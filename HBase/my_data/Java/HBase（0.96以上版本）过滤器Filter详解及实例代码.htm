@@ -1,0 +1,1363 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>HBase（0.96以上版本）过滤器Filter详解及实例代码</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="FONT-SIZE: 16pt">目录：</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><STRONG>引言 -- 参数基础</STRONG></DIV>
+<DIV><STRONG>1. 结构(Structural)过滤器--FilterList</STRONG></DIV>
+<DIV><STRONG>2.列值过滤器--SingleColumnValueFilter</STRONG></DIV>
+<DIV><STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">2.1.第一种构造函数情况 -- 
+比较的关键字是字符数组</SPAN></STRONG></DIV>
+<DIV><STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">2.2.第二种构造函数情况 -- 
+比较的关键字是比较器ByteArrayComparable</SPAN></STRONG></DIV>
+<DIV><STRONG>3.键值元数据</STRONG></DIV>
+<DIV><STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">3.1. 
+基于列族过滤数据的FamilyFilter</SPAN></STRONG></DIV>
+<DIV><STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">3.2. 
+基于限定符Qualifier（列）过滤数据的QualifierFilter</SPAN></STRONG></DIV>
+<DIV><STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">3.3. 
+基于列名(即Qualifier)前缀过滤数据的ColumnPrefixFilter</SPAN></STRONG></DIV>
+<DIV><STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">3.4. 
+基于多个列名(即Qualifier)前缀过滤数据的MultipleColumnPrefixFilter</SPAN></STRONG></DIV>
+<DIV><STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">3.5. 
+基于列范围（不是行范围）过滤数据ColumnRangeFilter</SPAN></STRONG></DIV>
+<DIV><STRONG>4. RowKey</STRONG></DIV>
+<DIV><STRONG>5. PageFilter</STRONG></DIV>
+<DIV><STRONG>6. SkipFilter</STRONG></DIV>
+<DIV><STRONG>7. Utility--FirstKeyOnlyFilter</STRONG></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>8. 
+取得查询结果</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+<STRONG><SPAN style="FONT-SIZE: 14pt">引言 -- 参数基础</SPAN></STRONG><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">有两个参数类在各类Filter中经常出现，统一介绍下：</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>（1）比较运算符&nbsp;<SPAN 
+style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">CompareFilter.CompareOp</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN style="COLOR: rgb(255,0,0)"><STRONG>比较运算符用于定义比较关系，<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">可以有以下几类值供选择：</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="COLOR: rgb(255,0,0)"></SPAN></SPAN>
+<OL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">EQUAL &nbsp; &nbsp; 
+  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+  &nbsp; &nbsp; &nbsp; &nbsp;相等</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">GREATER &nbsp; &nbsp; 
+  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+  &nbsp; &nbsp;大于</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">GREATER_OR_EQUAL &nbsp; 
+  &nbsp; &nbsp; &nbsp; &nbsp; 大于等于</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">LESS &nbsp; &nbsp; 
+  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;小于</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">LESS_OR_EQUAL &nbsp; 
+  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;小于等于</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">NOT_EQUAL &nbsp; &nbsp; 
+  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+  &nbsp;不等于</SPAN><BR></LI></OL></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>（2）比较器 
+&nbsp;<SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="COLOR: rgb(255,0,0)">ByteArrayComparable</SPAN></SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV>通过比较器可以实现多样化目标匹配效果，比较器<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">有以下子类可以使用：</SPAN></DIV>
+<DIV>
+<OL>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">BinaryComparator 
+  &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">&nbsp; 
+  &nbsp;&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">&nbsp; 
+  &nbsp;&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">&nbsp; 
+  &nbsp; &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">匹配完整字节数组&nbsp;</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">BinaryPrefixComparator 
+  &nbsp; &nbsp;&nbsp;匹配字节数组前缀&nbsp;</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">BitComparator</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">NullComparator</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">RegexStringComparator 
+  &nbsp; &nbsp;正则表达式匹配</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">SubstringComparator 
+  &nbsp; &nbsp; &nbsp; &nbsp;子串匹配</SPAN><BR></LI></OL></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+
+<DIV><SPAN style="COLOR: rgb(0,0,255)"><SPAN 
+style="FONT-SIZE: 14pt"><STRONG><SPAN style="FONT-SIZE: 16pt">1. 
+结构(Structural)过滤器--</SPAN></STRONG></SPAN><SPAN 
+style="FONT-SIZE: 16px; LINE-HEIGHT: 24px"><SPAN 
+style="FONT-SIZE: 16pt">FilterList</SPAN></SPAN></SPAN></DIV>
+<DIV><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">FilterList&nbsp;</SPAN></SPAN>代表一个<STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">过滤器链</SPAN></STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">，它可以包含一组即将应用于目标数据集的过滤器</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">，过滤器间具有“与”</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">FilterList.Operator.MUST_PASS_<SPAN 
+style="COLOR: rgb(255,0,0)">ALL</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">和“或”</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">FilterList.Operator.MUST_PASS_<SPAN 
+style="COLOR: rgb(255,0,0)">ONE</SPAN></SPAN>&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">关系。</SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">官网实例代码，</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">两个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">“</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5"><STRONG>或”</STRONG></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">关系的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">过滤器</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的写法：</SPAN></DIV>
+<DIV><SPAN style="COLOR: rgb(0,0,255)"><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">FilterList list = new 
+FilterList(FilterList.Operator.MUST_PASS_ONE); &nbsp; 
+//数据只要满足一组过滤器中的一个就可以</SPAN></SPAN></DIV>
+<DIV>SingleColumnValueFilter filter1 = new SingleColumnValueFilter(</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>cf,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>column,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>CompareOp.EQUAL,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>Bytes.toBytes("my value")</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>);</DIV>
+<DIV><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">list.add(filter1);</SPAN></DIV>
+<DIV>SingleColumnValueFilter filter2 = new SingleColumnValueFilter(</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>cf,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>column,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>CompareOp.EQUAL,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>Bytes.toBytes("my other value")</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>);</DIV>
+<DIV><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">list.add(filter2);</SPAN></DIV>
+<DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">Scan scan = new 
+Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">scan.setFilter(list);</SPAN></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-WEIGHT: bold"><SPAN style="COLOR: rgb(0,0,255)"><SPAN 
+style="FONT-SIZE: 16pt">2. 列值过滤器--</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 16pt">SingleColumnValueFilter</SPAN></SPAN></SPAN></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><STRONG><SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">SingleColumnValueFilter&nbsp;</SPAN></STRONG>用于测试<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="COLOR: rgb(255,0,0)">列值</SPAN></SPAN><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">相等 (CompareOp.EQUAL ), 不等 
+(CompareOp.NOT_EQUAL),或单侧范围 (e.g., 
+CompareOp.GREATER)</SPAN></STRONG></SPAN>。</DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>构造函数：</STRONG></SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>（1）比较的关键字是一个<SPAN 
+style="COLOR: rgb(255,0,0)">字符数组</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">SingleColumnValueFilter(byte[] 
+family, byte[] qualifier, CompareFilter.CompareOp compareOp, byte[] 
+value)</SPAN><BR></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>（2）比较的关键字是一个<SPAN 
+style="COLOR: rgb(255,0,0)">比较器</SPAN>（比较器下一小节做介绍）</STRONG></SPAN></DIV>
+<DIV>SingleColumnValueFilter(byte[] family, byte[] qualifier, 
+CompareFilter.CompareOp compareOp,&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="COLOR: rgb(255,0,0)">ByteArrayComparable 
+comparator</SPAN></SPAN>)<BR></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG><SPAN 
+style="FONT-SIZE: 14pt">2.1.第一种构造函数情况 -- 
+比较的关键字是字符数组</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>官网示例代码</STRONG>，</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">检查列值和字符串'my value' 相等：</SPAN></DIV>
+<DIV>SingleColumnValueFilter filter = new SingleColumnValueFilter(</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>cf,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>column,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>CompareOp.EQUAL,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>Bytes.toBytes("my value")</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>);</DIV>
+<DIV>scan.setFilter(filter);</DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>个人实测代码：</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; HTable&nbsp;table&nbsp;=&nbsp;HBaseDAO.<SPAN 
+style="FONT-STYLE: italic">getHTable</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"147patents"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; FilterList&nbsp;filterList&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;FilterList(FilterList.Operator.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>MUST_PASS_ALL</EM></SPAN>);</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SingleColumnValueFilter&nbsp;filter&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;SingleColumnValueFilter(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"patentinfo"</SPAN>),</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"CREATE_TIME"</SPAN>),</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>EQUAL</EM></SPAN>,</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">2013-06-08</SPAN>"</SPAN>)</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filterList.addFilter(filter);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(filterList);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(<SPAN 
+style="COLOR: rgb(42,0,255)">"Scan:&nbsp;"</SPAN>&nbsp;+&nbsp;r);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="FONT-SIZE: 12pt">注意：</SPAN><SPAN 
+style="FONT-SIZE: 12pt">还是大写问题，HBase的列名必须大写！</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="FONT-SIZE: 14pt">2.2.第二种构造函数情况 -- 比较的关键字是比较器</SPAN></STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG><SPAN 
+style="FONT-SIZE: 16pt"><SPAN 
+style="COLOR: rgb(255,0,0)">ByteArrayComparable</SPAN></SPAN></STRONG></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">该章节主要是针对<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">SingleColumnValueFilter的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">第二种构造函数使用情况做了一些举例：</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><STRONG>（1）<SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">支持值比较的<SPAN 
+style="COLOR: rgb(255,0,0)">正则表达式</SPAN>&nbsp;--&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(255,0,0)">RegexStringComparator</SPAN></STRONG></DIV>
+<DIV><STRONG>官网示例代码</STRONG>：</DIV>
+<DIV>RegexStringComparator&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">comp&nbsp;</SPAN>= 
+new&nbsp;<STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">RegexStringComparator</SPAN></STRONG>("my."); &nbsp; 
+//任意以my打头的值</DIV>
+<DIV>SingleColumnValueFilter filter = new SingleColumnValueFilter(</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>cf,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>column,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>CompareOp.EQUAL,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">comp</SPAN></DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>);</DIV>
+<DIV>scan.setFilter(filter);</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>个人实测代码：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; HTable&nbsp;table&nbsp;=&nbsp;HBaseDAO.<SPAN 
+style="FONT-STYLE: italic">getHTable</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"147patents"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FilterList&nbsp;filterList&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;FilterList(FilterList.Operator.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>MUST_PASS_ALL</EM></SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">RegexStringComparator&nbsp;comp&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;RegexStringComparator(<SPAN 
+style="COLOR: rgb(42,0,255)">"2013-06-1."</SPAN>);</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SingleColumnValueFilter&nbsp;filter&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;SingleColumnValueFilter(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"patentinfo"</SPAN>),</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"CREATE_TIME"</SPAN>),</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>EQUAL</EM></SPAN>,</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">comp</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filterList.addFilter(filter);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(filterList);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(<SPAN 
+style="COLOR: rgb(42,0,255)">"Scan:&nbsp;"</SPAN>&nbsp;+&nbsp;r);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（2）<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">检测一个子串是否存在于值中（</SPAN></STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>大小写不敏感</STRONG></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">） 
+--&nbsp;SubstringComparator</SPAN></DIV>
+<DIV><STRONG>官网示例代码：</STRONG></DIV>
+<DIV>SubstringComparator comp = new&nbsp;<SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>SubstringComparator</STRONG></SPAN>("y 
+val"); &nbsp; // looking for 'my value'</DIV>
+<DIV>SingleColumnValueFilter filter = new SingleColumnValueFilter(</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>cf,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>column,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>CompareOp.EQUAL,</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>comp</DIV>
+<DIV><SPAN style="WHITE-SPACE: pre"></SPAN>);</DIV>
+<DIV>scan.setFilter(filter);</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>个人实测代码：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; HTable&nbsp;table&nbsp;=&nbsp;HBaseDAO.<SPAN 
+style="FONT-STYLE: italic">getHTable</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"147patents"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FilterList&nbsp;filterList&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;FilterList(FilterList.Operator.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>MUST_PASS_ALL</EM></SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,127,95)">//&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RegexStringComparator&nbsp;<SPAN 
+style="TEXT-DECORATION: underline">comp</SPAN>&nbsp;=&nbsp;new&nbsp;RegexStringComparator("2013-06-1.");</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">SubstringComparator&nbsp;comp&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;SubstringComparator(<SPAN 
+style="COLOR: rgb(42,0,255)">"2013-06-1"</SPAN>);</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SingleColumnValueFilter&nbsp;filter&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;SingleColumnValueFilter(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"patentinfo"</SPAN>),</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"CREATE_TIME"</SPAN>),</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>EQUAL</EM></SPAN>,</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;comp</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filterList.addFilter(filter);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(filterList);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(<SPAN 
+style="COLOR: rgb(42,0,255)">"Scan:&nbsp;"</SPAN>&nbsp;+&nbsp;r);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp; &nbsp; &nbsp; table.close();</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;</SPAN><BR></DIV></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（3）BinaryComparator</STRONG></DIV>
+<DIV>二进制比较器，用得较少，有需要请自行查阅官网：http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（4）BinaryPrefixComparator</STRONG></DIV>
+<DIV>二进制前缀比较器<SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">，用得较少</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">，有需要请自行查阅官网：</SPAN>http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryPrefixComparator.html</DIV>
+<DIV>
+<HR>
+<SPAN style="FONT-SIZE: 14pt"><SPAN style="FONT-WEIGHT: bold"><SPAN 
+style="FONT-SIZE: 12pt"><SPAN style="COLOR: rgb(0,0,255)"><SPAN 
+style="FONT-SIZE: 16pt">3. 键值元数据</SPAN></SPAN></SPAN></SPAN></SPAN></DIV>
+<DIV>
+<DIV>由于HBase 采用<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">键值对</SPAN>保存内部数据，<STRONG>键值<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">元数据</SPAN>过滤器</STRONG>评估一行的<SPAN 
+style="COLOR: rgb(255,0,0)"><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">键</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>(ColumnFamily：Qualifiers)</STRONG></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5"><STRONG><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">是否存在</SPAN></STRONG></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;, 对应前节所述值的情况。</SPAN></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 14pt">3.1. 基于</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">列族</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">过滤数据的</SPAN></SPAN><SPAN 
+style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 14pt">FamilyFilter</SPAN></SPAN></STRONG></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">构造函数：</SPAN><BR></DIV>
+<DIV>FamilyFilter(CompareFilter.CompareOp familyCompareOp, ByteArrayComparable 
+familyComparator)<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>个人实测代码：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; HTable&nbsp;table&nbsp;=&nbsp;HBaseDAO.<SPAN 
+style="FONT-STYLE: italic">getHTable</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"147patents"</SPAN>);</SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,95,191)">/**</SPAN></SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'"><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;FamilyFilter构造函数中第二个参数是ByteArrayComparable类型</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'"><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;ByteArrayComparable类参见“引言-参数基础”章节</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'"><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;下面仅以最可能用到的BinaryComparator、BinaryPrefixComparator举例：</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FamilyFilter&nbsp;<SPAN 
+style="TEXT-DECORATION: underline">ff</SPAN>&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;FamilyFilter(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CompareFilter.CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>EQUAL</EM></SPAN>&nbsp;,&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;BinaryComparator(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"pat"</SPAN>))&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95); BACKGROUND-COLOR: rgb(255,255,0)">//表中不存在pat列族，过滤结果为空</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FamilyFilter&nbsp;ff1&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;FamilyFilter(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CompareFilter.CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>EQUAL</EM></SPAN>&nbsp;,&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;BinaryPrefixComparator(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"pat"</SPAN>))&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95); BACKGROUND-COLOR: rgb(255,255,0)">//表中存在以pat打头的列族<SPAN 
+style="TEXT-DECORATION: underline">patentinfo</SPAN>，过滤结果为该列族所有行</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(ff1);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;</SPAN><BR></DIV></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>注意：</STRONG></DIV>
+<DIV>
+<OL>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果希望查找的是一个已知的列族，则使用&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">scan.addFamily(<SPAN 
+  style="TEXT-DECORATION: underline">family)</SPAN></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">比使用过滤器效率更高；</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">由于目前HBase对多列族支持不完善，所以该过滤器目前用途不大。</SPAN><BR></LI></OL></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">3.2.&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="FONT-SIZE: 14pt">基于限定符Qualifier（列）过滤数据</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 14pt">的</SPAN><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 14pt">QualifierFilter</SPAN></SPAN></SPAN><BR></DIV>
+<DIV><STRONG>构造函数：</STRONG></DIV>
+<DIV>QualifierFilter(CompareFilter.CompareOp op, ByteArrayComparable 
+qualifierComparator)<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>个人实测代码：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; HTable&nbsp;table&nbsp;=&nbsp;HBaseDAO.<SPAN 
+style="FONT-STYLE: italic">getHTable</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"147patents"</SPAN>);</SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,95,191)">/**</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;QualifierFilter构造函数中第二个参数是ByteArrayComparable类型</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;ByteArrayComparable类有以下子类可以使用：</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;*******************************************</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;BinaryComparator&nbsp;&nbsp;匹配完整字节数组,&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;BinaryPrefixComparator&nbsp;&nbsp;匹配开始的部分字节数组,&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;BitComparator,&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;NullComparator,&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;RegexStringComparator,&nbsp;&nbsp;&nbsp;正则表达式匹配</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;SubstringComparator</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;*******************************************</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;下面仅以最可能用到的BinaryComparator、BinaryPrefixComparator举例：</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;QualifierFilter&nbsp;<SPAN 
+style="TEXT-DECORATION: underline">ff</SPAN>&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;QualifierFilter(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CompareFilter.CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>EQUAL</EM></SPAN>&nbsp;,&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;BinaryComparator(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"belong"</SPAN>))&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//表中不存在belong列，过滤结果为空</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;QualifierFilter&nbsp;ff1&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;QualifierFilter(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CompareFilter.CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>EQUAL</EM></SPAN>&nbsp;,&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;BinaryPrefixComparator(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"BELONG"</SPAN>))&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//表中存在以BELONG打头的列BELONG_SITE，过滤结果为所有行的该列数据</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(ff1);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><STRONG>说明：</STRONG></DIV>
+<DIV>
+<OL>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">一旦涉及到列（Qualifier），HBase就只认大写字母了！</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">该过滤器应该比</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">FamilyFilter更常用！</SPAN><BR></LI></OL></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><SPAN style="FONT-WEIGHT: bold"><SPAN 
+style="FONT-SIZE: 14pt">3.3.&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">基于</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">列名(即Qualifier)<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">前缀</SPAN></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">过滤数据的</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 14pt">ColumnPrefixFilter &nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)"><SPAN style="FONT-SIZE: 14pt">（ 
+该功能用</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN 
+style="FONT-SIZE: 14pt">QualifierFilter也能实现 ）</SPAN></SPAN></SPAN></DIV>
+<DIV><STRONG>构造函数：</STRONG></DIV>
+<DIV>ColumnPrefixFilter(byte[] prefix)&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>注意：</STRONG></DIV>
+<DIV>一个列名是可以出现在多个列族中的，该过滤器将返回所有列族中匹配的列。</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>官网示例代码，查找所有"abc<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">"打头的列：</SPAN></STRONG></DIV>
+<DIV>HTableInterface t = ...;</DIV>
+<DIV>byte[] row = ...;</DIV>
+<DIV>byte[] family = ...;</DIV>
+<DIV>byte[] prefix = Bytes.toBytes("abc");</DIV>
+<DIV>Scan scan = new Scan(row, row); // (optional) limit to one row</DIV>
+<DIV>scan.addFamily(family); // (optional) limit to one family</DIV>
+<DIV>Filter f = new ColumnPrefixFilter(prefix);</DIV>
+<DIV>scan.setFilter(f);</DIV>
+<DIV>scan.setBatch(10); // set this if there could be many columns 
+returned</DIV>
+<DIV>ResultScanner rs = t.getScanner(scan);</DIV>
+<DIV>for (Result r = rs.next(); r != null; r = rs.next()) {</DIV>
+<DIV>&nbsp; for (KeyValue kv : r.raw()) {</DIV>
+<DIV>&nbsp; &nbsp; // each kv represents a column</DIV>
+<DIV>&nbsp; }</DIV>
+<DIV>}</DIV>
+<DIV>rs.close();</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>个人实测代码：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; HTable&nbsp;table&nbsp;=&nbsp;HBaseDAO.<SPAN 
+style="FONT-STYLE: italic">getHTable</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"147patents"</SPAN>);</SPAN></DIV>
+<DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//返回所有行中以BELONG打头的列的数据</SPAN></SPAN>&nbsp;&nbsp;<BR></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ColumnPrefixFilter&nbsp;ff1&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;ColumnPrefixFilter(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"BELONG"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(ff1);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><SPAN style="FONT-WEIGHT: bold"><SPAN 
+style="FONT-SIZE: 14pt">3.4.&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">基于</SPAN><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 14pt; BACKGROUND-COLOR: rgb(255,255,0)">多个</SPAN></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">列名(即Qualifier)<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">前缀</SPAN></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">过滤数据的</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 14pt">MultipleColumnPrefixFilter</SPAN></SPAN></DIV>
+<DIV><STRONG>说明：</STRONG></DIV>
+<DIV>MultipleColumnPrefixFilter 和 ColumnPrefixFilter 行为差不多，但可以指定<SPAN 
+style="COLOR: rgb(255,0,0)"><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">多个前缀</SPAN></SPAN>。</DIV>
+<DIV><BR></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>官方示例代码，查找所有"abc"或"xyz"打头的列：</STRONG></SPAN></DIV>
+<DIV>HTableInterface t = ...;</DIV>
+<DIV>byte[] row = ...;</DIV>
+<DIV>byte[] family = ...;</DIV>
+<DIV>byte[][] prefixes = new byte[][] {Bytes.toBytes("abc"), 
+Bytes.toBytes("xyz")};</DIV>
+<DIV>Scan scan = new Scan(row, row); // (optional) limit to one row</DIV>
+<DIV>scan.addFamily(family); // (optional) limit to one family</DIV>
+<DIV>Filter f = new MultipleColumnPrefixFilter(prefixes);</DIV>
+<DIV>scan.setFilter(f);</DIV>
+<DIV>scan.setBatch(10); // set this if there could be many columns 
+returned</DIV>
+<DIV>ResultScanner rs = t.getScanner(scan);</DIV>
+<DIV>for (Result r = rs.next(); r != null; r = rs.next()) {</DIV>
+<DIV>&nbsp; for (KeyValue kv : r.raw()) {</DIV>
+<DIV>&nbsp; &nbsp; // each kv represents a column</DIV>
+<DIV>&nbsp; }</DIV>
+<DIV>}</DIV>
+<DIV>rs.close();</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>个人实测代码：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; HTable&nbsp;table&nbsp;=&nbsp;HBaseDAO.<SPAN 
+style="FONT-STYLE: italic">getHTable</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"147patents"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>byte</STRONG></SPAN>[][]&nbsp;prefixes&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>byte</STRONG></SPAN>[][]&nbsp;{Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"BELONG"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"CREATE"</SPAN>)};</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//返回所有行中以BELONG或者CREATE打头的列的数据</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MultipleColumnPrefixFilter&nbsp;ff&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;MultipleColumnPrefixFilter(prefixes);</SPAN></DIV>
+<DIV><BR></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(ff);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><SPAN style="FONT-WEIGHT: bold"><SPAN 
+style="FONT-SIZE: 14pt">3.5.&nbsp;</SPAN><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 14pt">基于<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">列范围</SPAN>（不是行范围）过滤数据</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 14pt">ColumnRangeFilter</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>说明：</STRONG></SPAN></DIV>
+<DIV>
+<OL>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">可用于获得一个范围的列，例如，如果你的一行中有百万个列，但是你只希望查看列名为bbbb到dddd的范围</SPAN></LI>
+  <LI>该方法从 HBase 0.92 版本开始引入<BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">一个列名是可以出现在多个列族中的，该过滤器将返回所有列族中匹配的列<BR></SPAN></LI></OL></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV><STRONG>构造函数：</STRONG></DIV>
+<DIV>
+<DIV>ColumnRangeFilter(byte[] minColumn, boolean minColumnInclusive, byte[] 
+maxColumn, boolean maxColumnInclusive)</DIV>
+<DIV>参数解释：</DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">minColumn - 
+  列范围的最小值，如果为空，则没有下限；</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">minColumnInclusive - 
+  列范围是否包含minColumn</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">；</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">maxColumn - 
+  列范围最大值，如果为空，则没有上限；</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">maxColumnInclusive - 
+  列范围是否包含</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">maxColumn</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;。</SPAN><BR></LI></UL></DIV></DIV>
+<DIV><STRONG><BR></STRONG></DIV>
+<DIV><STRONG>官网示例代码，查找列名在"<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">bbbb"到"dddd"范围的数据</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">：</SPAN></STRONG></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HTableInterface t = 
+...;</SPAN><BR></DIV>
+<DIV>byte[] row = ...;</DIV>
+<DIV>byte[] family = ...;</DIV>
+<DIV>byte[] startColumn = Bytes.toBytes("bbbb");</DIV>
+<DIV>byte[] endColumn = Bytes.toBytes("bbdd");</DIV>
+<DIV>Scan scan = new Scan(row, row); // (optional) limit to one row</DIV>
+<DIV>scan.addFamily(family); // (optional) limit to one family</DIV>
+<DIV>Filter f = new ColumnRangeFilter(startColumn, true, endColumn, true);</DIV>
+<DIV>scan.setFilter(f);</DIV>
+<DIV>scan.setBatch(10); // set this if there could be many columns 
+returned</DIV>
+<DIV>ResultScanner rs = t.getScanner(scan);</DIV>
+<DIV>for (Result r = rs.next(); r != null; r = rs.next()) {</DIV>
+<DIV>&nbsp; for (KeyValue kv : r.raw()) {</DIV>
+<DIV>&nbsp; &nbsp; // each kv represents a column</DIV>
+<DIV>&nbsp; }</DIV>
+<DIV>}</DIV>
+<DIV>rs.close();</DIV></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>个人实测代码：</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; HTable&nbsp;table&nbsp;=&nbsp;HBaseDAO.<SPAN 
+style="FONT-STYLE: italic">getHTable</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"147patents"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>byte</STRONG></SPAN>[]&nbsp;startColumn&nbsp;=&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"C"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>byte</STRONG></SPAN>[]&nbsp;endColumn&nbsp;=&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"D"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//返回所有列中从C到D打头的范围的数据，实际返回类似CREATOR、CREATE_TIME、CHANNEL_CODE等列的数据</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ColumnRangeFilter&nbsp;ff&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;ColumnRangeFilter(startColumn,&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>true</STRONG></SPAN>,&nbsp;endColumn,&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>true</STRONG></SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(ff);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+
+<DIV><STRONG><SPAN style="FONT-SIZE: 16pt"><SPAN style="COLOR: rgb(0,0,255)">4. 
+RowKey</SPAN></SPAN></STRONG></DIV>
+<DIV>当需要<STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">根据行键特征</SPAN></STRONG>查找一个范围的行数据时，使用<SPAN 
+style="COLOR: rgb(255,0,0)">Scan的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="COLOR: rgb(255,0,0)">startRow和stopRow</SPAN>会更高效，但是，</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">startRow和stopRow<STRONG><SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">只能匹配行键的开始字符</SPAN></STRONG>，而不能匹配中间包含的字符</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">：</SPAN></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>byte</STRONG></SPAN>[]&nbsp;startColumn&nbsp;=&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"aaa"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>byte</STRONG></SPAN>[]&nbsp;endColumn&nbsp;=&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"bbb"</SPAN>);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan(startColumn,endColumn);</SPAN></DIV>
+<DIV>&nbsp;&nbsp;<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">当需要针对行键进行更复杂的过滤时，可以使用</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">RowFilter：</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>构造函数：</STRONG></SPAN></DIV>
+<DIV>RowFilter(CompareFilter.CompareOp rowCompareOp, ByteArrayComparable 
+rowComparator)<BR></DIV>
+<DIV>参数解释<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">参见“引言-参数基础”章节。</SPAN></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>个人实测代码：</STRONG></DIV>
+<DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; HTable&nbsp;table&nbsp;=&nbsp;HBaseDAO.<SPAN 
+style="FONT-STYLE: italic">getHTable</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"147patents"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,95,191)">/**</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;<SPAN 
+style="TEXT-DECORATION: underline">rowkey</SPAN>格式为：<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">创建日期_</SPAN></SPAN><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'"><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>发布日期</STRONG></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">_ID_TITLE</SPAN></SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'"><SPAN 
+style="COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;</SPAN><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="COLOR: rgb(63,95,191)">目标：查找&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>发布日期</STRONG></SPAN><SPAN 
+style="COLOR: rgb(63,95,191)">&nbsp;&nbsp;为&nbsp;&nbsp;2013</SPAN><SPAN 
+style="COLOR: rgb(127,127,159)">-</SPAN><SPAN 
+style="COLOR: rgb(63,95,191)">07</SPAN><SPAN 
+style="COLOR: rgb(127,127,159)">-</SPAN><SPAN 
+style="COLOR: rgb(63,95,191)">16&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(63,95,191)">的数据</SPAN></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RowFilter&nbsp;rf&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;RowFilter(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CompareFilter.CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>EQUAL</EM></SPAN>&nbsp;,&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;SubstringComparator(<SPAN 
+style="COLOR: rgb(42,0,255)">"_2013-07-16_"</SPAN>)&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(rf);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><STRONG>注意：</STRONG></DIV></DIV>
+<DIV>测试过程中尝试通过组合使用两个RowFilter（<SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">CompareFilter.CompareOp参数分别为</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(0,0,192); LINE-HEIGHT: 1.5"><EM>GREATER_OR_EQUAL</EM></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">和</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(0,0,192); LINE-HEIGHT: 1.5"><EM>LESS_OR_EQUAL</EM></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">），和</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">SubstringComparator，</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">过滤找出指定发布时间范围内的数据，但结果比较意外，不是预想的数据，估计比较运算符</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(0,0,192); LINE-HEIGHT: 1.5"><EM>GREATER_OR_EQUAL</EM></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">和</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(0,0,192); LINE-HEIGHT: 1.5"><EM>LESS_OR_EQUAL</EM></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">和比较器</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">SubstringComparator组合使用效果不太好，慎用。</SPAN></DIV>
+<DIV>
+<HR>
+<SPAN style="FONT-SIZE: 16pt"><STRONG><SPAN 
+style="COLOR: rgb(0,0,255)">5.PageFilter</SPAN></STRONG></SPAN></DIV>
+<DIV>
+<DIV>指定页面行数，返回对应行数的结果集。</DIV>
+<DIV>需要注意的是，该过滤器<STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">并不能保证返回的结果行数小于等于指定的页面行数</SPAN></STRONG>，因为过滤器是分别作用到各个region 
+server的，它只能保证当前region返回的结果行数不超过指定页面行数。</DIV></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>构造函数：</STRONG></DIV>
+<DIV>PageFilter(long pageSize)<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>实测代码（从“2013-07-26”行开始，取5行）：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setStartRow(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"2013-07-26"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PageFilter&nbsp;pf&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;PageFilter(5L);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(pf);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;"</SPAN>&nbsp;+&nbsp;cell.getTimestamp());</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><STRONG>注意：</STRONG></DIV>
+<DIV>由于<SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">该过滤器</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="COLOR: rgb(255,0,0)">并不能保证返回的结果行数小于等于指定的页面行数</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">，所以更好的返回指定行数的办法是</SPAN><SPAN 
+style="COLOR: rgb(255,0,0)"><SPAN 
+style="BACKGROUND-COLOR: rgb(0,255,0)">ResultScanner.next(int 
+nbRows)</SPAN></SPAN>&nbsp;，即：</DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(0,255,0)">rs.next(5)</SPAN>)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;"</SPAN>&nbsp;+&nbsp;cell.getTimestamp());</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><SPAN style="FONT-WEIGHT: bold"><SPAN style="COLOR: rgb(0,0,255)"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 16pt">6.</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 16pt">SkipFilter</SPAN></SPAN></SPAN></DIV>
+<DIV>
+<DIV>根据整行中的每个列来做过滤，只要存在一列不满足条件，整行都被过滤掉。</DIV>
+<DIV>例如，如果一行中的所有列代表的是不同物品的重量，则真实场景下这些数值都必须大于零，我们希望将那些包含任意列值为0的行都过滤掉。</DIV>
+<DIV>在这个情况下，我们结合ValueFilter和SkipFilter共同实现该目的：</DIV>
+<DIV>scan.setFilter(new SkipFilter(new ValueFilter(CompareOp.NOT_EQUAL,<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">new 
+BinaryComparator(Bytes.toBytes(0))));</SPAN></DIV>
+<DIV><BR></DIV></DIV>
+<DIV><STRONG>构造函数：</STRONG></DIV>
+<DIV>SkipFilter(Filter filter)&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>个人实测代码：</STRONG></DIV>
+<DIV><STRONG>目前的数据：</STRONG></DIV>
+<DIV>
+<DIV>hbase(main):009:0&gt; scan 'rd_ns:itable'</DIV>
+<DIV>ROW &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; COLUMN+CELL</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; column=info:address, timestamp=1405417403438, value=anywhere</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; column=info:age, timestamp=1405417403438, value=24</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; column=info:name, timestamp=1405417403438, value=zhangtao</DIV>
+<DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;100002 &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; column=info:address, 
+timestamp=1405417426693, value=shangdi</SPAN></DIV>
+<DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;100002 &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; column=info:age, 
+timestamp=1405417426693, value=28</SPAN></DIV>
+<DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;100002 &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; column=info:name, 
+timestamp=1405417426693, value=shichao</SPAN></DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; column=info:address, timestamp=1405494141522, value=huilongguan</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; column=info:age, timestamp=1405494999631, value=29</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; column=info:name, timestamp=1405494141522, value=liyang</DIV>
+<DIV>3 row(s) in 0.0190 seconds</DIV></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>执行以下代码：</STRONG></SPAN></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>);</SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(0,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;SkipFilter(<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;ValueFilter(CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>NOT_EQUAL</EM></SPAN>,</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(0,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;BinaryComparator(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"28"</SPAN>)))));</SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;"</SPAN>&nbsp;+&nbsp;cell.getTimestamp());</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>输出结果（<SPAN 
+style="COLOR: rgb(255,0,0)">整个100002行被过滤掉了</SPAN>）：</STRONG></SPAN></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100001&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;anywhere&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417403438</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100001&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;24&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417403438</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100001&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;zhangtao&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417403438</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;huilongguan&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494141522</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;29&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494999631</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;liyang&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494141522</SPAN>&nbsp;&nbsp;</DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><SPAN style="FONT-WEIGHT: bold"><SPAN style="FONT-SIZE: 16pt"><SPAN 
+style="COLOR: rgb(0,0,255)">7. Utility-<SPAN 
+style="FONT-SIZE: 16pt">-</SPAN></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 16pt"><SPAN 
+style="COLOR: rgb(0,0,255)">FirstKeyOnlyFilter</SPAN></SPAN></SPAN></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV>该过滤器仅仅返回每一行中的第一个cell的值，<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">可以用于高效的执行行数统计操作。</SPAN></DIV>
+<DIV>估计实战意义不大。</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>构造函数：</STRONG></DIV>
+<DIV>public FirstKeyOnlyFilter()<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>个人实测代码：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; HTable&nbsp;table&nbsp;=&nbsp;HBaseDAO.<SPAN 
+style="FONT-STYLE: italic">getHTable</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"147patents"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FirstKeyOnlyFilter&nbsp;fkof&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;FirstKeyOnlyFilter();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(fkof);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 16pt"><SPAN style="COLOR: rgb(0,0,255)">8. 
+取得查询结果</SPAN></SPAN></STRONG><BR></DIV>
+<DIV>无论是官网的<SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Ref 
+Guide还是网上流传的大部分博客中，输出查询结果的代码都是：</SPAN></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV>for (Result r = rs.next(); r != null; r = rs.next()) {</DIV>
+<DIV>&nbsp; for (KeyValue kv : r.raw()) {</DIV>
+<DIV>&nbsp; &nbsp; // each kv represents a column</DIV>
+<DIV>&nbsp; }</DIV>
+<DIV>}</DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">但查看最新的API可知Result实例的raw()方法已经不建议使用了：</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN style="COLOR: rgb(0,0,255)">raw()&nbsp;<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Deprecated.&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">as of 0.96, use 
+rawCells()</SPAN></SPAN></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">0.96以后版本正确的获取结果代码如下：</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">r.getRow()</SPAN>)+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Familiy:Quilifier&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN></SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Value&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN></SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN>&nbsp;&nbsp;<BR></DIV><BR 
+class=Apple-interchange-newline></body>
+</html>

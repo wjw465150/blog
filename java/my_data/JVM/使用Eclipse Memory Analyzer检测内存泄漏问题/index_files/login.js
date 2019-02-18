@@ -1,0 +1,242 @@
+/*
+* CSDN ç?»å½?æ¡?
+* Copyright 2012, zhuhz@csdn.net
+* Date: 2012-6-6
+* 
+* è°?ç?¨ï¼?csdn.showLogin(callback);
+*
+* è?·å??å½?å??ç?»å½?ç?¨æ?·å??ï¼?å?¯ç?¨äº?å?¤æ?­ç?¨æ?·æ?¯å?¦å¤?äº?ç?»å½?ç?¶æ??ï¼?ï¼?csdn.getCookie('UserName')
+*/
+var csdn = csdn || function () { };
+
+csdn.domain = "passport.csdn.net";
+csdn.doing = false;
+csdn.$ = function (id) {
+    return document.getElementById(id);
+};
+csdn.loginBack = null;
+csdn.showLogin = function (callback) {
+   
+    var div = document.createElement("DIV");
+    div.id = "csdn_divh";
+    //div.style.marginLeft = "-200px";
+    div.style.marginTop = -75 + (document.documentElement.scrollTop||document.body.scrollTop) + "px";
+
+    // var title = 'ç?»å½?<a class="close" href="javascript:void(0);" onclick="javascript:csdn.closeLogin();return false;" title="å?³é?­çª?å?£">[X]</a>';
+    var title = '';
+    var body = csdn.loginForm();
+    var bottom = '';
+    var s = csdn.openBox().replace('#title#', title).replace('#body#', body);
+    div.innerHTML = s;
+
+    csdn.shieldBody();
+    document.body.appendChild(div);
+
+    var un = csdn.getCookie("UN");
+    if (un) {
+        csdn.$('u').value = un;
+        csdn.$('p').focus();
+    }
+    else {
+        csdn.$('u').focus();
+    }
+    csdn.$('u').onkeypress =
+    csdn.$('p').onkeypress = function (ev) {
+        if (csdn.isEnter(ev)) {
+            csdn.login();
+        }
+    };
+    csdn.loginBack = callback;
+};
+csdn.closeLogin = function () {
+    document.body.removeChild(csdn.$('csdn_divh'));
+    document.body.removeChild(csdn.$('csdn_shield'));
+};
+csdn.shieldBody = function () {
+    var shield = document.createElement("DIV");
+    shield.id = "csdn_shield";
+    var h1 = document.documentElement.clientHeight;
+    var h2 = document.documentElement.scrollHeight;
+    shield.style.height = Math.max(h1,h2) + "px";
+    shield.style.filter = "alpha(opacity=0)";
+    shield.style.opacity = 0;
+    document.body.appendChild(shield);
+
+    csdn.setOpacity = function (obj, opacity) {
+        if (opacity >= 1) opacity = opacity / 100;
+        try { obj.style.opacity = opacity; } catch (err) { }
+        try {
+            if (obj.filters.length > 0 && obj.filters("alpha")) {
+                obj.filters("alpha").opacity = opacity * 150;
+            } else {
+                obj.style.filter = "alpha(opacity=\"" + (opacity * 150) + "\")";
+            }
+        } catch (err) { }
+    };
+    var c = 0;
+    csdn.doAlpha = function () {
+        c += 2;
+        if (c > 20) { clearInterval(ad); return 0; }
+        csdn.setOpacity(shield, c);
+    };
+    var ad = setInterval("csdn.doAlpha()", 1);
+};
+csdn.setStyle = function () {
+    var lk = document.createElement("LINK");
+    lk.type = "text/css";
+    lk.rel = "stylesheet";
+    lk.href = location.protocol +"//" + csdn.domain + "/content/loginbox/style.css?r="+(new Date().getTime());
+    var head = document.getElementsByTagName("head")[0];
+    head.appendChild(lk);
+};
+csdn.isEnter = function (ev) {
+    ev = ev || window.event;
+    var code = (ev.keyCode || ev.which);
+    return (code == 10 || code == 13);
+};
+csdn.getCookie = function (name) {
+    var ck = document.cookie.match(new RegExp("(^| )" + name + "=([^;]*)(;|$)"));
+    if (ck) return ck[2];
+    else return null;
+};
+csdn.setCookie = function(name, value, expires) {
+    if (expires) expires = '; expires=' + new Date(expires).toUTCString();
+    else expires = '';
+    var path = '; path=/';
+    var domain = '; domain=' + document.domain.replace('www.', '');
+
+    document.cookie = [name, '=', encodeURIComponent(value), expires, path, domain].join('');
+}
+
+csdn.openBox = function () {
+    var text =       
+         "<div class='boxbody'>#body#</div>"
+       
+    return text;
+};
+csdn.loginForm = function () {
+
+    var text = "<div class='csdn_loginbox'>"
++ "<div class='login_content'>"
+  
++ "<input name='close' type='button' class='close'  onclick='javascript:csdn.closeLogin();return false;'  />"
++ "<p class='point' id='sperr'></p>"
+//+ "<span id='sperr'>&nbsp;</span>"
++ "<input name='user_id'  id='u'  type='text' class='user_id' placeholder='ç?¨æ?·ID/æ³¨å??é?®ç®±' />"
++ "<input name='password' id='p' type='password' class='password' placeholder='å¯?ç ?'/ >"
++ "<label><p class='remember clearfix'><input name='checkbox'  id='chkre' type='checkbox' value='checkbox' />è®°ä½?æ??ä¸?å?¨</p></label>"
++ "<div class='pw_lg'>"
++ "<a href='https://" + csdn.domain + "/account/forgotpassword' target='_blank' >å¿?è®°å¯?ç ?</a>|<a href='https://" + csdn.domain + "/account/register' target='_blank' class='pw_a'>æ³¨å??</a>"
++ "</div>"
++ "<input name='button' type='button'  onclick='javascript:csdn.login();return false;' value='ç?»  å½?' class='login_bt'/>"
++ "<div class='lg_3 clearfix'>"
++ "<a href='https://"+ csdn.domain +"/auth/google' target='_blank' class='google'></a>"
++ "<a href='https://"+ csdn.domain +"/auth/qq' target='_blank'  class='qq' ></a>"
++ "<a href='https://"+ csdn.domain +"/auth/sinat' target='_blank'  class='weibo'> </a>"
++ "ç¬¬ä¸?æ?¹ç?»å½?ï¼?"
++ "</div></div></div>";
+
+ 
+    return text;
+};
+
+csdn.login = function () {
+    if (csdn.doing) return;
+    var u = csdn.$('u');
+    var p = csdn.$('p');
+    var er = csdn.$('sperr');
+    if (!u.value) {
+        er.innerHTML = '* è¯·è¾?å?¥ç?¨æ?·å??/é?®ç®±ã??';
+        return;
+    }
+    if (!p.value) {
+        er.innerHTML = '* è¯·è¾?å?¥å¯?ç ?ã??';
+        return;
+    }
+    csdn.doing = true;
+    er.innerHTML = 'æ­£å?¨ç?»å½?...';
+    var url = location.protocol +'//' + csdn.domain + '/ajax/accounthandler.ashx';   
+    var data = 't=log&u=' + encodeURIComponent(u.value)
+        + '&p=' + encodeURIComponent(p.value)
+        + '&remember=' + (csdn.$('chkre').checked ? 1 : 0)
+        + '&callback=csdn.login_back'
+        + '&r=' + (new Date().getTime());
+    
+    csdn.post(url + '?' + data);
+};
+csdn.login_back = function (data) {
+    if (data.status) {
+        var userName = data.data.userName;
+        var userInfo = data.data.encryptUserInfo;
+        var exp = csdn.$('chkre').checked ? 7 : 0;
+        var url = location.protocol + '//' + csdn.domain + '/home/ssoindex'
+            + '?userName=' + encodeURIComponent(userName)
+            + '&userInfo=' + encodeURIComponent(userInfo)
+            + '&exp=' + exp;
+      
+        csdn.load_frm(url, csdn.login_ok(data));
+    } else {
+        if (data.error.indexOf("æ¿?æ´»") > -1) {
+            csdn.$('sperr').innerHTML = '* è´¦æ?·æ?ªæ¿?æ´»ï¼?è¯·å??<a href="https://' + csdn.domain + '/account/active?from=' + encodeURIComponent(location + '') + '" target=_blank>æ¿?æ´»</a>ã??';
+        } else {
+            csdn.$('sperr').innerHTML = '* ' + data.error;
+        }
+        csdn.doing = false;
+    }
+};
+csdn.login_ok = function (data) {
+	csdn.doing = false;
+    csdn.$('sperr').innerHTML = '<span style="color:green;">ç?»å½?æ??å??ï¼?</span>';
+    if (csdn.loginBack) csdn.loginBack(data);
+    csdn.closeLogin();
+};
+csdn.post = function (url, callback) {
+    var sc = document.createElement("script");
+    sc.type = 'text/javascript';
+    sc.async = true;
+    sc.src = url;
+    if (callback) {
+        if (sc.onload) sc.onload = callback;
+        else sc.onreadystatechange = callback;
+    }
+    document.body.appendChild(sc);
+};
+csdn.arr_isloaded = [];
+csdn.load_frm = function (url, loaded) {
+    var idx = csdn.arr_isloaded.length;
+    csdn.arr_isloaded[idx] = false;
+    var frm = document.createElement("iframe");
+    frm.style.width = '1px';
+    frm.style.height = '1px';
+    frm.style.visibility = 'hidden';
+    frm.src = url;
+    if (loaded) {
+        var call = function () {
+            if (!csdn.arr_isloaded[idx]) {
+                csdn.arr_isloaded[idx] = true;
+                loaded();
+            }
+        };
+        if (frm.onreadystatechange) {
+            frm.onreadystatechange = call;
+        } else {
+            frm.onload = call;
+        }
+        setTimeout(call, 5000);
+    }
+    document.body.appendChild(frm);
+};
+/*å? è½½æ ·å¼?è¡¨å??*/
+(function () {
+    if (typeof jQuery != 'undefined') {
+        jQuery(csdn.setStyle);
+    } else {
+        var ld = window.onload;
+        window.onload = function () {
+            if (ld) ld();
+            csdn.setStyle();
+        };
+    }
+})();
+
+

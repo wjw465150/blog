@@ -1,0 +1,555 @@
+﻿<HTML><HEAD>
+<META HTTP-EQUIV=Content-Type CONTENT=text/html; charset=UTF-8>
+<title>安装配置NFS服务器</title>
+<style type="text/css">
+<!--
+.9t {font-size: 9pt; color: #000000; font-family: "宋体";}
+-->
+</style></HEAD>
+<body bgcolor="#ffffff">
+<table width="90%" border="0" align="center" ><tr><td>
+<PRE class="9t">
+安装配置NFS服务器
+7.2  安装配置NFS服务器
+
+如果在Red Hat Enterprise Linux 5安装时已经默认安装了NFS组件，接下来的工作主要是配置相关文件使服务器提供NFS服务，步骤如下。
+
+（1）设定某台计算机为NFS服务器，并在后台启动相关的守护进程（在“服务配置”中启动）。一般来说，如果NFS服务器要提供服务，必须启动inet、
+portmap、nfs和mount这4个守护进程并保持在后台运行。
+
+（2）规划服务器分区，从安全等方面定义哪些分区作为要共享的文件系统。
+
+（3）在客户端列表中定义每一台客户机的参数。
+
+（4）修改/etc/exports。
+
+（5）重新启动NFS服务器，启动方法可采用命令行的方式，即/etc/rc.d/init.d/nfs restart。服务器端文件系统的共享设置有3种方法，一是直接修
+改/etc/exports文件；二是用exports命令来增加和删除目录；三是图形化的配置方法。
+
+7.2.1  了解NFS网络文件的系统结构
+
+NFS网络文件的系统结构包括如下目录结构：
+
+1．/etc/exports
+
+这个文件是NFS的主要配置文件，不过系统并没有默认值，所以这个文件不一定会存在。可能要使用vi主动建立起这个文件，接下来的设定也仅仅是这个文
+件。
+
+2．/usr/sbin/exportfs
+
+这是维护NFS共享资源的命令，我们可以用其重新分享/etc/exports变更的目录资源，并将NFS Server分享的目录卸载或重新分享等。这个命令是NFS系统中
+相当重要的一个，至于命令的用法在后面章节再介绍。
+
+3．/usr/sbin/showmount
+
+showmount命令主要用在Client端，可以用来查看NFS共享出来的目录资源。
+
+4．/var/lib/nfs/*tab
+
+在NFS服务器的登录文件都放置到/var/lib/nfs/目录中，在该目录下有两个比较重要的登录文件，一个是etab，主要记录了NFS所分享出来的目录的完整权
+限设定值；另一个是xtab，记录曾经连接到此NFS主机的相关客户端数据。
+
+7.2.2  配置/etc/exports文件
+
+用户可以把需要共享的文件系统直接编辑到/etc/exports文件中，这样当NFS服务器重新启动时系统就会自动读取/etc/exports文件，从而告诉内核要输出
+的文件系统和相关的存取权限。在下面的例子中显示了/etc/exports文件中几个条目项的内容，被挂载在/pub目录下的文件系统具有只读访问权限，所有的
+计算机在访问文件系统的时候不必经过安全检查。编辑/etc/exports文件：
+
+# vi /etc/exports
+
+/usr/sys/src -maproot=daemon host2
+
+/usr/ports -ro -network 192.168.1.0
+
+从上面这个例子中可以看出exports文件的格式，首先是定义要共享的文件目录。必须使用绝对路径，而不能使用符号链接。然后设置对这个目录进行访问
+限制的参数，用于保证安全性。在第1行设置中，将/usr/sys/src目录共享出去。但限制客户机上的root用户等价于本机上的daemon用户，以避免客户机上
+的root用户拥有这个服务器上的root权限进行非法操作。此后的host2参数是主机名，从而限制只有host2才能共享这个/usr/sys/src目录；第2行设置共
+享/usr/ports目录，但限制为只允许读取，并且也只有网络上的192.168.1.0计算机才能访问这个共享目录。
+
+#参数说明:
+ro：设置共享目录只读。
+rw：设置共享目录可读写。
+
+用户映射选项。在默认情况下，当客户端主机访问NFS服务器的时候，如果远程访问的用户是root用户，
+那么NFS服务器会将其映射为一个本地的匿名用户，使用nfsnobody账号，并且将它所属的用户组也映射为匿名用户组，用户组也为nfsnobody，
+这样有助于提高系统的安全性。用户映射选项主要有下述几种。
+all_squash：将远程访问的所有普通用户及所属用户组都映射为匿名用户或用户组，一般均为nfsnobody。
+no_all_squash：不将远程访问的所有普通用户及所属用户组都映射为匿名用户或用户组。
+
+root_squash：将root用户及所属用户组都映射为匿名用户或用户组。
+no_root_squash：不将root用户及所属用户组都映射为匿名用户或用户组。
+
+anonuid=xxx：将远程访问的所有用户都设置为匿名用户，并指定该匿名用户的账户为本地用户账户xxx。
+anongid=
+
+xxx：将远程访问的所有用户组都设置为匿名用户，并指定该匿名用户的账户组为本地用户组账户xxx。
+其他选项。针对其他选项可以对共享目录进行更为全面的控制。
+secure：限制客户端只能从小于1024的TCP/IP端口连接NFS服务器。
+
+insecure：允许客户端从大于1024的TCP/IP端口连接NFS服务器。
+sync：将数据同步写入内存缓冲区与磁盘中，虽然这样做效率较低，但是可以保证数据的一致性。
+
+async：将数据先保存在内存缓冲区，必要时才写入磁盘。
+wdelay：检查是否有相关的写操作，如果有则将这些写入一起执行，这样可以提高效率。
+
+no_wdelay：如果有写操作则立即执行，需要和sync配合使用。
+subtree_check：如果共享目录是一个子目录，则NFS服务器将检查其父目录的权限。
+
+no_subtree_check：即使共享目录是一个子目录，NFS服务器也不会检查其父目录的权限，这样可以提高效率。
+
+主机可以使用以下格式。
+
+（1）单个机器：一个全限定域名（能够被服务器解析）、主机名（能够被服务器解析）或IP地址。 （2）使用通配符来指定的机器系列，使用 * 或
+？字符来指定一个字符串匹配。IP地址中不使用通配符。如果反向DNS查询失败，它们可能会碰巧有用。在
+
+完整域名中指定通配符时，点（.）不包括在通配符中。例如，*.example.com包括one.example.com，但不包括one.two.example.com.。
+（3）IP网络：使用a.b.c.d/z，a.b.c.d是网络，z是子网掩码中的位数（如192.168.0.0/24）。另一种可以接受的格式是a.b.c.d/netmask，a.b.c.d是网
+
+络，netmask是子网掩码（如192.168.70.8/255.255.255.0）。
+
+
+激活服务portmap和nfsd  7.2.3
+
+激活服务portmap和nfsd
+
+命令如下： #  /etc/rc.d/init.d/portmap
+
+start #  /etc/rc.d/init.d/nfs
+
+start　　 portmap激活之后，就会出现一个端口号为111的sunrpc的服务。至于nfs则会激活至少两个以上的系统守护进程，然后就开始监听Client
+PC的需求。使用
+
+cat/var/log/messages可以查看操作是否成功： #cat
+
+/var/log/messages Nov 16 15:04:45 cao portmap: portmap startup
+
+succeeded Nov 16 15:04:53 cao nfs: Starting NFS  services:
+
+succeeded Nov 16 15:04:54 cao nfs: rpc.rquotad startup
+
+succeeded Nov 16 15:04:54 cao nfs: rpc.mountd startup
+
+succeeded Nov 16 15:04:54 cao nfs: rpc.nfsd startup
+
+succeeded  7.2.4
+
+exportfs命令
+
+如果修改了/etc/exports文件后不需要重新激活nfs，只要重新扫描一次/etc/exports文件，并且重新将设定加载即可： # exportfs
+
+[-aruv]
+
+参数说明如下。
+
+（1）-a：全部挂载（或卸载）/etc/exports文件内的设定。
+
+（2）-r：重新挂载/etc/exports中的设置，此外同步更新/etc/exports及/var/lib/nfs/xtab中的内容。
+
+（3）-u：卸载某一目录。
+
+（4）-v：在export时将共享的目录显示在屏幕上。  7.2.5
+
+检验目录/var/lib/nfs/xtab
+
+检验所共享的目录内容，查看/var/lib/nfs/xtab文件： # vi
+
+/var/lib/nfs/xtab  /home/cao
+
+192.168.0.1(rw,sync,wdelay,hide,secure,root_squash, no_all_squash,subtree_check,secure_locks,mapping=identity,anonuid=-2,
+
+anongid=-2)
+
+此即/home/cao这个共享出去的目录预设NFS中的属性。
+
+7.2.6  showmount
+
+showmount命令如下：
+
+# showmount [-ae] hostname
+
+参数说明如下。
+
+（1）-a或-all：以hostir这样的格式来显示客户主机名和挂载点目录。
+
+（2）-d或-directories：仅显示被客户挂载的目录名。
+
+（3）-e或-exports：显示NFS服务器的输出清单。
+
+（4）-h或-help：显示帮助信息。
+
+（5）-v或-version：显示版本信息。
+
+（6）--no-headers：禁止输出描述头部的信息。
+
+当要扫描某一主机所提供的NFS共享的目录时，使用showmount -e IP（或主机名称hostname）即可。
+观察激活的端口号
+
+7.2.7  观察激活的端口号
+命令如下：
+# netstat -utln 
+Active Internet connections (only SERVERs)
+Proto Recv-Q Send-Q Local Address    Foreign Address        State
+tcp        0      0 0.0.0.0:111    0.0.0.0              LISTEN &lt;== portmap
+tcp        0      0 0.0.0.017    0.0.0.0              LISTEN &lt;== rpc.xxxx 
+tcp        0      0 0.0.0.0:1266    0.0.0.0              LISTEN &lt;== rpc.xxxx
+udp        0      0 0.0.0.0:2049    0.0.0.0　　　　　　　　　&lt;== nfs 的端口
+udp        0      0 0.0.0.014    0.0.0.0　　　　　　　　　&lt;== rpc.xxxx
+udp        0      0 0.0.0.0:1327    0.0.0.0:*　　　　　　　　　&lt;== rpc.xxxx
+udp        0      0 0.0.0.0:111      0.0.0.0:*　　　　　　　　　&lt;== portmap
+nfs所开启的端口是2049，其他端口是RPC Server其他程序（例如rpc.mountd、rpc.rquotad及rpc.nfsd.）随机产生的。即端口号不会是固定的，每次
+restart nfs都会得到不一样的端口号。
+7.2.8  启动和停止NFS服务器
+在导出NFS文件系统的服务器中，nfs服务必须在运行。使用以下命令来查看NFS守护进程的状态：
+/sbin/service nfs status
+使用以下命令来启动NFS守护进程：
+/sbin/service nfs start
+使用以下命令来停止NFS守护进程：
+/sbin/service nfs stop
+要在引导时启动nfs服务，使用以下命令：
+/sbin/chkconfig --level 345 nfs on
+还可以使用ntsysv或服务配置工具来配置在引导时启动这些服务。
+7.3  NFS的图形化配置
+在Red Hat Enterprise Linux 5系统中，如果要配置NFS服务器，也可以使用NFS图形化配置方法，这种方法简单明了且方便快捷。
+
+
+
+NFS服务器配置窗口 
+
+
+7.3.1  NFS服务器配置窗口
+在shell提示符下输入system-config-nfs命令，打开“NFS服务器配置”窗口，如图7-4所示。
+
+图7-4  “NFS服务器配置”窗口
+7.3.2  添加NFS共享
+在“NFS服务器配置”窗口中，如果要添加共享目录，可单击工具栏中的“添加”按钮打开“添加NFS共享”对话框，如图7-5所示。
+
+图7-5  “添加NFS共享”对话框
+“基本”选项卡中的选项如下。
+（1）“目录”文本框：指要共享的目录，如/tmp/。
+（2）“主机”文本框：指要共享目录的主机。
+（3）“基本权限”选项组：指定共享目录应该有“只读”权限还是“读/写”权限。
+首先在“目录”文本框中输入要共享的目录路径，或单击“浏览”按钮，打开“选择一个目录”对话框，在其中可选择一个系统目录来共享。
+返回到“添加NFS共享”对话框，在“主机”文本框中输入主机名（即localhost或者输入NFS服务器的IP地址）作为NFS服务器名。在“基本权限”中为共享
+目录选择一个权限，系统默认是“只读”权限。
+7.3.3  常规选项
+返回到“添加NFS共享”对话框，单击“常规选项”标签，打开“常规选项”选项卡，如图7-6所示。
+
+图7-6  “常规选项”选项卡
+在该选项卡中，用户可根据需要选中相应的复选框，一般保留系统默认值即可。各个复选框的功能如下。
+（1）允许来自高于724的端口的连接：在号码小于724的端口上启动的服务必须以根用户身份启动，选择该复选框来允许根用户以外的用户来启动NFS服务。
+该复选框和insecure相对应。
+（2）允许不安全的文件锁定：不需要锁定请求，该复选框和insecure_locks相对应。
+（3）禁用子树检查：如果某文件系统的子目录被导出，但是整个文件系统没有被导出，服务器会检查所请求的文件是否在导出的子目录中。这种检查叫做
+“子树检查”（subtree checking），选择这个复选框来禁用子树检查。如果整个文件系统被导出，选择该复选框检查可以提高传输率。该复选框和
+no_subtree_check相对应。
+（4）按要求同步写操作：默认被启用，该复选框不允许服务器在请求被写入磁盘前回复这些请求。该复选框和sync相对应。如果清除该复选框，async选项
+会被使用。
+（5）立即强制同步写操作：不推迟写入磁盘的操作，该复选框和no_wdelay相对应。
+7.3.4  用户访问
+在“添加NFS共享”对话框中，单击“用户访问”标签，打开“用户访问”选项卡，如图7-7所示。
+各复选框的功能如下。
+（1）把远程根用户当做本地根用户：按照默认设置，根用户的用户ID和组群ID都是0。根权限压缩（root Squashing）把用户ID 0和组群ID 0映射为匿名的
+用户和组群ID，因此客户端上的根用户就不会在NFS服务器上具备根特权。如果选择这个复选框，根用户就不会被映射为匿名用户，客户端上的根用户就会
+对导出的目录拥有根特权。选择这个复选框会大大降低系统的安全性，除非绝对必要；否则不要选择。该复选框和no_root_squash相对应。
+
+图7-7  “用户访问”选项卡
+（2）把所有客户用户当作匿名用户：如果选择该复选框，所有用户和组群ID都会被映射为匿名用户。该复选框和all_squash相对应。
+（3）为匿名用户指定本地用户ID：如果把所有客户用户作为匿名用户选择，这个复选框会要求为匿名用户指定一个用户ID。该复选框和corresponds to 
+anonuid相对应。
+（4）为匿名用户指定本地组群ID：如果把所有客户用户当做匿名用户选择，这个复选框会要求为匿名用户指定一个组群ID。该复选框和corresponds to 
+anongid相对应。
+编辑NFS共享
+7.3.5  编辑NFS共享
+在“NFS服务器配置”窗口中，选择要编辑的NFS共享目录和文件，然后单击“属性”按钮。若要删除某个现存NFS共享，可从列表中选中它，然后单击“删
+除”按钮。单击“确定”按钮从列表中添加、编辑或删除某个NFS共享后，更改就会立即生效。服务器守护进程被重新启动，原有的配置文件被保存
+为/etc/exports.bak，新的配置文件被写入/etc/exports。NFS服务器图形化配置工具可直接读写/etc/exports配置文件，因此这个文件在使用该工具后仍
+可以手工修改，修改该文件后也可以使用这个工具。
+7.4  NFS的客户端配置
+配置NFS服务器以后，网络中不同的计算机在使用该文件系统之前必须先挂载该文件系统。用户既可以通过mount命令挂载，也可以通过在/etc/fstab中加入
+条目项实现，/etc/fstab中的条目项中包括一个NFS的挂载类型。NFS文件系统的名称由文件所在的主机名加上被挂载目录的路径名组成，两个部分通过冒号
+分开。例如，computer1:/home/project指示一个文件系统被挂载在计算机computer1中的/home/project中。
+这里推荐客户端使用mount命令来挂载，下面主要挂载的相关知识和方法，然后简单介绍直接编辑/etc/fstab文件的方法。
+7.4.1  使用mount命令
+用户同样可以在NFS的条目项中修改多个NFS特定的挂载选项，例如，可以指定往返数据包的大小和计算机等待系统响应的时间大小，或者指定一个文件系统
+是被硬挂载（hard-mounted）还是软挂载（soft-mounted）。对硬挂载文件系统来说，如果因为某种原因远程系统的响应失败，计算机将会持续地尝试建立
+连接；对软挂载文件系统来说，同样情况下，在指定的时间间隔后计算机将会放弃尝试建立连接而发送一个错误消息。默认采用硬挂载文件系统，系统硬挂
+载尝试失败时，对用户输入的响应也会停止。正是因为这样，有的用户更喜欢采用软挂载，它会使系统在尝试挂载失败后停止尝试。
+mount命令的格式如下：
+mount[-t vfstype] [-o  options] device dir
+mount命令参数非常多，如下为与NFS相关的参数。
+（1）-a：把/etc/fstab中列出的路径全部挂载。
+（2）-t：需要mount的类型，如nfs等。
+（3）-r：将mount的路径定为read only。
+（4）-v mount：过程的每一个操作都有message传回到屏幕上。
+（5）rsize=n：在NFS服务器读取文件时NFS使用的字节数，默认值是1 024个字节。
+（6）wsize=n：向NFS服务器写文件时NFS使用的字节数，默认值是1 024个字节。
+（7）timeo=n：从超时后到第1次重新传送占用的1/7秒的数目，默认值是7/7秒。
+（8）retry= 
+n：在放弃后台mount操作之前可以尝试的次数，默认值是7
+000次。
+（9）soft：使用软挂载的方式挂载系统，若Client的请求得不到回应，则重新请求并传回错误信息。
+（10）hard：使用硬挂载的方式挂载系统，该值是默认值，重复请求直到NFS服务器回应。
+（11）intr：允许NFS中断文件操作和向调用它的程序返回值，默认不允许文件操作被中断。
+（12）fg：一直在提示符下执行重复挂载。
+（13）bg：如果第1次挂载文件系统失败，继续在后台尝试执行挂载，默认值是失败后不在后台处理。 （14）tcp：对文件系统的挂载使用TCP，而不是默认的UDP。
+说明：mount NFS服务器的另一个重要参数是hard（硬）mount或soft（软）mount。
+采用hard mount，NFS客户机会不断地尝试与NFS服务器连接（在后台一般不会给出任何提示信息），直到挂载上为止。
+采用soft mount，会在前台尝试与NFS服务器连接，当收到错误信息后终止mount尝试，并给出相关信息。
+例如，hard mount： # mount -t nfs -o hard
+192.168.1.4:/home/cao
+/home/nfs/cao
+使用hard还是soft主要取决于访问的信息。例如，要查看NFS服务器的视频文件，不会希望由于一些意外的情况（如网络速度变得很慢）而使系统输出大量
+的错误信息。如果此时使用hard方式，系统就会等待，直到能够重新与NFS服务器建立连接传输信息。另外，如果是非关键数据，也可以使用hard方式，如 FTP一些数据等，这样在远程机器暂时连接不上或关闭时就不会挂起会话过程。
+
+扫描可以使用的NFS  Server目录 7.4.2
+扫描可以使用的NFS Server目录 在客户端本地建立mount
+point，使用mount挂载远程主机共享的目录。假设主机名是“www.cao.net”，使用showmount查看NFS Server可以共享的目录，然
+后将/home/public挂载在/home/ nfs/public下： # showmount
+-e www.cao.net Export list
+for        localhost:
+/tmp  *
+/home/linux *.cao.net
+/home/public  (everyone)
+/home/cao  192.168.1.4
+7.4.3
+卸载NFS网络文件系统 卸载NFS网络文件系统可以使用unmount命令：
+umount /home/nfs/public # unmount
+-a #取消所有已经挂载在mount上的路径
+如果关机时NFS服务器中还有客户联机，建议在关机之前先关闭portmap与nfsd系统服务。如果无法正确关闭，那么应执行命令“netstat
+-utlp”找出PID。  然后使用kill命令杀死进程，这样才能正常关机。
+7.4.4
+应用实例
+本节介绍如何挂载/home/cao目录。 首先建立这个目录，然后利用mount指令来挂载NFS服务器的/home/cao目录： # mkdir
+-p /home/nfs/cao # mount -t
+nfs
+
+192.168.1.4:/home/cao/home/nfs/cao  使用df命令查看挂载的目录，目录中已经包括NFS服务器IP地址的共享目录，如图7-8所示。
+图7-8
+挂载NFS服务器的共享目录
+
+挂载后，只要进入/home/nfs/cao目录，即进IP地址为“192.168.1.4”那台NFS服务器的/home/cao目录中。  其他挂载NFS文件系统的方法
+7.4.5
+其他挂载NFS文件系统的方法
+1．使用/etc/fstab来挂载NFS
+要挂载其他机器上的NFS共享的另一种方法是在/etc/fstab文件中添加一行，在这一行中必须声明NFS服务器的主机名、要导出的目录，以及要挂载NFS共享
+的本地机器目录。必须是根用户才能修改/etc/fstab文件。    /etc/fstab中每行的一般语法如下所示：  server:/usr/local/pub    /pubnfsrsize=8192,wsize=8192,timeo=
+14,intr
+挂载点/pub在客户端机器上必须存在。在客户端系统的/etc/fstab文件中添加这一行后在shell提示下键入命令mount，以及将会从服务器中挂载的挂载
+点/pub。
+2．使用autofs来挂载NFS
+挂载NFS共享的第3种方法是使用autofs，它使用automount守护进程来管理挂载点，只在文件系统被访问时才动态地挂载。
+autofs咨询主映射配置文件/etc/auto.master来决定要定义哪些挂载点，然后使用适用于各个挂载点的参数来启动automount守护进程。主映射配置中的每
+一行都定义一个挂载点，一个分开的映射文件定义在该挂载点下要挂载的文件系统。如/etc/auto.misc文件可能会定义/misc目录中的挂载点，这种关系
+在/etc/auto.master文件中会被定义。
+auto.master文件中的每个项目都有3个字段，第1个字段是挂载点；第2个字段是映射文件的位置；第3个字段可选，可以包括超时数值之类的信息。
+例如，要在机器上的/misc/myproject挂载点上挂载远程机penguin.example.net中的/project52目录，在auto.master文件中添加以下行：  /misc /etc/auto.misc --timeout
+60
+在/etc/auto.misc文件中添加以下行：  myproject-rw,soft,intr,rsize=8192,wsize= 
+
+8192
+penguin.example.net:/proj52
+/etc/auto.misc中的第1个字段是/misc子目录的名称，该目录被automount动态地创建，它不应该在客户端机器上实际存在；第2个字段包括挂载选项，如rw 代表读写访问权，第3个字段是要导出的NFS的位置，包括主机名和目录。 autofs是一种服务，要启动这项服务，在shell提示下键入以下命令：
+/sbin/service
+autofs restart 要查看活跃的挂载点，在shell提示下键入以下命令：
+/sbin/service
+autofs status 如果在autofs运行时修改了/etc/auto.master配置文件，则必须在shell提示下键入以下命令来通知automount守护进程重新载入配置文件：
+/sbin/service
+
+autofs  reload
+NFS服务器的故障排除  7.5
+NFS服务器的故障排除
+7.5.1
+故障排除思路
+NFS出现了故障，可以从以下几个方面着手检查。
+（1）NFS客户机和服务器的负荷是否太高，服务器和客户端之间的网络是否正常。
+（2）/etc/exports文件的正确性。 （3）必要时重新启动NFS或portmap服务。 运行下列命令重新启动portmap和NFS：
+service portmap restart
+service
+nfs
+start（4）检查客户端中的mount命令或/etc/fstab的语法是否正确。（5）查看内核是否支持NFS和RPC服务。 普通的内核应有的选项为CONFIG_NFS_FS=m、CONFIG_NFS_V3=y、CONFIG_NFSD=m、CONFIG_NFSD_V3=y和CONFIG_SUNRPC=m。
+我们可以使用常见的网络连接和测试工具ping及tracerroute来测试网络连接及速度是否正常，网络连接正常是NFS作用的基础。rpcinfo命令用于显示系统
+的RPC信息，一般使用-p参数列出某台主机的RPC服务。用rpcinfo-p命令检查服务器时，应该能看到portmapper、status、mountd nfs和nlockmgr。用该命
+令检查客户端时，应该至少能看到portmapper服务。
+7.5.2  NFS错误信息
+NFS错误信息如表7-2所示。
+错误信息
+ 描    述
+ 
+Too many levels of remote in path
+ 试图挂载一个存在的文件系统
+ 
+Permission denied
+ NFS服务器不让客户机挂接，也可能是因为用户在服务器上不存在
+ 
+No such host
+ 通常是DNS配置错误
+ 
+No such file or directory
+ 通常是访问的目录不存在
+ 
+NFS server is not responding 
+ 通常是NFS已经超过负载或者NFS已经停止工作
+ 
+Stale file handle 
+ 在NFS客户端关闭之前客户端访问的文件被删除
+ 
+Fake hostname 
+ Forward和reverse的DNS记录在NFS客户端下不存在
+ 
+
+7.5.3  使用nfsstat命令查看NFS服务器状态
+nfsstat命令显示关于NFS和到内核的远程过程调用（RPC）接口的统计信息，也可以使用该命令重新初始化该信息。如果未给定标志，默认是nfsstat -csnr
+命令。使用该命令显示每条信息，但不能重新初始化任何信息。
+nfsstat命令的主要参数如下。
+
+（1）-b：显示NFS V4服务器的其他统计信息。
+
+（2）c：只显示客户机端的NFS和RPC信息，允许用户仅查看客户机数据的报告。nfsstat命令提供关于被客户机发送和拒绝的RPC和NFS调用数目的信息。
+
+要只显示客户机NFS或者RPC信息，将该参数与-n或者-r参数结合。
+
+（3）-d：显示与NFS V4授权相关的信息。
+
+（4）-g：显示RPCSEC_GSS信息。
+
+（5）-m：显示每个NFS文件系统的统计信息，该文件系统和服务器名称、地址、安装标志、当前读和写大小，以及重新传输计数
+
+（6）-n：为客户机和服务器显示NFS信息。要只显示NFS客户机或服务器信息，将该参数与-c和-s参数结合。
+
+（7）-r：显示RPC信息。
+
+（8）-s：显示服务器信息。
+
+（9）-t：显示与NFS标识映射子系统的转换请求相关的统计信息，要只显示NFS客户机或服务器信息，将-c和-s&lt;br /&gt;选项结合。
+
+（10）-4：当与-c、-n、-s或-z参数组合使用时，将包含NFS V4客户机或服务器的信息，以及现有的NFS V2和V3数据&lt;br /&gt;。
+
+（11）-z：重新初始化统计信息。该参数仅供root用户使用，并且在显示上面的标志后可以和那些标志中的任何一个组合到&lt;br /&gt;统计信息的零特殊集合。
+
+要显示关于客户机发送和拒绝的RPC和NFS调用数目的信息，输入：
+
+nfsstat -c
+
+要显示和打印与客户机NFS调用相关的信息，输入如下命令：
+
+nfsstat -cn
+
+要显示和打印客户机和服务器的与RPC调用相关的信息，输入如下命令：
+
+nfsstat -r
+
+要显示关于服务器接收和拒绝的RPC和NFS调用数目的信息，输入如下命令：
+
+nfsstat -s
+
+7.5.4  NFS典型故障排除步骤
+
+1．个别客户端无法从一个或多个服务器导入
+
+（1）在客户端中检查下列内容。
+
+验证在客户端中是否有该本地目录，如果不存在，使用mkdir创建。例如，如下命令：
+
+# mkdir /opt/adobe
+
+检查局域网电缆是否没有损坏并已连接上，所有的连接是否有效。
+
+/etc/hosts是否存在并且有“相关信息”。
+
+/etc/fstab是否存在并且有“相关信息”，同时所有条目是否仍然指向服务器中的有效目录。
+
+/etc/resolv.conf是否存在并且有“相关信息”（仅适于DNS）。
+
+（2）在服务器中检查下列内容。
+
+客户端尝试挂接的目录是否已存在并在配置文件中列出。
+
+客户端是否具有挂接文件系统的权限。
+
+相关信息说明如下。
+
+/etc/hosts、/etc/fstab和/etc/resolv.conf中必须包含下列条目：
+
+? /etc/hosts：系统主机名和IP地址，例如：
+
+12.0.14.123 fredsys fredsys.mysite.myco.com
+
+类似以下的条目：
+
+127.0.0.1  localhost    loopback #[no SMTP]
+
+? /etc/fstab：对于标准挂接，每个导入的文件系统对应一个条目。
+
+? /etc/resolv.conf（仅域名服务[DNS]需要使用）：系统所在域的名称，例如：
+
+domain mysite.myco.com
+
+至少一个名称服务器，例如：
+
+nameserver 12.0.14.165
+
+2．所有客户端都无法从指定的服务器导入
+
+在服务器上执行下列步骤。
+
+（1）确保服务器已启动且正在运行，并且服务器和客户端之间的局域网连接有效（是否可以从服务器ping通连接客户端，并且反之也可）。
+
+（2）确保客户端要挂接的文件系统已在/etc/fstab中列出。
+
+（3）重新启动NFS服务器。
+
+如果这些补救方法都失败，而配置也正确（执行了上述所有测试），则服务器可能没有正确引导，应重新引导服务器。
+
+3．其他NFS常见故障排除
+
+（1）当mount NFS文件系统时，如果错误信息是“Permission denied”，则表示NFS服务器不允许客户机挂接。一般可以用更改服务端上的/etc/exports文
+件来解决问题，使用exportfs-rv命令重新导出文件系统。
+
+（2）如果出现的错误是“Program not registed”，则是NFS服务可能没有启动或者运行不正常，最常用的解决方法是重新启动NFS服务。
+
+（3）如果出现“RPC：Unable to receive”，则可能是服务端没有启动portmap服务；如果已经启动，则可能是被防火墙所屏蔽。
+
+（4）挂载文件系统的时候，客户端没有任何反应，则可能为客户端没有启动portmap服务。
+
+（5）在NFS服务器中共享目录输出失败。
+
+如果使用图形化窗口对共享目录进行配置，设置后必须测试共享目录的输出，以验证配置是否正确，通常图形化窗口不会报告配置错误。
+
+使用“exportfs  -v  -a”命令检查/etc/exports文件中设置的共享目录是否能够正常输出，其中选项“-v”表示以冗余模式显示，即显示每一步的细节。
+
+（6）显示“设备正忙”无法卸载。
+
+在使用umount命令卸载远程NFS共享目录时，出现“设备正忙”等卸载失败消息。通常可能的原因是有一个进程仍然在使用这个目录，可以使用lsof命令来
+查看是否有进程正在使用该共享目录。
+
+（7）挂载失败。
+
+如果在挂载NFS共享目录时，客户端提示“RPC（Remote Procedure Call）failed”，即远程过程调用失败消息，则很可能是因为服务器上带有约束性质的
+防火墙错误地阻止了NFS客户端挂载NFS共享，即防火墙封锁了NFS或者RPC端口。为了解决这个问题，可以使用iptable命令打开服务器上的111（RPC）和
+2049（NFS）端口，允许NFS客户端访问服务器。
+
+（8）NFS请求挂起。
+
+如果客户端正在执行写操作，而服务器无法响应或者在网络上变得不可访问，那么在默认情况下（使用hard选项进行挂载）客户端进程将挂起直到写操作完
+成。如果不中止写操作，进程就不能从请求中退出。为了避免NFS请求挂起，在网络状况不稳定情况下可以在挂载目录时指定soft选项以允许操作因超时而
+退出，或者指定intr选项以允许用户在命令行上通过按下Ctrl+C组合键退出挂起的操作。
+
+（9）NFS挂载在引导时挂起。
+
+如果在/etc/fstab文件中设置了自动挂载NFS，但在系统引导时NFS共享目录暂时不可用，那么默认情况下引导进程将进入等待状态，直到NFS目录变得可用
+为止。如果所需等待的NFS目录是系统必须的，那么这种等待可能还可以接受。然而在很多情况下，用户只想让系统把挂载请求放在后台并继续引导系统。
+可以把bg选项添加到/etc/fstab文件中，这样在首次挂载请求超时之后，挂载请求会转入后台，系统继续引导。当需要在前台挂载NFS共享目录时可以将fg
+选项添加到/etc/fstab文件的挂载选项中。
+
+7.6  本章小结
+
+NFS（Network File System，网络文件系统）是分布式计算机系统的一个组成部分，可实现在异构网络上共享和装配远程文件系统。本章介绍了NFS服务器
+的工作原理，安装配置NFS服务器的方法，NFS服务器的图形化配置过程，NFS的客户端配置和NFS服务器的故障排除方法。
+ 
+</PRE>
+</td></tr></table>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+
+</body>
+</HTML>

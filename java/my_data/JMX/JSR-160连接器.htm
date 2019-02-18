@@ -1,0 +1,128 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>JSR-160连接器</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<DIV class=titlepage 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: medium Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV>
+<DIV>
+<H2 class=title style="CLEAR: both">20.5.&nbsp;JSR-160连接器</H2></DIV></DIV></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: medium Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">对于远程访问，Spring 
+JMX模块在<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=literal>org.springframework.jmx.support</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>包内提供了两个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=classname>FactoryBean</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>实现，用来构建服务器端和客户端的连接器。</P>
+<DIV lang=zh-cn class=section 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: medium Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=titlepage>
+<DIV>
+<DIV>
+<H3 class=title><A 
+name=jmx-jsr160-server></A>20.5.1.&nbsp;服务器端连接器</H3></DIV></DIV></DIV>
+<P>使Spring JMX构建，启动和暴露一个JSR-160<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=classname>JMXConnectorServer</CODE>，要使用以下配置：</P><PRE class=code>&lt;bean id="serverConnector" class="org.springframework.jmx.support.ConnectorServerFactoryBean"/&gt;</PRE>
+<P><CODE class=literal>ConnectorServerFactoryBean</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>默认创建一个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=classname>JMXConnectorServer</CODE>， 并将其绑定到<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=literal>"service:jmx:jmxmp://localhost:9875"</CODE>。 因此该<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=literal>serverConnector</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>Bean在本机9875端口通过JMXMP协议将本地<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=interfacename>MBeanServer</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>暴露给客户。 
+要留意JSR160规范已将JMXMP协议标记为可选的，如今，主流的开源JMX实现MX4J和J2SE 5.0提供的实现都已不支持JMXMP了。</P>
+<P>要指定其他URL和要用<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=interfacename>MBeanServer</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>注册<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=classname>JMXConnectorServer</CODE>， 要使用相应的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=literal>serviceUrl</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=classname>ObjectName</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>属性：</P><PRE class=code>&lt;bean id="serverConnector"
+      class="org.springframework.jmx.support.ConnectorServerFactoryBean"&gt;
+  &lt;property name="objectName" value="connector:name=rmi"/&gt;
+  &lt;property name="serviceUrl" 
+            value="service:jmx:rmi://localhost/jndi/rmi://localhost:1099/myconnector"/&gt;
+&lt;/bean&gt;</PRE>
+<P>如果设置了<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=classname>ObjectName</CODE>，Spring将自动把连接器用该<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=classname>ObjectName</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>注册到<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=interfacename>MBeanServer</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>上。 以下例子展示了当创建一个JMX连接器时，你可以传给<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=classname>ConnectorServerFactoryBean</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的所有参数：</P><PRE class=code>&lt;bean id="serverConnector"
+      class="org.springframework.jmx.support.ConnectorServerFactoryBean"&gt;
+  &lt;property name="objectName" value="connector:name=iiop"/&gt;
+  &lt;property name="serviceUrl" 
+               value="service:jmx:iiop://localhost/jndi/iiop://localhost:900/myconnector"/&gt;
+  &lt;property name="threaded" value="true"/&gt;
+  &lt;property name="daemon" value="true"/&gt;
+  &lt;property name="environment"&gt;
+    &lt;map&gt;
+      &lt;entry key="someKey" value="someValue"/&gt;
+    &lt;/map&gt;
+  &lt;/property&gt;
+&lt;/bean&gt;</PRE>
+<P>要注意的是，当使用一个基于RMI的连接器，你要先启动查找服务（tnameserv或者rmiregistry），以便完成命名注册。 
+如果你在使用Spring将远程服务通过RMI输出，那么Spring已经构建了一个RMI注册服务。如果没有使用Spring，通过使用以下配置片段，你也可以很容易地启动一个注册服务。</P><PRE class=code>&lt;bean id="registry" class="org.springframework.remoting.rmi.RmiRegistryFactoryBean"&gt;
+  &lt;property name="port" value="1099"/&gt;
+&lt;/bean&gt;</PRE></DIV>
+<DIV lang=zh-cn class=section 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: medium Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=titlepage>
+<DIV>
+<DIV>
+<H3 class=title><A 
+name=jmx-jsr160-client></A>20.5.2.&nbsp;客户端连接器</H3></DIV></DIV></DIV>
+<P>要构建一个<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=classname>MBeanServerConnection</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>到一个远程的JSR-160<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=interfacename>MBeanServer</CODE>， 使用以下所示的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+class=classname>MBeanServerConnectionFactoryBean</CODE>。</P><PRE class=code>&lt;bean id="clientConnector" class="org.springframework.jmx.support.MBeanServerConnectionFactoryBean"&gt;
+  &lt;property name="serviceUrl" value="service:jmx:rmi://localhost:9875"/&gt;
+&lt;/bean&gt;</PRE></DIV>
+<DIV lang=zh-cn class=section 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: medium Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=titlepage>
+<DIV>
+<DIV>
+<H3 class=title><A 
+name=jmx-jsr160-protocols></A>20.5.3.&nbsp;基于Burlap/Hessian/SOAP的JMX</H3></DIV></DIV></DIV>
+<P>JSR-160运行扩展客户端与服务器端交流的方式。上面的例子都使用了强制的基于RMI的实现，这是JSR-160规范（IIOP和JRMP）和（可选的JMXMP）要求的。 
+通过使用其他提供商的或者其他的JMX实现（例如<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+href="http://www.iteedu.com/webtech/j2ee/spring25cn/ch20s08.php" 
+target=_top>MX4J</A>），你就可以享受其他协议， 如SOAP，Hessian，基于HTTP或SSL的Burlap，或者其他协议：</P><PRE class=code>&lt;bean id="serverConnector" class="org.springframework.jmx.support.ConnectorServerFactoryBean"&gt;
+  &lt;property name="objectName" value="connector:name=burlap"/&gt;
+  &lt;property name="serviceUrl" value="service:jmx:burlap://localhost:9874"/&gt;
+&lt;/bean&gt;</PRE>
+<P>上述例子中，使用了MX4J 3.0.0，更多的信息请查看MX4J官方文档。</P></DIV></body>
+</html>

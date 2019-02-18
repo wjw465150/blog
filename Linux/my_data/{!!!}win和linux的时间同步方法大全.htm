@@ -1,0 +1,25 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;" charset=UTF-8"UTF-8">
+  <title>{!!!}win和linux的时间同步方法大全</title>
+  <style type="text/css">
+<!--
+.9t {font-size: 9pt; color: #000000; font-family: "宋体";}
+-->
+  </style>
+</head>
+<body bgcolor="#ffffff">
+<table align="center" border="0" width="90%">
+  <tbody>
+    <tr>
+      <td>
+      <pre class="9t">net time /setsntp:10.128.3.101<br><br>net time /QUERYSNTP<br><br>w32tm /resync<br><br><br>###################################################################<br>win和linux的时间同步方法大全<br>###################################################################<br><br>1 windows 如何从广域网时间服务器，同步时间？ <br>1)将时间服务器改成，中国科学院国家授时中心      <br>net time /setsntp:210.72.145.44<br>2)启动时间同步服务<br>sc start w32time<br>3)同步时间<br>w32tm /resync实际上，大多数情况下，光作第三步即可。<br><br>2 linux 如何从广域网时间服务器，同步时间？ <br>同步时间<br>ntpdate 210.72.145.44<br><br><br>###################################################################<br>为什么不用ntpdate，而要用ntpd<br>###################################################################<br>时钟的跃变，有时候会导致很严重的问题。许多应用程序依赖连续的时钟--毕竟，这是一项常见的假定，即，取得的时间是线性的，一些操作，例如数据库事务，通常会地依赖这样的事实：时间不会往回跳<br>跃。<br>不幸的是，ntpdate调整时间的方式就是我们所说的”跃变“：在获得一个时间之后，ntpdate使用settimeofday(2)设置系统时间，这有几个非常明显的问题：<br>第一，这样做不安全。ntpdate的设置依赖于ntp服务器的安全性，攻击者可以利用一些软件设计上的缺陷，拿下ntp服务器并令与其同步的服务器执行某些消耗性的任务。由于ntpdate采用的方式是跳变，跟<br>随它的服务器无法知道是否发生了异常（时间不一样的时候，唯一的办法是以服务器为准）。<br>第二，这样做不精确。一旦ntp服务器宕机，跟随它的服务器也就会无法同步时间。与此不同，ntpd不仅能够校准计算机的时间，而且能够校准计算机的时钟。<br>第三，这样做不够优雅。由于是跳变，而不是使时间变快或变慢，依赖时序的程序会出错（例如，如果ntpdate发现你的时间快了，则可能会经历两个相同的时刻，对某些应用而言，这是致命的）。<br>因而，唯一一个可以令时间发生跳变的点，是计算机刚刚启动，但还没有启动很多服务的那个时候。其余的时候，理想的做法是使用ntpd来校准时钟，而不是调整计算机时钟上的时间。<br><br>###################################################################<br>Linux系统时钟同步服务NTPD配置方法<br>###################################################################<br>    下述设置以时钟源服务器IP地址为192.168.0.1为例。<br><br>    可以命令ntpstat   和   ntpq -p 查看本机NTPD服务状态。<br><br>    配置完成后，均需要重新启动NTPD服务 service ntpd restart<br>    ntpd的端口是 UPD 123 <br><br>    【服务器端设置】(192.168.0.1)<br><br>    1.将/etc/下的文件ntp.conf修改如下：<br>    添加<br>    #wjw_add<BR>restrict default kod nomodify notrap nopeer noquery notrust #默认对所有client拒绝所有的操作<BR>restrict 127.0.0.1&nbsp;&nbsp; #允许本机地址的一切操作<BR>restrict 192.168.0.0 mask 255.255.255.0 nomodify&nbsp; #允许局域网内所有client连接到这台服务器同步时间.但是拒绝让他们修改服务器上的时间</pre>
+      <pre class="9t"># 如果无法与上层ntp server通信以本地时间为标准时间<BR>server&nbsp;&nbsp;&nbsp; 127.127.1.0&nbsp;&nbsp;&nbsp; # local clock<BR>fudge&nbsp;&nbsp;&nbsp; 127.127.1.0 stratum 10<BR>   2. 启动服务: service ntpd restart<br><br>    【客户端设置】(192.168.0.2)<br>    1.将/etc/下的文件ntp.conf修改如下：<br>    添加 <br>    server 192.168.0.1<br>    2. 启动服务: service ntpd start<br>    3. 测查看状态:  ntpq -p<br><span
+ style="FONT-WEIGHT: bold">错误1.Server dropped: Strata too high</span><br>在ntp客户端运行ntpdate serverIP，出现no server suitable for synchronization found的错误。<br>在ntp客户端用ntpdate –d serverIP查看，发现有“Server dropped: strata too high”的错误，并且显示“stratum 16”。而正常情况下stratum这个值得范围是“0~15”。<br>这是因为NTP server还没有和其自身或者它的server同步上。</pre>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<P>&nbsp;</P>
+</body>

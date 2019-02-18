@@ -1,0 +1,532 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>SwingWorker应用举例</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: 宋体, Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+</style>
+
+</head>
+
+<body><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">在开发Java 
+Swing应用程序的过程中，有两个原则是必须要牢记的：</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">&nbsp;&nbsp;&nbsp;&nbsp;1.耗时的操作（例如从数据库查询大量数据，读取URI资源等）一定不能运行在EDT(事件派发线程)上，否则会导致Swing用户界面失去响应。</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">&nbsp;&nbsp;&nbsp;&nbsp;2.只能在EDT线程上对Swing 
+Components进行访问。</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">&nbsp;&nbsp;&nbsp;&nbsp;基于上面两点原因，在一个Java 
+Swing程序中，要想使用户界面响应灵敏，至少应该有两个线程；一个线程用来执行耗时操作，EDT线程用来执行所有与Swing 
+Components的交互，例如更新文本，重绘图形等等。这就要求两个线程之间要相互通讯，给程序的开发带来了不少的难度，Swing 
+Worker的出现从根本上解决了这个问题，使程序员快速开发反应灵敏的的Swing程序成为可能。SwingWoker被设计应用在此种场景下，你有一个耗时操作需要运行在后台，在该操作完成或部分完成时，你要利用操作返回的结果去更新用户界面。</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">&nbsp;&nbsp;&nbsp;&nbsp;让我们假想有这样一个应用场景，我有一个保存联系人的文件，我需要从中读取并解析出所有联系人的信息，并及时更新在一个JTable中；假设这个文件非常的大，解析出所有联系人的信息需要花费几分钟的时间，如果不能很好的协调这个任务和EDT线程，则很有可能会造成用户在几分钟时间里得不到结果，而Swing界面处于无响应状态。在这种情况下，SwingWorker就是一个绝佳的选择。我们首先看一下SwingWorker的定义：</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">&nbsp;&nbsp;&nbsp;&nbsp;public 
+abstract class<SPAN class=Apple-converted-space>&nbsp;</SPAN></SPAN><STRONG 
+style="FONT-SIZE: 13px; FONT-FAMILY: Verdana, Geneva, Arial, Helvetica, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: 16px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">SwingWorker&lt;T,V&gt;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></STRONG><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">extends<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><A title="class in java.lang" 
+style="TEXT-DECORATION: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: navy; FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto" 
+href="http://download.oracle.com/javase/6/docs/api/java/lang/Object.html">Object</A><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">&nbsp;implements<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><A 
+title="interface in java.util.concurrent" 
+style="TEXT-DECORATION: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: navy; FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto" 
+href="http://download.oracle.com/javase/6/docs/api/java/util/concurrent/RunnableFuture.html">RunnableFuture</A><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">&lt;T&gt;</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">显然，这时一个抽象的模板类，在应用的时候，我们需要继承SwingWorker并实例化模板参数。那么，这两个模板类型究竟是什么意思呢，T参数代表的是你的耗时任务执行完成时返回的结果类型，V代表的是你的耗时任务部分完成时返回的结果类型。在我们的场景中，假设任务完成时我们需要一个List&lt;BeanContact&gt;(BeanContact是一个保存联系人信息的JavaBean),每当从文件中解析出一个联系人信息时，我们会新建一个BeanContact并需要更新到JTable中。那么我们的T就是List&lt;BeanContact&gt;,而V就是BeanContact,则应该定义如下的类：</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); FONT: 13px/16px Verdana, Geneva, Arial, Helvetica, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><FONT style="FONT-SIZE: 13px; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: 16px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto" face=Verdana>public class LoadContactsTask extends 
+SwingWorker&lt;List&lt;BeanContact&gt;, BeanContact&gt; 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px"><FONT face=Verdana>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;@Override<BR>&nbsp;&nbsp;&nbsp; 
+protected List&lt;BeanContact&gt; doInBackground() throws Exception 
+{</FONT><FONT face=Verdana><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//To do the 
+task and return the result<BR>&nbsp;&nbsp;&nbsp; 
+}</FONT></P><BR>&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;从上面可以看到，我们还必须覆盖SwingWorker的doInBackground方法，该方法执行我们的耗时操作，并且返回模板实例化时的T类型结果。下面是具体的代码实现：<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px"><FONT face=Verdana>&nbsp;&nbsp;&nbsp;&nbsp;@Override<BR>&nbsp;&nbsp;&nbsp; protected 
+List&lt;BeanContact&gt; doInBackground() throws Exception 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; BufferedReader reader = new 
+BufferedReader(new 
+FileReader("c:/contacts.cff"));<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String line = 
+   null;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; while ((line = 
+reader.readLine()) != null) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String[] 
+strContacts = 
+line.split(",");<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+BeanContact contact = new 
+BeanContact();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contact.setName(strContacts[0]);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contact.setSex(strContacts[1]);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contact.setPhone(strContacts[2]);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contact.setEmail(strContacts[3]);</FONT></P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px"><FONT face=Verdana>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lineCnt++;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+publish(contact);/*********/<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contacts.add(contact);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Thread.sleep(100);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 
+contacts;<BR>&nbsp;&nbsp;&nbsp; 
+}</FONT></P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;该方法很简单，就是从文件中读取一个联系人的记录并且新建一个BeanContact实例添加到结果集中。我们需要注意的是其中的publish方法，该方法用来发布部分执行结果，每读取一个联系人信息，我们就用该方法把新建的BeanContact发布出去。我们需要知道的是，在publish若干个结果后（可能是一个或多个，由SwingWorker类实现）SwingWorker类的process方法会被自动回调，而我们可以在其中去更新用户界面，SwingWorker保证process方法中所有操作都运行在EDT线程中。下面是我们的具体实现：<BR>&nbsp;&nbsp;&nbsp;&nbsp;<FONT face=Verdana>@Override<BR>&nbsp;&nbsp;&nbsp; protected void 
+process(List&lt;BeanContact&gt; chunks) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (progressHandle != null) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+progressHandle.processInProgress(chunks, lineCnt * 100 / 
+10000);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<BR>&nbsp;&nbsp;&nbsp; 
+}</FONT><BR>&nbsp;&nbsp;&nbsp;&nbsp;我们的实现中，process中会调用IProgressHandle（自定义的一个接口，用来更新用户界面，详见后面代码）的processInProgress方法来更新用户界面，大家会注意到process方法的参数是一个List&lt;BeanContact&gt;,为什么不是一个BeanContact呢，答案就是我们在上面讲过的，有可能publish若干次后才调用process方法。<BR>&nbsp;&nbsp;&nbsp;&nbsp;与此类似，在doInBackground完成后，SwingWorker会自动调用done方法，下面是我们的实现：<BR>&nbsp;&nbsp;&nbsp;&nbsp;<FONT face=Verdana>@Override<BR>&nbsp;&nbsp;&nbsp; protected void done() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (progressHandle != null) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+progressHandle.processComplete(contacts);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;客户端如何来使用用SwingWork呢，很简单，只需要新建一个实例并且调用它的execute方法即可，他会自动调用doInBackground方法来完成操作；以下是完整的代码实现：<BR>&nbsp;&nbsp;&nbsp;&nbsp;<BR>&nbsp;&nbsp;&nbsp;&nbsp;
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/*<BR>&nbsp;* 
+To change this template, choose Tools | Templates<BR>&nbsp;* and open the 
+template in the editor.<BR>&nbsp;*/<BR>package swingworkertest;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/**<BR>&nbsp;*<BR>&nbsp;* 
+@author Administrator<BR>&nbsp;*/<BR>public class BeanContact 
+{<BR>&nbsp;&nbsp;&nbsp; private String name=null;<BR>&nbsp;&nbsp;&nbsp; private 
+String sex=null;<BR>&nbsp;&nbsp;&nbsp; private String 
+phone=null;<BR>&nbsp;&nbsp;&nbsp; private String email=null;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @return the name<BR>&nbsp;&nbsp;&nbsp;&nbsp; 
+*/<BR>&nbsp;&nbsp;&nbsp; public String getName() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 
+name;<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @param name the name to 
+set<BR>&nbsp;&nbsp;&nbsp;&nbsp; */<BR>&nbsp;&nbsp;&nbsp; public void 
+setName(String name) {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.name = 
+name;<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @return the sex<BR>&nbsp;&nbsp;&nbsp;&nbsp; 
+*/<BR>&nbsp;&nbsp;&nbsp; public String getSex() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 
+sex;<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @param sex the sex to 
+set<BR>&nbsp;&nbsp;&nbsp;&nbsp; */<BR>&nbsp;&nbsp;&nbsp; public void 
+setSex(String sex) {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.sex = 
+sex;<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @return the phone<BR>&nbsp;&nbsp;&nbsp;&nbsp; 
+*/<BR>&nbsp;&nbsp;&nbsp; public String getPhone() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 
+phone;<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @param phone the phone to 
+set<BR>&nbsp;&nbsp;&nbsp;&nbsp; */<BR>&nbsp;&nbsp;&nbsp; public void 
+setPhone(String phone) {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.phone = 
+  phone;<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @return the email<BR>&nbsp;&nbsp;&nbsp;&nbsp; 
+*/<BR>&nbsp;&nbsp;&nbsp; public String getEmail() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 
+email;<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @param email the email to 
+set<BR>&nbsp;&nbsp;&nbsp;&nbsp; */<BR>&nbsp;&nbsp;&nbsp; public void 
+setEmail(String email) {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.email = 
+  email;<BR>&nbsp;&nbsp;&nbsp; }<BR>&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>}<BR></P><BR>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/*<BR>&nbsp;* 
+To change this template, choose Tools | Templates<BR>&nbsp;* and open the 
+template in the editor.<BR>&nbsp;*/</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/*<BR>&nbsp;* 
+Contacts.java<BR>&nbsp;*<BR>&nbsp;* Created on 2011-6-25, 
+10:40:13<BR>&nbsp;*/<BR>package swingworkertest;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">import 
+javax.swing.JFileChooser;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/**<BR>&nbsp;*<BR>&nbsp;* 
+@author Administrator<BR>&nbsp;*/<BR>public class Contacts extends 
+javax.swing.JFrame {</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/** Creates new form Contacts */<BR>&nbsp;&nbsp;&nbsp; public Contacts() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+initComponents();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; handle = new 
+DefaultProgressHandle();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+handle.setTable(jTable1);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+handle.setProgressBar(jProgressBar1);<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/** This method is called from within the constructor 
+to<BR>&nbsp;&nbsp;&nbsp;&nbsp; * initialize the 
+form.<BR>&nbsp;&nbsp;&nbsp;&nbsp; * WARNING: Do NOT modify this code. The 
+content of this method is<BR>&nbsp;&nbsp;&nbsp;&nbsp; * always regenerated by 
+the Form Editor.<BR>&nbsp;&nbsp;&nbsp;&nbsp; */<BR>&nbsp;&nbsp;&nbsp; 
+@SuppressWarnings("unchecked")<BR>&nbsp;&nbsp;&nbsp; // &lt;editor-fold 
+defaultstate="collapsed" desc="Generated 
+Code"&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp;&nbsp;&nbsp; private void 
+initComponents() {</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jButton1 = new 
+javax.swing.JButton();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; jTextField1 =  
+ new javax.swing.JTextField();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; jScrollPane1 = 
+  new 
+javax.swing.JScrollPane();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; jTable1 
+= new javax.swing.JTable();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jButton2 = new 
+javax.swing.JButton();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; jProgressBar1 = 
+  new javax.swing.JProgressBar();</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jButton1.setText("浏览");<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jButton1.addActionListener(new java.awt.event.ActionListener() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; public 
+void actionPerformed(java.awt.event.ActionEvent evt) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jButton1ActionPerformed(evt);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jTextField1.setEditable(false);</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jTable1.setModel(new 
+javax.swing.table.DefaultTableModel(<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+new Object [][] {</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+},<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; new 
+String [] 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+"姓名", "性别", "电话", 
+"电子邮件"<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Class[] 
+types = new Class [] 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+java.lang.String.class, java.lang.String.class, java.lang.String.class, 
+java.lang.String.class<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+};</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+public Class getColumnClass(int columnIndex) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+return types 
+[columnIndex];<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+});<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jScrollPane1.setViewportView(jTable1);</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jButton2.setText("加载联系人");<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jButton2.addActionListener(new java.awt.event.ActionListener() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; public 
+void actionPerformed(java.awt.event.ActionEvent evt) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jButton2ActionPerformed(evt);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+javax.swing.GroupLayout layout = new 
+javax.swing.GroupLayout(getContentPane());<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+getContentPane().setLayout(layout);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+layout.setHorizontalGroup(<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addGroup(javax.swing.GroupLayout.Alignment.TRAILING, 
+layout.createSequentialGroup()<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addContainerGap()<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING, 
+javax.swing.GroupLayout.DEFAULT_SIZE, 557, 
+Short.MAX_VALUE)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addComponent(jProgressBar1, javax.swing.GroupLayout.Alignment.LEADING, 
+javax.swing.GroupLayout.DEFAULT_SIZE, 557, 
+Short.MAX_VALUE)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addComponent(jButton2, javax.swing.GroupLayout.Alignment.LEADING, 
+javax.swing.GroupLayout.DEFAULT_SIZE, 557, 
+Short.MAX_VALUE)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addGroup(layout.createSequentialGroup()<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, 97, 
+Short.MAX_VALUE)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addGap(18, 18, 
+18)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 442, 
+javax.swing.GroupLayout.PREFERRED_SIZE)))<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addContainerGap())<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+layout.setVerticalGroup(<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addGroup(layout.createSequentialGroup()<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addContainerGap()<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addComponent(jButton1)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 
+javax.swing.GroupLayout.DEFAULT_SIZE, 
+javax.swing.GroupLayout.PREFERRED_SIZE))<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addComponent(jButton2)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 120, 
+javax.swing.GroupLayout.PREFERRED_SIZE)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addComponent(jProgressBar1, javax.swing.GroupLayout.PREFERRED_SIZE, 22, 
+javax.swing.GroupLayout.PREFERRED_SIZE)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+.addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, 
+Short.MAX_VALUE))<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; );</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+layout.linkSize(javax.swing.SwingConstants.VERTICAL, new java.awt.Component[] 
+{jButton1, jButton2, jTextField1});</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+pack();<BR>&nbsp;&nbsp;&nbsp; }// 
+&lt;/editor-fold&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) 
+{&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+ContactsFileFilter filter = new 
+ContactsFileFilter();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+JFileChooser chooser = new 
+JFileChooser();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+chooser.setFileFilter(filter);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int 
+returnVal = 
+chooser.showOpenDialog(null);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+if(returnVal == 
+JFileChooser.APPROVE_OPTION){<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+jTextField1.setText(chooser.getSelectedFile().getAbsolutePath());<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp; 
+}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) 
+{&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+// TODO add your handling code 
+here:<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; LoadContactsTask task = new 
+LoadContactsTask(jTextField1.getText());<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+task.setProgressHandle(handle);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+task.execute();<BR>&nbsp;&nbsp;&nbsp; 
+}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @param args the command line 
+arguments<BR>&nbsp;&nbsp;&nbsp;&nbsp; */<BR>&nbsp;&nbsp;&nbsp; public static 
+void main(String args[]) {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+java.awt.EventQueue.invokeLater(new Runnable() {</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+public void run() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Contacts contacts = new 
+Contacts();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contacts.setTitle("Contacts");;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contacts.setVisible(true);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; });<BR>&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp; DefaultProgressHandle handle = 
+null;<BR>&nbsp;&nbsp;&nbsp; // Variables declaration - do not 
+modify&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp;&nbsp;&nbsp; private 
+javax.swing.JButton jButton1;<BR>&nbsp;&nbsp;&nbsp; private javax.swing.JButton 
+jButton2;<BR>&nbsp;&nbsp;&nbsp; private javax.swing.JProgressBar 
+jProgressBar1;<BR>&nbsp;&nbsp;&nbsp; private javax.swing.JScrollPane 
+jScrollPane1;<BR>&nbsp;&nbsp;&nbsp; private javax.swing.JTable 
+jTable1;<BR>&nbsp;&nbsp;&nbsp; private javax.swing.JTextField 
+jTextField1;<BR>&nbsp;&nbsp;&nbsp; // End of variables 
+declaration&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>}<BR></P><BR>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/*<BR>&nbsp;* 
+To change this template, choose Tools | Templates<BR>&nbsp;* and open the 
+template in the editor.<BR>&nbsp;*/<BR>package swingworkertest;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">import 
+java.io.File;<BR>import javax.swing.filechooser.FileFilter;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/**<BR>&nbsp;*<BR>&nbsp;* 
+@author Administrator<BR>&nbsp;*/<BR>public class ContactsFileFilter extends 
+FileFilter{</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+public boolean accept(File pathname) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+if(pathname.isDirectory()){<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+return true;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}else{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+return 
+pathname.getName().endsWith(".cff");<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+@Override<BR>&nbsp;&nbsp;&nbsp; public String getDescription() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return "Text 
+Files";<BR>&nbsp;&nbsp;&nbsp; }<BR>&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>}<BR></P><BR>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/*<BR>&nbsp;* 
+To change this template, choose Tools | Templates<BR>&nbsp;* and open the 
+template in the editor.<BR>&nbsp;*/<BR>package swingworkertest;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">import 
+java.util.List;<BR>import javax.swing.JProgressBar;<BR>import 
+javax.swing.JTable;<BR>import javax.swing.table.DefaultTableModel;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/**<BR>&nbsp;*<BR>&nbsp;* 
+@author Administrator<BR>&nbsp;*/<BR>public class DefaultProgressHandle 
+implements IProgressHandle {</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+private JTable table = null;<BR>&nbsp;&nbsp;&nbsp; private JProgressBar progressBar =   
+  null;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+public void processInProgress(List&lt;BeanContact&gt; contacts, int progress) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DefaultTableModel model = 
+(DefaultTableModel) 
+table.getModel();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (BeanContact 
+contact : contacts) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String[] 
+strArray = {contact.getName(), contact.getSex(), contact.getPhone(), 
+contact.getEmail()};<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+model.addRow(strArray);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+progressBar.setValue(progress);<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+public void processComplete(List&lt;BeanContact&gt; contacts) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+progressBar.setValue(progressBar.getMaximum());<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @param table the table to 
+set<BR>&nbsp;&nbsp;&nbsp;&nbsp; */<BR>&nbsp;&nbsp;&nbsp; public void 
+setTable(JTable table) {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.table = 
+  table;<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @param progressBar the progressBar to 
+set<BR>&nbsp;&nbsp;&nbsp;&nbsp; */<BR>&nbsp;&nbsp;&nbsp; public void 
+setProgressBar(JProgressBar progressBar) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.progressBar = 
+progressBar;<BR>&nbsp;&nbsp;&nbsp; }<BR>}<BR></P><BR>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/*<BR>&nbsp;* 
+To change this template, choose Tools | Templates<BR>&nbsp;* and open the 
+template in the editor.<BR>&nbsp;*/<BR>package swingworkertest;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">import 
+java.util.List;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/**<BR>&nbsp;*<BR>&nbsp;* 
+@author Administrator<BR>&nbsp;*/<BR>public interface IProgressHandle 
+{<BR>&nbsp;&nbsp;&nbsp; public abstract void 
+processInProgress(List&lt;BeanContact&gt; contacts,int 
+progress);<BR>&nbsp;&nbsp;&nbsp; public abstract void 
+processComplete(List&lt;BeanContact&gt; contacts);<BR>}<BR></P><BR>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/*<BR>&nbsp;* 
+To change this template, choose Tools | Templates<BR>&nbsp;* and open the 
+template in the editor.<BR>&nbsp;*/<BR>package swingworkertest;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">import 
+java.io.BufferedReader;<BR>import java.io.FileReader;<BR>import 
+java.util.ArrayList;<BR>import java.util.List;<BR>import 
+javax.swing.SwingWorker;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">/**<BR>&nbsp;*<BR>&nbsp;* 
+@author Administrator<BR>&nbsp;*/<BR>public class LoadContactsTask extends 
+SwingWorker&lt;List&lt;BeanContact&gt;, BeanContact&gt; {</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+private String fileName = null;<BR>&nbsp;&nbsp;&nbsp; private IProgressHandle progressHandle =   
+  null;<BR>&nbsp;&nbsp;&nbsp; private List&lt;BeanContact&gt; 
+contacts = null;<BR>&nbsp;&nbsp;&nbsp; private int lineCnt = 0;</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+public LoadContactsTask(String fileName) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.fileName = 
+fileName;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; contacts = new 
+ArrayList&lt;BeanContact&gt;();<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+@Override<BR>&nbsp;&nbsp;&nbsp; protected List&lt;BeanContact&gt; 
+doInBackground() throws Exception 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; BufferedReader reader = new 
+BufferedReader(new 
+FileReader("c:/contacts.cff"));<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String line = 
+   null;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; while ((line = 
+reader.readLine()) != null) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String[] 
+strContacts = 
+line.split(",");<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+BeanContact contact = new 
+BeanContact();<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contact.setName(strContacts[0]);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contact.setSex(strContacts[1]);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contact.setPhone(strContacts[2]);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contact.setEmail(strContacts[3]);</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lineCnt++;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+publish(contact);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+contacts.add(contact);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Thread.sleep(100);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 
+contacts;<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+/**<BR>&nbsp;&nbsp;&nbsp;&nbsp; * @param progressHandle the progressHandle to 
+set<BR>&nbsp;&nbsp;&nbsp;&nbsp; */<BR>&nbsp;&nbsp;&nbsp; public void 
+setProgressHandle(IProgressHandle progressHandle) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.progressHandle = 
+progressHandle;<BR>&nbsp;&nbsp;&nbsp; }</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+@Override<BR>&nbsp;&nbsp;&nbsp; protected void process(List&lt;BeanContact&gt; 
+chunks) {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (progressHandle != 
+null) {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+progressHandle.processInProgress(chunks, lineCnt * 100 / 
+10000);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<BR>&nbsp;&nbsp;&nbsp; 
+}</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;&nbsp;&nbsp; 
+@Override<BR>&nbsp;&nbsp;&nbsp; protected void done() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (progressHandle != null) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+progressHandle.processComplete(contacts);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp; }<BR>}</P>
+<P 
+style="FONT-SIZE: 13px; MARGIN: 10px 0px; LINE-HEIGHT: 19px; TEXT-INDENT: 20px">&nbsp;</P></FONT></FONT></body>
+</html>

@@ -1,0 +1,75 @@
+﻿<HTML><HEAD>
+<META HTTP-EQUIV=Content-Type CONTENT=text/html; charset=UTF-8>
+<title>设置TOMCAT启用GZIP压缩</title>
+<style type="text/css">
+<!--
+.9t {font-size: 9pt; color: #000000; font-family: "宋体";}
+-->
+</style></HEAD>
+<body bgcolor="#ffffff">
+<table width="90%" border="0" align="center" ><tr><td>
+<PRE class="9t">
+原理简介
+        HTTP 压缩可以大大提高浏览网站的速度，它的原理是，在客户端请求服务器对应资源后，从服务器端将资源文件压缩，再输出到客户端，由客户端的浏览器负责解压缩并浏览。相对于普通的浏览过
+程HTML ,CSS,Javascript , Text ，它可以节省40%左右的流量。更为重要的是，它可以对动态生成的，包括CGI、PHP , JSP , ASP , Servlet,SHTML等输出的网页也能进行压缩，压缩效率也很高。 
+配置方法
+Tomcat5.0以后的版本是支持对输出内容进行压缩的，使用的是gzip压缩格式 。
+ 
+修改%TOMCAT_HOME%/conf/server.xml，修订节点如下：
+view plaincopy to clipboardprint?
+&lt;Connector port="80" protocol="HTTP/1.1"   
+           connectionTimeout="20000"   
+           redirectPort="8443" executor="tomcatThreadPool" URIEncoding="utf-8"   
+                       compression="on"   
+                       compressionMinSize="50" noCompressionUserAgents="gozilla, traviata"   
+                       compressableMimeType="text/html,text/xml,text/javascript,text/css,text/plain" /&gt;  
+ 
+
+　　从上面节点的属性可以看出，要使用gzip压缩功能，你需要在Connector节点中加上如下属性
+
+compression="on" 打开压缩功能 
+compressionMinSize="50" 启用压缩的输出内容大小，默认为2KB 
+noCompressionUserAgents="gozilla, traviata" 对于以下的浏览器，不启用压缩 
+compressableMimeType="text/html,text/xml,text/javascript,text/css,text/plain"　哪些资源类型需要压缩
+测试方法
+启用了TOMCAT这个压缩功能后，我们如何来测试压缩是否有效呢？
+首先Tomcat是根据浏览器请求头中的accept-encoding来判断浏览器是否支持压缩功能，如果这个值包含有gzip，就表明浏览器支持gzip压缩内容的浏览，我们可以用两种方法来验证压缩是否生效。
+通过浏览器直接请求
+       大家直接通过浏览器访问启用了压缩配置的服务器，然后通过抓包工具查看抓到的数据包，如果内容有很多你看不懂，就说明已经启用压缩功能了。
+通过程序模拟请求
+我们用httpclient写一个简单的测试程序，代码如下：
+view plaincopy to clipboardprint?
+@Test  
+public void testGzip() {  
+        HttpClient httpClient = new HttpClient();  
+        GetMethod getMethod = new GetMethod("http://localhost/admin.jsp");  
+        try {  
+                getMethod.addRequestHeader("accept-encoding", "gzip,deflate");  
+                getMethod.addRequestHeader("user-agent","Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; Alexa Toolbar; Maxthon 2.0)");  
+                int result = httpClient.executeMethod(getMethod);  
+                if (result == 200) {  
+                        System.out.println(getMethod.getResponseContentLength());  
+                        String html = getMethod.getResponseBodyAsString();  
+                        System.out.println(html);  
+                        System.out.println(html.getBytes().length);  
+                }  
+        } catch (HttpException e) {  
+                e.printStackTrace();  
+        } catch (IOException e) {  
+                e.printStackTrace();  
+        } finally {  
+                getMethod.releaseConnection();  
+        }  
+}  
+
+　　执行这个junit程序，看看它所输出的是什么内容，如果输出的是一些乱码，并且打印内容的长度远小于实际的长度，就说明我们的配置生效了，通过一些其它验证工具，会发现网站浏览速度会明显提
+升。
+备注：如果发现内容没有被压缩，可以考虑调整compressionMinSize大小，如果请求资源小于这个数值，则不会启用压缩。
+ 
+</PRE>
+</td></tr></table>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+
+</body>
+</HTML>

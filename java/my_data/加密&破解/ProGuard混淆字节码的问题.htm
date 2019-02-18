@@ -1,0 +1,194 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>ProGuard混淆字节码的问题</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>昨天刚刚发表了一篇文章（<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://kaedea.com/2017/03/20/android/naughty-proguard/" 
+rel=nofollow,noindex target=_blank>ProGuard又搞了个大新闻</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>），主要吐槽的是项目里面使用ProGuard工具导致的一个诡异的坑。其中根本的原因就是，ProGuard混淆Java注解类的时候，把两个方法混淆成同样的名字，导致dx工具在打包<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>.dex</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>文件的时候报错。</P>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>本来以为这件事情算是告一段落了，没想到自己还是太Naive了。今天早上突然收到了ProGuard开发者发来的一份邮件，Exciting！邮件里谈到了这次的坑出现的真正原因 
+—— Java源码和字节码（bytecode）里方法的重载（OverLoading）。</P>
+<H2 
+style='FONT-SIZE: 18px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: bold; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.5em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.6em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial; text-rendering: optimizeLegibility'>被雪藏的问题真正原因</H2>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>在上一篇文章里，我分析到这次问题的原因是</P>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>ProGuard工具在混淆注解类类<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>Route.java</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的时候，把它的两个字段都混淆成<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>a</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>了，按道理应该是一个a和一个b，不知道是不是ProGuard的BUG，还是Route与其他库冲突了。</P>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>本来我以为是ProGuard的BUG，把注解类的两个字段都混淆成一样的名字，或者是ProGuard受到别的库的影响才出现了这个BUG。显然，在Java代码里面，是不允许有两个名字相同且形参一样的方法的，哪怕是它们的返回值不同。</P><PRE class="prettyprint hljs typescript" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; FONT-STYLE: normal; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'><SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">static</SPAN> classHello{
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-built_in style="COLOR: rgb(57,115,0)">String</SPAN>[] foo() {
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">return</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">new</SPAN> <SPAN class=hljs-built_in style="COLOR: rgb(57,115,0)">String</SPAN>[]{<SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"wor"</SPAN>, <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"ld"</SPAN>};
+    }
+    publicStringfoo(){
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">return</SPAN> <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"world"</SPAN>;
+    }
+}
+</PRE>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>这两个方法是无法重载的，IDE会提示错误并且无法编译。虽然现在不少的新编程语言支持这样返回值类型不同的方法重载，但是在Java里行不通，原因也很简单，类似下面的方法立刻就会产生歧义。</P><PRE class="hljs less" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; FONT-STYLE: normal; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: medium none; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'><SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">publicvoidcall</SPAN>(){
+    <SPAN class=hljs-comment style="COLOR: rgb(136,136,136)">// 无法确定调用的是哪个方法。</SPAN>
+    <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">foo</SPAN>();
+}
+</PRE>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>问题的原因虽然只是这么简单，但是其实在<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>.class</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>文件的字节码（bytecode）里，这样的重载方法是被允许的。为什么呢？简单点说，在字节码里面，对类的文件结构的描述十分严谨，方法调用必须有指定的返回类型，所以像上面那样的调用是不存在的，自然也就不存在产生歧义的问题。</P>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>假设现在有这样一个正常的类（上面的示例代码的正常版）。</P><PRE class="prettyprint hljs typescript" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; FONT-STYLE: normal; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'><SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">public</SPAN> classHello{
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-built_in style="COLOR: rgb(57,115,0)">String</SPAN>[] foo1() {
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">return</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">new</SPAN> <SPAN class=hljs-built_in style="COLOR: rgb(57,115,0)">String</SPAN>[]{<SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"wor"</SPAN>, <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"ld"</SPAN>};
+    }
+    publicStringfoo2(){
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">return</SPAN> <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"world"</SPAN>;
+    }
+
+    publicvoidmain(){
+        foo1();
+        <SPAN class=hljs-built_in style="COLOR: rgb(57,115,0)">String</SPAN> s = foo2();
+    }
+}
+</PRE>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>这个类编译成<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>.class</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>字节码文件后，它的文件结构大概是这样的。</P><PRE class="prettyprint hljs delphi" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; FONT-STYLE: normal; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'>+ <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Program</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">class</SPAN>: com/bilibili/routertest/Hello
+ ...
+Interfaces (count = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>):
+Constant Pool (count = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">30</SPAN>):
+ ...
+Fields (count = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>):
+
+Methods (count = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">4</SPAN>):
+  - Method:       &lt;init&gt;()V
+    Access flags: <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>x1
+      = <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">public</SPAN> Hello()
+      ...
+
+  + Method:       foo1()[Ljava/lang/<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">String</SPAN>;
+    Access flags: <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>x1
+      = <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">public</SPAN> java.lang.<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">String</SPAN>[] foo1()
+      ...
+
+  + Method:       foo2()Ljava/lang/<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">String</SPAN>;
+    Access flags: <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>x1
+      = <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">public</SPAN> java.lang.<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">String</SPAN> foo2()
+      ...
+
+  + Method:       main()V
+    Access flags: <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>x1
+      = <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">public</SPAN> void main()
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Class</SPAN> member attributes (count = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1</SPAN>):
+    + Code attribute instructions (code length = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">11</SPAN>, locals = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">2</SPAN>, stack = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1</SPAN>):
+      [<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>] aload_0 v0
+      [<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1</SPAN>] invokevirtual <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">#7</SPAN>
+        + Methodref [com/bilibili/routertest/Hello.foo1 ()[Ljava/lang/<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">String</SPAN>;]
+      [<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">4</SPAN>] pop
+      [<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">5</SPAN>] aload_0 v0
+      [<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">6</SPAN>] invokevirtual <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">#8</SPAN>
+        + Methodref [com/bilibili/routertest/Hello.foo2 ()Ljava/lang/<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">String</SPAN>;]
+      [<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">9</SPAN>] astore_1 v1
+      [<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">10</SPAN>] return
+      Code attribute exceptions (count = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>):
+      Code attribute attributes (attribute count = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1</SPAN>):
+      + Line number table attribute (count = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3</SPAN>)
+        [<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>] -&gt; line <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">12</SPAN>
+        [<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">5</SPAN>] -&gt; line <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">13</SPAN>
+        [<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">10</SPAN>] -&gt; line <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">14</SPAN>
+
+<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Class</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">file</SPAN> attributes (count = <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1</SPAN>):
+  ...
+</PRE>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>我们重点关心其中的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>main()V</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法，可以清楚的看到，上面的Java源码中，main方法调用了foo1方法，虽然没有处理返回值，但是在字节码文件结构对应的方法里明确地指明了改该方法的的返回值类型是<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>[Ljava/lang/String</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>，区别于foo2方法的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>Ljava/lang/String</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>。也就是说，字节码里面并不会存在我们上面提到的方法调用的歧义问题，因此可以支持相同形参不同返回值的方法的重载。</P>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>对于这个课题感兴趣的同学可以参考这篇出自Oracle的调研文章：<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://community.oracle.com/docs/DOC-983207" rel=nofollow,noindex 
+target=_blank>Return-Type-Based Method Overloading in Java Blog</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>。</P>
+<H2 
+style='FONT-SIZE: 18px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: bold; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.5em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.6em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial; text-rendering: optimizeLegibility'>总结一些人参经验</H2>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>关于造成该问题原因的一些阐述。</P>
+<OL 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">上一篇文章提到的ProGuard构建问题其实不是ProGuard的BUG，而是Android 
+  SDK的dx工具的BUG。</LI>
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">不是只有在开启MultiDex的时候才会出现这个问题，不开启问题也会存在，这个问题与MultiDex完全没有关系。</LI>
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">ProGuard混淆的是字节码而不是Java源码，字节码支持相同形参不同返回值的方法的重载，ProGuard为了最大限度压缩代码量，对后者的重载提供了支持。</LI>
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">不仅注解类，普通的类也会出现类似的问题。</LI></OL>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>解决该问题的一些方法。</P>
+<OL 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">如果不开启ProGuard的<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><CODE 
+  style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>-overloadaggressively</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>功能，ProGuard不会对字节码中相同形参不同返回值的方法进行重载（这个功能默认不开启）。</LI>
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">尝试将注解类的RetentionPolicy级别降级为SOURCE级别。</LI>
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">不要让注解类出现相同形参不同返回值不同名字的方法，不然可能被混淆成重载的方法。</LI>
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">Keep住相应的注解类。</LI></OL>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>以下是ProGuard开发者给出的建议。</P><PRE class="prettyprint hljs livescript" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; FONT-STYLE: normal; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'>Unfortunately, dx has a bug: <SPAN class=hljs-literal style="COLOR: rgb(120,169,96)">it</SPAN> crashes <SPAN class=hljs-literal style="COLOR: rgb(120,169,96)">on</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">this</SPAN> overloading. Workarounds:
+
+- Do <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">not</SPAN> use the option <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">'-overloadaggressively'</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">in</SPAN> your ProGuard configuration.
+
+- Alternatively, keep the original annotation method names:
+
+    -keepclassmembernames @interface * { &lt;methods&gt;; }
+
+The dx tool should <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">then</SPAN> accept the code.
+
+If <SPAN class=hljs-literal style="COLOR: rgb(120,169,96)">it</SPAN> works, you can post <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">this</SPAN> solution <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">in</SPAN> your blog.
+</PRE>
+<P 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 0.75em; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>最后，感叹作者的反馈这么迅速。引用作者的一句原话，<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>It's 
+a fast world!</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>，西方程序员跑的比谁都快。</P></body>
+</html>

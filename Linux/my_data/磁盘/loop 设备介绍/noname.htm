@@ -1,0 +1,46 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>loop 设备介绍</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body><!--StartFragment--><tr><td class="floot_right" id="td_tpc"><div class="tpc_content">
+<div class="f14 mb10" id="read_tpc">
+<b>1. loop 设备介绍</b><br>在类 UNIX 系统里，loop 设备是一种伪设备(pseudo-device)，或者也可以说是仿真设备。它能使我们像块设备一样访问一个文件。<br><br>在使用之前，一个 loop 设备必须要和一个文件进行连接。这种结合方式给用户提供了一个替代块特殊文件的接口。因此，如果这个文件包含有一个完整的文件系统，那么这个文件就可以像一个<u>磁盘设备</u>一样被 mount 起来。<u><br><br></u>上面说的文件格式，我们经常见到的是 CD 或 DVD 的 ISO 光盘镜像文件或者是软盘(硬盘)的 *.img 镜像文件。通过这种 loop mount (回环mount)的方式，这些镜像文件就可以被 mount 到当前文件系统的一个目录下。<u><br><br></u>
+至此，顺便可以再理解一下 loop 之含义：对于第一层文件系统，它直接安装在我们计算机的物理设备之上；而对于这种被 mount 
+起来的镜像文件(它也包含有文件系统)，它是建立在第一层文件系统之上，这样看来，它就像是在第一层文件系统之上再绕了一圈的文件系统，所以称为 
+loop。<u><br><br></u>在 Linux 里，loop 设备的设备名形如：<u><br></u><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ >ls /dev/loop*<br>/dev/loop0&nbsp; /dev/loop2&nbsp; /dev/loop4&nbsp; /dev/loop6<br>/dev/loop1&nbsp; /dev/loop3&nbsp; /dev/loop5&nbsp; /dev/loop7<br>... ...</div></blockquote><u><br></u>例如，要在一个目录下 mount 一个包含有磁盘镜像的文件，需要分 2 步走：<br><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ >losetup /dev/loop0 disk.img&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="COLOR: #0000ff">#使磁盘镜像文件与循环设备连结起来</span><br>mount /dev/loop0 /home/groad/disk_test&nbsp;&nbsp; <span style="COLOR: #0000ff">#将循环设备 mount 到目录 disk_test 下</span></div></blockquote><br>经过上面的两个命令后，镜像文件就如同一个文件系统挂载在 disk_test 目录下，当然我们也可以往镜像里面添加文件。<u><br><br></u>其实上面的两个步骤可以写成一个步骤：<br><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ >mount -t minix -o loop ./disk.img ./disk_test</div></blockquote><br>
+其中，加了 -o loop 指定后，那么也就相当于执行了第一行的 losetup 命令。做一个简单的试验可以证明一点，首先分开执行 losetup
+ 和 mount 命令，那么我们看到我们可以 mount 的是 /dev/loop0 这个设备。当我们在 mount 中指定参数 -o loop
+ 时，镜像文件其实已和 /dev/loop1 相关联，这里我们在挂载镜像文件后，尝试再执行一下 mount -t minix 
+/dev/loop1 ./disk_test 来验证，它会得到提示：<br><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ >linux-z13e:/usr/local/share/bochs/Linux011/temp # mount -t minix /dev/loop1 ./test_dir/ <br>mount: /dev/loop1 already mounted or ./test_dir/ busy<br>mount: according to mtab, /dev/loop1 is already mounted on /usr/local/share/bochs/Linux011/temp/test_dir</div></blockquote><u><br></u><br>最后，要卸载的话，就直接 umount /dev/loop0 即可。关于 losetup 的介绍见：<a href="http://www.groad.net/bbs/read.php?tid-2353.html" target="_blank" onClick="return checkUrl(this)" id="url_1">http://www.groad.net/bbs/read.php?tid-2353.html</a><br><br><br><b>一个完整测试实例</b>：<br><br><b>1. 首先创建一个 1G 大小的空文件</b>：<br><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ ># dd if=/dev/zero of=loopfile.img bs=1G count=1<br>1+0 records in<br>1+0 records out<br>1073741824 bytes (1.1 GB) copied, 69.3471 s, 15.5 MB/s</div></blockquote><br><br><b>2. 对该文件格式化为 ext4 格式</b>：<br><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ ># mkfs.ext4 loopfile.img <br>mke2fs 1.41.11 (14-Mar-2010)<br>loopfile.img is not a block special device.<br>Proceed anyway? (y,n) y<br>Filesystem label=<br>OS type: Linux<br>Block size=4096 (log=2)<br>Fragment size=4096 (log=2)<br>Stride=0 blocks, Stripe width=0 blocks<br>65536 inodes, 262144 blocks<br>13107 blocks (5.00%) reserved for the super user<br>First data block=0<br>Maximum filesystem blocks=268435456<br>8 block groups<br>32768 blocks per group, 32768 fragments per group<br>8192 inodes per group<br>Superblock backups stored on blocks: <br>&nbsp;&nbsp;&nbsp;&nbsp;32768, 98304, 163840, 229376<br><br>Writing inode tables: done&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>Creating journal (8192 blocks): done<br>Writing superblocks and filesystem accounting information: done<br><br>This filesystem will be automatically checked every 38 mounts or<br>180 days, whichever comes first.&nbsp;&nbsp;Use tune2fs -c or -i to override.</div></blockquote><br><br><b>3. 用 file 命令查看下格式化后的文件类型</b>：<br><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ ># file loopfile.img <br>loopfile.img: Linux rev 1.0 ext4 filesystem data, UUID=a9dfb4a0-6653-4407-ae05-7044d92c1159 (extents) (large files) (huge files)</div></blockquote><br><br><b>4. 准备将上面的文件挂载起来</b>：<br><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ ># mkdir /mnt/loopback<br># mount -o loop loopfile.img /mnt/loopback</div></blockquote><br>mount 命令的 -o loop 选项可以将任意一个 loopback 文件系统挂载。<br><br>上面的 mount 命令实际等价于下面两条命令：<br><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ ># losetup /dev/loop0 loopfile.img<br># mount /dev/loop0 /mnt/loopback</div></blockquote><br>因此实际上，mount -o loop 在内部已经默认的将文件和 /dev/loop0 挂载起来了。<br><br>然而对于第一种方法(mount -o loop)并不能适用于所有的场景。比如，我们想创建一个硬盘文件，然后对该文件进行分区，接着挂载其中一个子分区，这时就不能用 -o loop 这种方法了。因此必须如下做：<br><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ ># losetup /dev/loop1 loopfile.img<br># fdisk /dev/loop1</div></blockquote><br><br><b>6. 卸载挂载点</b><br><blockquote class="blockquote3"><div class="text" style="PADDING-BOTTOM: 15px; PADDING-TOP: 15px; PADDING-LEFT: 15px; PADDING-RIGHT: 15px" 
+ ># umount /mnt/loopback</div></blockquote>
+</div>
+
+		</div>
+
+                </td>
+            </tr>
+            <tr>
+                <td class="floot_bottom">
+
+
+
+<div class="userOper">
+</div>
+	<div id="cloudwind_read_content"></div>
+
+<div class="related mb10">
+	<h4 class="b">相关话题</h4></div></td></tr><!--EndFragment-->
+</body>
+</htm</html>

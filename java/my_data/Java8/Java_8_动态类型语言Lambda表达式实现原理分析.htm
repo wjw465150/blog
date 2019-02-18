@@ -1,0 +1,239 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Java 8 动态类型语言Lambda表达式实现原理分析</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<DIV 
+style="WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: tahoma, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); FONT-STYLE: normal; TEXT-ALIGN: center; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(250,250,252); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial">
+<H1 class=aTitle 
+style="FONT-SIZE: 16px; POSITION: relative; FONT-WEIGHT: bold; PADDING-TOP: 10px">Java 
+8 动态类型语言Lambda表达式实现原理分析</H1></DIV>
+<TABLE 
+style="FONT-SIZE: 12px; FONT-FAMILY: tahoma, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(250,250,252); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial" 
+width="97%" align=center>
+  
+  <TR>
+    <TD style="WORD-WRAP: break-word; FONT-SIZE: 12px"       width=140>[日期：2017-02-07]</TD>
+    <TD style="WORD-WRAP: break-word; FONT-SIZE: 12px"       align=center>来源：Linux社区&nbsp; 作者：raintungli</TD>
+    <TD style="WORD-WRAP: break-word; FONT-SIZE: 12px" width=160       align=right>[字体：<A style="TEXT-DECORATION: none; COLOR: rgb(96,96,96)" 
+      href="javascript:ContentSize(16)">大</A><SPAN>&nbsp;</SPAN><A 
+      style="TEXT-DECORATION: none; COLOR: rgb(96,96,96)" 
+      href="javascript:ContentSize(0)">中</A><SPAN>&nbsp;</SPAN><A 
+      style="TEXT-DECORATION: none; COLOR: rgb(96,96,96)" 
+      href="javascript:ContentSize(12)">小</A>]</TD></TR></TABLE>
+<DIV id=li_all 
+style="OVERFLOW: hidden; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: tahoma, 宋体; WIDTH: 735px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: both; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,252); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial">
+<DIV id=li_1 
+style="OVERFLOW: hidden; WORD-WRAP: break-word; FONT-SIZE: 12px; WIDTH: 336px; FLOAT: left; PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 15px; PADDING-LEFT: 25px; MARGIN: 0px; PADDING-RIGHT: 0px"></DIV>
+<DIV id=li_2 
+style="OVERFLOW: hidden; WORD-WRAP: break-word; FONT-SIZE: 12px; FLOAT: right; PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 15px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"></DIV></DIV>
+<DIV id=content 
+style="WORD-WRAP: break-word; FONT-SIZE: 14px; HEIGHT: 5329px; FONT-FAMILY: tahoma, 宋体; WIDTH: 1277px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: hidden; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); FONT-STYLE: normal; TEXT-ALIGN: justify; MARGIN: 13px auto; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.6; BACKGROUND-COLOR: rgb(250,250,252); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial">
+<P>Java 8支持动态语言，看到了很酷的Lambda表达式，对一直以静态类型语言自居的Java，让人看到了Java虚拟机可以支持动态语言的目标。</P>
+<P>import java.util.function.Consumer;</P>
+<P>public class Lambda {<BR>&nbsp;public static void main(String[] args) 
+{<BR>&nbsp; Consumer&lt;String&gt; c = s -&gt; System.out.println(s);<BR>&nbsp; 
+c.accept("hello lambda!");<BR>&nbsp;}<BR>}</P>
+<P>刚看到这个表达式，感觉java的处理方式是属于内部匿名类的方式</P>
+<P>public class Lambda {<BR>&nbsp;static {<BR>&nbsp; 
+System.setProperty("jdk.internal.lambda.dumpProxyClasses", 
+".");<BR>&nbsp;}<BR>&nbsp;public static void main(String[] args) {<BR>&nbsp; 
+Consumer&lt;String&gt; c = new Consumer&lt;String&gt;(){<BR>&nbsp; 
+&nbsp;@Override<BR>&nbsp; &nbsp;public void accept(String s) {<BR>&nbsp; &nbsp; 
+System.out.println(s);<BR>&nbsp; &nbsp;}<BR>&nbsp; &nbsp;};<BR>&nbsp; 
+c.accept("hello lambda");<BR>&nbsp;}<BR>}</P>
+<P>编译的结果应该是Lambda.class , Lambda$1.class 
+猜测在支持动态语言java换汤不换药，在最后编译的时候生成我们常见的方式。</P>
+<P>但是结果不是这样的，只是产生了一个Lambda.class</P>
+<P>反编译吧，来看看真相是什么？</P>
+<P>javap -v -p Lambda.class</P>
+<P>注意&nbsp; -p 这个参数 -p 参数会显示所有的方法，而不带默认是不会反编译private 的方法的</P>
+<P>&nbsp; public Lambda();<BR>&nbsp; &nbsp; descriptor: ()V<BR>&nbsp; &nbsp; 
+flags: ACC_PUBLIC<BR>&nbsp; &nbsp; Code:<BR>&nbsp; &nbsp; &nbsp; stack=1, 
+locals=1, args_size=1<BR>&nbsp; &nbsp; &nbsp; &nbsp; 0: aload_0<BR>&nbsp; &nbsp; 
+&nbsp; &nbsp; 1: invokespecial #21&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; // Method java/lang/Object."&lt;init&gt;":()V<BR>&nbsp; &nbsp; 
+&nbsp; &nbsp; 4: return<BR>&nbsp; &nbsp; &nbsp; LineNumberTable:<BR>&nbsp; 
+&nbsp; &nbsp; &nbsp; line 3: 0<BR>&nbsp; &nbsp; &nbsp; 
+LocalVariableTable:<BR>&nbsp; &nbsp; &nbsp; &nbsp; Start&nbsp; Length&nbsp; 
+Slot&nbsp; Name&nbsp; Signature<BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+0&nbsp; &nbsp; &nbsp; 5&nbsp; &nbsp; 0&nbsp; this&nbsp; LLambda;</P>
+<P>&nbsp; public static void main(java.lang.String[]);<BR>&nbsp; &nbsp; 
+descriptor: ([Ljava/lang/String;)V<BR>&nbsp; &nbsp; flags: ACC_PUBLIC, 
+ACC_STATIC<BR>&nbsp; &nbsp; Code:<BR>&nbsp; &nbsp; &nbsp; stack=2, locals=2, 
+args_size=1<BR>&nbsp; &nbsp; &nbsp; &nbsp; 0: invokedynamic #30,&nbsp; 0&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // InvokeDynamic 
+#0:accept:()Ljava/util/function/Consumer;<BR>&nbsp; &nbsp; &nbsp; &nbsp; 5: 
+astore_1<BR>&nbsp; &nbsp; &nbsp; &nbsp; 6: aload_1<BR>&nbsp; &nbsp; &nbsp; 
+&nbsp; 7: ldc&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; #31&nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; // String hello lambda<BR>&nbsp; &nbsp; &nbsp; 
+&nbsp; 9: invokeinterface #33,&nbsp; 2&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // 
+InterfaceMethod 
+java/util/function/Consumer.accept:(Ljava/lang/Object;)V<BR>&nbsp; &nbsp; &nbsp; 
+&nbsp; 14: return<BR>&nbsp; &nbsp; &nbsp; LineNumberTable:<BR>&nbsp; &nbsp; 
+&nbsp; &nbsp; line 8: 0<BR>&nbsp; &nbsp; &nbsp; &nbsp; line 9: 6<BR>&nbsp; 
+&nbsp; &nbsp; &nbsp; line 10: 14<BR>&nbsp; &nbsp; &nbsp; 
+LocalVariableTable:<BR>&nbsp; &nbsp; &nbsp; &nbsp; Start&nbsp; Length&nbsp; 
+Slot&nbsp; Name&nbsp; Signature<BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+0&nbsp; &nbsp; &nbsp; 15&nbsp; &nbsp; 0&nbsp; args&nbsp; 
+[Ljava/lang/String;<BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 6&nbsp; &nbsp; 
+&nbsp; 9&nbsp; &nbsp; 1&nbsp; &nbsp; c&nbsp; 
+Ljava/util/function/Consumer;<BR>&nbsp; &nbsp; &nbsp; 
+LocalVariableTypeTable:<BR>&nbsp; &nbsp; &nbsp; &nbsp; Start&nbsp; Length&nbsp; 
+Slot&nbsp; Name&nbsp; Signature<BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+6&nbsp; &nbsp; &nbsp; 9&nbsp; &nbsp; 1&nbsp; &nbsp; c&nbsp; 
+Ljava/util/function/Consumer&lt;Ljava/lang/String;&gt;;</P>
+<P>&nbsp; private static void lambda$0(java.lang.String);<BR>&nbsp; &nbsp; 
+descriptor: (Ljava/lang/String;)V<BR>&nbsp; &nbsp; flags: ACC_PRIVATE, 
+ACC_STATIC, ACC_SYNTHETIC<BR>&nbsp; &nbsp; Code:<BR>&nbsp; &nbsp; &nbsp; 
+stack=2, locals=1, args_size=1<BR>&nbsp; &nbsp; &nbsp; &nbsp; 0: getstatic&nbsp; 
+&nbsp; #46&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // Field 
+java/lang/System.out:Ljava/io/PrintStream;<BR>&nbsp; &nbsp; &nbsp; &nbsp; 3: 
+aload_0<BR>&nbsp; &nbsp; &nbsp; &nbsp; 4: invokevirtual #50&nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // Method 
+java/io/PrintStream.println:(Ljava/lang/String;)V<BR>&nbsp; &nbsp; &nbsp; &nbsp; 
+7: return<BR>&nbsp; &nbsp; &nbsp; LineNumberTable:<BR>&nbsp; &nbsp; &nbsp; 
+&nbsp; line 8: 0<BR>&nbsp; &nbsp; &nbsp; LocalVariableTable:<BR>&nbsp; &nbsp; 
+&nbsp; &nbsp; Start&nbsp; Length&nbsp; Slot&nbsp; Name&nbsp; Signature<BR>&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 0&nbsp; &nbsp; &nbsp; 8&nbsp; &nbsp; 0&nbsp; 
+&nbsp; s&nbsp; Ljava/lang/String;<BR>}<BR>SourceFile: 
+"Lambda.java"<BR>BootstrapMethods:<BR>&nbsp; 0: #66 invokestatic 
+java/lang/invoke/LambdaMetafactory.metafactory:(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;<BR>&nbsp; 
+&nbsp; Method arguments:<BR>&nbsp; &nbsp; &nbsp; #67 
+(Ljava/lang/Object;)V<BR>&nbsp; &nbsp; &nbsp; #70 invokestatic 
+Lambda.lambda$0:(Ljava/lang/String;)V<BR>&nbsp; &nbsp; &nbsp; #71 
+(Ljava/lang/String;)V<BR>InnerClasses:<BR>&nbsp; &nbsp; public static final #77= 
+#73 of #75; //Lookup=class java/lang/invoke/MethodHandles$Lookup of class 
+java/lang/invoke/MethodHandles</P>
+<P>在这里我们发现了几个与我们常见的java不太一样的地方，由于常量定义太多了，文章中就不贴出了</P>
+<P>1. Invokedynamic 指令</P>
+<P>Java的调用函数的四大指令（invokevirtual、invokespecial、invokestatic、invokeinterface)，通常方法的符号引用在静态类型语言编译时就能产生，而动态类型语言只有在运行期才能确定接收者类型，改变四大指令的语意对java的版本有很大的影响，所以在JSR 
+292 《Supporting Dynamically Typed Languages on the Java Platform》添加了一个新的指令</P>
+<P>Invokedynamic</P>
+<P>0: invokedynamic #30,&nbsp; 0&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // 
+InvokeDynamic #0:accept:()Ljava/util/function/Consumer;</P>
+<P>#30 是代表常量#30 也就是后面的注释InvokeDynamic 
+#0:accept:()Ljava/util/function/Consumer;</P>
+<P>0 是占位符号，目前无用</P>
+<P>2. BootstrapMethods</P>
+<P>每一个invokedynamic指令的实例叫做一个动态调用点(dynamic call site), 
+动态调用点最开始是未链接状态(unlinked:表示还未指定该调用点要调用的方法), 动态调用点依靠引导方法来链接到具体的方法.&nbsp; 
+引导方法是由编译器生成, 在运行期当JVM第一次遇到invokedynamic指令时, 
+会调用引导方法来将invokedynamic指令所指定的名字(方法名,方法签名)和具体的执行代码(目标方法)链接起来, 
+引导方法的返回值永久的决定了调用点的行为.引导方法的返回值类型是java.lang.invoke.CallSite, 
+一个invokedynamic指令关联一个CallSite, 将所有的调用委托到CallSite当前的target(MethodHandle)</P>
+<P>InvokeDynamic #0 就是BootstrapMethods表示#0的位置</P>
+<P>&nbsp; 0: #66 invokestatic 
+java/lang/invoke/LambdaMetafactory.metafactory:(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;<BR>&nbsp; 
+&nbsp; Method arguments:<BR>&nbsp; &nbsp; &nbsp; #67 
+(Ljava/lang/Object;)V<BR>&nbsp; &nbsp; &nbsp; #70 invokestatic 
+Lambda.lambda$0:(Ljava/lang/String;)V<BR>&nbsp; &nbsp; &nbsp; #71 
+(Ljava/lang/String;)V</P>
+<P>我们看到调用了LambdaMetaFactory.metafactory 的方法</P>
+<P>参数:</P>
+<P>LambdaMetafactory.metafactory(Lookup, String, MethodType, MethodType, 
+MethodHandle, MethodType)有六个参数, 按顺序描述如下</P>
+<P>1. MethodHandles.Lookup caller : 代表查找上下文与调用者的访问权限, 使用invokedynamic指令时, 
+JVM会自动自动填充这个参数</P>
+<P>2. String invokedName : 要实现的方法的名字, 使用invokedynamic时, 
+JVM自动帮我们填充(填充内容来自常量池InvokeDynamic.NameAndType.Name), 在这里JVM为我们填充为 "apply", 
+即Consumer.accept方法名.</P>
+<P>3. MethodType invokedType : 调用点期望的方法参数的类型和返回值的类型(方法signature). 
+使用invokedynamic指令时, JVM会自动自动填充这个参数(填充内容来自常量池InvokeDynamic.NameAndType.Type), 
+在这里参数为String, 返回值类型为Consumer, 表示这个调用点的目标方法的参数为String, 
+然后invokedynamic执行完后会返回一个即Consumer实例.</P>
+<P>4. MethodType samMethodType :&nbsp; 函数对象将要实现的接口方法类型, 这里运行时, 值为 (Object)Object 
+即 Consumer.accept方法的类型(泛型信息被擦除).#67 (Ljava/lang/Object;)V</P>
+<P>5. MethodHandle implMethod : 一个直接方法句柄(DirectMethodHandle), 描述在调用时将被执行的具体实现方法 
+(包含适当的参数适配, 返回类型适配, 和在调用参数前附加上捕获的参数), 在这里为 #70 invokestatic 
+Lambda.lambda$0:(Ljava/lang/String;)V 方法的方法句柄.</P>
+<P>6. MethodType instantiatedMethodType : 函数接口方法替换泛型为具体类型后的方法类型, 通常和 
+samMethodType 一样, 不同的情况为泛型:</P>
+<P>比如函数接口方法定义为 void accept(T t)&nbsp; T为泛型标识, 这个时候方法类型为(Object)Void,&nbsp; 
+在编译时T已确定, 即T由String替换, 这时samMethodType就是 (Object)Void, 
+而instantiatedMethodType为(String)Void.</P>
+<P>第4, 5, 6 三个参数来自class文件中的. 如上面引导方法字节码中Method arguments后面的三个参数就是将应用于4, 5, 
+6的参数.</P>
+<P>&nbsp; Method arguments:<BR>&nbsp; &nbsp; &nbsp; #67 
+(Ljava/lang/Object;)V<BR>&nbsp; &nbsp; &nbsp; #70 invokestatic 
+Lambda.lambda$0:(Ljava/lang/String;)V<BR>&nbsp; &nbsp; &nbsp; #71 
+(Ljava/lang/String;)V</P>
+<P>我们来看metafactory 的方法里的实现代码</P>
+<P>public static CallSite metafactory(MethodHandles.Lookup caller,<BR>&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; String invokedName,<BR>&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; MethodType 
+invokedType,<BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; MethodType 
+samMethodType,<BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+MethodHandle implMethod,<BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; MethodType instantiatedMethodType)<BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; throws LambdaConversionException {<BR>&nbsp; &nbsp; &nbsp; &nbsp; 
+AbstractValidatingLambdaMetafactory mf;<BR>&nbsp; &nbsp; &nbsp; &nbsp; mf = new 
+InnerClassLambdaMetafactory(caller, invokedType,<BR>&nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; invokedName, 
+samMethodType,<BR>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; implMethod, instantiatedMethodType,<BR>&nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; false, EMPTY_CLASS_ARRAY, 
+EMPTY_MT_ARRAY);<BR>&nbsp; &nbsp; &nbsp; &nbsp; 
+mf.validateMetafactoryArgs();<BR>&nbsp; &nbsp; &nbsp; &nbsp; return 
+mf.buildCallSite();<BR>&nbsp; &nbsp; }</P>
+<P>在buildCallSite的函数中</P>
+<P>CallSite buildCallSite() throws LambdaConversionException {<BR>&nbsp; &nbsp; 
+&nbsp; &nbsp; final Class&lt;?&gt; innerClass = spinInnerClass();</P>
+<P>函数spinInnerClass 构建了这个内部类，也就是生成了一个Lambda$$Lambda$1/716157500 
+这样的内部类,这个类是在运行的时候构建的，并不会保存在磁盘中，如果想看到这个构建的类，可以通过设置环境参数</P>
+<P>System.setProperty("jdk.internal.lambda.dumpProxyClasses", ".");</P>
+<P>会在你指定的路径 . 当前运行路径上生成这个内部类</P>
+<P>3.静态类</P>
+<P>Java在编译表达式的时候会生成lambda$0静态私有类，在这个类里实现了表达式中的方法块 system.out.println(s);</P>
+<P>private static void lambda$0(java.lang.String);<BR>&nbsp; &nbsp; descriptor: 
+(Ljava/lang/String;)V<BR>&nbsp; &nbsp; flags: ACC_PRIVATE, ACC_STATIC, 
+ACC_SYNTHETIC<BR>&nbsp; &nbsp; Code:<BR>&nbsp; &nbsp; &nbsp; stack=2, locals=1, 
+args_size=1<BR>&nbsp; &nbsp; &nbsp; &nbsp; 0: getstatic&nbsp; &nbsp; #46&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // Field 
+java/lang/System.out:Ljava/io/PrintStream;<BR>&nbsp; &nbsp; &nbsp; &nbsp; 3: 
+aload_0<BR>&nbsp; &nbsp; &nbsp; &nbsp; 4: invokevirtual #50&nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // Method 
+java/io/PrintStream.println:(Ljava/lang/String;)V<BR>&nbsp; &nbsp; &nbsp; &nbsp; 
+7: return<BR>&nbsp; &nbsp; &nbsp; LineNumberTable:<BR>&nbsp; &nbsp; &nbsp; 
+&nbsp; line 8: 0<BR>&nbsp; &nbsp; &nbsp; LocalVariableTable:<BR>&nbsp; &nbsp; 
+&nbsp; &nbsp; Start&nbsp; Length&nbsp; Slot&nbsp; Name&nbsp; Signature<BR>&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 0&nbsp; &nbsp; &nbsp; 8&nbsp; &nbsp; 0&nbsp; 
+&nbsp; s&nbsp; Ljava/lang/String;</P>
+<P>当然了在上一步通过设置的jdk.internal.lambda.dumpProxyClasses里生成的Lambda$$Lambda$1.class</P>
+<P>&nbsp;public void accept(java.lang.Object);<BR>&nbsp; &nbsp; descriptor: 
+(Ljava/lang/Object;)V<BR>&nbsp; &nbsp; flags: ACC_PUBLIC<BR>&nbsp; &nbsp; 
+Code:<BR>&nbsp; &nbsp; &nbsp; stack=1, locals=2, args_size=2<BR>&nbsp; &nbsp; 
+&nbsp; &nbsp; 0: aload_1<BR>&nbsp; &nbsp; &nbsp; &nbsp; 1: checkcast&nbsp; 
+&nbsp; #15&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // class 
+java/lang/String<BR>&nbsp; &nbsp; &nbsp; &nbsp; 4: invokestatic&nbsp; #21&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; // Method 
+Lambda.lambda$0:(Ljava/lang/String;)V<BR>&nbsp; &nbsp; &nbsp; &nbsp; 7: 
+return<BR>&nbsp; &nbsp; RuntimeVisibleAnnotations:<BR>&nbsp; &nbsp; &nbsp; 0: 
+#13()</P>
+<P>调用了Lambda.lambda$0静态函数，也就是表达式中的函数块</P>
+<P>总结</P>
+<P>这样就完成的实现了Lambda表达式，使用invokedynamic指令，运行时调用LambdaMetafactory.metafactory动态的生成内部类，实现了接口，内部类里的调用方法块并不是动态生成的，只是在原class里已经编译生成了一个静态的方法，内部类只需要调用该静态方法。</P>
+<P><SPAN style="FONT-SIZE: small"><STRONG>本文永久更新链接地址</STRONG></SPAN>：<A 
+style="TEXT-DECORATION: underline; COLOR: rgb(179,43,213)" 
+href="https://www.linuxidc.com/Linux/2017-02/140340.htm">http://www.linuxidc.com/Linux/2017-02/140340.htm</A></P></DIV></body>
+</html>

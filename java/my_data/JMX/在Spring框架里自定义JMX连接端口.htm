@@ -1,0 +1,154 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>在Spring框架里自定义JMX连接端口</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H2 id=2006_12_3_JconsoleRemoteManagement class=storytitle 
+style="FONT-SIZE: 1.4em; FONT-FAMILY: 'Lucida Grande', Tahoma, Arial, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(155,187,56); FONT-STYLE: normal; TEXT-ALIGN: left; MARGIN: 1.2em 0px; WIDOWS: 1; LETTER-SPACING: normal; LINE-HEIGHT: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+style="TEXT-DECORATION: none; COLOR: rgb(185,111,23)" 
+href="http://www.javaworld.com.tw/roller/ingramchen/entry/2006_12_3_JconsoleRemoteManagement">Jconsole 
+Remote Management</A></H2>
+<P class=meta 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 12px/1.5em 在Spring框架里自定义JMX连接端口; MARGIN: 1.2em 0px; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">08:28下午 
+十二月 03, 2006 in category<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><U>Java</U><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>by ingramchen</P>
+<DIV class=postentry 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 12px 在Spring框架里自定义JMX连接端口; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">JDK 5 內建了 jmx 的 
+client: jconsole。只消在 jvm 啟動時加上參數：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">    java myapp -Dcom.sun.management.jmxremote 
+</PRE>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">就能使用 jconsole 
+在本地端連上該 jvm (server)，觀測它的 memory 和 thread 等等的情報，非常方便。</P>
+<P 
+style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">但是！一切美好的東西一旦變成遠端處理，問題就層出不窮... 
+下面介紹兩種連線的方式。</P>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">(1) 假設在沒有 
+firewall 的情況下，我們仍然能夠使用 jvm 內建的 rmi 做遠端存取，只要參數再加上：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">  -Dcom.sun.management.jmxremote 
+  -Dcom.sun.management.jmxremote.port=1099 
+  -Dcom.sun.management.jmxremote.ssl=false 
+  -Dcom.sun.management.jmxremote.password.file=/mypath/jmxremote.password
+</PRE>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">上面的參數我們指定 jvm 
+啟動一 rmi registry server 在 1099 port，而連線時所需要的帳號密碼，則寫在<CODE 
+style="FONT-FAMILY: monospace; COLOR: rgb(102,102,102)">/mypath/jmxremote.password</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>裡。這個檔案的格式可以參考<CODE 
+style="FONT-FAMILY: monospace; COLOR: rgb(102,102,102)">JRE_HOME/lib/management/jmxremote.password.template</CODE>，一般的設定是：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">  controlRole  myAdminPassword
+  monitorRole  myMonitorPassword
+</PRE>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">帳號 controlRole 
+可以讀寫 jmx 的操作，而帳號 monitorRole 則只能唯讀 jmx 的資料。另外<CODE 
+style="FONT-FAMILY: monospace; COLOR: rgb(102,102,102)">/mypath/jmxremote.password</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>檔案權限要設為只有自己才能讀取：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">   chmod 600 /mypath/jmxremote.password
+</PRE>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">ok，完成上述步驟後即可使用 
+jconsole 遠端連至 jvm (server)：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">   jconsole myapp.example.com:1099
+</PRE>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">登入視窗輸入帳號密碼： 
+controlRole/myAdminPassword 即可。</P>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">上面的做法使用 jvm 
+本身內建的 rmi server connector 和 rmi registry 而達到遠端連線。如果你用 netstat 之類的指令去追蹤，可發現除了 
+1099 之外，還有一個亂數的 port 的連線。它就是 rmi server connector 另外建立的，用來做遠端物件的傳輸。可惜的是 jvm 內建的 
+connector 無法指定這個亂數的 port... 對有 firewall 的系統而言，就無法做特殊的設定了。</P>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">為解決這個亂數 port 
+的問題，只好放棄 jvm 內建的 rmi 服務，自己建一個。</P>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">(2) 由於使用自己建立的 
+rmi server，我們可以還原環境變數成：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">-Dcom.sun.management.jmxremote 
+</PRE>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">接下來，我們利用 spring 
+來建立 rmi server：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">&lt;!-- create rmi registry on specific port --&gt;
+&lt;bean class="org.springframework.remoting.rmi.RmiRegistryFactoryBean" &gt;
+    &lt;property name="port" value="9000"/&gt;
+&lt;/bean&gt;
+
+&lt;bean id="rmiConnectorServer" class="org.springframework.jmx.support.ConnectorServerFactoryBean" &gt;
+
+    &lt;property name="objectName" value="connector:name=rmi"/&gt;
+      &lt;!-- the first url (rmi://...) is for rmi objects transfer
+           the second url (/jndi/rmi:....) is for rmiregistry 
+      --&gt;
+      &lt;property name="serviceUrl" 
+                   value="service:jmx:rmi://localhost:3000/jndi/rmi://localhost:9000/server" /&gt;
+
+      &lt;!-- make connector use it's own thread, default is false --&gt;
+      &lt;property name="threaded" value="true" /&gt; 
+
+      &lt;!-- make server as deamon, default is false --&gt;
+      &lt;property name="daemon" value="true" /&gt;
+      
+      &lt;property name="environmentMap"&gt;
+          &lt;map&gt;
+              &lt;entry key="jmx.remote.x.password.file" value="/mypath/jmxremote.password"&gt;
+              &lt;/entry&gt;
+          &lt;/map&gt;
+      &lt;/property&gt;
+&lt;/bean&gt;
+</PRE>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">上面的設定檔，第一個 bean 
+我們註冊了一個 RMIRegistry 在 port 9000。第二個bean "rmiConnectorServer" 使用 serviceUrl 指定 
+port：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">service:jmx:rmi://localhost:3000/jndi/rmi://localhost:9000/server
+</PRE>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">前半段的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-FAMILY: monospace; COLOR: rgb(102,102,102)">rmi://localhost:3000</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>指定 RMI 使用 port 3000進行遠端物件的傳輸，後半端的<CODE 
+style="FONT-FAMILY: monospace; COLOR: rgb(102,102,102)">jndi/rmi://localhost:9000/server</CODE>則表示將 
+RMIConnectorServer bind 到使用 9000 port 的 RMIRegistry。至於<CODE 
+style="FONT-FAMILY: monospace; COLOR: rgb(102,102,102)">environmentMap</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>內指定的是 password 檔，內容同上。</P>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">ok，設好之後，spring 
+啟動時便會啟動 rmi registry 和 connector，我們可以用下面的 jconsole 指令遠端連線：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">jconsole service:jmx:rmi://myapp.example.com:3000/jndi/rmi://myapp.example.com:9000/server
+</PRE>
+<P 
+style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">輸入帳號密碼後即可登入。這一次就會使用 
+port 3000 和 9000 連線了，所以 firewall 可以對 3000/9000 port 做一些設定。</P>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em"><STRONG>注意 
+！</STRONG>如果你的 jvm (server) 是在 linux 下使用，請先檢查<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-FAMILY: monospace; COLOR: rgb(102,102,102)">hostname -i</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>這個指令是否回傳 127.0.0.1。如果是，RMI 
+將無法連線，你可以使用下列的解法：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">#設定 /etc/hosts, xxx.xxx.xxx.xxx 是真的 ip
+xxx.xxx.xxx.xxx myhostname
+</PRE>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">或是指定 jvm 
+參數：</P><PRE style="OVERFLOW: auto; FONT-SIZE: 12px; BORDER-TOP: rgb(43,145,175) 1px solid; BORDER-RIGHT: rgb(43,145,175) 1px solid; BORDER-BOTTOM: rgb(43,145,175) 1px solid; PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 1em; BORDER-LEFT: rgb(108,226,108) 3px solid; BACKGROUND-COLOR: rgb(250,250,250)">-Djava.rmi.server.hostname=myhostname
+</PRE>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">呼... 總算搞定了... 
+linux 那個 hostname 問題搞了我一整個下午，真是 @$#^%!$。至於如何使用 firewall 並經由 ssl tunnel ... 呃... 
+還有一堆參數和設定檔要做，光用想的就快暈了，下次有緣再試吧！</P>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">參考資料：</P>
+<UL 
+style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 1.2em 0px 1.2em 2em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px">
+  <LI><A style="TEXT-DECORATION: none; COLOR: rgb(185,111,23)" 
+  href="http://java.sun.com/j2se/1.5.0/docs/guide/management/agent.html">Monitoring 
+  and Management Using JMX</A></LI>
+  <LI><A style="TEXT-DECORATION: none; COLOR: rgb(185,111,23)" 
+  href="http://forum.java.sun.com/thread.jspa?threadID=717761&amp;messageID=4148704">Jconsole 
+  through firewall</A></LI>
+  <LI><A style="TEXT-DECORATION: none; COLOR: rgb(185,111,23)" 
+  href="http://forum.java.sun.com/thread.jspa?forumID=58&amp;threadID=703567">JMX-RIM-SSL</A></LI>
+  <LI><A style="TEXT-DECORATION: none; COLOR: rgb(185,111,23)" 
+  href="http://www.springframework.org/docs/reference/jmx.html">Spring Reference 
+  - JMX</A></LI>
+  <LI><A style="TEXT-DECORATION: none; COLOR: rgb(185,111,23)" 
+  href="http://java.sun.com/j2se/1.5.0/docs/guide/management/jconsole.html">Using 
+  Jconsole</A></LI>
+  <LI><A style="TEXT-DECORATION: none; COLOR: rgb(185,111,23)" 
+  href="http://java.sun.com/j2se/1.5.0/docs/guide/management/faq.html">FAQ 
+  JConsole and Remote Management</A></LI></UL>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em"></P>
+<P style="FONT-SIZE: 1em; MARGIN: 1.2em 0px; LINE-HEIGHT: 1.5em">ps. 文中提及的 jvm 
+都是指 server 端的 vm，而不是 client vm (即jconsole)。</P></DIV></body>
+</html>

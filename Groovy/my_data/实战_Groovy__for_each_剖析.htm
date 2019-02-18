@@ -1,0 +1,1441 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>实战 Groovy: for each 剖析</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: 宋体, Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">迭代是编程的基础。您经常会遇到需要进行逐项遍历的内容，比如<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">List</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">File</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和 JDBC<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">ResultSet</CODE>。Java 
+语言几乎总是提供了某种方法帮助您逐项遍历所需的内容，但令人沮丧的是，它并没有给出一种标准方法。Groovy 的迭代方法非常实用，在这一点上，Groovy 编程与 
+Java 编程截然不同。通过一些代码示例（可从<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="COLOR: rgb(153,102,153)" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#download">下载</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>小节获得），本文将介绍 Groovy 的万能的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法，从而将 Java 语言的那些迭代怪癖抛在脑后。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N10091><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>Java 迭代策略</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">假设您有一个 
+Java 编程语言的<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.util.List</CODE>。清单 
+1 展示了在 Java 语言中如何使用编程实现迭代：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing1><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+1. Java 列表迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="60%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+import java.util.*;
+
+public class ListTest{
+  public static void main(String[] args){
+    List&lt;String&gt; list = new ArrayList&lt;String&gt;();
+    list.add("Java");
+    list.add("Groovy");
+    list.add("JavaScript");
+    
+    for(Iterator&lt;String&gt; i = list.iterator(); i.hasNext();){
+      String language = i.next();
+      System.out.println("I know " + language);
+    }
+  }  
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">由于提供了大部分集合类都可以共享的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.lang.Iterable</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>接口，您可以使用相同的方法遍历<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.util.Set</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>或<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.util.Queue</CODE>。</P>
+<DIV class="ibm-container ibm-alt-header dw-container-sidebar" 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FLOAT: right; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; MARGIN: 0px 0px 1.2em 10px; LETTER-SPACING: normal; WIDTH: 320px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<H2 
+style="FONT-SIZE: 0.75em; BORDER-TOP: rgb(204,204,204) 1px solid; HEIGHT: 15px; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BACKGROUND-IMAGE: none; BORDER-BOTTOM: rgb(204,204,204) 1px solid; BACKGROUND-POSITION: 0px -545px; PADDING-BOTTOM: 3px; PADDING-TOP: 3px; PADDING-LEFT: 5px; MARGIN: 0px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(247,248,252)">关于本系列</H2>
+<DIV class=ibm-container-body 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/t/container-gradient.gif); BORDER-BOTTOM: rgb(204,204,204) 1px solid; BACKGROUND-POSITION: 0px 100%; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255)">
+<P 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; MARGIN: 0px; PADDING-RIGHT: 5px">Groovy 
+是一款运行在 Java 平台之上的现代编程语言。它能够与现有 Java 代码无缝集成，同时引入了闭包和元编程等出色的新特性。简而言之，Groovy 类似于 21 
+世纪的 Java 语言。</P>
+<P 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; MARGIN: 0px; PADDING-RIGHT: 5px">如果要将新工具集成到开发工具箱中，最关键的是理解什么时候需要使用它以及什么时候不适合使用它。Groovy 
+可以变得非常强大，但前提是它被适当地应用到合适的场景中。因此，<A style="COLOR: rgb(153,102,153)" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg/"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EM>实战 Groovy</EM><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></A>系列旨在展示 Groovy 
+的实际使用，以及何时和如何成功应用它。</P></DIV></DIV>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">现在，假设该语言存储在<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.util.Map</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>中。在编译时，尝试对<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>获取<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Iterator</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>会导致失败 ―<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>并没有实现<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Iterable</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>接口。幸运的是，可以调用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">map.keySet()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>返回一个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Set</CODE>，然后就可以继续处理。这些小差异可能会影响您的速度，但不会妨碍您的前进。需要注意的是，<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">List</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Set</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Queue</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>实现了<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Iterable</CODE>，但是<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>没有 ― 即使它们位于相同的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.util</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>包中。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">现在假设该语言存在于<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">String</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>数组中。数组是一种数据结构，而不是类。不能对<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">String</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>数组调用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">.iterator()</CODE>，因此必须使用稍微不同的迭代策略。您再一次受到阻碍，但可以使用如清单 
+2 所示的方法解决问题：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing2><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+2. Java 数组迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+public class ArrayTest{
+  public static void main(String[] args){
+    String[] list = {"Java", "Groovy", "JavaScript"};
+    
+    for(int i = 0; i &lt; list.length; i++){
+      String language = list[i];
+      System.out.println("I know " + language);            
+    }
+  }
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">但是等一下 
+― 使用 Java 5 引入的 for-each 语法怎么样（参见<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A style="COLOR: rgb(153,102,153)" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#resources">参考资料</A>）？它可以处理任何实现<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Iterable</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的类和数组，如清单 3 所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing3><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+3. Java 语言的 for-each 迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+import java.util.*;
+
+public class MixedTest{
+  public static void main(String[] args){
+    List&lt;String&gt; list = new ArrayList&lt;String&gt;();
+    list.add("Java");
+    list.add("Groovy");
+    list.add("JavaScript");
+    
+    for(String language: list){
+      System.out.println("I know " + language);      
+    }
+
+    String[] list2 = {"Java", "Groovy", "JavaScript"};
+    for(String language: list2){
+      System.out.println("I know " + language);      
+    }
+  }
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">因此，您可以使用相同的方法遍历数组和集合（<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>除外）。但是如果语言存储在<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.io.File</CODE>，那该怎么办？如果存储在 
+JDBC<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">ResultSet</CODE>，或者存储在 
+XML 文档、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.util.StringTokenizer</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>中呢？面对每一种情况，必须使用一种稍有不同的迭代策略。这样做并不是有什么特殊目的 
+― 而是因为不同的 API 是由不同的开发人员在不同的时期开发的 ― 但事实是，您必须了解 6 个 Java 迭代策略，特别是使用这些策略的特殊情况。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">Eric 
+S. Raymond 在他的<SPAN class=Apple-converted-space>&nbsp;</SPAN><EM>The Art of Unix 
+Programming</EM>（参见<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="COLOR: rgb(153,102,153)" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#resources">参考资料</A>）一书中解释了 
+“最少意外原则”。他写道，“要设计可用的接口，最好不要设计全新的接口模型。新鲜的东西总是难以入门；会为用户带来学习的负担，因此应当尽量减少新内容。”Groovy 
+对迭代的态度正是采纳了 Raymond 的观点。在 Groovy 中遍历几乎任何结构时，您只需要使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>这一种方法。</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N1015E><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>Groovy 中的列表迭代</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">首先，我将<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A style="COLOR: rgb(153,102,153)" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#listing3">清单 
+3</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>中的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">List</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>重构为 Groovy。在这里，只需要直接对列表调用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法并传递一个闭包，而不是将<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">List</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>转换成<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">for</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>循环（顺便提一句，这样做并不是特别具有面向对象的特征，不是吗）。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">创建一个名为 
+listTest.groovy 的文件并添加清单 4 中的代码：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing4><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+4. Groovy 列表迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def list = ["Java", "Groovy", "JavaScript"]
+list.each{language-&gt;
+  println language
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">清单 
+4 中的第一行是 Groovy 用于构建<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.util.ArrayList</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的便捷语法。可以将<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">println 
+list.class</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>添加到此脚本来验证这一点。接下来，只需对列表调用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE>，并在闭包体内输出<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">language</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>变量。在闭包的开始处使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">language-&gt;</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>语句命名<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">language</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>变量。如果没有提供变量名，Groovy 提供了一个默认名称<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">it</CODE>。在命令行提示符中输入<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">groovy 
+listTest</CODE><SPAN class=Apple-converted-space>&nbsp;</SPAN>运行 
+listTest.groovy。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">清单 
+5 是经过简化的<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="COLOR: rgb(153,102,153)" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#listing4">清单 
+4</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>代码版本：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing5><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+5. 使用 Groovy 的<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">it</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>变量的迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+// shorter, using the default it variable
+def list = ["Java", "Groovy", "JavaScript"]
+list.each{ println it }
+
+// shorter still, using an anonymous list
+["Java", "Groovy", "JavaScript"].each{ println it }
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">Groovy 
+允许您对数组和<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">List</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>交替使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法。为了将<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">ArrayList</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>改为<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">String</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>数组，必须将<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">as 
+String[]</CODE><SPAN class=Apple-converted-space>&nbsp;</SPAN>添加到行末，如清单 6 
+所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing6><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+6. Groovy 数组迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def list = ["Java", "Groovy", "JavaScript"] as String[]
+list.each{println it}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在 
+Groovy 中普遍使用<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法，并且 getter 语法非常便捷（<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">getClass()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">class</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>是相同的调用），这使您能够编写既简洁又富有表达性的代码。例如，假设您希望利用反射显示给定类的所有公共方法。清单 
+7 展示了这个例子：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing7><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+7. Groovy 反射</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def s = "Hello World"
+println s
+println s.class
+s.class.methods.each{println it}
+
+//output:
+$ groovy reflectionTest.groovy 
+Hello World
+class java.lang.String
+public int java.lang.String.hashCode()
+public volatile int java.lang.String.compareTo(java.lang.Object)
+public int java.lang.String.compareTo(java.lang.String)
+public boolean java.lang.String.equals(java.lang.Object)
+...
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">脚本的最后一行调用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">getClass()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法。<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.lang.Class</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>提供了一个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">getMethods()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法，后者返回一个数组。通过将这些操作串连起来并对<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Method</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的结果数组调用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE>，您只使用了一行代码就完成了大量工作。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">但是，与 
+Java for-each 语句不同的是，万能的<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法并不仅限于<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">List</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和数组。在 Java 语言中，故事到此结束。然而，在 Groovy 
+中，故事才刚刚开始。</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N1021C><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>Map 迭代</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">从前文可以看到，在 
+Java 语言中，无法直接迭代<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE>。在 Groovy 
+中，这完全不是问题，如清单 8 所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing8><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+8. Groovy map 迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def map = ["Java":"server", "Groovy":"server", "JavaScript":"web"]
+map.each{ println it }
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">要处理名称/值对，可以使用隐式的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">getKey()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">getValue()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法，或在包的开头部分显式地命名变量，如清单 9 所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing9><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+9. 从 map 获得键和值</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def map = ["Java":"server", "Groovy":"server", "JavaScript":"web"]
+map.each{ 
+  println it.key
+  println it.value 
+}
+
+map.each{k,v-&gt;
+  println k
+  println v
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">可以看到，迭代<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和迭代其它任何集合一样自然。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在继续研究下一个迭代例子前，应当了解 
+Groovy 中有关<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的另一个语法。与在 Java 语言中调用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">map.get("Java")</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>不一样，可以简化对<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">map.Java</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的调用，如清单 10 所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing10><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+10. 获得 map 值</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def map = ["Java":"server", "Groovy":"server", "JavaScript":"web"]
+
+//identical results
+println map.get("Java")
+println map.Java
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">不可否认，Groovy 
+针对<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的这种便捷语法非常酷，但这也是在对<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>使用反射时引起一些常见问题的原因。对<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">list.class</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的调用将生成<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.util.ArrayList</CODE>，而调用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">map.class</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>返回<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">null</CODE>。这是因为获得 
+map 元素的便捷方法覆盖了实际的 getter 调用。<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>中的元素都不具有<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">class</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>键，因此调用实际会返回<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">null</CODE>，如清单 11 
+的示例所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing11><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+11. Groovy map 和<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">null</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def list = ["Java", "Groovy", "JavaScript"]
+println list.class
+// java.util.ArrayList
+
+def map = ["Java":"server", "Groovy":"server", "JavaScript":"web"]
+println map.class
+// null
+
+map.class = "I am a map element"
+println map.class
+// I am a map element
+
+println map.getClass()
+// class java.util.LinkedHashMap
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">这是 
+Groovy 比较罕见的打破 “最少意外原则” 的情况，但是由于从 map 获取元素要比使用反射更加常见，因此我可以接受这一例外。</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N102A0><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>String 迭代</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">现在您已经熟悉<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法了，它可以出现在所有相关的位置。假设您希望迭代一个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">String</CODE>，并且是逐一迭代字符，那么马上可以使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法。如清单 12 所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing12><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+12.<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">String</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def name = "Jane Smith"
+name.each{letter-&gt;
+  println letter
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">这提供了所有的可能性，比如使用下划线替代所有空格，如清单 
+13 所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing13><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+13. 使用下划线替代空格</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def name = "Jane Smith"
+println "replace spaces"
+name.each{
+  if(it == " "){
+    print "_"
+  }else{
+    print it
+  }
+}
+
+// output
+Jane_Smith
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">当然，在替换一个单个字母时，Groovy 
+提供了一个更加简洁的替换方法。您可以将清单 13 中的所有代码合并为一行代码：<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">"Jane 
+Smith".replace(" ", "_")</CODE>。但是对于更复杂的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">String</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>操作，<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法是最佳选择。</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N102DF><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>Range 迭代</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">Groovy 
+提供了原生的<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Range</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>类型，可以直接迭代。使用两个点分隔的所有内容（比如<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">1..10</CODE>）都是一个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Range</CODE>。清单 14 
+展示了这个例子：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing14><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+14. Range 迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def range = 5..10
+range.each{
+  println it
+}
+
+//output:
+5
+6
+7
+8
+9
+10
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Range</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>不局限于简单的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Integer</CODE>。考虑清单 
+15 在的代码，其中迭代<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Date</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Range</CODE>：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing15><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+15.<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Date</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def today = new Date()
+def nextWeek = today + 7
+(today..nextWeek).each{
+  println it
+}
+
+//output:
+Thu Mar 12 04:49:35 MDT 2009
+Fri Mar 13 04:49:35 MDT 2009
+Sat Mar 14 04:49:35 MDT 2009
+Sun Mar 15 04:49:35 MDT 2009
+Mon Mar 16 04:49:35 MDT 2009
+Tue Mar 17 04:49:35 MDT 2009
+Wed Mar 18 04:49:35 MDT 2009
+Thu Mar 19 04:49:35 MDT 2009
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">可以看到，<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>准确地出现在您所期望的位置。Java 语言缺乏原生的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Range</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>类型，但是提供了一个类似地概念，采取<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">enum</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的形式。毫不奇怪，在这里<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>仍然派得上用场。</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N10332><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>Enumeration 类型</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">Java<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">enum</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>是按照特定顺序保存的随意的值集合。清单 16 展示了<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法如何自然地配合<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">enum</CODE>，就好象它在处理<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Range</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>操作符一样：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing16><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+16.<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">enum</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+enum DAY{
+  MONDAY, TUESDAY, WEDNESDAY, THURSDAY,
+    FRIDAY, SATURDAY, SUNDAY
+}
+
+DAY.each{
+  println it
+}
+
+(DAY.MONDAY..DAY.FRIDAY).each{
+  println it
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在 
+Groovy 中，有些情况下，<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>这个名称远未能表达它的强大功能。在下面的例子中，将看到使用特定于所用上下文的方法对<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法进行修饰。Groovy<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachRow()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法就是一个很好的例子。</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N10368><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>SQL 迭代</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在处理关系数据库表时，经常会说 
+“我需要针对表中的每一行执行操作”。比较一下前面的例子。您很可能会说 “我需要对列表中的每一种语言执行一些操作”。根据这个道理，<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">groovy.sql.Sql</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>对象提供了一个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachRow()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法，如清单 17 所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing17><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+17.<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">ResultSet</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+import groovy.sql.*
+
+def sql = Sql.newInstance(
+   "jdbc:derby://localhost:1527/MyDbTest;create=true",
+   "username",
+   "password",
+   "org.apache.derby.jdbc.ClientDriver")
+
+println("grab a specific field")
+sql.eachRow("select name from languages"){ row -&gt;
+    println row.name
+}
+
+println("grab all fields")
+sql.eachRow("select * from languages"){ row -&gt;
+    println("Name: ${row.name}")
+    println("Version: ${row.version}")
+    println("URL: ${row.url}\n")
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">该脚本的第一行代码实例化了一个新的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Sql</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>对象：设置 JDBC 连接字符串、用户名、密码和 JDBC 
+驱动器类。这时，可以调用<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachRow()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法，传递 SQL<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">select</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>语句作为一个方法参数。在闭包内部，可以引用列名（<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">name</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">version</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">url</CODE>），就好像实际存在<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">getName()</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">getVersion()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">getUrl()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法一样。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">这显然要比 
+Java 语言中的等效方法更加清晰。在 Java 中，必须创建单独的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">DriverManager</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Connection</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Statement</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">JDBCResultSet</CODE>，然后必须在嵌套的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">try</CODE>/<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">catch</CODE>/<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">finally</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>块中将它们全部清除。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">对于<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Sql</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>对象，您会认为<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>或<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachRow()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>都是一个合理的方法名。但是在接下来的示例中，我想您会认为<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>这个名称并不能充分表达它的功能。</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N103E0><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>文件迭代</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">我从未想过使用原始的 
+Java 代码逐行遍历<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.io.File</CODE>。当我完成了所有的嵌套的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">BufferedReader</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">FileReader</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>后（更别提每个流程末尾的所有异常处理），我已经忘记最初的目的是什么。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">清单 
+18 展示了使用 Java 语言完成的整个过程：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing18><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+18. Java 文件迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class WalkFile {
+   public static void main(String[] args) {
+      BufferedReader br = null;
+      try {
+         br = new BufferedReader(new FileReader("languages.txt"));
+         String line = null;
+         while((line = br.readLine()) != null) {
+            System.out.println("I know " + line);
+         }
+      }
+      catch(FileNotFoundException e) {
+         e.printStackTrace();
+      }
+      catch(IOException e) {
+         e.printStackTrace();
+      }
+      finally {
+         if(br != null) {
+            try {
+               br.close();
+            }
+            catch(IOException e) {
+               e.printStackTrace();
+            }
+         }
+      }
+   }
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">清单 
+19 展示了 Groovy 中的等效过程：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing19><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+19. Groovy 文件迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def f = new File("languages.txt")
+f.eachLine{language-&gt;
+  println "I know ${language}"
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">这正是 
+Groovy 的简洁性真正擅长的方面。现在，我希望您了解为什么我将 Groovy 称为 “<A style="COLOR: rgb(153,102,153)" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg02179.html">Java 程序员的 
+DSL</A>”。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">注意，我在 
+Groovy 和 Java 语言中同时处理同一个<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.io.File</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>类。如果该文件不存在，那么 Groovy 代码将抛出和 Java 
+代码相同的<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">FileNotFoundException</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>异常。区别在于，Groovy 没有已检测的异常。在<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">try</CODE>/<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">catch</CODE>/<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">finally</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>块中封装<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachLine()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>结构是我自己的爱好 ― 
+而不是一项语言需求。对于一个简单的命令行脚本中，我欣赏<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="COLOR: rgb(153,102,153)" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#listing19">清单 
+19</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>中的代码的简洁性。如果我在运行应用服务的同时执行相同的迭代，我不能对这些异常坐视不管。我将在与 
+Java 版本相同的<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">try/catch</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>块中封装<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachLine()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>块。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">File</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>类对<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法进行了一些修改。其中之一就是<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">splitEachLine(String 
+separator, Closure closure)</CODE>。这意味着您不仅可以逐行遍历文件，同时还可以将它分为不同的标记。清单 20 
+展示了一个例子：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing20><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+20. 分解文件的每一行<SPAN class=Apple-converted-space>&nbsp;</SPAN></B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+// languages.txt
+// notice the space between the language and the version
+Java 1.5
+Groovy 1.6
+JavaScript 1.x 
+
+// splitTest.groovy
+def f = new File("languages.txt")
+f.splitEachLine(" "){words-&gt;
+  words.each{ println it }
+}
+
+// output
+Java
+1.5
+Groovy
+1.6
+JavaScript
+1.x
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">如果处理的是二进制文件，Groovy 
+还提供了一个<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachByte()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">当然，Java 
+语言中的<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">File</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>并不总是一个文件 ― 有时是一个目录。Groovy 还提供了一些<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>修改以处理子目录。</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N1046C><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>目录迭代</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">使用 
+Groovy 代替 shell 脚本（或批处理脚本）非常容易，因为您能够方便地访问文件系统。要获得当前目录的目录列表，参见清单 21：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing21><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+21. 目录迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def dir = new File(".")
+dir.eachFile{file-&gt;
+  println file
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachFile()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法同时返回了文件和子目录。使用 Java 语言的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">isFile()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">isDirectory()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法，可以完成更复杂的事情。清单 22 展示了一个例子：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing22><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+22. 分离文件和目录</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def dir = new File(".")
+dir.eachFile{file-&gt;
+  if(file.isFile()){
+    println "FILE: ${file}"    
+  }else if(file.isDirectory()){
+    println "DIR:  ${file}"
+  }else{
+    println "Uh, I'm not sure what it is..."
+  }
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">由于两种 
+Java 方法都返回<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">boolean</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>值，可以在代码中添加一个 Java 三元操作符。清单 23 
+展示了一个例子：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing23><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+23. 三元操作符</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def dir = new File(".")
+dir.eachFile{file-&gt;
+  println file.isDirectory() ? "DIR:  ${file}" : "FILE: ${file}"
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">如果只对目录有兴趣，那么可以使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachDir()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>而不是<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachFile()</CODE>。还提供了<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachDirMatch()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachDirRecurse()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">可以看到，对<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">File</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>仅使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法并不能提供足够的含义。典型<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法的语义保存在<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">File</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>中，但是方法名更具有描述性，从而提供更多有关这个高级功能的信息。</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N104CF><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>URL 迭代</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">理解了如何遍历<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">File</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>后，可以使用相同的原则遍历 HTTP 请求的响应。Groovy 为<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">java.net.URL</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>提供了一个方便的（和熟悉的）<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachLine()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">例如，清单 
+24 将逐行遍历 ibm.com 主页的 HTML：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing24><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+24. URL 迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def url = new URL("http://www.ibm.com")
+url.eachLine{line-&gt;
+  println line
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">当然，如果这就是您的目的的话，Groovy 
+提供了一个只包含一行代码的解决办法，这主要归功于<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">toURL()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法，它被添加到所有<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Strings</CODE>：<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">"http://www.ibm.com".toURL().eachLine{ 
+println it }</CODE>。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">但是，如果希望对 
+HTTP 响应执行一些更有用的操作，该怎么办呢？具体来讲，如果发出的请求指向一个 RESTful Web 服务，而该服务包含您要解析的 
+XML，该怎么做呢？<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法将在这种情况下提供帮助。</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N10507><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>XML 迭代</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">您已经了解了如何对文件和 
+URL 使用<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">eachLine()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法。XML 给出了一个稍微有些不同的问题 ― 与逐行遍历 XML 
+文档相比，您可能更希望对逐个元素进行遍历。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">例如，假设您的语言列表存储在名为 
+languages.xml 的文件中，如清单 25 所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing25><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+25. languages.xml 文件</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+&lt;langs&gt;
+  &lt;language&gt;Java&lt;/language&gt;
+  &lt;language&gt;Groovy&lt;/language&gt;
+  &lt;language&gt;JavaScript&lt;/language&gt;
+&lt;/langs&gt;
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">Groovy 
+提供了一个<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法，但是需要做一些修改。如果使用名为<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">XmlSlurper</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的原生 Groovy 类解析 XML，那么可以使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE>遍历元素。参见清单 
+26 所示的例子：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing26><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+26. XML 迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def langs = new XmlSlurper().parse("languages.xml")
+langs.language.each{
+  println it
+}
+
+//output
+Java
+Groovy
+JavaScript
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">langs.language.each</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>语句从名为<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">&lt;language&gt;</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">&lt;langs&gt;</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>提取所有元素。如果同时拥有<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">&lt;format&gt;</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">&lt;server&gt;</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>元素，它们将不会出现在<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法的输出中。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">如果觉得这还不够的话，那么假设这个 
+XML 是通过一个 RESTful Web 服务的形式获得，而不是文件系统中的文件。使用一个 URL 替换文件的路径，其余代码仍然保持不变，如清单 27 
+所示：</P><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=listing27><B 
+style="FONT-SIZE: 0.76em; FONT-FAMILY: arial, sans-serif; FONT-WEIGHT: bold; PADDING-BOTTOM: 0.7em; PADDING-TOP: 0.3em; PADDING-LEFT: 5px; PADDING-RIGHT: 5px">清单 
+27. Web 服务调用的 XML 迭代</B></A><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<TABLE 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; WIDTH: 694px; BACKGROUND-COLOR: rgb(247,247,247)">				
+def langs = new XmlSlurper().parse("http://somewhere.com/languages")
+langs.language.each{
+  println it
+}
+</PRE></TD></TR></TABLE><BR 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">这真是个好方法，<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法在这里用得很好，不是吗？</P>
+<DIV class=ibm-alternate-rule 
+style="HEIGHT: 1px; BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/solid.gif); WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium Simsun; CLEAR: both; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></DIV>
+<P class="ibm-ind-link ibm-back-to-top" 
+style="HEIGHT: 15px; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: right; PADDING-TOP: 5px; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; CLEAR: both; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+class=ibm-anchor-up-link 
+style="BACKGROUND-IMAGE: url(http://1.www.s81c.com/i/v16/icons/u_bold.gif); BACKGROUND-POSITION: 0px -1px; FONT-WEIGHT: bold; COLOR: rgb(153,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 18px; TEXT-DECORATION: none; MARGIN: 0px; DISPLAY: inline; PADDING-RIGHT: 0px" 
+href="http://www.ibm.com/developerworks/cn/java/j-pg04149.html#ibm-pcon">回页首</A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=N1056B><SPAN class=atitle style="FONT-SIZE: 1.5em; FONT-WEIGHT: bold"><FONT size=5>结束语</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法的整个过程中，最妙的部分在于它只需要很少的工作就可以处理大量 Groovy 
+内容。解了<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">each()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法之后，Groovy 中的迭代就易如反掌了。正如 Raymond 
+所说，这正是关键所在。一旦了解了如何遍历<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">List</CODE>，那么很快就会掌握如何遍历数组、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Map</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">String</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">Range</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">enum</CODE>、SQL<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">ResultSet</CODE>、<CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">File</CODE>、目录和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">URL</CODE>，甚至是 XML 
+文档的元素。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">本文的最后一个示例简单提到使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">XmlSlurper</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>实现 XML 解析。在下一期文章中，我将继续讨论这个问题，并展示使用 
+Groovy 进行 XML 解析有多么简单！您将看到<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">XmlParser</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">XmlSlurper</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的实际使用，并更好地了解 Groovy 为什么提供两个类似但又略有不同的类实现 
+XML 解析。到那时，希望您能发现 Groovy 的更多实际应用。</P></body>
+</html>

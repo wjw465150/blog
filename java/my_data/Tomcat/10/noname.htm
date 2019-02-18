@@ -1,0 +1,140 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML dir=ltr xml:lang="zh-CN" 
+xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Apache2.2.4整合Tomcat6.0.16三种方式的详细配置过程</title><LINK 
+href="favicon.ico" type=image/x-icon rel="shortcut icon"><LINK 
+title=hackang href="rss" type=application/rss+xml rel=alternate><LINK 
+media=screen href="blog.css_1247066018" 
+type=text/css rel=stylesheet><LINK media=screen 
+href="blue.css_1235723792" 
+type=text/css rel=stylesheet>
+<LINK media=screen 
+href="SyntaxHighlighter.css_1201588027" 
+type=text/css rel=stylesheet>
+<STYLE>
+    div#main {background-color: transparent; border: 0; padding: 0px; width: 740px;}
+  </STYLE>
+</HEAD>
+
+<BODY>
+
+<DIV id=page>
+
+<DIV class=clearfix id=content>
+
+<DIV id=main>
+
+<DIV class=blog_main><!--StartFragment-->
+<DIV class=blog_title><H3 title="" ><A 
+href="http://hackang.javaeye.com/blog/233997">Apache2.2.4整合Tomcat6.0.16三种方式的详细配置过程</A></H3></DIV>
+<DIV class=blog_content>
+<P>通常都是通过JK_MOD来整合Apache和Tomcat，但是Apache2.2版本以上整合Tomcat可以直接通过AJP_PROXY来完成，很方便。下面把几种方式都简单讲讲。</P>
+<P>假设一个Apache，两个Tomcat容器，访问 a.hackang.cn 和 b.hackang.cn 分别对应 tomcata 和 tomcatb 
+的应用</P>
+<P><STRONG>第一种方式：JK_PROXY</STRONG></P>
+<P>安装好Apache和Tomcat，下载mod_jk-1.2.26-httpd-2.2.4.so （2.2.4对应着Apache版本）</P>
+<P>将mod_jk-1.2.26-httpd-2.2.4.so 放到Apache安装目录的modules文件夹下。</P>
+<P>在Apache安装目录的conf文件夹创建workers.properties配置文件，内容如下:</P>
+<TABLE cellSpacing=0 cellPadding=0 width=400 border=1>
+<TBODY>
+<TR>
+<TD vAlign=top width=400>
+<P>#下面是Tomcat实例列表<BR>worker.list=tomcata,tomcatb </P>
+<P>#tomcata实例配置<BR>worker.tomcata.host=127.0.0.1<BR>worker.tomcata.port=8009<BR>worker.tomcata.type=ajp13 
+</P>
+<P>#tomcatb实例配置<BR>worker.tomcatb.host=127.0.0.1<BR>worker.tomcatb.port=9009<BR>worker.tomcatb.type=ajp13 
+</P></TD></TR></TBODY></TABLE>
+<P>编辑apache配置文件httpd.conf，在文件末尾加上以下内容：</P>
+<TABLE cellSpacing=0 cellPadding=0 width=400 border=1>
+<TBODY>
+<TR>
+<TD vAlign=top width=400>
+<P>#以下为tomcat集成配置部分<BR>LoadModule jk_module 
+modules/mod_jk-1.2.26-httpd-2.2.4.so<BR>JkWorkersFile 
+conf/workers.properties<BR>JkLogFile logs/mod_jk.log<BR>JkLogLevel 
+info<BR>#如果机器有多个IP地址请务必使用*号<BR>NameVirtualHost *:80 </P>
+<P> </P>
+<P>#a.hackang.cn虚拟站点<BR>&lt;VirtualHost *:80&gt;<BR>ServerName 
+a.hackang.cn<BR>JkMount /*.* tomcata<BR>JkMount /* tomcata<BR>DirectoryIndex 
+index.jsp<BR>&lt;/VirtualHost&gt; </P>
+<P>#b.hackang.cn虚拟站点<BR>&lt;VirtualHost *:80&gt;<BR>ServerName 
+b.hackang.cn<BR>JkMount /*.* tomcatb<BR>DirectoryIndex 
+index.jsp<BR>&lt;/VirtualHost&gt; </P></TD></TR></TBODY></TABLE>
+<P>下面是Tomcat的配置，很重要。</P>
+<P>tomcata可以使用默认配置，如果想访问 
+a.hackang.cn直接显示某应用的首页，可在tomcata的配置文件server.xml里面的host节点间加上</P>
+<TABLE cellSpacing=0 cellPadding=0 width=400 border=1>
+<TBODY>
+<TR>
+<TD vAlign=top width=400>
+<P>&lt;Context className="org.apache.catalina.core.StandardContext" 
+cachingAllowed="true" 
+<BR>charsetMapperClass="org.apache.catalina.util.CharsetMapper" cookies="true" 
+crossContext="false" debug="0" displayName="a.hackang.cn" <FONT color=#ff0000>docBase="E:\myweb\a"<BR></FONT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+mapperClass="org.apache.catalina.core.StandardContextMapper" path=""&nbsp; 
+privileged="false" reloadable="false" swallowOutput="false" useNaming="true" 
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+wrapperClass="org.apache.catalina.core.StandardWrapper"&gt;<BR>&lt;/Context&gt; 
+</P></TD></TR></TBODY></TABLE>
+<P><FONT color=#ff0000>docBase指向的你应用所在的文件夹，不能将此应用部署到tomcata的webapps文件夹中。否则就有两个应用了，一个是根访问路径，一个是根访问路径+应用名了。</FONT></P>
+<P><FONT color=#000000>tomcatb的配置要稍加修改,修改 conf/server.xml文件</FONT></P>
+<P><FONT color=#000000>&lt;Server port="8005" 
+shutdown="SHUTDOWN"&gt;将此处的端口号改掉，不能与tomcata的相同，比如可以改成 </FONT><FONT color=#ff0000>9005</FONT></P>
+<P><FONT color=#000000>修改默认的8080端口为<FONT color=#ff0000>9090</FONT>，修改后如下：</FONT></P>
+<TABLE cellSpacing=0 cellPadding=0 width=400 border=1>
+<TBODY>
+<TR>
+<TD vAlign=top width=400>
+<P>&lt;Connector port="9090" maxHttpHeaderSize="8192"<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+maxThreads="150" minSpareThreads="25" maxSpareThreads="75"<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+enableLookups="false" redirectPort="8443" acceptCount="100"<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+connectionTimeout="20000" disableUploadTimeout="true" 
+/&gt;</P></TD></TR></TBODY></TABLE>
+<P><FONT color=#000000>&nbsp;</P>
+<P><FONT color=#000000>修改端口号为8009的Connector<BR></FONT><FONT color=#000000>修改前为：<BR></FONT>&lt;Connector port="8009" enableLookups="false" 
+redirectPort="8443" protocol="AJP/1.3" /&gt;<BR>修改后：<BR>&lt;Connector 
+port="<FONT color=#ff0000>9009</FONT>" enableLookups="false" redirectPort="8443" 
+protocol="AJP/1.3" /&gt;</P>
+<P>此处的9009跟workers.properties文件中tomcatb的端口号是一致的。</P>
+<P>如果也想访问 b.hackang.cn时直接显示应用b，配置方法同a，以上已经提及，只需将<FONT color=#ff0000>docBase="E:\myweb\a" 改成 </FONT><FONT color=#ff0000>docBase="E:\myweb\b"即可</FONT></P>
+<P><FONT color=#ff0000>最后编辑C:\WINDOWS\system32\drivers\etc\hosts文件，在最后加上两个映射</FONT></P>
+<P><FONT color=#ff0000>&nbsp; 127.0.0.1&nbsp; <FONT color=#ff0000>a.hackang.cn <BR><FONT color=#ff0000>&nbsp; 127.0.0.1&nbsp; <FONT color=#ff0000>b.hackang.cn 
+</FONT></FONT></FONT></FONT></P>
+<P><FONT color=#ff0000>&nbsp;</P>
+<P><FONT color=#ff0000><FONT color=#000000>至此，配置就结束了，可以用Apache的Test 
+Configuration命令测试一下配置文件，如果没有问题，启动Apache，再分别启动两个Tomcat就ok了</FONT><BR></FONT></P>
+<P><STRONG><FONT color=#000000>第二种方式配置： ajp</FONT></STRONG></P>
+<P><FONT color=#000000>apache2.2以上版本，无需使用jk_mod来集成tomcat，直接使用ajp，很方便。</FONT></P>
+<P><FONT color=#000000>修改apache配置文件httpd.conf</FONT></P>
+<P><FONT color=#000000>启用mod_proxy_ajp</FONT></P>
+<P>#LoadModule proxy_module modules/mod_proxy.so<BR>#LoadModule proxy_ajp_module 
+modules/mod_proxy_ajp.so </P>
+<P>把这两行前面的#去掉即可 </P>
+<P>然后在末尾加上 </P>
+<P>&lt;VirtualHost *:80&gt;<BR>ProxyPass / 
+ajp://127.0.0.1:8009/<BR>ProxyPassReverse / ajp://127.0.0.1:8009/<BR>ServerName 
+a.hackang.cn<BR>&lt;/VirtualHost&gt;<BR>&lt;VirtualHost *:80&gt;<BR>ProxyPass / 
+ajp://127.0.0.1:9009/<BR>ProxyPassReverse / ajp://127.0.0.1:9009/<BR>ServerName 
+b.hackang.cn<BR>&lt;/VirtualHost&gt; </P>
+<P><FONT color=#000000>搞定！！！方便吧，我现在用的就是这种。</FONT></P>
+<P><STRONG>第三种方式</STRONG></P>
+<P>第三种方式其实跟第二种差不多，只不过用的是http端口</P>
+<P>&lt;VirtualHost *:80&gt;<BR>ProxyPass / <A 
+href="http://127.0.0.1:8080/">http://127.0.0.1:8080/</A><BR>ProxyPassReverse / 
+<A href="http://127.0.0.1:8080/">http://127.0.0.1:8080/</A><BR>ServerName 
+a.hackang.cn<BR>&lt;/VirtualHost&gt;<BR>&lt;VirtualHost *:80&gt;<BR>ProxyPass / 
+<A href="http://127.0.0.1:9090/">http://127.0.0.1:9090/</A><BR>ProxyPassReverse 
+/ <A href="http://127.0.0.1:9090/">http://127.0.0.1:9090/</A><BR>ServerName 
+b.hackang.cn<BR>&lt;/VirtualHost&gt;</P>
+<P>此处的9090跟tomcatb中配置的http端口一致</P>
+<P>&nbsp;</P>
+<P>到此Apache整合Tomcat全部结束，若要加强tomcat处理静态资源的能力，可以启用APR服务。</P>
+<P><FONT color=#000000>&nbsp;</P></FONT></FONT></FONT></DIV><!--EndFragment--></DIV>
+</DIV>
+</DIV>
+</DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

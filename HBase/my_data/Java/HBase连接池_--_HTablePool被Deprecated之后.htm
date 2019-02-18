@@ -1,0 +1,949 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>HBase连接池 -- HTablePool被Deprecated之后</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 14pt"><STRONG>说明：</STRONG></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>最近两天在调研HBase的连接池，有了一些收获，特此记录下来。</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>本文先将官方文档（http://hbase.apache.org/book.html）9.3.1.1节翻译，方便大家阅读，然后查阅了关键类HConnectionManager的Developer 
+API（</SPAN><SPAN><A style="TEXT-DECORATION: none; COLOR: rgb(202,0,0)" 
+href="http://hbase.apache.org/devapidocs/index.html%EF%BC%89%EF%BC%8C%E5%81%9A%E4%BA%86%E4%B8%80%E4%BA%9B%E6%80%BB%E7%BB%93%E3%80%82" 
+target=_blank>http://hbase.apache.org/devapidocs/index.html）</A>&nbsp;做了一些总结。&nbsp;</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>最后介绍一些阅读0.96、0.98及最新源码的精彩发现。</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN></SPAN>
+<HR>
+<STRONG>欢迎转载，请注明来源：</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>http://blog.csdn.net/u010967382/article/details/38046821<BR></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 14pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 16pt"><STRONG>1.连接</STRONG></SPAN></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>HTable是HBase的client，负责从meta表中找到目标数据所在的RegionServers，当定位到目标<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">RegionServers后，client直接和</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">RegionServers交互，而不比再经过master。</SPAN></STRONG></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">HTable实例并不是线程安全的。<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">当需要创建HTable实例时，明智的做法是<SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>使用相同的HBaseConfiguration实例</STRONG></SPAN>，这使得共享连接到RegionServers的ZK和socket实例，例如，应该使用这样的代码：</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><PRE class=programlisting style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0.75em; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 1ex; PADDING-TOP: 1ex; PADDING-LEFT: 1ex; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN-TOP: 0.75em; LINE-HEIGHT: 1; PADDING-RIGHT: 1ex; BACKGROUND-COLOR: rgb(238,238,238)" name="code">HBaseConfiguration conf = HBaseConfiguration.create();
+HTable table1 = new HTable(conf, "myTable");
+HTable table2 = new HTable(conf, "myTable");</PRE></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">而不是这样的代码：</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><PRE class=programlisting style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0.75em; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 1ex; PADDING-TOP: 1ex; PADDING-LEFT: 1ex; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN-TOP: 0.75em; LINE-HEIGHT: 1; PADDING-RIGHT: 1ex; BACKGROUND-COLOR: rgb(238,238,238)" name="code">HBaseConfiguration conf1 = HBaseConfiguration.create();
+HTable table1 = new HTable(conf1, "myTable");
+HBaseConfiguration conf2 = HBaseConfiguration.create();
+HTable table2 = new HTable(conf2, "myTable");</PRE>
+<DIV style="COLOR: gray"><BR></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="FONT-SIZE: 16pt">2.连接池</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">当面对多线程访问需求时，我们可以预先建立HConnection，参见以下代码：</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P class=title 
+style="FONT-SIZE: 14px; FONT-FAMILY: Simsun; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 19px; PADDING-RIGHT: 0px"><SPAN 
+style="COLOR: rgb(153,0,0)">Example&nbsp;9.1.&nbsp;Pre-Creating a&nbsp;<CODE 
+class=code>HConnection</CODE></SPAN></P>
+<DIV class=example-contents 
+style="FONT-SIZE: 14px; FONT-FAMILY: Simsun; MARGIN: 0px; LINE-HEIGHT: 19px"><PRE class=programlisting style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0.75em; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 1ex; PADDING-TOP: 1ex; PADDING-LEFT: 1ex; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN-TOP: 0.75em; LINE-HEIGHT: 1; PADDING-RIGHT: 1ex" name="code"><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN style="COLOR: rgb(255,0,0)">// Create a connection to the cluster.
+HConnection connection = HConnectionManager.createConnection(Configuration);
+HTableInterface table = connection.getTable("myTable");
+// use table as needed, the table returned is lightweight
+table.close();
+// use the connection for other access to the cluster
+connection.close();</SPAN></SPAN></PRE></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">构建HTableInterface实现是非常轻量级的，并且资源是可控的。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>注意：</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">HTablePool是HBase连接池的老用法，该类在0.94，0.95和0.96中已经不建议使用，在0.98.1版本以后已经移除。</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="COLOR: rgb(0,0,255)">BTW：简陋的官方文档到此为止。。。。Orz</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+<STRONG><SPAN style="FONT-SIZE: 16pt">3.HConnectionManager</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">该类是连接池的关键，专门介绍。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">HConnectionManager是一个不可实例化的类，专门用于创建HConnection。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">最简单的创建HConnection实例的方式是<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionManager.<SPAN 
+style="COLOR: rgb(255,0,0)"><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">createConnection</SPAN></SPAN>(config)，该方法创建了一个连接到集群的HConnection实例，该实例被创建的程序管理。通过这个HConnection实例，可以使用</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnection.<STRONG><SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">getTable</SPAN></STRONG>(byte[])方法取得</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HTableInterface 
+implementations的实现，例如</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">:</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; HConnection&nbsp;connection 
+=&nbsp;HConnectionManager</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">.</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5"><EM>createConnection</EM></SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">(</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5"><U>config</U></SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTableInterface&nbsp;table 
+=&nbsp;connection.getTable(<SPAN 
+style="COLOR: rgb(42,0,255)">"tablename"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>try</STRONG></SPAN>&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//&nbsp;Use&nbsp;the&nbsp;table&nbsp;as&nbsp;needed,&nbsp;for&nbsp;a&nbsp;single&nbsp;operation&nbsp;and&nbsp;a&nbsp;single</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(63,127,95); LINE-HEIGHT: 1.5">&nbsp;thread</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>finally</STRONG></SPAN>&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;connection.close();</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN>&nbsp;&nbsp;</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="FONT-SIZE: 14pt">3.1构造函数</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">无，不可实例化。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="FONT-SIZE: 14pt">3.2常用方法</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><STRONG>（1）<SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">static 
+HConnection &nbsp;createConnection(org.apache.hadoop.conf.Configuration 
+conf)</SPAN></STRONG></DIV>
+<DIV><STRONG>创建一个新的HConnection实例。</STRONG></DIV>
+<DIV>该方法绕过了常规的HConnection生命周期管理，常规是通过<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">getConnection(Configuration)来获取连接。调用方负责执行</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Closeable.close()</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">来关闭获得的连接实例。</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">推荐的创建HConnection的方法是：</SPAN></DIV>
+<DIV><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnection 
+connection = 
+HConnectionManager.createConnection(conf);&nbsp;</SPAN></SPAN></DIV>
+<DIV><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HTableInterface table = 
+connection.getTable("mytable");&nbsp;</SPAN></SPAN></DIV>
+<DIV><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">table.get(...);</SPAN></SPAN></DIV>
+<DIV><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;...&nbsp;</SPAN></SPAN></DIV>
+<DIV><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">table.close();&nbsp;</SPAN></SPAN></DIV>
+<DIV><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; FONT-FAMILY: 'Microsoft YaHei UI'; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">connection.close();</SPAN></SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">（2）</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">public static HConnection 
+getConnection(org.apache.hadoop.conf.Configuration conf)</SPAN></STRONG></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">根据conf获取连接实例。如果没有对应的连接实例存在，该方法创建一个新的连接。</SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">注意：该方法在0.96和0.98版本中都被</SPAN>Deprecated了，不建议使用，但是在最新的未发布代码版本中又复活了！！！</SPAN></SPAN></DIV>
+<DIV><BR></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 14pt"><STRONG>3.3实例代码</STRONG></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>package<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;fulong.bigdata.hbase;</SPAN></STRONG></SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;java.io.IOException;</SPAN></STRONG></SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.conf.Configuration;</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.hbase.Cell;</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.hbase.CellUtil;</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.hbase.HBaseConfiguration;</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.hbase.client.HConnection;</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.hbase.client.HConnectionManager;</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.hbase.client.HTableInterface;</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.hbase.client.Result;</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.hbase.client.ResultScanner;</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.hbase.client.Scan;</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>import<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;org.apache.hadoop.hbase.util.Bytes;</SPAN></STRONG></SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(127,0,85)"><STRONG>public<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;</SPAN>class<SPAN 
+style="FONT-WEIGHT: normal; COLOR: windowtext">&nbsp;ConnectionPoolTest&nbsp;{</SPAN></STRONG></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>private</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>static</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>final</STRONG></SPAN>&nbsp;String&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>QUORUM</EM></SPAN>&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"FBI001,FBI002,FBI003"</SPAN>;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>private</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>static</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>final</STRONG></SPAN>&nbsp;String&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>CLIENTPORT</EM></SPAN>&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"2181"</SPAN>;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>private</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>static</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>final</STRONG></SPAN>&nbsp;String&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>TABLENAME</EM></SPAN>&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>private</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>static</STRONG></SPAN>&nbsp;Configuration&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>conf</EM></SPAN>&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>null</STRONG></SPAN>;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>private</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>static</STRONG></SPAN>&nbsp;HConnection&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>conn</EM></SPAN>&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>null</STRONG></SPAN>;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>static</STRONG></SPAN>{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>try</STRONG></SPAN>&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>conf</EM></SPAN>&nbsp;=&nbsp;&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>conf</EM></SPAN>.set(<SPAN 
+style="COLOR: rgb(42,0,255)">"hbase.zookeeper.quorum"</SPAN>,&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>QUORUM</EM></SPAN>);&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>conf</EM></SPAN>.set(<SPAN 
+style="COLOR: rgb(42,0,255)">"hbase.zookeeper.property.clientPort"</SPAN>,&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>CLIENTPORT</EM></SPAN>);&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="COLOR: rgb(0,0,192)"><EM>conn</EM></SPAN>&nbsp;=&nbsp;HConnectionManager.<SPAN 
+style="FONT-STYLE: italic">createConnection</SPAN>(<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>conf</EM></SPAN>);</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>catch</STRONG></SPAN>&nbsp;(IOException&nbsp;e)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>public</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>static</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>void</STRONG></SPAN>&nbsp;main(String[]&nbsp;args)&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>throws</STRONG></SPAN>&nbsp;IOException&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTableInterface&nbsp;htable&nbsp;=&nbsp;ConnectionPoolTest.<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="COLOR: rgb(0,0,192)"><EM>conn</EM></SPAN>.getTable(<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>TABLENAME</EM></SPAN>);</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>try</STRONG></SPAN>&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;htable.getScanner(scan);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs.next(5))&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;"</SPAN>&nbsp;+&nbsp;cell.getTimestamp());</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>finally</STRONG></SPAN>&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;htable.close();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">}</SPAN></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+<STRONG><SPAN style="FONT-SIZE: 16pt">4.阅读源码的新发现</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="FONT-SIZE: 14pt">4.1消失的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">HConnectionManager.</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 14pt">getConnection</SPAN></SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">从0.96和0.98版本HConnectionManager的源码中可以看到</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>static</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>final</STRONG></SPAN>&nbsp;Map&lt;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">HConnectionKey</SPAN>,&nbsp;HConnectionImplementation&gt;&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192); BACKGROUND-COLOR: rgb(255,255,0)"><EM>CONNECTION_INSTANCES</EM></SPAN>;</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">就是连接池，连接池中的每个连接用<STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">HConnectionKey</SPAN></STRONG>来标识，然而，<SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext; LINE-HEIGHT: 1.5"><STRONG>HConnectionManager</STRONG></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">源码中所有涉及</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; COLOR: rgb(0,0,192); LINE-HEIGHT: 19px; BACKGROUND-COLOR: rgb(255,255,0)"><EM>CONNECTION_INSTANCES</EM></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的方法全都被Deprcated了。</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">我们来看已经被Deprecated的<STRONG>getConnection</STRONG>方法：</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,95,191)">/**</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;Get&nbsp;the&nbsp;connection&nbsp;that&nbsp;goes&nbsp;with&nbsp;the&nbsp;passed&nbsp;<SPAN 
+style="COLOR: rgb(127,127,159)">&lt;code&gt;<SPAN 
+style="COLOR: rgb(63,95,191)"><U>conf</U></SPAN>&lt;/code&gt;</SPAN>&nbsp;configuration&nbsp;instance.</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;If&nbsp;no&nbsp;current&nbsp;connection&nbsp;exists,&nbsp;method&nbsp;creates&nbsp;a&nbsp;new&nbsp;connection&nbsp;and&nbsp;keys&nbsp;it&nbsp;using</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;connection<SPAN 
+style="COLOR: rgb(127,127,159)">-</SPAN>specific&nbsp;properties&nbsp;from&nbsp;the&nbsp;passed&nbsp;<SPAN 
+style="COLOR: rgb(63,63,191)">{@link&nbsp;Configuration}</SPAN>;&nbsp;see</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;<SPAN 
+style="COLOR: rgb(63,63,191)">{@link&nbsp;HConnectionKey}</SPAN>.</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;<SPAN 
+style="COLOR: rgb(127,159,191)"><STRONG>@param</STRONG></SPAN>&nbsp;conf&nbsp;configuration</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;<SPAN 
+style="COLOR: rgb(127,159,191)"><STRONG>@return</STRONG></SPAN>&nbsp;HConnection&nbsp;object&nbsp;for&nbsp;<SPAN 
+style="COLOR: rgb(127,127,159)">&lt;code&gt;<SPAN 
+style="COLOR: rgb(63,95,191)"><U>conf</U></SPAN>&lt;/code&gt;</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;<SPAN 
+style="COLOR: rgb(127,159,191)"><STRONG>@throws</STRONG></SPAN>&nbsp;ZooKeeperConnectionException</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*/</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(100,100,100)">@Deprecated</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>public</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>static</STRONG></SPAN>&nbsp;HConnection&nbsp;getConnection(<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>final</STRONG></SPAN>&nbsp;Configuration&nbsp;conf)</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>throws</STRONG></SPAN>&nbsp;IOException&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">HConnectionKey&nbsp;connectionKey&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HConnectionKey(conf);</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>synchronized</STRONG></SPAN>&nbsp;(<SPAN 
+style="COLOR: rgb(0,0,192); BACKGROUND-COLOR: rgb(255,255,0)"><EM>CONNECTION_INSTANCES</EM></SPAN>)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HConnectionImplementation&nbsp;connection&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>CONNECTION_INSTANCES</EM></SPAN>.<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">get(connectionKey)</SPAN>;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>if</STRONG></SPAN>&nbsp;(connection&nbsp;==&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>null</STRONG></SPAN>)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;connection&nbsp;=&nbsp;(HConnectionImplementation)createConnection(conf,&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>true</STRONG></SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>CONNECTION_INSTANCES</EM></SPAN>.put(connectionKey,&nbsp;connection);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>else</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>if</STRONG></SPAN>&nbsp;(connection.isClosed())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HConnectionManager.deleteConnection(connectionKey,&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>true</STRONG></SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;connection&nbsp;=&nbsp;(HConnectionImplementation)createConnection(conf,&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>true</STRONG></SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>CONNECTION_INSTANCES</EM></SPAN>.put(connectionKey,&nbsp;connection);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;connection.incCount();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>return</STRONG></SPAN>&nbsp;connection;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;}</SPAN>&nbsp;&nbsp;</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">该方法逻辑很简单：</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">根据传入的conf构建</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey，然后以</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">实例为key到连接池Map对象</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; COLOR: rgb(0,0,192); LINE-HEIGHT: 19px"><EM>CONNECTION_INSTANCES</EM></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">中去查找connection，如果找到就返回connection，如果<STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">找不到就新建</SPAN></STRONG>，如果<STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">找到但已被关闭，就删除再新建</SPAN></STRONG>。</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">我们来看<STRONG>HConnectionKey</STRONG>的构造函数：<BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp; 
+HConnectionKey(Configuration&nbsp;conf)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;Map&lt;String,&nbsp;String&gt;&nbsp;m&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HashMap&lt;String,&nbsp;String&gt;();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>if</STRONG></SPAN>&nbsp;(conf&nbsp;!=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>null</STRONG></SPAN>)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(String&nbsp;property&nbsp;:&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>CONNECTION_PROPERTIES</EM></SPAN>)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;value&nbsp;=&nbsp;conf.get(property);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>if</STRONG></SPAN>&nbsp;(value&nbsp;!=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>null</STRONG></SPAN>)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m.put(property,&nbsp;value);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>this</STRONG></SPAN>.<SPAN 
+style="COLOR: rgb(0,0,192)">properties</SPAN>&nbsp;=&nbsp;Collections.<SPAN 
+style="FONT-STYLE: italic">unmodifiableMap</SPAN>(m);</SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>try</STRONG></SPAN>&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;UserProvider&nbsp;provider&nbsp;=&nbsp;UserProvider.<SPAN 
+style="FONT-STYLE: italic">instantiate</SPAN>(conf);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;User&nbsp;currentUser&nbsp;=&nbsp;provider.getCurrent();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>if</STRONG></SPAN>&nbsp;(currentUser&nbsp;!=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>null</STRONG></SPAN>)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)">username</SPAN>&nbsp;=&nbsp;currentUser.getName();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>catch</STRONG></SPAN>&nbsp;(IOException&nbsp;ioe)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HConnectionManager.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>LOG</EM></SPAN>.warn(<SPAN 
+style="COLOR: rgb(42,0,255)">"Error&nbsp;obtaining&nbsp;current&nbsp;user,&nbsp;skipping&nbsp;username&nbsp;in&nbsp;HConnectionKey"</SPAN>,&nbsp;ioe);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;}</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">由以上源码可知，接收conf构造<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">实例时，其实是将conf配置文件中的属性赋值给</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">自身的属性，换句话说，不管你new几次，只要conf的属性相同，new出来的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">实例的<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">属性都相同</SPAN>。</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)"><STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">结论一：conf的属性 --》&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">实例的属性</SPAN></STRONG></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">接下来，回到getConnection源码中看到这样一句话：</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px">&nbsp; &nbsp; 
+&nbsp; HConnectionImplementation&nbsp;connection&nbsp;=&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; COLOR: rgb(0,0,192); LINE-HEIGHT: 19px"><EM>CONNECTION_INSTANCES</EM></SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px">.</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px; BACKGROUND-COLOR: rgb(255,255,0)">get(connectionKey)</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px">;</SPAN><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">该代码是以<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">实例为key来查找</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; COLOR: rgb(0,0,192); LINE-HEIGHT: 19px"><EM>CONNECTION_INSTANCES</EM></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">这个</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext; LINE-HEIGHT: 1.5">LinkedHashMap</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">中是否已经包含了</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">实例</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">为key的键值对，这里要注意的是，<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">map的get方法，其实获取的是key的hashcode，这个自己读JDK源码就能看到。</SPAN></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">然而</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">已经重载了hashcode方法：</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(100,100,100)">@Override</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>public</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>int</STRONG></SPAN>&nbsp;hashCode()&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>final</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>int</STRONG></SPAN>&nbsp;prime&nbsp;=&nbsp;31;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>int</STRONG></SPAN>&nbsp;result&nbsp;=&nbsp;1;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>if</STRONG></SPAN>&nbsp;(<SPAN 
+style="COLOR: rgb(0,0,192)">username</SPAN>&nbsp;!=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>null</STRONG></SPAN>)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)">username</SPAN>.hashCode();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(String&nbsp;property&nbsp;:&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>CONNECTION_PROPERTIES</EM></SPAN>)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;value&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(0,0,192)">properties</SPAN>.get(property);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>if</STRONG></SPAN>&nbsp;(value&nbsp;!=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>null</STRONG></SPAN>)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result&nbsp;=&nbsp;prime&nbsp;*&nbsp;result&nbsp;+&nbsp;value.hashCode();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>return</STRONG></SPAN>&nbsp;result;</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;}</SPAN>&nbsp;&nbsp;<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在该代码中，最终返回的hashcode取决于当前用户名及当前conf配置文件的属性。所以，只要conf配置文件的属性和用户相同，<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">实例的hashcode就相同！</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">结论二：conf的属性 --》</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HConnectionKey</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">实例的hashcode</SPAN></SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">再来看刚才这句代码：</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px">&nbsp; &nbsp; 
+&nbsp; HConnectionImplementation&nbsp;connection&nbsp;=&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; COLOR: rgb(0,0,192); LINE-HEIGHT: 19px"><EM>CONNECTION_INSTANCES</EM></SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px">.</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px; BACKGROUND-COLOR: rgb(255,255,0)">get(connectionKey)</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px">;</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="BACKGROUND-COLOR: rgb(0,255,0)"><SPAN style="FONT-WEIGHT: bold"><SPAN 
+style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 10.5pt">对于get方法的参数</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px"><SPAN 
+style="FONT-SIZE: 10.5pt">connectionKey</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">，不管</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px"><SPAN 
+style="FONT-SIZE: 10.5pt">connectionKey</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">是不是同一个对象，只要</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px"><SPAN 
+style="FONT-SIZE: 10.5pt">connectionKey</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">的属性相同，那</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px"><SPAN 
+style="FONT-SIZE: 10.5pt">connectionKey</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 10.5pt">的hasecode就相同，对于get方法而言，也就是同样的key！！！</SPAN></SPAN></SPAN></SPAN></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>所以，可以得出</STRONG><SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)"><STRONG>结论三：</STRONG></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><STRONG>conf的属性 
+--》</STRONG></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)"><STRONG>HConnectionKey</STRONG></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)"><STRONG>实例的hashcode 
+--》 get返回的connection实例</STRONG></SPAN></SPAN></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>结论三换句话说说：</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">conf的属性相同 
+--》&nbsp;<SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px"><EM>CONNECTION_INSTANCES</EM></SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px">.</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: Consolas; LINE-HEIGHT: 19px">get</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">返回同一个connection实例</SPAN></SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">然而，<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">假设我们的HBase集群只有一个，</SPAN>那我们的<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">HBase集群的conf配置文件也就只有一个（固定的一组属性）</SPAN>，除非你有多个HBase集群另当别论。</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">在这样一个机制下，如果只有一个conf配置文件，则连接池中永远只会有一个connection实例！那“池”的意义就不大了！</SPAN></STRONG></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">所以，代码中才将基于</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">getConnection</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">获取池中物的机制</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Deprecated了，转而在官方文档中建议：</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">*******************************************************************************************************************</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="BACKGROUND-COLOR: rgb(127,255,212)">当面对多线程访问需求时，我们可以预先建立HConnection，参见以下代码：</SPAN></DIV>
+<DIV>
+<P class=title 
+style="FONT-SIZE: 14px; FONT-FAMILY: Simsun; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 19px; PADDING-RIGHT: 0px"><SPAN 
+style="COLOR: rgb(153,0,0); BACKGROUND-COLOR: rgb(127,255,212)">Example&nbsp;9.1.&nbsp;Pre-Creating 
+a&nbsp;<CODE class=code>HConnection</CODE></SPAN></P>
+<DIV class=example-contents 
+style="FONT-SIZE: 14px; FONT-FAMILY: Simsun; MARGIN: 0px; LINE-HEIGHT: 19px"><PRE class=programlisting style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0.75em; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 1ex; PADDING-TOP: 1ex; PADDING-LEFT: 1ex; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN-TOP: 0.75em; LINE-HEIGHT: 1; PADDING-RIGHT: 1ex" name="code"><STRONG><SPAN style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(127,255,212)">// Create a connection to the cluster.
+HConnection connection = HConnectionManager.createConnection(Configuration);
+HTableInterface table = connection.getTable("myTable");
+// use table as needed, the table returned is lightweight
+table.close();
+// use the connection for other access to the cluster
+connection.close();</SPAN></STRONG></PRE></DIV></DIV>
+<DIV><SPAN 
+style="BACKGROUND-COLOR: rgb(127,255,212)">构建HTableInterface实现是非常轻量级的，并且资源是可控的。</SPAN></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">*******************************************************************************************************************<BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">（以上重新拷贝了一次官方文档的翻译）</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">如果大家按照官方文档的建议做了，也就是预先创建了一个连接，以后的访问都共享该连接，这样的效果其实和过去的<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">getConnection</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">完全一样，都是在玩<STRONG><SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">一个connection实例</SPAN></STRONG>！</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 14pt"><STRONG>4.2 HBase的新时代</STRONG></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">我查看了Git上最新版本的代码（https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=tree），发现getConnection复活了：</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,95,191)">/**</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;Get&nbsp;the&nbsp;connection&nbsp;that&nbsp;goes&nbsp;with&nbsp;the&nbsp;passed&nbsp;<SPAN 
+style="COLOR: rgb(127,127,159)">&lt;code&gt;<SPAN 
+style="COLOR: rgb(63,95,191)"><U>conf</U></SPAN>&lt;/code&gt;</SPAN>&nbsp;configuration&nbsp;instance.</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;If&nbsp;no&nbsp;current&nbsp;connection&nbsp;exists,&nbsp;method&nbsp;creates&nbsp;a&nbsp;new&nbsp;connection&nbsp;and&nbsp;keys&nbsp;it&nbsp;using</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;connection<SPAN 
+style="COLOR: rgb(127,127,159)">-</SPAN>specific&nbsp;properties&nbsp;from&nbsp;the&nbsp;passed&nbsp;<SPAN 
+style="COLOR: rgb(63,63,191)">{@link&nbsp;Configuration}</SPAN>;&nbsp;see</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;<SPAN 
+style="COLOR: rgb(63,63,191)">{@link&nbsp;HConnectionKey}</SPAN>.</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;<SPAN 
+style="COLOR: rgb(127,159,191)"><STRONG>@param</STRONG></SPAN>&nbsp;conf&nbsp;configuration</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;<SPAN 
+style="COLOR: rgb(127,159,191)"><STRONG>@return</STRONG></SPAN>&nbsp;HConnection&nbsp;object&nbsp;for&nbsp;<SPAN 
+style="COLOR: rgb(127,127,159)">&lt;code&gt;<SPAN 
+style="COLOR: rgb(63,95,191)"><U>conf</U></SPAN>&lt;/code&gt;</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*&nbsp;<SPAN 
+style="COLOR: rgb(127,159,191)"><STRONG>@throws</STRONG></SPAN>&nbsp;ZooKeeperConnectionException</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: rgb(63,95,191)">&nbsp;&nbsp;&nbsp;*/</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>public</STRONG></SPAN>&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>static</STRONG></SPAN>&nbsp;HConnection&nbsp;<SPAN 
+style="TEXT-DECORATION: underline">getConnection(<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>final</STRONG></SPAN>&nbsp;Configuration&nbsp;conf)&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>throws</STRONG></SPAN>&nbsp;IOException</SPAN>&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>return</STRONG></SPAN>&nbsp;<SPAN 
+style="TEXT-DECORATION: underline">ConnectionManager</SPAN>.getConnectionInternal(conf);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: Consolas; COLOR: windowtext">&nbsp;&nbsp;}</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">这个不是重点，重点是最新版本代码的pom：</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l39 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l39" 
+target=_blank>39</A> 
+&nbsp;&nbsp;&lt;groupId&gt;org.apache.hbase&lt;/groupId&gt;</DIV>
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l40 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l40" 
+target=_blank>40</A> 
+&nbsp;&nbsp;&lt;artifactId&gt;hbase&lt;/artifactId&gt;</DIV>
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l41 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l41" 
+target=_blank>41</A> &nbsp;&nbsp;&lt;packaging&gt;pom&lt;/packaging&gt;</DIV>
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l42 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l42" 
+target=_blank>42</A> &nbsp;&nbsp;&lt;version&gt;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">2.0.0-SNAPSHOT</SPAN></STRONG></SPAN>&lt;/version&gt;</DIV>
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l43 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l43" 
+target=_blank>43</A> &nbsp;&nbsp;&lt;name&gt;HBase&lt;/name&gt;</DIV>
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l44 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l44" 
+target=_blank>44</A> &nbsp;&nbsp;&lt;description&gt;</DIV>
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l45 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l45" 
+target=_blank>45</A> &nbsp;&nbsp;&nbsp;&nbsp;Apache&nbsp;HBase<SPAN class=cntrl 
+style="BORDER-TOP: rgb(170,170,170) 1px dashed; BORDER-RIGHT: rgb(170,170,170) 1px dashed; BORDER-BOTTOM: rgb(170,170,170) 1px dashed; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 2px; MARGIN: 0px 2px; BORDER-LEFT: rgb(170,170,170) 1px dashed; PADDING-RIGHT: 2px">\99</SPAN>&nbsp;is&nbsp;the&nbsp;Hadoop&nbsp;database.&nbsp;Use&nbsp;it&nbsp;when&nbsp;you&nbsp;need</DIV>
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l46 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l46" 
+target=_blank>46</A> 
+&nbsp;&nbsp;&nbsp;&nbsp;random,&nbsp;realtime&nbsp;read/write&nbsp;access&nbsp;to&nbsp;your&nbsp;Big&nbsp;Data.</DIV>
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l47 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l47" 
+target=_blank>47</A> 
+&nbsp;&nbsp;&nbsp;&nbsp;This&nbsp;project's&nbsp;goal&nbsp;is&nbsp;the&nbsp;hosting&nbsp;of&nbsp;very&nbsp;large&nbsp;tables&nbsp;--&nbsp;billions&nbsp;of&nbsp;rows&nbsp;X&nbsp;millions&nbsp;of&nbsp;columns&nbsp;--&nbsp;atop&nbsp;clusters</DIV>
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l48 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l48" 
+target=_blank>48</A> 
+&nbsp;&nbsp;&nbsp;&nbsp;of&nbsp;commodity&nbsp;hardware.</DIV>
+<DIV class=pre 
+style="FONT-SIZE: 12px; FONT-FAMILY: monospace; WHITE-SPACE: pre; LINE-HEIGHT: normal"><A 
+id=l49 class=linenr style="TEXT-DECORATION: none; COLOR: rgb(153,153,153)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=pom.xml;h=6b7b65e0821e9d53a1ca7e958aacf9357b741407;hb=HEAD#l49" 
+target=_blank>49</A> &nbsp;&nbsp;&lt;/description&gt;</DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN style="COLOR: rgb(255,0,0)"><STRONG><SPAN 
+style="FONT-SIZE: 12pt">HBase即将迎来2.0.0版本！！</SPAN></STRONG></SPAN></DIV>
+<DIV>HBase的下一个发布版是否会像Hadoop2.0那样来一个华丽丽的升华，迎来众多牛逼的新特性呢？</DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/21px 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">从<A 
+class=list 
+style="FONT-SIZE: 12px; TEXT-DECORATION: none; FONT-FAMILY: monospace; COLOR: rgb(0,0,0); MARGIN: 20px 20px 0px; LINE-HEIGHT: normal; BACKGROUND-COLOR: rgb(237,236,230)" 
+href="https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=CHANGES.txt;h=52d21202fe9c9020a7eeee5d722af3ddf524f092;hb=HEAD" 
+target=_blank>CHANGES.txt</A><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">文档中没法得到最新的信息，最后一次更新还在2012年2月24日，看来开源大佬们也是爱编码不爱写文档的主。。</SPAN></DIV></body>
+</html>

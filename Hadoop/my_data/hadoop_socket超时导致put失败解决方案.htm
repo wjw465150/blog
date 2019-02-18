@@ -1,0 +1,84 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>hadoop socket超时导致put失败解决方案</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BACKGROUND: rgb(255,255,255); WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 13px/24px 'Microsoft YaHei', 微软雅黑, Arial, 'Lucida Grande', Tahoma, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 2em; -webkit-text-stroke-width: 0px">当一个<A 
+title=HDFS的安全模式 style="TEXT-DECORATION: none; COLOR: rgb(1,150,227)" 
+href="http://www.superwu.cn/2013/10/14/682/">HDFS</A>系统同时处理许多个并行的put操作，往HDFS上传<B><SPAN 
+style="FONT-SIZE: 13px; TEXT-DECORATION: underline; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BACKGROUND: none transparent scroll repeat 0% 0%; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">数据</SPAN></B>时，有时候会出现dfsclient 
+端发生socket 链接超时的报错，有的时候甚至会由于这种原因导致最终的put操作失败，造成数据上传不完整。<BR>log类似如下：<BR>All 
+datanodes *** are bad. 
+Aborting...<BR>类似这样的错误，常常会在并行的put操作比较多，比如60-80个，每个put的数据量约100G的时候，产生类似的错误，错误出现以后，比较好一点的情况是DFSClient端会报出一些列的错误log，如：<BR>error 
+Recovery for block block_-13954o849583405 bad datanode ** "<BR>Bad response for 
+block block_-254u94545923 from datanode ***<BR>10/01/18 18:48:00 WARN 
+hdfs.DFSClient: Error Recovery for block blk_6828192944006126093_201296138 bad 
+datanode[0] 172.23.115.79:50010<BR>10/01/18 18:48:00 WARN hdfs.DFSClient: Error 
+Recovery for block blk_6828192944006126093_201296138 in pipeline 
+172.23.115.79:50010, 172.23.115.68:50010: bad datanode 
+172.23.115.79:50010<BR>10/01/18 18:48:27 WARN hdfs.DFSClient: DFSOutputStream 
+ResponseProcessor exception for block 
+blk_-1574627828968965286_201296769java.net.SocketTimeoutException: 63000 millis 
+timeout while waiting for channel to be ready for read. ch :<B><SPAN 
+style="FONT-SIZE: 13px; TEXT-DECORATION: underline; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BACKGROUND: none transparent scroll repeat 0% 0%; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">java</SPAN></B>.nio.channels.SocketChannel[connected 
+local=/172.23.113.2:50391 remote=/172.23.114.41:50010]<BR>at 
+org.apache.hadoop.net.SocketIOWithTimeout.doIO(SocketIOWithTimeout.java:162)<BR>at 
+org.apache.hadoop.net.SocketInputStream.read(SocketInputStream.java:150)<BR>at 
+org.apache.hadoop.net.SocketInputStream.read(SocketInputStream.java:123)<BR>at 
+java.io.DataInputStream.readFully(DataInputStream.java:178)<BR>at 
+java.io.DataInputStream.readLong(DataInputStream.java:399)<BR>at 
+org.apache.hadoop.hdfs.DFSClient$DFSOutputStream$ResponseProcessor.run(DFSClient.java:2318)<BR>10/01/18 
+18:48:27 WARN hdfs.DFSClient: Error Recovery for block 
+blk_-1574627828968965286_201296769 bad datanode[0] 
+172.23.114.41:50010<BR>10/01/18 18:49:04 WARN hdfs.DFSClient: DFSOutputStream 
+ResponseProcessor exception for block 
+blk_6828192944006126093_201297704java.net.SocketTimeoutException: 63000 millis 
+timeout while waiting for channel to be ready for read. ch : 
+java.nio.channels.SocketChannel[connected local=/172.23.113.2:44177 
+remote=/172.23.115.68:50010]<BR>at 
+org.apache.hadoop.net.SocketIOWithTimeout.doIO(SocketIOWithTimeout.java:162)<BR>at 
+org.apache.hadoop.net.SocketInputStream.read(SocketInputStream.java:150)<BR>at 
+org.apache.hadoop.net.SocketInputStream.read(SocketInputStream.java:123)<BR>at 
+java.io.DataInputStream.readFully(DataInputStream.java:178)<BR>at 
+java.io.DataInputStream.readLong(DataInputStream.java:399)<BR>at 
+org.apache.hadoop.hdfs.DFSClient$DFSOutputStream$ResponseProcessor.run(DFSClient.java:2318)<BR>10/01/18 
+18:49:04 WARN hdfs.DFSClient: Error Recovery for block 
+blk_6828192944006126093_201297704 bad datanode[0] 172.23.115.68:50010<BR>put: 
+All datanodes 172.23.115.190:50010 are bad. Aborting...<BR>put: All datanodes 
+172.23.115.101:50010 are bad. 
+Aborting...<BR>产生这样的报错后，put操作仍然能够进行，并最终数据上传是完整的，只是效率会收到影响。<BR>但是如果碰到不好的情况，就会报出：<BR>All 
+datanodes *** are bad. 
+Aborting...<BR>这样的错误，这样就会导致put操作中断，导致数据上传不完整。<BR>后来检查发现，所有的datanode虽然负载都比较搞，都在正常<B><SPAN 
+style="FONT-SIZE: 13px; TEXT-DECORATION: underline; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BACKGROUND: none transparent scroll repeat 0% 0%; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">服务</SPAN></B>，而DFS的操作都是客户端直接跟datanode进行通信和数据传输，那么到底是什么原因导致了这样的问题呢？<BR>根据log查看hadoop的代码发现，出错的地方在 
+DFSClient 的 
+processDatanodeError()方法中，进入这个方法就表示DFSClient的操作发生了错误。而进入这个报错的代码逻辑是因为DFSClient中发现errorIndex 
+&gt; 0，继续跟踪，发现修改了errorIndex变量的方法调用中，只有 
+createBlockOutputStream，DFSOutputStream的构造方法，以及ResponseProcessor.run()方法中对该变量进行了修改，而由于DFSOutputStream的构造方法对该变量进行的修改是在append的时候，ResponseProcessor.run()会直接抛出另外的异常，因此调用定位到createBlockOutputStream() 
+方法中，最后发现修改errorIndex的原因是由于 
+某个datanode的link跟dfsclient短发生了失败，根据log中发现失败是由于socket链接超时导致，这说明，put发生异常的时候，是DFSClient 
+链接从namenode得来的datanode列表中的datanode时，由于该datanode当时的负载非常的高，导致当时无法服务造成。<BR>找到原因以后就好办了，由于DFSClient跟datanode的链接超时控制参数是一个客户端参数，因此，在数据上传的客户端hadoop-site.xml里修改配置参数 
+dfs.socket.timeout（默认十分钟），之后重新运行大批量的数据上传操作，问题不再重现：）</P>
+<P 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BACKGROUND: rgb(255,255,255); WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 13px/24px 'Microsoft YaHei', 微软雅黑, Arial, 'Lucida Grande', Tahoma, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 2em; -webkit-text-stroke-width: 0px">ps：最好是在程序中通过 
+conf.set 设置，否则如果程序有死循环岂不是要经过n久才会发现~~</P>
+<P 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BACKGROUND: rgb(255,255,255); WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 13px/24px 'Microsoft YaHei', 微软雅黑, Arial, 'Lucida Grande', Tahoma, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 2em; -webkit-text-stroke-width: 0px">conf.set("mapred.task.timeout", 
+"3600000");&nbsp; //ms</P>
+<P 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BACKGROUND: rgb(255,255,255); WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 13px/24px 'Microsoft YaHei', 微软雅黑, Arial, 'Lucida Grande', Tahoma, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 2em; -webkit-text-stroke-width: 0px">conf.set("dfs.socket.timeout", 
+"3600000");<BR>conf.set("dfs.datanode.socket.write.timeout", 
+"3600000");</P></body>
+</html>

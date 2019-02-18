@@ -1,0 +1,5199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-CN" lang="zh-CN"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>JTA 深度历险 - 原理与实现</title>
+<meta http-equiv="PICS-Label" content="(PICS-1.1 &quot;http://www.icra.org/ratingsv02.html&quot; l gen true r (cz 1 lz 1 nz 1 oz 1 vz 1) &quot;http://www.rsac.org/ratingsv01.html&quot; l gen true r (n 0 s 0 v 0 l 0) &quot;http://www.classify.org/safesurf/&quot; l gen true r (SS~~000 1))">
+<link rel="schema.DC" href="http://purl.org/DC/elements/1.0/">
+<link rel="SHORTCUT ICON" href="index_files/favicon.ico">
+  <meta name="Owner" content="dw@cn.ibm.com">
+  <meta name="DC.Language" scheme="rfc1766" content="zh-CN">
+  <meta name="IBM.Country" content="CN">
+<meta name="Security" content="Public">
+<meta name="IBM.SpecialPurpose" content="SP001">
+<meta name="IBM.PageAttributes" content="sid=1003,1004">
+<meta name="Source" content="v16 Template Generator">
+<meta name="Robots" content="index,follow">
+<meta name="Abstract" content="在 J2EE 应用中，事务是一个不可或缺的组件模型，它保证了用户操作的 ACID（即原子、一致、隔离、持久）属性。对于只操作单一数据源的应用，可以通过本地资源接口实现事务管理；对于跨数据源（例如多个数据库，或者数据库与 JMS）的大型应用，则必须使用全局事务 JTA (Java Transaction API)。JTA 为 J2EE 平台提供了分布式事务服务，它隔离了事务与底层的资源，实现了透明的事务管理方式。本文将深入探寻 JTA 的体系架构，并通过详细的代码介绍其实现机制。">
+<meta name="Description" content="在 J2EE 应用中，事务是一个不可或缺的组件模型，它保证了用户操作的 ACID（即原子、一致、隔离、持久）属性。对于只操作单一数据源的应用，可以通过本地资源接口实现事务管理；对于跨数据源（例如多个数据库，或者数据库与 JMS）的大型应用，则必须使用全局事务 JTA (Java Transaction API)。JTA 为 J2EE 平台提供了分布式事务服务，它隔离了事务与底层的资源，实现了透明的事务管理方式。本文将深入探寻 JTA 的体系架构，并通过详细的代码介绍其实现机制。">
+<meta name="Keywords" content="JTA,Java,事务, tttjca">
+<meta name="DC.Date" scheme="iso8601" content="2012-08-06">
+<meta name="DC.Type" scheme="IBM_ContentClassTaxonomy" content="CT316">
+<meta name="DC.Subject" scheme="IBM_SubjectTaxonomy" content="TT300">
+<meta scheme="IBM_WTMCategory" name="IBM.WTMCategory" content="SOFDCJVACN">
+<meta name="DC.Rights" content="© Copyright IBM Corporation 2012">
+<meta name="IBM.Effective" scheme="W3CDTF" content="2012-08-06">
+<meta name="title" content="JTA 深度历险 - 原理与实现">
+
+<!-- HEADER_SCRIPTS_AND_CSS_INCLUDE -->
+<link href="index_files/all.css" media="all" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/screen.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/screen-uas.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/screen-fonts.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/handheld.css" media="handheld" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/print.css" media="print" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/overlay.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+
+<!-- dW-specific CSS -->
+<link href="index_files/dw-screen.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/dw-local-site.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/dw-screen-comments-ratings-signin.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/jquery.cluetip.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+
+<!-- JPP: LOCAL URL FOR TESTING V16 DEFIANT MASTHEAD/FOOTER -->
+<link href="index_files/dw-mf2012-01.css" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/dw-mf-cn.css" rel="stylesheet" title="www" type="text/css">
+<script src="index_files/ibmcommon.js" type="text/javascript">//</script><link title="IBM Search" href="http://www.ibm.com/search/opensearch/description.xml" type="application/opensearchdescription+xml" rel="search">
+<script src="index_files/dynamicnav.js" type="text/javascript">//</script>
+<script language="JavaScript" src="index_files/urltactic.js" type="text/javascript"></script>
+<!-- Rating_START -->
+<script language="JavaScript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+
+<!-- Rating_START -->
+<script language="JavaScript" src="index_files/showrating.js" type="text/javascript"></script>
+<style type="text/css"><!--
+/* Effective stylesheet produced by snapshot save */
+.metavalue { display: none; }
+--></style>
+<!-- Rating_END --><!-- RESERVED_HEADER_INCLUDE -->
+<script language="javascript" src="index_files/ajax1.js" type="text/javascript"></script>
+<script language="javascript" src="index_files/search_counter-maverick.js" type="text/javascript"></script>
+<script language="javascript" src="index_files/request_referer_capture-maverick.js" type="text/javascript"></script>
+<script language="JavaScript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+<script language="JavaScript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+  <!-- Include file support -->
+  <script language="JavaScript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+<script charset="UTF-8" src="index_files/flash-detect.js" type="text/javascript" id="flashdetect"></script><script charset="UTF-8" src="index_files/cnzh-utf8.js" type="text/javascript" id="mhMenu"></script><script charset="UTF-8" src="index_files/Controller.js" type="text/javascript" id="wiBundle"></script></head>
+
+<body id="ibm-com">
+<div id="ibm-top" class="ibm-landing-page">
+
+<!-- MASTHEAD_BEGIN -->
+<!-- MASTHEAD_BEGIN -->
+<div class="ibm-access"><a href="#ibm-content">跳转到主要内容</a></div>
+<div id="ibm-masthead-dw">
+  
+    <!-- TOP ROW -->    
+    <div id="dw-masthead-top-row">
+    	<ul id="ibm-mast-options-dw" class="cn">
+    		<li id="dw-mast-top-0"> 	
+    			<a class="" href="http://www.ibm.com/developerworks/dwwi/DWAuthRouter?m=loginpage&amp;lang=zh&amp;d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-jta%2F" title="">登录 (或注册)</a>
+    		</li>
+    		<li id="dw-mast-top-1" class="dw-mast-top-1-cn">
+    			<a href="#SELECTLANG">中文</a><img class="dw-preload" src="index_files/arrow-down-active.gif" alt="" height="7" width="8">
+    		</li>
+    		<li id="dw-mast-top-2" class="dw-mf-hide">
+    			<a href="#"><img src="index_files/photo.do.gif" alt="PHOTO" class="dw-mast-profimg" height="20" width="20"> [userid]</a>
+    		</li>
+    		<li id="dw-mast-top-3">
+    			<a href="#"><img src="index_files/ibm-smlogo.gif" alt="IBM®" height="16" width="44"></a>
+    		</li>
+    	</ul>
+	</div>
+    
+    <!-- TOP ROW SLIDER -->
+    <div id="ibm-my-menu-dw">    
+        <div class="ibm-ribbon-pane-dw">
+            <div class="ibm-ribbon-section-dw">
+                <!-- Sign-in -->
+                <div class="dw-mast-columns">                
+					<div class="dw-mast-col-1-1">
+						<div id="dw-mast-sso">
+							<!--<div id="dw-mast-sso-reg">
+								<p class="dw-mast-sso-reg-cn">如果您还没有注册到 IBM 注册系统，我们为给您带来的不便表示道歉，并请您马上注册。 							
+									<a href="#" onclick="(function () {window.location='/developerworks/dwwi/DWAuthRouter?m=reg&amp;lang=zh&amp;d='+encodeURIComponent(location.href);})();">现在注册</a>。</p>
+							</div>-->
+							<div id="signin_error_mf" class="no-display"></div>
+							<div id="dw-mast-sso-form">
+								<form id="sForm_mf" action="" method="post" name="sForm_name_mf" onsubmit="">
+									<div id="dw-mast-sso-id" class="dw-mast-sso-id-cn">
+										<label for="ibmid_mf">IBM ID：</label>
+										<input class="" id="ibmid_mf" name="ibmid_name_mf" maxlength="100" onkeypress="" type="text">
+									</div>
+									<div id="dw-mast-sso-pw" class="dw-mast-sso-pw-cn">
+										<label for="pw_mf">密码：</label>
+										<input class="" id="pw_mf" value="" name="pw_name_mf" maxlength="100" onkeypress="" type="password">
+									</div>
+									<div id="dw-mast-sso-target" class="dw-mast-sso-target-cn">
+										<p class="dw-mf-perm-box">
+											<input id="perm_mf" name="perm_name_mf" type="checkbox"><label for="perm_mf"> 保持登录。</label>
+										</p>
+									</div>
+									<div id="dw-mast-sso-terms">
+										<p class="dw-mast-sso-terms-cn">单击提交则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/mydeveloperworks/terms?lang=zh">查看条款和条件</a>.</p>
+									</div>
+									<div>
+										<input class="dw-mf-submit-btn-cn" name="ibm_submit_name_mf" value="提交" onclick="" type="submit">
+									</div>
+								</form>
+							</div>
+							<div id="dw-mast-sso-update">
+								<div id="dw-mast-sso-update-id">
+									<ul>
+										<li><a class="ibm-forward-link" href="#" onclick="">需要一个 IBM ID？</a></li>
+										
+									<li><a class="ibm-forward-link" href="http://www.ibm.com/developerworks/dwwi/jsp/WSHelp.jsp?lang=zh_CN">忘记 IBM ID？</a></li>
+									</ul>
+								</div>
+								<div id="dw-mast-sso-update-pw">
+								<ul class="dw-mf-pwupdate">
+									<li><a class="ibm-forward-link" href="#" onclick="">忘记密码？</a></li>
+									<li><a class="ibm-forward-link" href="#" onclick="">更改您的密码</a></li>
+								</ul>
+									</div>
+							</div>
+							<div id="dw-mast-sso-text">
+								<p>当您初次登录到 developerWorks 时，将会为您创建一份概要信息。<strong>您在 developerWorks 概要信息中选择公开的信息将公开显示给其他人，但您可以随时修改这些信息的显示状态。</strong>您的姓名（除非选择隐藏）和昵称将和您在 developerWorks 发布的内容一同显示。</p>
+								<p class="dw-mf-secure-cn">所有提交的信息确保安全。</p>
+							</div>
+							<div class="dw-mast-close">
+								<ul>
+									<li><div class="dw-mast-close-sign-cn"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" border="0" height="10" width="20"></a></div></li>
+								</ul>
+							</div>	
+						</div>
+						
+						<div id="dw-mast-dname" class="dw-mf-hide">
+							<p>当您初次登录到 developerWorks 时，将会为您创建一份概要信息，您需要指定一个昵称。您的昵称将和您在 developerWorks 发布的内容显示在一起。</p><p><strong>昵称长度在 3 至 31 个字符之间</strong>。 您的昵称在 developerWorks 社区中必须是唯一的，并且出于隐私保护的原因，不能是您的电子邮件地址。</p>
+							<div id="signin_dname_error_mf" class="no-display"></div>
+							<div id="dw-mast-dname-form">
+								<form id="dForm_mf" action="" method="post" name="dForm_name_mf" onsubmit="">
+									<div id="dw-mast-dname-mf">
+										<label for="dname_mf">昵称：</label>
+										<input id="dname_mf" name="dname_name_mf" maxlength="31" size="25" onkeypress="" type="text">
+									</div>
+									<div id="dw-mast-dname-terms">
+										<p class="dw-mast-dname-terms-cn">单击<strong>提交</strong>则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/mydeveloperworks/terms?lang=zh">查看条款和条件</a>.</p>
+									</div>
+									<div>
+										<input class="dw-mf-submit-btn-cn" name="dname_submit_name_mf" value="提交" onclick="" type="submit">
+									</div>
+								</form>								
+							</div>
+							<div id="dw-mast-dname-secure">
+								<p class="dw-mf-secure-cn">所有提交的信息确保安全。</p>
+							</div>
+							<div class="dw-mast-close">
+								<ul>
+									<li><div class="dw-mast-close-sign-cn"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" border="0" height="10" width="20"></a></div></li>
+								</ul>
+							</div>	
+						</div>
+	
+						<div id="dw-mast-auth" class="dw-mf-hide">
+							<div>
+
+								<h2>My developerWorks:</h2>
+								<ul>
+									<li><a id="dw-mast-top-0-0" href="http://www.ibm.com/developerworks/mydeveloperworks/profiles/html/myProfileView.do?lang=zh">我的概要信息</a></li>
+									<li><a href="http://www.ibm.com/developerworks/mydeveloperworks/homepage?lang=zh">我的首页</a></li>
+									<li><a href="http://www.ibm.com/developerworks/mydeveloperworks/groups/service/html/mycommunities?lang=zh">我的群组</a></li>
+								</ul>     
+							</div>
+							<div id="dw-mast-notify" class="dw-mf-hide">
+								<h2>我的通知：</h2>
+								<ul>
+									<li><a id="new_notify" href="http://www.ibm.com/developerworks/mydeveloperworks/homepage?lang=zh">{[num_notify] 个新通知}([num_notify] 个新通知)</a></li>
+									<li><a id="new_invite" href="http://www.ibm.com/developerworks/mydeveloperworks/profiles/html/wc.do?action=in&amp;requireAuth=true&amp;widgetId=friends&amp;lang=[lang]">{[num_invite] 个网络请求}([num_invite] 个网络请求)</a></li>  
+								</ul>
+							</div>
+							<div class="dw-mast-more">
+								<ul class="ibm-link-list">
+									<li><a class="dw-more-link" href="#" onclick=""><strong>退出</strong></a></li>
+								</ul>
+							</div>
+							<div class="dw-mast-close">
+								<ul>
+									<li><div class="dw-mast-close-sign"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" border="0" height="10" width="20"></a></div></li>
+								</ul>
+							</div>		
+						</div>
+						
+					</div>
+                	
+                </div>
+                <!-- Site selector --> 
+				<div class="dw-mast-columns">
+					<div class="dw-mast-col-2-1">
+						<h2>选择语言：</h2>
+						<ul>
+							<li><a id="dw-mast-top-1-0" href="http://www.ibm.com/developerworks/">English</a></li>
+							<li><a href="http://www.ibm.com/developerworks/cn/">中文</a></li>
+							<li><a href="http://www.ibm.com/developerworks/jp/">日本語</a></li>
+						    <li><a href="http://www.ibm.com/developerworks/ru/">Русский</a></li>
+						</ul>
+					</div>
+					<div class="dw-mast-col-2-2">
+						<ul>
+							<li><a href="http://www.ibm.com/developerworks/br/">Português (Brasil)</a></li>
+							<li><a href="http://www.ibm.com/developerworks/ssa/">Español</a></li>
+							<li><a href="http://www.ibm.com/developerworks/vn/">Việt</a></li>
+						</ul>
+					</div>
+					<div class="dw-mast-close">
+						<ul>
+							<li><div class="dw-mast-close-lang"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" border="0" height="10" width="20"></a></div></li>
+						</ul>
+                    </div>
+                </div>
+                <div class="dw-mast-columns"><!-- Authenticated --></div>
+                <!-- IBM -->
+				<div class="dw-mast-columns">
+					<div class="dw-mast-col-2-1">
+						<ul>
+							<li><a id="dw-mast-top-3-0" href="http://www.ibm.com/cn/zh/">IBM 主页</a></li>
+							<li><a href="http://www.ibm.com/solutions/cn/zh/">解决方案</a></li>
+							<li><a href="http://www.ibm.com/software/cn/">软件</a></li>
+						</ul>
+					</div>
+					<div class="dw-mast-col-2-2 dw-mast-ibm">
+						<ul>
+							<li><a href="http://www.ibm.com/support/cn/zh/">支持门户</a></li>
+							<li><a href="http://www.ibm.com/support/documentation/cn/zh/">产品文档</a></li>
+							<li><a href="http://www.ibm.com/redbooks/">Redbooks（英文）</a></li>
+						</ul>
+					</div>
+					<div class="dw-mast-close">
+						<ul>
+							<li><div class="dw-mast-close-ibm-cn"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" border="0" height="10" width="20"></a></div></li>
+						</ul>
+                    </div> 
+				</div>
+			</div>
+        </div>
+    </div>
+
+    <!-- BOTTOM ROW -->
+    <div id="ibm-universal-nav-dw">
+        <ul id="ibm-unav-links-dw">
+        	<li id="ibm-unav-home-dwlogo">
+        		<a href="http://www.ibm.com/developerworks/cn/"><img src="index_files/dw-wordmark.gif" alt="developerWorks®" height="32" width="218"></a>
+        	</li>
+        </ul>
+    	<ul id="ibm-menu-links-dw" class="ibm-menu-links-dw-cn">
+    		
+    		<li id="dw-mast-nav-0"><a href="http://www.ibm.com/developerworks/cn/topics">技术主题</a></li>
+    		<li id="dw-mast-nav-1"><a href="http://www.ibm.com/developerworks/cn/downloads/">软件下载</a></li>
+    		<li id="dw-mast-nav-2"><a href="https://www.ibm.com/developerworks/community/?lang=zh">社区</a></li>
+    		<li id="dw-mast-nav-3"><a href="https://www.ibm.com/developerworks/community/groups/service/html/communityview?communityUuid=6d7f9e5d-5f89-4767-a006-a81b8d186370&amp;lang=zh">技术讲座</a></li>
+    	</ul>   
+    	<form id="ibm-search-form" action="http://www.ibm.com/search/csass/search/" method="get" name="form1">
+    		<input name="sn" value="dw" type="hidden">
+    		<input name="lang" value="zh" type="hidden">
+    		<input name="cc" value="CN" type="hidden">
+    		<input name="en" value="utf" type="hidden">
+    		<input name="hpp" value="20" type="hidden">
+    		<input name="dws" value="cndw" type="hidden">
+    		<input name="lo" value="zh" type="hidden">
+    		<p>
+    			<label for="q"><img alt="查询:" src="index_files/c.gif" height="1" width="1"></label>
+    			<input value="搜索 developerWorks" name="q" maxlength="100" id="q" type="text">
+    			<input id="ibm-search" class="ibm-btn-search ibm-btn-search-cn" name="Search" value="搜索" type="submit">
+    		</p>
+    	</form>
+    </div>
+    
+    <!-- BOTTOM ROW SLIDER -->
+    <div id="ibm-common-menu-dw">
+        <div class="ibm-ribbon-pane-dw">
+            <div class="ibm-ribbon-section-dw">
+				<!-- Technical topics category -->
+  
+            	<div class="dw-mast-columns">
+            	<div class="dw-mast-col-5-1">
+            		<h2><a id="dw-mast-nav-0-0" href="http://www.ibm.com/developerworks/cn/topics/">技术主题</a></h2>
+            		
+            		<ul>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/agile/">Agile
+            			    transformation</a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/aix/">AIX and UNIX</a></li>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/bigdata/">Big data</a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/cloud/">Cloud computing</a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/ibmi/">IBM i</a></li>
+            			
+            		</ul>     
+            	</div>
+            	<div class="dw-mast-col-5-2">
+            		
+            		<ul>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/data/">Information management</a></li>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/java/">Java technology</a></li>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/linux/">Linux</a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/lotus/">Lotus</a></li>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/mobile/">Mobile
+            		        development</a></li>
+           			
+            		</ul>
+            	</div>
+            	<div class="dw-mast-col-5-3">
+            		
+            		<ul>
+          			<li><a href="http://www.ibm.com/developerworks/cn/opensource/">Open source</a></li>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/rational/">Rational</a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/webservices/">SOA and web services</a></li>
+             			<li><a href="http://www.ibm.com/developerworks/cn/web/">Web development</a></li>  
+            			<li><a href="http://www.ibm.com/developerworks/cn/websphere/">WebSphere</a></li>     
+    
+            		</ul>
+            		
+            	</div>
+            	<div class="dw-mast-col-5-4">
+            		<ul>
+           			<li><a href="http://www.ibm.com/developerworks/cn/xml/">XML</a></li>
+            		</ul>        
+            	</div>
+            	<div class="dw-mast-col-5-5">
+            		<ul>
+            			<li><a href="http://www.ibm.com/developerworks/cn/library/"><strong>文档库</strong></a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/products/"><strong>产品 A - Z</strong></a></li>				    
+            		</ul>        
+            	</div>
+            	<div class="dw-mast-close">
+            		<ul>
+            			<li><div class="dw-mast-close-tech-cn"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" border="0" height="10" width="20"></a></div></li>
+            		</ul>
+            	</div>
+            </div>
+            	<!-- Evaluation software category -->
+            	<div class="dw-mast-columns">
+            		<div class="dw-mast-col-2-1">
+            			<h2><a id="dw-mast-nav-1-0" href="http://www.ibm.com/developerworks/cn/downloads">软件下载</a></h2>
+            			<ul>
+            				<li><a href="http://www.ibm.com/developerworks/cn/downloads/#data">Information management</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/cn/downloads/#lotus">Lotus</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/cn/downloads/#rational">Rational</a></li>
+            			</ul>            
+            		</div>
+            		<div class="dw-mast-col-2-2">
+            			<ul>
+            				<li><a href="http://www.ibm.com/developerworks/cn/downloads/#tivoli">Tivoli</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/cn/downloads/#websphere">WebSphere</a></li>
+            				
+            			</ul>            
+            		</div>
+            		<div class="dw-mast-close">
+            			<ul>
+            				<li><div class="dw-mast-close-eval-cn"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" border="0" height="10" width="20"></a></div></li>
+            			</ul>
+            		</div>
+            	</div>
+            	<!-- Community category -->
+            	<div class="dw-mast-columns">
+            		<div class="dw-mast-col-2-1">
+            			<h2><a id="dw-mast-nav-2-0" href="https://www.ibm.com/developerworks/community/?lang=zh">社区</a></h2>
+            			<ul>
+            				<li><a href="https://www.ibm.com/developerworks/community/homepage/?lang=zh">我的首页</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/community/profiles/home.do?lang=zh">概要信息</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/community/groups/service/html/allcommunities?lang=zh">群组</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/mydeveloperworks/blogs/?lang=zh">博客</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/community/bookmarks/html?lang=zh">书签</a></li>  
+            			</ul>     
+            		</div>
+            		<div class="dw-mast-col-2-2">
+            			<ul>
+            				<!--	<li><a href="">Forums</a></li> -->
+            				<li><a href="https://www.ibm.com/developerworks/mydeveloperworks/wikis/home?lang=zh">Wiki</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/community/files/app?lang=zh">文件</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/community/activities/service/html/mainpage?lang=zh#dashboard,myactivities">活动</a></li>
+            				<!--	<li><a href="">Podcasts</a></li> -->    
+            			</ul>
+            		</div>
+            		<div class="dw-mast-close">
+            			<ul>
+            				<li><div class="dw-mast-close-comm-cn"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" border="0" height="10" width="20"></a></div></li>
+            			</ul>
+            		</div>
+            	</div>
+            	<!-- Events category -->
+            	<div class="dw-mast-columns">
+            		<div class="dw-mast-col-1-1">
+            			<h2><a id="dw-mast-nav-3-0" href="https://www.ibm.com/developerworks/community/groups/service/html/communityview?communityUuid=6d7f9e5d-5f89-4767-a006-a81b8d186370&amp;lang=zh">技术讲座</a></h2>
+            			<ul>
+            				<li><a href="https://www.ibm.com/developerworks/community/groups/service/html/communityview?communityUuid=6d7f9e5d-5f89-4767-a006-a81b8d186370&amp;lang=zh">技术讲座</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/cn/swi/">多媒体课堂</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/find/webcasts/">网络广播（英文）</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/find/events/">查找活动（技术讲座，网络广播，会议等）（英文）</a></li> 
+            			</ul>            
+            		</div>
+            		<div class="dw-mast-close">
+            			<ul>
+            				<li><div class="dw-mast-close-event-cn"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" border="0" height="10" width="20"></a></div></li>
+            			</ul>
+            		</div>
+            	</div>
+            </div>
+        </div>
+    </div>
+	
+</div>
+<div id="fdiv" class="ibm-access"><div role="button" tabindex="0" movieattribute="https://www.ibm.com/developerworks/js/dw-mf/connect.swf" srcattribute="https://www.ibm.com/developerworks/js/dw-mf/connect.swf" title="https://www.ibm.com/developerworks/js/dw-mf/connect.swf" style="background: url(&quot;index_files/flash.png&quot;) no-repeat scroll center center transparent ! important; min-width: 32px ! important; min-height: 32px ! important; width: 32px; height: 32px; border: 1px solid rgb(223, 223, 223); cursor: pointer; overflow: hidden; display: inline-block; visibility: visible ! important; -moz-box-sizing: border-box;" bgactive="url(chrome://flashblock/content/flashplay.png) no-repeat center" bginactive="url(chrome://flashblock/content/flash.png) no-repeat center"></div></div>
+<!-- MASTHEAD_END --><!-- MASTHEAD_END -->
+
+<div id="ibm-pcon">
+
+<!-- CONTENT_BEGIN -->
+<div id="ibm-content">
+
+<!-- Navigation_Trail_BEGIN -->
+<!-- &nbsp; -->
+      <div id="ibm-content-head"><ul id="ibm-navigation-trail"><li class="ibm-first"><a href="http://www.ibm.com/developerworks/cn/">developerWorks</a></li><li><a href="http://www.ibm.com/developerworks/cn/topics/">技术主题</a></li><li><a href="http://www.ibm.com/developerworks/cn/java/">Java technology</a></li><li><a href="http://www.ibm.com/developerworks/cn/views/java/libraryview.jsp">文档库</a></li></ul></div>
+<!-- Navigation_Trail_END -->
+
+<!-- dW_Summary Area_START -->
+<div id="dw-summary-article">
+
+<div class="dw-content-head">
+<h1>JTA 深度历险 - 原理与实现</h1><p>
+</p></div>
+
+<div class="ibm-container-body ibm-two-column">
+
+<div class="ibm-column ibm-first">
+<div class="author"><a class="dwauthor" rel="#authortip1" href="#author1">肖 国一</a>, 软件工程师, IBM</div><div style="display: none;" id="authortip1" class="dwauthor-onload-state ibm-no-print">肖国一是一位在 IBM 中国软件开发中心（CSDL）工作的软件工程师，目前从事企业电子商务应用的开发。</div><div class="author"><a class="dwauthor" rel="#authortip2" href="#author2">王 晓利</a>, 软件工程师, IBM</div><div style="display: none;" id="authortip2" class="dwauthor-onload-state ibm-no-print">王晓利，一位工作在 IBM CSDL 的软件工程师，具有 5 年的 J2EE 开发经验和 2 年的 DB2 存储过程开发经验，目前从事企业电子商务应用的开发。</div>
+<p></p>
+  <p><strong>简介：</strong> 在 J2EE 应用中，事务是一个不可或缺的组件模型，它保证了用户操作的 ACID（即原子、一致、隔离、持久）属性。对于只操作单一数据源的应用，可以通过本地资源接口实现事务管理；对于跨数据源（例如多个数据库，或者数据库与 JMS）的大型应用，则必须使用全局事务 JTA (Java Transaction API)。JTA 为 J2EE 平台提供了分布式事务服务，它隔离了事务与底层的资源，实现了透明的事务管理方式。本文将深入探寻 JTA 的体系架构，并通过详细的代码介绍其实现机制。</p>
+
+  <!-- <p class="ibm-no-print"><div id="dw-tag-this" class="ibm-no-print"></div><div id="interestShow" class="ibm-no-print"></div></p> -->
+<div id="dw-tag-content" class="ibm-no-print"></div><div id="dw-moretags-access" class="ibm-access"></div>
+<p class="ibm-no-print"></p><div id="dw-tag-this" class="ibm-no-print"><a class="ibm-external-link" onclick="" href="#">标记本文！</a></div><div id="interestShow" class="ibm-no-print"></div><p></p>
+</div>
+
+<div class="ibm-column ibm-second">
+
+<p class="leading"><strong>发布日期：</strong> 2012 年 8 月 06 日
+  
+<br><strong>级别：</strong> 中级
+    
+
+<br><strong>访问情况 ：</strong> 345 次浏览
+  <br><strong>评论：</strong> <span id="nCmts">0 (<a class="dw-view-comment" href="#icomments">查看</a> | <a onclick="" href="#">添加评论</a> - 登录)</span>
+  <!-- Rating_Area_Begin -->
+  </p><div id="art-rating-summary"><img alt="平均分 5 星 共 1 个评分" src="index_files/stars120x20-5b.jpg" class="dw-avg-rating"> 平均分 (1个评分)<br><a class="dw-view-comment" href="#iratings">为本文评分</a></div>
+  <!-- Rating_Area_End -->
+  <br>
+<p></p>
+</div>
+
+</div>
+</div>
+<!-- dW_Summary_Area_END -->
+
+<!-- CONTENT_BODY -->
+<div id="ibm-content-body">
+
+<!-- MAIN_COLUMN_BEGIN -->
+<div id="ibm-content-main">
+
+<!-- Related_Searches_Area_And_Overlays_Begin -->
+
+<!-- MAIN_COLUMN_CONTAINER_BEGIN -->
+<div class="ibm-container">
+
+<!-- MAIN_COLUMN_CONTENT_BEGIN -->
+<p><a name="major1"><span class="atitle">利用 JTA 处理事务</span></a></p>
+			<p><strong>什么是事务处理</strong></p>
+			<p>事务是计算机应用中不可或缺的组件模型，它保证了用户操作的原子性 ( Atomicity )、一致性 ( Consistency )、隔离性 ( Isolation ) 和持久性 ( Durabilily )。关于事务最经典的示例莫过于信用卡转账：将用户 A 账户中的 500 元人民币转移到用户 B 的账户中，其操作流程如下 <br>
+         1. 将 A 账户中的金额减少 500<br>
+      	 2. 将 B 账户中的金额增加 500<br>
+      	这两个操作必须保正 ACID 的事务属性：即要么全部成功，要么全部失败；假若没有事务保障，用户的账号金额将可能发生问题：<br>假如第一步操作成功而第二步失败，那么用户 A 账户中的金额将就减少 500 元而用户 B 的账号却没有任何增加（不翼而飞）；同样如果第一步出错
+      	而第二步成功，那么用户 A 的账户金额不变而用户 B 的账号将增加 500 元（凭空而生）。上述任何一种错误都会产生严重的数据不一致问题，事务的缺失对于一个稳定的生产系统是不可接受的。</p>
+			<p><strong>J2EE 事务处理方式</strong></p>
+			<p>1. 本地事务：紧密依赖于底层资源管理器（例如数据库连接 )，事务处理局限在当前事务资源内。此种事务处理方式不存在对应用服务器的依赖，因而部署灵活却无法支持多数据源的分布式事务。在数据库连接中使用本地事务示例如下：</p>
+			<p>
+				<br><a name="listing1"><strong>清单 1. 本地事务处理实例</strong></a><br></p><table summary="这一表格包含代码清单。" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="code-outline"><pre class="displaycode">					
+ public void transferAccount() { 
+		 Connection conn = null; 
+		 Statement stmt = null; 
+		 try{ 
+			 conn = getDataSource().getConnection(); 
+			 // 将自动提交设置为 false，
+			 //若设置为 true 则数据库将会把每一次数据更新认定为一个事务并自动提交
+			 <strong>conn.setAutoCommit(false);</strong>
+			
+			 stmt = conn.createStatement(); 
+			 // 将 A 账户中的金额减少 500 
+			 stmt.execute("\
+             update t_account set amount = amount - 500 where account_id = 'A'");
+			 // 将 B 账户中的金额增加 500 
+			 stmt.execute("\
+             update t_account set amount = amount + 500 where account_id = 'B'");
+			
+			 // 提交事务
+		     <strong>conn.commit();</strong>
+			 // 事务提交：转账的两步操作同时成功
+		 } catch(SQLException sqle){ 			
+			 try{ 
+				 // 发生异常，回滚在本事务中的操做
+                <strong>conn.rollback();</strong>
+				 // 事务回滚：转账的两步操作完全撤销
+                 stmt.close(); 
+                 conn.close(); 
+			 }catch(Exception ignore){ 
+				
+			 } 
+			 sqle.printStackTrace(); 
+		 } 
+	 } 
+              </pre></td></tr></tbody></table><br>
+			<p></p>
+			<p>2. 分布式事务处理 : Java 事务编程接口（JTA：Java Transaction API）和 Java 事务服务 (JTS；Java Transaction Service) 为 J2EE 平台提供了分布式事务服务。分布式事务（Distributed Transaction）包括事务管理器（Transaction Manager）和一个或多个支持 XA 协议的资源管理器 ( Resource Manager )。我们可以将资源管理器看做任意类型的持久化数据存储；事务管理器承担着所有事务参与单元的协调与控制。JTA 事务有效的屏蔽了底层事务资源，使应用可以以透明的方式参入到事务处理中；但是与本地事务相比，XA 协议的系统开销大，在系统开发过程中应慎重考虑是否确实需要分布式事务。若确实需要分布式事务以协调多个事务资源，则应实现和配置所支持 XA 协议的事务资源，如 JMS、JDBC 数据库连接池等。使用 JTA 处理事务的示例如下（注意：connA 和 connB 是来自不同数据库的连接）</p>
+			<p>
+				<br><a name="listing2"><strong>清单 2. JTA 事务处理</strong></a><br></p><table summary="这一表格包含代码清单。" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="code-outline"><pre class="displaycode">					
+ public void transferAccount() { 
+		
+		 UserTransaction userTx = null; 
+		 Connection connA = null; 
+		 Statement stmtA = null; 
+				
+		 Connection connB = null; 
+		 Statement stmtB = null; 
+    
+		 try{ 
+		       // 获得 Transaction 管理对象
+			 userTx = (UserTransaction)getContext().lookup("\
+			       java:comp/UserTransaction"); 
+			 // 从数据库 A 中取得数据库连接
+			 connA = getDataSourceA().getConnection(); 
+			
+			 // 从数据库 B 中取得数据库连接
+			 connB = getDataSourceB().getConnection(); 
+      
+                        // 启动事务
+			 <strong>userTx.begin();</strong>
+			
+			 // 将 A 账户中的金额减少 500 
+			 stmtA = connA.createStatement(); 
+			 stmtA.execute("
+            update t_account set amount = amount - 500 where account_id = 'A'");
+			
+			 // 将 B 账户中的金额增加 500 
+			 stmtB = connB.createStatement(); 
+			 stmtB.execute("\
+             update t_account set amount = amount + 500 where account_id = 'B'");
+			
+			 // 提交事务
+			 <strong>userTx.commit();</strong>
+			 // 事务提交：转账的两步操作同时成功（数据库 A 和数据库 B 中的数据被同时更新）
+		 } catch(SQLException sqle){ 
+			
+			 try{ 
+		  	       // 发生异常，回滚在本事务中的操纵
+                  <strong>userTx.rollback();</strong>
+				 // 事务回滚：转账的两步操作完全撤销 
+				 //( 数据库 A 和数据库 B 中的数据更新被同时撤销）
+				
+				 stmt.close(); 
+                 conn.close(); 
+				 ... 
+			 }catch(Exception ignore){ 
+				
+			 } 
+			 sqle.printStackTrace(); 
+			
+		 } catch(Exception ne){ 
+			 e.printStackTrace(); 
+		 } 
+	 }  </pre></td></tr></tbody></table><br>
+			<p></p>
+			<div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><p><a name="major2"><span class="atitle">JTA 实现原理</span></a></p>
+			<p>很多开发人员都会对 JTA 的内部工作机制感兴趣：我编写的代码没有任何与事务资源（如数据库连接）互动的代码，但是我的操作（数据库更新）却实实在在的被包含在了事务中，那 JTA 究竟是通过何种方式来实现这种透明性的呢？
+要理解 JTA 的实现原理首先需要了解其架构：它包括事务管理器（Transaction Manager）和一个或多个支持 XA 协议的资源管理器 ( Resource Manager ) 两部分， 我们可以将资源管理器看做任意类型的持久化数据存储；事务管理器则承担着所有事务参与单元的协调与控制。
+根据所面向对象的不同，我们可以将 JTA 的事务管理器和资源管理器理解为两个方面：面向开发人员的使用接口（事务管理器）和面向服务提供商的实现接口（资源管理器）。其中开发接口的主要部分即为上述示例中引用的 UserTransaction 对象，开发人员通过此接口在信息系统中实现分布式事务；而实现接口则用来规范提供商（如数据库连接提供商）所提供的事务服务，它约定了事务的资源管理功能，使得 JTA 可以在异构事务资源之间执行协同沟通。以数据库为例，IBM 公司提供了实现分布式事务的数据库驱动程序，Oracle 也提供了实现分布式事务的数据库驱动程序，
+在同时使用 DB2 和 Oracle 两种数据库连接时， JTA 即可以根据约定的接口协调者两种事务资源从而实现分布式事务。正是基于统一规范的不同实现使得 JTA 可以协调与控制不同数据库或者 JMS 厂商的事务资源，其架构如下图所示：
+</p>
+			
+				<br><a name="fig1"><strong>图 1. JTA 体系架构</strong></a><br>
+				<img alt="JTA 体系架构图" src="index_files/transaction_architecture.jpg" height="300" width="450">
+			<br>
+			<p>开发人员使用开发人员接口，实现应用程序对全局事务的支持；各提供商（数据库，JMS 等）依据提供商接口的规范提供事务资源管理功能；事务管理器（ TransactionManager ）将应用对分布式事务的使用映射到实际的事务资源并在事务资源间进行协调与控制。
+下面，本文将对包括 UserTransaction、Transaction 和 TransactionManager 在内的三个主要接口以及其定义的方法进行介绍。</p>
+	 	<p>面向开发人员的接口为 UserTransaction （使用方法如上例所示），开发人员通常只使用此接口实现 JTA 事务管理，其定义了如下的方法：</p>
+<ul>
+   <li><strong>begin()</strong>- 开始一个分布式事务，（在后台 TransactionManager 会创建一个
+ Transaction 事务对象并把此对象通过 ThreadLocale 关联到当前线程上 )</li>
+  <li><strong>commit()</strong>- 提交事务（在后台 TransactionManager 会从当前线程下取出事务对象并把此对象所代表的事务提交）</li>
+  <li><strong>rollback()</strong>- 回滚事务（在后台 TransactionManager 会从当前线程下取出事务对象并把此对象所代表的事务回滚）</li>
+  <li><strong>getStatus()</strong>- 返回关联到当前线程的分布式事务的状态 (Status 对象里边定义了所有的事务状态，感兴趣的读者可以参考 API 文档 )</li>
+  <li><strong>setRollbackOnly()</strong>- 标识关联到当前线程的分布式事务将被回滚</li>
+ 
+</ul>
+	 	
+		
+	 	<p>面向提供商的实现接口主要涉及到 TransactionManager 和 Transaction 两个对象 </p>
+	 	 <p>Transaction 代表了一个物理意义上的事务，在开发人员调用 UserTransaction.begin() 方法时 TransactionManager 会创建一个 Transaction 事务对象（标志着事务的开始）并把此对象通过 ThreadLocale 关联到当前线程。UserTransaction 接口中的 commit()、rollback()，getStatus() 等方法都将最终委托给 Transaction 类的对应方法执行。Transaction 接口定义了如下的方法：</p>
+	 	 <ul>
+					<li>
+					<strong>commit()</strong>- 协调不同的事务资源共同完成事务的提交</li>
+<li>
+					<strong>rollback()</strong>- 协调不同的事务资源共同完成事务的回滚</li>
+<li>
+					<strong>setRollbackOnly()</strong>- 标识关联到当前线程的分布式事务将被回滚</li>
+<li>
+					<strong>getStatus()</strong>- 返回关联到当前线程的分布式事务的状态</li>
+<li>
+					<strong>enListResource(XAResource xaRes, int flag)</strong>- 将事务资源加入到当前的事务中（在上述示例中，在对数据库 A 操作时
+其所代表的事务资源将被关联到当前事务中，同样，在对数据库 B 操作时其所代表的事务资源也将被关联到当前事务中）</li>
+<li>
+					<strong>delistResourc(XAResource xaRes, int flag)</strong>- 将事务资源从当前事务中删除</li>
+<li>
+					<strong>registerSynchronization(Synchronization sync)</strong>- 回调接口，Hibernate 等 ORM 工具都有自己的事务控制机制来保证事务，
+但同时它们还需要一种回调机制以便在事务完成时得到通知从而触发一些处理工作，如清除缓存等。这就涉及到了 Transaction 
+的回调接口 registerSynchronization。工具可以通过此接口将回调程序注入到事务中，当事务成功提交后，回调程序将被激活。</li>
+				</ul>
+	 	 
+
+	 	<p> TransactionManager 本身并不承担实际的事务处理功能，它更多的是充当用户接口和实现接口之间的桥梁。下面列出了 TransactionManager 中定义的方法，可以看到此接口中的大部分事务方法与 UserTransaction 和 Transaction 相同。
+在开发人员调用 UserTransaction.begin() 方法时 TransactionManager 会创建一个 Transaction 事务对象（标志着事务的开始）并把此对象通过 ThreadLocale 关联到当前线程上；同样 UserTransaction.commit() 会调用 TransactionManager.commit()， 方法将从当前线程下取出事务对象 Transaction 并把此对象所代表的事务提交， 即调用 Transaction.commit() </p>
+<ul>
+	<li>
+					<strong>begin()</strong>- 开始事务</li>
+<li>
+					<strong>commit()</strong>- 提交事务</li>
+<li>
+					<strong>rollback()</strong>- 回滚事务</li>
+<li>
+					<strong>getStatus()</strong>- 返回当前事务状态</li>
+<li>
+					<strong>setRollbackOnly()</strong></li>
+<li>
+					<strong>getTransaction()</strong>- 返回关联到当前线程的事务</li>
+<li>
+					<strong>setTransactionTimeout(int seconds)</strong>- 设置事务超时时间</li>
+<li>
+					<strong>resume(Transaction tobj)</strong>- 继续当前线程关联的事务</li>
+<li>
+					<strong>suspend()</strong>- 挂起当前线程关联的事务</li>
+</ul>
+	 
+<p>在系统开发过程中会遇到需要将事务资源暂时排除的操作，此时就需要调用 suspend() 方法将当前的事务挂起：在此方法后面所做的任何操作将不会被包括在事务中，在非事务性操作完成后调用 resume()以继续事务（注： 要进行此操作需要获得 TransactionManager 对象， 其获得方式在不同的 J2EE 应用服务器上是不一样的）<br>
+下面将通过具体的代码向读者介绍 JTA 实现原理。下图列出了示例实现中涉及到的 Java 类，其中 UserTransactionImpl 实现了 UserTransaction 接口，TransactionManagerImpl 实现了 TransactionManager 接口，TransactionImpl 实现了 Transaction 接口
+</p>
+			
+				<br><a name="fig2"><strong>图 2. JTA 实现类图</strong></a><br>
+				<img alt="Transaction 类图" src="index_files/transacton_all_classes.jpg" height="500" width="572">
+			<br>
+			<p>
+				<br><a name="listing3"><strong>清单 3. 开始事务 - UserTransactionImpl implenments UserTransaction</strong></a><br></p><table summary="这一表格包含代码清单。" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="code-outline"><pre class="displaycode">					
+public void begin() throws NotSupportedException, SystemException { 
+   // 将开始事务的操作委托给 TransactionManagerImpl 
+   TransactionManagerImpl.singleton().begin(); 
+     } 
+    </pre></td></tr></tbody></table><br>
+				<br><a name="listing4"><strong>清单 4. 开始事务 - TransactionManagerImpl implements TransactionManager</strong></a><br><table summary="这一表格包含代码清单。" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="code-outline"><pre class="displaycode">					
+// 此处 transactionHolder 用于将 Transaction 所代表的事务对象关联到线程上
+private static ThreadLocal&lt;TransactionImpl&gt; transactionHolder 
+        = new ThreadLocal&lt;TransactionImpl&gt;(); 
+	
+	 //TransacationMananger 必须维护一个全局对象，因此使用单实例模式实现
+	 private static TransactionManagerImpl singleton = new TransactionManagerImpl(); 
+	
+	 private TransactionManagerImpl(){ 
+		
+	 } 
+	
+	 public static TransactionManagerImpl singleton(){ 
+		 return singleton; 
+	 } 
+
+	 public void begin() throws NotSupportedException, SystemException { 
+		 //XidImpl 实现了 Xid 接口，其作用是唯一标识一个事务
+		 XidImpl xid = new XidImpl(); 
+		 // 创建事务对象，并将对象关联到线程
+		 TransactionImpl tx = new TransactionImpl(xid); 
+		
+		 transactionHolder.set(tx); 
+	 } 
+    </pre></td></tr></tbody></table><br>
+			<p></p>
+			<p>现在我们就可以理解 Transaction 接口上没有定义 begin 方法的原因了：Transaction 对象本身就代表了一个事务，在它被创建的时候就表明事务已经开始，因此也就不需要额外定义 begin() 方法了。
+
+     	 	 <br><a name="listing5"><strong>清单 5. 提交事务 - UserTransactionImpl implenments UserTransaction</strong></a><br></p><table summary="这一表格包含代码清单。" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="code-outline"><pre class="displaycode">					
+     	 public void commit() throws RollbackException, HeuristicMixedException, 
+			 HeuristicRollbackException, SecurityException, 
+			 IllegalStateException, SystemException { 
+			
+			 // 检查是否是 Roll back only 事务，如果是回滚事务
+		        if(rollBackOnly){ 
+			     rollback(); 
+			
+			     return; 
+		       } else { 
+			    // 将提交事务的操作委托给 TransactionManagerImpl 
+			    TransactionManagerImpl.singleton().commit(); 
+		       } 
+	 } 
+	</pre></td></tr></tbody></table><br>
+				<br><a name="listing6"><strong>清单 6. 提交事务 - TransactionManagerImpl implenments TransactionManager</strong></a><br><table summary="这一表格包含代码清单。" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="code-outline"><pre class="displaycode">					
+public void commit() throws RollbackException, HeuristicMixedException, 
+    HeuristicRollbackException, SecurityException, 
+    IllegalStateException, SystemException { 
+				
+     // 取得当前事务所关联的事务并通过其 commit 方法提交
+     TransactionImpl tx = transactionHolder.get(); 
+     tx.commit(); 
+	         } 
+	    </pre></td></tr></tbody></table><br>
+			<p></p>
+			<p>同理， rollback、getStatus、setRollbackOnly 等方法也采用了与 commit() 相同的方式实现。 UserTransaction 对象不会对事务进行任何控制，
+所有的事务方法都是通过 TransactionManager 传递到实际的事务资源即 Transaction 对象上。<br>
+上述示例演示了 JTA 事务的处理过程，下面将为您展示事务资源（数据库连接，JMS）是如何以透明的方式加入到 JTA 事务中的。首先需要明确的一点是，在 JTA 事务
+代码中获得的数据库源 ( DataSource ) 必须是支持分布式事务的。在如下的代码示例中，尽管所有的数据库操作都被包含在了 JTA 事务中，但是因为 MySql 的数据库连接是通过本地方式获得的，对 MySql 的任何更新将不会被自动包含在全局事务中。
+		</p>
+			<p>
+				<br><a name="listing7"><strong>清单 7. JTA 事务处理</strong></a><br></p><table summary="这一表格包含代码清单。" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="code-outline"><pre class="displaycode">					
+ public void transferAccount() { 
+		
+		 UserTransaction userTx = null; 
+		 Connection mySqlConnection = null; 
+		 Statement mySqlStat = null; 
+				
+		 Connection connB = null; 
+		 Statement stmtB = null; 
+    
+		 try{ 
+		        // 获得 Transaction 管理对象
+			 userTx = 
+            (UserTransaction)getContext().lookup("java:comp/UserTransaction");
+			 // 以本地方式获得 mySql 数据库连接
+			 mySqlConnection = DriverManager.getConnection("localhost:1111"); 
+			
+			 // 从数据库 B 中取得数据库连接， getDataSourceB 返回应用服务器的数据源
+			 connB = getDataSourceB().getConnection(); 
+      
+                        // 启动事务
+			 <strong>userTx.begin();</strong>
+			
+			 // 将 A 账户中的金额减少 500 
+			 //mySqlConnection 是从本地获得的数据库连接，不会被包含在全局事务中
+			 mySqlStat = mySqlConnection.createStatement(); 
+			 mySqlStat.execute("
+             update t_account set amount = amount - 500 where account_id = 'A'");
+			
+			 //connB 是从应用服务器得的数据库连接，会被包含在全局事务中
+			 stmtB = connB.createStatement(); 
+			 stmtB.execute("
+             update t_account set amount = amount + 500 where account_id = 'B'");
+			
+			 // 事务提交：connB 的操作被提交，mySqlConnection 的操作不会被提交
+			 <strong>userTx.commit();</strong>
+
+		 } catch(SQLException sqle){ 
+			 // 处理异常代码
+		 } catch(Exception ne){ 
+			 e.printStackTrace(); 
+		 } 
+	 }  </pre></td></tr></tbody></table><br>
+			<p></p>
+			<p>为什么必须从支持事务的数据源中获得的数据库连接才支持分布式事务呢？其实支持事务的数据源与普通的数据源是不同的，它实现了额外的 XADataSource 接口。我们可以简单的将 XADataSource 理解为普通的数据源（继承了 java.sql.PooledConnection），只是它为支持分布式事务而增加了 getXAResource 方法。另外，由 XADataSource 
+返回的数据库连接与普通连接也是不同的，此连接除了实现 java.sql.Connection 定义的所有功能之外还实现了 XAConnection 接口。我们可以把 XAConnection 理解为普通的数据库连接，它支持所有 JDBC 规范的数据库操作，不同之处在于 XAConnection 增加了对分布式事务的支持。通过下面的类图读者可以对这几个接口的关系有所了解：</p>
+			
+				<br><a name="fig3"><strong>图 3. 事务资源类图</strong></a><br>
+				<img alt="Transaction 类图" src="index_files/xa_resource.jpg" height="400" width="572">
+			<br>
+			<p>应用程序从支持分布式事务的数据源获得的数据库连接是 XAConnection 接口的实现，而由此数据库连接创建的会话（Statement）也为了支持分布式事务而增加了功能，如下代码所示：
+      		  <br><a name="listing8"><strong>清单 8. JTA 事务资源处理</strong></a><br></p><table summary="这一表格包含代码清单。" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="code-outline"><pre class="displaycode">					
+ public void transferAccount() { 
+		
+		 UserTransaction userTx = null; 
+				
+		 Connection conn = null; 
+		 Statement stmt = null; 
+    
+		 try{ 
+		        // 获得 Transaction 管理对象
+			 userTx = (UserTransaction)getContext().lookup("
+			 java:comp/UserTransaction"); 
+
+			 // 从数据库中取得数据库连接， getDataSourceB 返回支持分布式事务的数据源
+			 conn = getDataSourceB().getConnection(); 
+                        // 会话 stmt 已经为支持分布式事务进行了功能增强
+			 stmt = conn.createStatement(); 
+			
+                        // 启动事务
+			 <strong>userTx.begin();</strong>
+             stmt.execute("update t_account ... where account_id = 'A'"); 
+			 <strong>userTx.commit();</strong>
+
+		 } catch(SQLException sqle){ 
+			 // 处理异常代码
+		 } catch(Exception ne){ 
+			 e.printStackTrace(); 
+		 } 
+	 } 
+	</pre></td></tr></tbody></table><br>
+			<p></p>
+			<p>我们来看一下由 XAConnection 数据库连接创建的会话（Statement）部分的代码实现（不同的 JTA 提供商会有不同的实现方式，此处代码示例只是向您演示事务资源是如何被自动加入到事务中）。
+我们以会话对象的 execute 方法为例，通过在方法开始部分增加对 associateWithTransactionIfNecessary 方法的调用，即可以保证在 JTA 事务期间，对任何数据库连接的操作都会被透明的加入到事务中。
+      		  <br><a name="listing9"><strong>清单 9. 将事务资源自动关联到事务对象 - XAStatement implements Statement</strong></a><br></p><table summary="这一表格包含代码清单。" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="code-outline"><pre class="displaycode">					
+ public void execute(String sql) { 
+                // 对于每次数据库操作都检查此会话所在的数据库连接是否已经被加入到事务中
+		 associateWithTransactionIfNecessary(); 
+
+		 try{ 
+                      // 处理数据库操作的代码
+		      .... 
+
+		 } catch(SQLException sqle){ 
+			 // 处理异常代码
+		 } catch(Exception ne){ 
+			 e.printStackTrace(); 
+		 } 
+	 } 
+
+ public void associateWithTransactionIfNecessary(){ 
+	     
+		 // 获得 TransactionManager 
+		 TransactionManager tm = getTransactionManager(); 
+
+                Transaction tx = tm.getTransaction()；
+        	 // 检查当前线程是否有分布式事务
+	        if(tx != null){ 
+			 // 在分布式事务内，通过 tx 对象判断当前数据连接是否已经被包含在事务中，
+			 //如果不是那么将此连接加入到事务中
+			 Connection conn = this.getConnection(); 
+			 //tx.hasCurrentResource， xaConn.getDataSource() 不是标准的 JTA 
+                        // 接口方法，是为了实现分布式事务而增加的自定义方法
+			 if(!tx.hasCurrentResource(conn)){ 
+			     XAConnection xaConn = (XAConnection)conn; 
+			     XADataSource xaSource = xaConn.getDataSource(); 
+					
+			     // 调用 Transaction 的接口方法，将数据库事务资源加入到当前事务中
+			     <strong>tx.enListResource(xaSource.getXAResource(), 1);</strong>
+		         } 
+	         } 
+        } 	
+	</pre></td></tr></tbody></table><br>
+			<p></p>
+			<p>XAResource 与 Xid： XAResource 是 Distributed Transaction Processing: The XA Specification 标准的 Java 实现，它是对底层事务资源的抽象，定义了分布式事务处理过程中事务管理器和资源管理器之间的协议，各事务资源提供商（如 JDBC 驱动，JMS）将提供此接口的实现。使用此接口，开发人员可以通过自己的编程实现分布式事务处理，但这些通常都是由应用服务器实现的（服务器自带实现更加高效，稳定）
+为了说明，我们将举例说明他的使用方式。<br>
+在使用分布式事务之前，为了区分事务使之不发生混淆，必须实现一个 Xid 类用来标识事务，可以把 Xid 想象成事务的一个标志符，每次在新事务创建是都会为事务分配一个 Xid，Xid 包含三个元素：formatID、gtrid（全局事务标识符）和 bqual（分支修饰词标识符）。
+ formatID 通常是零，这意味着你将使用 OSI CCR（Open Systems Interconnection Commitment, Concurrency 和 Recovery 标准）来命名；如果你要使用另外一种格式，那么 formatID 应该大于零，-1 值意味着 Xid 为无效。</p>
+      	 <p>gtrid 和 bqual 分别包含 64 个字节二进制码来分别标识全局事务和分支事务， 唯一的要求是 gtrid 和 bqual 必须是全局唯一的。<br>
+ XAResource 接口中主要定义了如下方法：</p>      
+ <ul>
+	
+<li>
+					<strong>commit()</strong>- 提交事务</li>
+<li>
+					<strong>isSameRM(XAResource xares)</strong>- 检查当前的 XAResource 与参数是否同一事务资源</li>
+<li>
+					<strong>prepare()</strong>- 通知资源管理器准备事务的提交工作</li>
+<li>
+					<strong>rollback()</strong>- 通知资源管理器回滚事务</li> 	
+						
+	</ul>
+
+       <p>在事务被提交时，Transaction 对象会收集所有被当前事务包含的 XAResource 资源，然后调用资源的提交方法，如下代码所示：</p> 
+       <br><a name="listing10"><strong>清单 10. 提交事务 - TransactionImpl implements Transaction</strong></a><br><table summary="这一表格包含代码清单。" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="code-outline"><pre class="displaycode">					
+public void commit() throws RollbackException, HeuristicMixedException, 
+			 HeuristicRollbackException, SecurityException, 
+			 IllegalStateException, SystemException { 
+			
+			 // 得到当前事务中的所有事务资源
+		        List&lt;XAResource&gt; list = getAllEnlistedResouces(); 
+			
+			 // 通知所有的事务资源管理器，准备提交事务
+                        // 对于生产级别的实现，此处需要进行额外处理以处理某些资源准备过程中出现的异常
+			 for(XAResource xa : list){ 
+				 xa.prepare(); 
+			 } 
+			
+			 // 所有事务性资源，提交事务
+			 for(XAResource xa : list){ 
+				 xa.commit(); 
+			 } 
+	   } 
+	    </pre></td></tr></tbody></table><br>
+			
+			<div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><p><a name="major3"><span class="atitle">结束语</span></a></p>
+			<p>通过如上介绍相信读者对 JTA 的原理已经有所了解，本文中的示例代码都是理想情况下的假设实现。一款完善成熟的 JTA 事务实现需要考虑与处理的细节非常多，如性能（提交事务的时候使用多线程方式并发提交事务）、容错（网络，系统异常）等， 其成熟也需要经过较长时间的积累。感兴趣的读者可以阅读一些开源 JTA 实现以进一步深入学习。</p>
+		<!-- CMA ID: 829330 --> <!-- Site ID: 10 --> <!-- XSLT stylesheet used to transform this file: dw-document-html-6.0.xsl -->
+<br>
+<p><a name="resources"><span class="atitle">参考资料 </span></a></p><p><strong>学习</strong></p><ul><li>
+        Java 官方网站“<a href="http://www.oracle.com/technetwork/java/javaee/jta/index.html">Java Transaction API Specification</a>”提供了详细的 JTA 信息、包括版本， 规范等，感兴趣的读者可以参考<br><br></li><li>
+        这篇文章“<a href="http://www.bccn.net/Article/kfyy/java/jszl/200709/6154.html">Java Transaction API 概述</a>”( 编程中国 ) 详细描述了 XA 资源的使用原理， 感兴趣的读者可以参照学习<br><br></li><li>
+        “<a href="http://jotm.objectweb.org/">JOTM</a>”是一款开源的 JTA 实现， 读者可以参照其源代码深入学习<br><br></li><li>
+				<a href="http://www.ibm.com/developerworks/cn/java/" onmouseover="">developerWorks Java 技术专区</a>：这里有数百篇关于 Java 编程各个方面的文章。
+<br><br></li></ul><p><strong>讨论</strong></p><ul><li><a href="http://www.ibm.com/developerworks/forums/dw_forum.jsp?forum=375&amp;cat=5">参与论坛讨论</a>。<br><br></li><li>加入 <a href="http://www.ibm.com/developerworks/cn/community/" onmouseover="">developerWorks 中文社区</a>。查看开发人员推动的博客、论坛、组和维基，并与其他 developerWorks 用户交流。<br><br></li></ul>
+<p><a name="author"><span class="atitle">作者简介</span></a></p><div class="ibm-container ibm-portrait-module ibm-alternate-two"><div class="ibm-container-body"><p><a name="author1"> </a>肖国一是一位在 IBM 中国软件开发中心（CSDL）工作的软件工程师，目前从事企业电子商务应用的开发。</p></div><div class="ibm-container-body"><p><a name="author2"> </a>王晓利，一位工作在 IBM CSDL 的软件工程师，具有 5 年的 J2EE 开发经验和 2 年的 DB2 存储过程开发经验，目前从事企业电子商务应用的开发。</p></div></div>
+<!-- MAIN_COLUMN_CONTENT_END -->
+  <!-- OVERLAYS_START -->
+  <!-- Report_Abuse_Start -->
+  <div class="ibm-common-overlay ibm-no-print" id="reportabuseoverlay">
+    <div class="ibm-head"><p><a class="ibm-common-overlay-close" href="#">关闭 [x]</a></p></div>
+    <div class="ibm-body">
+      <div class="ibm-main">
+        <a class="ibm-access" name="reportabuseoverlay">关于报告滥用的帮助</a>   
+        <div class="ibm-title"><h1>报告滥用</h1></div>
+        <div class="ibm-container ibm-alternate">
+          <p><strong>谢谢!</strong>  此内容已经标识给管理员注意。</p>
+          <div class="ibm-overlay-rule"><hr></div>
+          <div class="ibm-buttons-row">
+            <input onclick="" class="ibm-btn-cancel-sec dw-btn-cancel-sec" name="ibm-cancel" value="关闭" type="button">
+          </div>
+        </div>
+      </div> 
+    </div>
+    <div class="ibm-footer"></div>
+  </div>
+  <!-- Report_Abuse_Error_Start -->
+  <div class="ibm-common-overlay ibm-no-print" id="reportabuseoverlayerror">
+    <div class="ibm-head"><p><a class="ibm-common-overlay-close" href="#">关闭 [x]</a></p></div>
+    <div class="ibm-body">
+      <div class="ibm-main">
+        <a class="ibm-access" name="reportabuseoverlayerror">关于报告滥用的帮助</a>   
+        <div class="ibm-title"><h1>报告滥用</h1></div>
+        <div class="ibm-container ibm-alternate">
+          <p class="ibm-ind-error"><strong>报告滥用提交失败。  请稍后重试。</strong></p>
+          <div class="ibm-overlay-rule"><hr></div>
+          <div class="ibm-buttons-row">
+            <input onclick="" class="ibm-btn-cancel-sec dw-btn-cancel-sec" name="ibm-cancel" value="关闭" type="button">
+          </div>
+        </div>
+      </div> 
+    </div>
+    <div class="ibm-footer"></div>
+  </div>
+  <!-- Sign in OVERLAY STARTS HERE --> 
+  <div class="ibm-common-overlay" id="signin_overlay">
+    <div class="ibm-head">
+      <p><a class="ibm-common-overlay-close" href="#" onclick="">关闭 [x]</a></p>
+    </div>
+    <div class="ibm-body">
+      <div class="ibm-main">
+        <div class="ibm-title ibm-subtitle">
+          <h1>developerWorks：登录</h1>
+          <div id="ibm-overlay-error-signin" class="no-display"></div>
+        </div>
+        
+        <div class="ibm-container ibm-alternate ibm-buttons-last">
+          <div class="ibm-container-body">
+
+            <form class="ibm-column-form" id="sFormId" action="" method="post" name="sForm" onsubmit="">
+              <p><label for="ibmid">IBM ID：</label><span><input name="ibm-id" id="ibmid" size="25" class="required" onkeypress="" type="text">
+                <br><a class="ibm-forward-link" href="#" onclick="">需要一个 IBM ID？</a>
+                <br><a class="ibm-forward-link" href="http://www.ibm.com/developerworks/dwwi/jsp/WSHelp.jsp?lang=zh_CN">忘记 IBM ID？</a></span>   
+              </p> 
+              <p><label for="password">密码：</label><span><input name="password" id="password" size="25" value="" class="required" onkeypress="" type="password"><br>
+                <a class="ibm-forward-link" href="#" onclick="">忘记密码？</a><br>
+                <a class="ibm-forward-link" href="#" onclick="">更改您的密码</a></span></p> 
+
+              <p class="dw-perm-box">
+                <span><input id="perm" name="perm_name" type="checkbox"><label for="perm"> 保持登录。</label></span>
+              </p>
+
+              <p>单击提交则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/mydeveloperworks/terms?lang=zh">使用条款</a></p>
+              <div class="ibm-buttons-row">
+                <p><input class="ibm-btn-arrow-pri" name="ibm-submit" value="提交" onclick="" type="submit"><span class="ibm-sep"> </span>
+                  <input value="取消" name="ibm-cancel" class="ibm-btn-cancel-sec" onclick="" type="button"></p>
+              </div>
+            </form>
+            <div class="ibm-overlay-rule"><hr></div>
+            <p>当您初次登录到 developerWorks 时，将会为您创建一份概要信息。<strong>您在 developerWorks 概要信息中选择公开的信息将公开显示给其他人，但您可以随时修改这些信息的显示状态。</strong>您的姓名（除非选择隐藏）和昵称将和您在 developerWorks 发布的内容一同显示。</p>
+            <div class="dw-overlay-legal"><p>所有提交的信息确保安全。</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ibm-footer"></div>
+  </div>
+  <!-- Sign in OVERLAY ENDS HERE --> 
+  
+  
+  <!-- Display name OVERLAY STARTS HERE --> 
+  <div class="ibm-common-overlay" id="displayname_overlay">
+    <div class="ibm-head">
+      <p><a class="ibm-common-overlay-close" href="#" onclick="">关闭 [x]</a></p>
+    </div>
+    <div class="ibm-body">
+      <div class="ibm-main">
+        <div class="ibm-title ibm-subtitle">
+          <h1>请选择您的昵称：</h1>
+          <div id="ibm-overlay-error-dname" class="no-display"></div>
+        </div>
+        <div class="ibm-container ibm-alternate ibm-buttons-last">
+          <div class="ibm-container-body">
+            <p class="ibm-overlay-intro">当您初次登录到 developerWorks 时，将会为您创建一份概要信息，您需要指定一个昵称。您的昵称将和您在 developerWorks 发布的内容显示在一起。</p><p><strong>昵称长度在 3 至 31 个字符之间</strong>。 您的昵称在 developerWorks 社区中必须是唯一的，并且出于隐私保护的原因，不能是您的电子邮件地址。</p>
+            <form id="dFormId" method="post" action="" name="dForm" onsubmit="" class="ibm-column-form">
+              <p><label for="displayname">昵称：</label><span><input name="displayname" id="displayname" size="25" onkeypress="" type="text"></span><span class="ibm-form-note">（长度在 3 至 31 个字符之间）</span>
+              </p>
+              
+              <div class="ibm-overlay-rule"><hr>
+              </div>
+              <p>单击<strong>提交</strong>则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/mydeveloperworks/terms?lang=zh">使用条款</a>.</p>
+              <div class="ibm-buttons-row">
+                <p><input class="ibm-btn-arrow-pri" name="ibm-submit" value="提交" onclick="" type="submit"><span class="ibm-sep"> </span>
+                  <input value="取消" name="ibm-cancel" class="ibm-btn-cancel-sec" onclick="" type="button"></p>
+              </div>
+            </form>
+            <div class="ibm-overlay-rule"><hr></div>
+            <div class="dw-overlay-legal"><p>所有提交的信息确保安全。</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ibm-footer"></div>
+  </div>
+  <!-- Display name OVERLAY ENDS HERE -->
+  <!-- OVERLAYS_END -->
+  <!-- RATINGS START -->
+  <p class="ibm-no-print"><span class="atitle"><a name="iratings">为本文评分</a></span></p>
+  <input id="art-rating" name="ratinga" value="5" type="hidden"><div id="art-rating-module"><p id="submitErr" class="ibm-ind-error" style="display: none;"><strong>错误：提交失败，请重试。</strong></p><p><span id="ratingSectUI"><img alt="平均分 5 星 共 1 个评分" src="index_files/stars120x20-5gw.jpg" class="dw-avg-rating"> 平均分 (1个评分)</span></p><div class="ibm-container" id="ratingForm"><div class="ibm-container-body dw-container-ratings"><form class="dw-ratings-form" onsubmit=""><input name="ratingstars" id="rat-1" value="1" type="radio"><label class="rating-label" id="star1" for="rat-1">1 星</label><img id="rat-1-img" alt="1 星" title="1 星" src="index_files/stars120x20-1w.jpg" class="rating-image"><span class="dw-rating-text">1 星</span><br><input name="ratingstars" id="rat-2" value="2" type="radio"><label class="rating-label" id="star2" for="rat-2">2 星</label><img id="rat-2-img" alt="2 星" title="2 星" src="index_files/stars120x20-2w.jpg" class="rating-image2"><span class="dw-rating-text">2 星</span><br><input name="ratingstars" id="rat-3" value="3" type="radio"><label class="rating-label" id="star3" for="rat-3">3 星</label><img id="rat-3-img" alt="3 星" title="3 星" src="index_files/stars120x20-3w.jpg" class="rating-image2"><span class="dw-rating-text">3 星</span><br><input name="ratingstars" id="rat-4" value="4" type="radio"><label class="rating-label" id="star4" for="rat-4">4 星</label><img id="rat-4-img" alt="4 星" title="4 星" src="index_files/stars120x20-4w.jpg" class="rating-image2"><span class="dw-rating-text">4 星</span><br><input name="ratingstars" id="rat-5" value="5" type="radio"><label class="rating-label" id="star5" for="rat-5">5 星</label><img id="rat-5-img" alt="5 星" title="5 星" src="index_files/stars120x20-5w.jpg" class="rating-image2"><span class="dw-rating-text">5 星</span><div class="ibm-buttons-row"><p class="ibm-first"><input value="提交" name="ibm-submit" class="ibm-btn-arrow-pri dw-ratings-submit" type="submit"></p></div></form></div></div></div>
+  <script language="JavaScript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+  <!-- RATINGS END --> 
+  
+  <!-- INLINE_COMMENTS_START -->
+  <p class="ibm-no-print"><span class="atitle"><a name="icomments">评论</a></span></p>
+    <script language="JavaScript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+    <div id="threadShow"><div id="cmtTog" style=""><div class="ibm-container ibm-alternate-two dw-commentbox dw-noborder"><p id="cmtHead"><label for="newCmt"><strong>添加评论:</strong></label></p><div class="ibm-container-body dw-commentbox dw-noborder"><p id="signInSect">请 <a onclick="" href="#">登录</a> 或 <a href="http://www.ibm.com/developerworks/dwwi/DWAuthRouter?m=register&amp;lang=zh_CN&amp;d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-jta%2F%23icomments">注册</a>  后发表评论。</p><p>注意：评论中不支持 HTML 语法</p><span id="infoCmt"></span><form focus="name" enctype="multipart/form-data" method="post" action="" name="form" class="ibm-column-form"><p><textarea disabled="disabled" cols="120" rows="5" name="newCmt" id="newCmt" class="dw-inoperable"></textarea><br></p><span class="ibm-input-group"><input value="1" name="comment_notification" id="comment_notification" disabled="disabled" type="checkbox"><label id="notifyText" class="ibm-form-note dw-btn-cancel-sec" for="comment_notification">有新评论时提醒我</label></span><span class="ibm-form-note dw-btn-cancel-sec notifySection" id="maxCharsCount">剩余 <span id="charCount">1000</span> 字符</span><br><br><p></p><p class="ibm-buttons-row"><input disabled="disabled" value="发布" jquery1275054459750="11" name="postCmt" id="postCmt" class="ibm-btn-arrow-sec dw-btn-arrow-sec" alt="添加您的评论" type="button"><br><br></p></form></div></div><div id="topControl" class="ibm-container ibm-alternate-two dw-comment-totals" style="display: none;"><div class="ibm-container-body"><form id="selectComments" method="get" action=""><p><span class="dw-comment-totals-label"><strong>共有评论 (<span id="numCmts">0</span>)</strong></span><span><img src="index_files/c.gif" alt="" height="10" width="100"></span><span class="dw-how-many-comments-label" style="display:none" id="dropdownCmts"><label for="howManyComments">显示：</label> <select name="comments" id="howManyComments" class="dw-how-many-comments"><option selected="selected" value="recent">最新评论   </option></select><input class="ibm-btn-go" name="ibm-go" value="Go" src="index_files/short-btn.gif" alt="Go" type="image"><br></span></p></form></div></div><div id="cmtSect"><div class="comment"><div class="dw-icomment-container"><table class="dw-icomment-body" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td><p>快来添加第一条评论</p></td></tr></tbody></table></div></div></div></div><div id="bottomControl" class="ibm-container ibm-alternate-two dw-comment-totals" style="display:none"><div class="ibm-container-body"><form id="selectComments2" method="get" action=""><p><span class="dw-comment-totals-label"><strong>共有评论 (<span id="numCmts2">0</span>)</strong></span><span><img src="index_files/c.gif" alt="" height="10" width="100"></span><span class="dw-how-many-comments-label" style="display:none" id="dropdownCmts2"><label for="howManyComments2">显示：</label> <select name="comments" id="howManyComments2" class="dw-how-many-comments"><option selected="selected" value="recent">最新评论   </option></select><input class="ibm-btn-go" name="ibm-go" value="Go" src="index_files/short-btn.gif" alt="Go" type="image"><br></span></p></form></div></div></div>
+  <!-- INLINE_COMMENTS_END -->
+  
+
+  <p class="ibm-ind-link ibm-back-to-top"><a class="ibm-anchor-up-link" href="#ibm-pcon">回页首</a></p>
+
+<!-- Overlays -->
+<!-- lk - pull in overlays from ww when required on cn -->
+  </div>
+<!-- MAIN_COLUMN_CONTAINER_END -->
+
+<!-- Rating_Meta_BEGIN -->
+<!--Rating_Meta_BEGIN--><div class="metavalue">static.content.url=http://www.ibm.com/developerworks/js/artrating/</div><div class="metavalue">SITE_ID=10</div><div class="metavalue">Zone=Java technology</div><div class="metavalue">ArticleID=829330</div><div class="metavalue">ArticleTitle=JTA 深度历险 - 原理与实现</div><div class="metavalue">publish-date=08062012</div><script language="javascript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script><div class="metavalue">url=http://www.ibm.com/developerworks/cn/java/j-lo-jta/</div><!--Rating_Meta_END-->
+<!-- Rating_Meta_END -->
+
+</div>
+<!-- MAIN_COLUMN_END-->
+
+<!-- RIGHT_COLUMN_BEGIN -->
+<div id="ibm-content-sidebar">
+
+<!-- RIGHT_COLUMN_CONTENT_BEGIN --> 
+<div class="ibm-container"><h2>内容</h2><div class="ibm-container-body"><img alt="" src="index_files/c-1.gif" height="1" width="1"><ul class="ibm-bullet-list"><li><a class="ibm-feature-link" href="#major1">使用 JTA 处理事务</a></li><li><a class="ibm-feature-link" href="#major2">JTA 实现原理</a></li><li><a class="ibm-feature-link" href="#major3">结束语</a></li><li><a class="ibm-feature-link" href="#resources">参考资料 </a></li><li><a class="ibm-feature-link" href="#author">作者简介</a></li><li><a class="ibm-feature-link" href="#icomments">评论</a></li></ul></div></div>
+
+ 
+
+<!-- Tagging_Start -->
+<div id="dw-tag-cloud-container" class="ibm-container"><h2>标签</h2>
+<div id="dw-tag-help"><a class="dwauthor" rel="#tagtip" id="dwtagtip"><img alt="Help" src="index_files/help_icon.gif" align="top" height="16" width="16"></a></div>
+<div style="display: none;" id="tagtip" class="dwauthor-onload-state ibm-no-print">使用 <strong>搜索</strong> 文本框在 My developerWorks 中查找包含该标签的所有内容。<p>使用 <strong>滑动条</strong> 调节标签的数量。</p><p><strong>热门标签</strong> 显示了特定专区最受欢迎的标签（例如 Java technology，Linux，WebSphere）。</p><p><strong>我的标签</strong> 显示了特定专区您标记的标签（例如 Java technology，Linux，WebSphere）。</p></div>
+<div class="ibm-access">使用搜索文本框在 My developerWorks 中查找包含该标签的所有内容。<em>热门标签</em> 显示了特定专区最受欢迎的标签（例如 Java technology，Linux，WebSphere）。<em>我的标签</em> 显示了特定专区您标记的标签（例如 Java technology，Linux，WebSphere）。</div>
+<div class="ibm-container-body">
+<div class="dw-tag-search"><form action="http://www.ibm.com/developerworks/mydeveloperworks/bookmarks/html" method="get" id="actualtagform" onsubmit="">
+<p><label for="tagfield"><strong>搜索所有标签</strong></label>
+<input name="lang" value="zh" type="hidden">
+<input id="tagfield" name="tag" maxlength="20" size="17" type="text"> <input src="index_files/short-btn.gif" class="ibm-btn-view" alt="submit search" title="提交搜索" value="Search" type="image"></p></form></div>
+<div class="ibm-rule"><hr></div>
+<div id="dw-tag-select">
+<div id="dw-tag-select-popular"><p><strong>热门文章标签</strong> | <br><a id="a-my" href="javascript:void(0);">我的文章标签</a><a href="#dw-tag-access" class="ibm-access">跳转到标签列表</a></p></div>
+<div id="dw-tag-select-my" class="dw-hidetag"><p><a id="a-popular" href="javascript:void(0);">热门文章标签</a> | <br><strong>我的文章标签</strong></p><a href="#dw-tag-access" class="ibm-access">跳转到标签列表</a></div><div id="dw-tag-access" class="ibm-access"><h2>热门标签</h2><ul>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f1-19">
+					
+					<a title="_unassigned 26" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							_unassigned	
+						
+					
+					<span class="ibm-access">(26)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f2-25">
+					
+					<a title="1 33" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							1	
+						
+					
+					<span class="ibm-access">(33)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f3-15">
+					
+					<a title="2 22" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							2	
+						
+					
+					<span class="ibm-access">(22)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f4-1">
+					
+					<a title="2.5 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							2.5	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f5-2">
+					
+					<a title="3.0 13" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							3.0	
+						
+					
+					<span class="ibm-access">(13)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f6-19">
+					
+					<a title="ajax 26" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							ajax	
+						
+					
+					<span class="ibm-access">(26)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f7-16">
+					
+					<a title="ant 23" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							ant	
+						
+					
+					<span class="ibm-access">(23)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f8-32">
+					
+					<a title="apache 43" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							apache	
+						
+					
+					<span class="ibm-access">(43)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f9-56">
+					
+					<a title="api 116" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							api	
+						
+					
+					<span class="ibm-access">(116)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f10-60">
+					
+					<a title="best_practices 133" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+							best_practice...	
+						
+						
+					
+					<span class="ibm-access">(133)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f11-4">
+					
+					<a title="concurrent 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							concurrent	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f12-11">
+					
+					<a title="eclipse 19" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							eclipse	
+						
+					
+					<span class="ibm-access">(19)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f13-1">
+					
+					<a title="hadoop 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							hadoop	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f14-26">
+					
+					<a title="hibernate 34" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							hibernate	
+						
+					
+					<span class="ibm-access">(34)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f15-28">
+					
+					<a title="i/o 37" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							i/o	
+						
+					
+					<span class="ibm-access">(37)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f16-7">
+					
+					<a title="ibatis 16" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							ibatis	
+						
+					
+					<span class="ibm-access">(16)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f17-4">
+					
+					<a title="io 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							io	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f18-27">
+					
+					<a title="j2ee 36" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							j2ee	
+						
+					
+					<span class="ibm-access">(36)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f19-22">
+					
+					<a title="j2ee_(java_2_enterprise_edition) 29" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+							j2ee_(java_2_...	
+						
+						
+					
+					<span class="ibm-access">(29)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f20-9">
+					
+					<a title="j2se 17" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							j2se	
+						
+					
+					<span class="ibm-access">(17)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f21-28">
+					
+					<a title="j2se_(java_2_standard_edition) 38" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+							j2se_(java_2_...	
+						
+						
+					
+					<span class="ibm-access">(38)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+							
+							
+								
+							
+						
+				<li class="f22-100">
+					
+					<a title="java 662" class="lotusF5 my" href="javascript:void(0);">
+					
+						
+						
+							java	
+						
+					
+					<span class="ibm-access">(662)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f23-50">
+					
+					<a title="java_技术 91" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							java_技术	
+						
+					
+					<span class="ibm-access">(91)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f24-2">
+					
+					<a title="java_入门 13" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							java_入门	
+						
+					
+					<span class="ibm-access">(13)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f25-20">
+					
+					<a title="javascript 27" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							javascript	
+						
+					
+					<span class="ibm-access">(27)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f26-6">
+					
+					<a title="java技术 15" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							java技术	
+						
+					
+					<span class="ibm-access">(15)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f27-18">
+					
+					<a title="jetty 25" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							jetty	
+						
+					
+					<span class="ibm-access">(25)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f28-14">
+					
+					<a title="jsf 21" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							jsf	
+						
+					
+					<span class="ibm-access">(21)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f29-1">
+					
+					<a title="jstl 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							jstl	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f30-4">
+					
+					<a title="junit 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							junit	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f31-16">
+					
+					<a title="jvm 23" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							jvm	
+						
+					
+					<span class="ibm-access">(23)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f32-10">
+					
+					<a title="jvm_(java_virtual_machine) 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+							jvm_(java_virt...	
+						
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f33-11">
+					
+					<a title="lucene 19" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							lucene	
+						
+					
+					<span class="ibm-access">(19)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f34-4">
+					
+					<a title="mahout 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							mahout	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f35-1">
+					
+					<a title="mapreduce 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							mapreduce	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f36-6">
+					
+					<a title="maven 15" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							maven	
+						
+					
+					<span class="ibm-access">(15)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f37-10">
+					
+					<a title="mvc 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							mvc	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f38-9">
+					
+					<a title="nio 17" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							nio	
+						
+					
+					<span class="ibm-access">(17)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f39-10">
+					
+					<a title="nosql 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							nosql	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f40-1">
+					
+					<a title="quartz 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							quartz	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f41-54">
+					
+					<a title="servlet 105" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							servlet	
+						
+					
+					<span class="ibm-access">(105)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+							
+								
+							
+							
+						
+				<li class="f42-68">
+					
+					<a title="spring 182" class="lotusF4 my" href="javascript:void(0);">
+					
+						
+						
+							spring	
+						
+					
+					<span class="ibm-access">(182)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f43-10">
+					
+					<a title="struts 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							struts	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f44-17">
+					
+					<a title="struts2 24" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							struts2	
+						
+					
+					<span class="ibm-access">(24)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f45-1">
+					
+					<a title="test 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							test	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f46-54">
+					
+					<a title="tomcat 105" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							tomcat	
+						
+					
+					<span class="ibm-access">(105)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f47-10">
+					
+					<a title="volatile 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							volatile	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f48-33">
+					
+					<a title="web 46" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							web	
+						
+					
+					<span class="ibm-access">(46)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f49-11">
+					
+					<a title="web_服务 19" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							web_服务	
+						
+					
+					<span class="ibm-access">(19)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f50-4">
+					
+					<a title="web_应用 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							web_应用	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f51-16">
+					
+					<a title="xml 23" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							xml	
+						
+					
+					<span class="ibm-access">(23)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f52-10">
+					
+					<a title="安全 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							安全	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f53-41">
+					
+					<a title="编码 63" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							编码	
+						
+					
+					<span class="ibm-access">(63)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f54-7">
+					
+					<a title="标准 16" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							标准	
+						
+					
+					<span class="ibm-access">(16)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f55-10">
+					
+					<a title="并发 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							并发	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f56-13">
+					
+					<a title="部分 20" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							部分	
+						
+					
+					<span class="ibm-access">(20)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f57-19">
+					
+					<a title="部分: 26" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							部分:	
+						
+					
+					<span class="ibm-access">(26)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f58-4">
+					
+					<a title="持久性 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							持久性	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f59-10">
+					
+					<a title="的工作机制 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							的工作机制	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f60-4">
+					
+					<a title="堆 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							堆	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f61-30">
+					
+					<a title="多线程 41" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							多线程	
+						
+					
+					<span class="ibm-access">(41)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f62-13">
+					
+					<a title="工作原理解析 20" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							工作原理解析	
+						
+					
+					<span class="ibm-access">(20)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f63-6">
+					
+					<a title="开发 15" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							开发	
+						
+					
+					<span class="ibm-access">(15)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f64-46">
+					
+					<a title="开放源码 77" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							开放源码	
+						
+					
+					<span class="ibm-access">(77)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f65-10">
+					
+					<a title="类加载器 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							类加载器	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f66-11">
+					
+					<a title="理论与实践: 19" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							理论与实践:	
+						
+					
+					<span class="ibm-access">(19)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f67-14">
+					
+					<a title="模式 21" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							模式	
+						
+					
+					<span class="ibm-access">(21)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f68-32">
+					
+					<a title="配置 44" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							配置	
+						
+					
+					<span class="ibm-access">(44)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f69-35">
+					
+					<a title="设计模式 50" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							设计模式	
+						
+					
+					<span class="ibm-access">(50)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f70-26">
+					
+					<a title="深入分析 35" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							深入分析	
+						
+					
+					<span class="ibm-access">(35)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f71-14">
+					
+					<a title="使用 21" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							使用	
+						
+					
+					<span class="ibm-access">(21)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f72-6">
+					
+					<a title="事务 15" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							事务	
+						
+					
+					<span class="ibm-access">(15)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f73-13">
+					
+					<a title="数据库和数据管理 20" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							数据库和数据管理	
+						
+					
+					<span class="ibm-access">(20)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f74-35">
+					
+					<a title="算法 49" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							算法	
+						
+					
+					<span class="ibm-access">(49)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f75-4">
+					
+					<a title="体系架构 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							体系架构	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f76-2">
+					
+					<a title="线程 13" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							线程	
+						
+					
+					<span class="ibm-access">(13)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f77-21">
+					
+					<a title="性能 28" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							性能	
+						
+					
+					<span class="ibm-access">(28)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f78-4">
+					
+					<a title="应用架构 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							应用架构	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+							
+							
+								
+							
+						
+				<li class="f79-86">
+					
+					<a title="应用开发 381" class="lotusF5 my" href="javascript:void(0);">
+					
+						
+						
+							应用开发	
+						
+					
+					<span class="ibm-access">(381)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f80-6">
+					
+					<a title="中的中文编码问题 15" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							中的中文编码问题	
+						
+					
+					<span class="ibm-access">(15)</span>					
+					</a> 
+				</li>
+					
+			</ul><p>热门标签结束</p><h2>我的标签</h2><div id="dw-tag-access-my" class="ibm-access"><center>要访问我的标签，请<a href="http://www.ibm.com/developerworks/dwwi/DWAuthRouter?m=auth&amp;lang=zh&amp;d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-jta%2F">登录</a><p>查看热门标签</p></center><br></div><p>我的标签结束</p></div>
+<div id="dw-tag-cloud">
+	<div id="dogearTagCloud">
+		<div class="ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all" id="content-slider"><a style="left: 0%;" class="ui-slider-handle ui-state-default ui-corner-all" href="#"></a></div>
+		
+			
+						
+						
+						
+						
+			
+				<div id="ui-slider-scale"><p><span class="content-slider-more">更多</span><span class="content-slider-less">更少</span></p></div>
+						
+									
+			
+		
+	    <div id="cloud-container">
+			<ul>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f1-19">
+					
+					<a title="_unassigned 26" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							_unassigned	
+						
+					
+					<span class="ibm-access">(26)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f2-25">
+					
+					<a title="1 33" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							1	
+						
+					
+					<span class="ibm-access">(33)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f3-15">
+					
+					<a title="2 22" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							2	
+						
+					
+					<span class="ibm-access">(22)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f4-1">
+					
+					<a title="2.5 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							2.5	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f5-2">
+					
+					<a title="3.0 13" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							3.0	
+						
+					
+					<span class="ibm-access">(13)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f6-19">
+					
+					<a title="ajax 26" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							ajax	
+						
+					
+					<span class="ibm-access">(26)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f7-16">
+					
+					<a title="ant 23" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							ant	
+						
+					
+					<span class="ibm-access">(23)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f8-32">
+					
+					<a title="apache 43" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							apache	
+						
+					
+					<span class="ibm-access">(43)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f9-56">
+					
+					<a title="api 116" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							api	
+						
+					
+					<span class="ibm-access">(116)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f10-60">
+					
+					<a title="best_practices 133" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+							best_practice...	
+						
+						
+					
+					<span class="ibm-access">(133)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f11-4">
+					
+					<a title="concurrent 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							concurrent	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f12-11">
+					
+					<a title="eclipse 19" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							eclipse	
+						
+					
+					<span class="ibm-access">(19)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f13-1">
+					
+					<a title="hadoop 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							hadoop	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f14-26">
+					
+					<a title="hibernate 34" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							hibernate	
+						
+					
+					<span class="ibm-access">(34)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f15-28">
+					
+					<a title="i/o 37" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							i/o	
+						
+					
+					<span class="ibm-access">(37)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f16-7">
+					
+					<a title="ibatis 16" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							ibatis	
+						
+					
+					<span class="ibm-access">(16)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f17-4">
+					
+					<a title="io 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							io	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f18-27">
+					
+					<a title="j2ee 36" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							j2ee	
+						
+					
+					<span class="ibm-access">(36)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f19-22">
+					
+					<a title="j2ee_(java_2_enterprise_edition) 29" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+							j2ee_(java_2_...	
+						
+						
+					
+					<span class="ibm-access">(29)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f20-9">
+					
+					<a title="j2se 17" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							j2se	
+						
+					
+					<span class="ibm-access">(17)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f21-28">
+					
+					<a title="j2se_(java_2_standard_edition) 38" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+							j2se_(java_2_...	
+						
+						
+					
+					<span class="ibm-access">(38)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+							
+							
+								
+							
+						
+				<li class="f22-100">
+					
+					<a title="java 662" class="lotusF5 my" href="javascript:void(0);">
+					
+						
+						
+							java	
+						
+					
+					<span class="ibm-access">(662)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f23-50">
+					
+					<a title="java_技术 91" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							java_技术	
+						
+					
+					<span class="ibm-access">(91)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f24-2">
+					
+					<a title="java_入门 13" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							java_入门	
+						
+					
+					<span class="ibm-access">(13)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f25-20">
+					
+					<a title="javascript 27" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							javascript	
+						
+					
+					<span class="ibm-access">(27)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f26-6">
+					
+					<a title="java技术 15" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							java技术	
+						
+					
+					<span class="ibm-access">(15)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f27-18">
+					
+					<a title="jetty 25" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							jetty	
+						
+					
+					<span class="ibm-access">(25)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f28-14">
+					
+					<a title="jsf 21" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							jsf	
+						
+					
+					<span class="ibm-access">(21)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f29-1">
+					
+					<a title="jstl 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							jstl	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f30-4">
+					
+					<a title="junit 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							junit	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f31-16">
+					
+					<a title="jvm 23" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							jvm	
+						
+					
+					<span class="ibm-access">(23)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f32-10">
+					
+					<a title="jvm_(java_virtual_machine) 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+							jvm_(java_virt...	
+						
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f33-11">
+					
+					<a title="lucene 19" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							lucene	
+						
+					
+					<span class="ibm-access">(19)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f34-4">
+					
+					<a title="mahout 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							mahout	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f35-1">
+					
+					<a title="mapreduce 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							mapreduce	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f36-6">
+					
+					<a title="maven 15" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							maven	
+						
+					
+					<span class="ibm-access">(15)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f37-10">
+					
+					<a title="mvc 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							mvc	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f38-9">
+					
+					<a title="nio 17" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							nio	
+						
+					
+					<span class="ibm-access">(17)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f39-10">
+					
+					<a title="nosql 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							nosql	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f40-1">
+					
+					<a title="quartz 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							quartz	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f41-54">
+					
+					<a title="servlet 105" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							servlet	
+						
+					
+					<span class="ibm-access">(105)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+							
+								
+							
+							
+						
+				<li class="f42-68">
+					
+					<a title="spring 182" class="lotusF4 my" href="javascript:void(0);">
+					
+						
+						
+							spring	
+						
+					
+					<span class="ibm-access">(182)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f43-10">
+					
+					<a title="struts 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							struts	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f44-17">
+					
+					<a title="struts2 24" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							struts2	
+						
+					
+					<span class="ibm-access">(24)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f45-1">
+					
+					<a title="test 12" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							test	
+						
+					
+					<span class="ibm-access">(12)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f46-54">
+					
+					<a title="tomcat 105" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							tomcat	
+						
+					
+					<span class="ibm-access">(105)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f47-10">
+					
+					<a title="volatile 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							volatile	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f48-33">
+					
+					<a title="web 46" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							web	
+						
+					
+					<span class="ibm-access">(46)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f49-11">
+					
+					<a title="web_服务 19" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							web_服务	
+						
+					
+					<span class="ibm-access">(19)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f50-4">
+					
+					<a title="web_应用 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							web_应用	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f51-16">
+					
+					<a title="xml 23" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							xml	
+						
+					
+					<span class="ibm-access">(23)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f52-10">
+					
+					<a title="安全 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							安全	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f53-41">
+					
+					<a title="编码 63" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							编码	
+						
+					
+					<span class="ibm-access">(63)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f54-7">
+					
+					<a title="标准 16" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							标准	
+						
+					
+					<span class="ibm-access">(16)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f55-10">
+					
+					<a title="并发 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							并发	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f56-13">
+					
+					<a title="部分 20" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							部分	
+						
+					
+					<span class="ibm-access">(20)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f57-19">
+					
+					<a title="部分: 26" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							部分:	
+						
+					
+					<span class="ibm-access">(26)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f58-4">
+					
+					<a title="持久性 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							持久性	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f59-10">
+					
+					<a title="的工作机制 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							的工作机制	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f60-4">
+					
+					<a title="堆 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							堆	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f61-30">
+					
+					<a title="多线程 41" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							多线程	
+						
+					
+					<span class="ibm-access">(41)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f62-13">
+					
+					<a title="工作原理解析 20" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							工作原理解析	
+						
+					
+					<span class="ibm-access">(20)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f63-6">
+					
+					<a title="开发 15" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							开发	
+						
+					
+					<span class="ibm-access">(15)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+								
+							
+							
+							
+						
+				<li class="f64-46">
+					
+					<a title="开放源码 77" class="lotusF3 my" href="javascript:void(0);">
+					
+						
+						
+							开放源码	
+						
+					
+					<span class="ibm-access">(77)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f65-10">
+					
+					<a title="类加载器 18" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							类加载器	
+						
+					
+					<span class="ibm-access">(18)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f66-11">
+					
+					<a title="理论与实践: 19" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							理论与实践:	
+						
+					
+					<span class="ibm-access">(19)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f67-14">
+					
+					<a title="模式 21" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							模式	
+						
+					
+					<span class="ibm-access">(21)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f68-32">
+					
+					<a title="配置 44" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							配置	
+						
+					
+					<span class="ibm-access">(44)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f69-35">
+					
+					<a title="设计模式 50" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							设计模式	
+						
+					
+					<span class="ibm-access">(50)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f70-26">
+					
+					<a title="深入分析 35" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							深入分析	
+						
+					
+					<span class="ibm-access">(35)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f71-14">
+					
+					<a title="使用 21" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							使用	
+						
+					
+					<span class="ibm-access">(21)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f72-6">
+					
+					<a title="事务 15" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							事务	
+						
+					
+					<span class="ibm-access">(15)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f73-13">
+					
+					<a title="数据库和数据管理 20" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							数据库和数据管理	
+						
+					
+					<span class="ibm-access">(20)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f74-35">
+					
+					<a title="算法 49" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							算法	
+						
+					
+					<span class="ibm-access">(49)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f75-4">
+					
+					<a title="体系架构 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							体系架构	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f76-2">
+					
+					<a title="线程 13" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							线程	
+						
+					
+					<span class="ibm-access">(13)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+								
+							
+							
+							
+							
+						
+				<li class="f77-21">
+					
+					<a title="性能 28" class="lotusF2 my" href="javascript:void(0);">
+					
+						
+						
+							性能	
+						
+					
+					<span class="ibm-access">(28)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f78-4">
+					
+					<a title="应用架构 14" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							应用架构	
+						
+					
+					<span class="ibm-access">(14)</span>					
+					</a> 
+				</li>
+					
+						
+							
+							
+							
+							
+							
+								
+							
+						
+				<li class="f79-86">
+					
+					<a title="应用开发 381" class="lotusF5 my" href="javascript:void(0);">
+					
+						
+						
+							应用开发	
+						
+					
+					<span class="ibm-access">(381)</span>					
+					</a> 
+				</li>
+					
+						
+							
+								
+							
+							
+							
+							
+							
+						
+				<li class="f80-6">
+					
+					<a title="中的中文编码问题 15" class="lotusF1 my" href="javascript:void(0);">
+					
+						
+						
+							中的中文编码问题	
+						
+					
+					<span class="ibm-access">(15)</span>					
+					</a> 
+				</li>
+					
+			</ul>
+		</div>
+		
+			
+						
+						
+						
+						
+			
+				<div class="ibm-rule"><hr></div><p>查看方式<strong>云</strong> | <a id="alist" class="lotusAction" href="javascript:void(0);">列表</a></p>
+						
+			
+			
+		
+		</div> 
+
+		
+			
+			<div class="lotusChunk dw-hidetag" id="dogearTagList">
+			<div id="list-container">
+				<ul class="lotusList lotusEditable lotusTags lotusMeta">
+				
+					
+						
+			
+
+			
+				<li>				
+					<a title="_unassigned 26" class="lotusLeft my" href="javascript:void(0);">
+						
+							
+							
+								_unassigned	
+							
+						
+					</a>
+					26
+				</li>
+				
+			
+					
+						
+			
+
+			
+				<li>				
+					<a title="1 33" class="lotusLeft my" href="javascript:void(0);">
+						
+							
+							
+								1	
+							
+						
+					</a>
+					33
+				</li>
+				
+			
+					
+						
+			
+
+			
+				<li>				
+					<a title="2 22" class="lotusLeft my" href="javascript:void(0);">
+						
+							
+							
+								2	
+							
+						
+					</a>
+					22
+				</li>
+				
+			
+					
+						
+			
+
+			
+				<li>				
+					<a title="2.5 12" class="lotusLeft my" href="javascript:void(0);">
+						
+							
+							
+								2.5	
+							
+						
+					</a>
+					12
+				</li>
+				
+			
+					
+						
+			
+
+			
+				<li>				
+					<a title="3.0 13" class="lotusLeft my" href="javascript:void(0);">
+						
+							
+							
+								3.0	
+							
+						
+					</a>
+					13
+				</li>
+				
+			
+					
+						
+			
+
+			
+				<li>				
+					<a title="ajax 26" class="lotusLeft my" href="javascript:void(0);">
+						
+							
+							
+								ajax	
+							
+						
+					</a>
+					26
+				</li>
+				
+			
+					
+						
+			
+
+			
+				<li>				
+					<a title="ant 23" class="lotusLeft my" href="javascript:void(0);">
+						
+							
+							
+								ant	
+							
+						
+					</a>
+					23
+				</li>
+				
+			
+					
+						
+			
+
+			
+				<li>				
+					<a title="apache 43" class="lotusLeft my" href="javascript:void(0);">
+						
+							
+							
+								apache	
+							
+						
+					</a>
+					43
+				</li>
+				
+			
+					
+						
+			
+
+			
+				<li>				
+					<a title="api 116" class="lotusLeft my" href="javascript:void(0);">
+						
+							
+							
+								api	
+							
+						
+					</a>
+					116
+				</li>
+				
+			
+					
+						
+			
+
+			
+				<li>				
+					<a title="best_practices 133" class="lotusLeft my" href="javascript:void(0);">
+						
+							
+							
+								best_practices	
+							
+						
+					</a>
+					133
+				</li>
+				
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+					
+			
+				
+			</ul>
+			</div>
+			
+				
+							
+							
+							
+							
+				
+					<div class="ibm-rule"><hr></div><p>查看方式<a id="acloud" class="lotusAction" href="javascript:void(0);">云</a> | <strong>列表</strong></p>
+							
+								
+				
+			
+			</div></div>  
+</div>   
+</div>
+</div>
+<!-- Tagging_End -->
+
+<!-- Dig_Deeper -->
+
+<!-- High_Visibility_Offer -->
+
+<!-- Special_Offers -->
+
+<!-- RIGHT_COLUMN_CONTENT_END -->
+
+</div>
+<!-- RIGHT_COLUMN_END -->
+
+<!-- CONTENT_BODY_END -->
+</div>
+
+</div>
+<!-- CONTENT_END -->
+
+ <!-- END_IBM-PCON -->
+</div>
+
+<!-- FOOTER_BEGIN -->
+<div id="ibm-footer">
+<!-- IBM footer container; disabled -->
+</div>
+
+<div id="ibm-page-tools-dw">
+	<div id="dw-footer-top-row">
+		<ul id="dw-foot-options">
+			<li id="dw-print"><a class="ibm-print-link" href="#">打印此页面</a></li>
+		</ul>
+		<ul id="ibm-foot-options-dw">
+			<li id="dw-foot-0" class="dw-foot-0-cn"><a href="#">分享此页面</a></li>
+			<li id="dw-foot-1" class="dw-foot-1-cn"><a href="#">关注 developerWorks</a></li>
+		</ul>
+	</div>       
+	
+	
+	<!-- TOP ROW SLIDER -->
+    <div id="dw-page-tools-menu">    
+        <div class="ibm-ribbon-pane-dw">
+            <div class="ibm-ribbon-section-dw">
+				<!-- Share this page -->			
+                <div class="dw-footer-columns">
+                    <div class="dw-footer-col-4-1">
+                    	<h2>分享此页面：</h2>                            
+						<ul class="ibm-link-list">
+						  <!--<li><a id="dw-foot-0-0" class="dwcn-sina-link"
+						        href="#"
+						        onClick="javascript:location.href='http://hits.sinajs.cn/A1/weiboshare.html?&amp;appkey=&amp;title='+escape(document.title)+'&amp;url='+escape(location.href)'+'&amp;pic=&ralateUid&amp;language=zh_cn;
+						        ">新浪微博</a></li> -->
+						   <li><a id="dw-foot-0-0" class="dwcn-sina-link" href="#" onclick="">新浪微博</a></li> 
+						   <li><a class="dwcn-renren-link" href="#" onclick="">人人网</a></li> 
+						    <li><a class="dwcn-tencent-link" href="#" onclick="">腾讯微博</a></li> 
+						   				
+						</ul>
+                    </div>
+                    <div class="dw-footer-col-4-2">
+						<ul class="ibm-link-list">
+						    <li><a class="dwcn-sohu-link" href="#" onclick="">搜狐微博</a></li>
+						    
+						    <li><a class="dwcn-netease-link" href="#" onclick="">网易微博</a></li>
+						    <li><a class="ibm-facebook-link" href="#">Facebook</a></li>
+						</ul>
+                </div>
+                    <div class="dw-footer-col-4-3">
+						<ul class="ibm-link-list">
+						 <li><a class="ibm-linkedin-link" href="#">LinkedIn</a></li>   
+						 <li><a class="ibm-twitter-link" href="#">Twitter</a></li>   
+						 <li><a class="ibm-delicious-link" href="#">Delicious</a></li>
+						
+						</ul>
+                    </div>
+                   <div class="dw-footer-col-4-4">
+						<ul class="ibm-link-list">
+						 <li><a class="ibm-digg-link" href="#">Digg</a></li>   
+						 <li><a class="ibm-email-link" href="#">发送此页面</a></li>
+						</ul>
+                    </div>
+                    <div class="dw-footer-close">
+						<ul>
+							<li><div class="dw-footer-close-share"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" height="10" width="20"></a></div></li>
+						</ul>
+                    </div>
+                </div>
+                  <!-- Follow developerWorks -->
+                <div class="dw-footer-columns">
+                    <div class="dw-footer-col-1-1 dw-footer-col-1-1-cn">
+                    	<h2>关注 developerWorks 中国网站：</h2>
+						<ul class="ibm-link-list">
+							<!--<li><a id="dw-foot-1-0" class="ibm-twitter-link" href="http://www.twitter.com/dwchina">Twitter</a></li>-->
+						    <li><a id="dw-foot-1-0" class="dwcn-sina-link" href="http://weibo.com/ibmdw/">新浪微博</a></li>
+						</ul>
+                    </div>
+                    <div class="dw-footer-close">
+						<ul>
+							<li><div class="dw-footer-close-follow-cn"><a href="#"><img src="index_files/c.gif" alt="关闭 [x]" height="10" width="20"></a></div></li>
+						</ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="ibm-footer-module-dw">
+	<div class="dw-footer-columns">
+		<div class="dw-footer-col-6-1">
+			<ul>
+				<!--<li><a href="http://www.ibm.com/developerworks/aboutdw/">About</a></li>-->
+				<li><a href="https://www.ibm.com/developerworks/secure/feedback.jsp?domain=dwchina">帮助</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/author/">联系编辑</a></li>
+				<li><a href="https://www.ibm.com/developerworks/secure/myideas2.jsp?domain=dwchina&amp;start=true">提交内容</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/sitemap/">网站导航</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-2">
+			<ul>
+				<li><a href="http://www.ibm.com/developerworks/cn/rss/">订阅源</a></li>
+				<li><a href="http://www.ibm.com/vrm/newsletter/10104?S_TACT=105AGX52&amp;S_CMP=dwcntop">在线浏览每周时事通讯</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-3">
+			<ul>
+				<li><a href="https://www.ibm.com/developerworks/community/report?lang=zh">报告滥用</a></li>
+				<li><a href="https://www.ibm.com/developerworks/community/terms?lang=zh">使用条款</a></li>
+				<li><a href="http://www.ibm.com/privacy/cn/zh/">隐私条约</a></li>
+				<li><a href="http://www.ibm.com/ibm/accessibility/cn/">浏览辅助</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-4-cn">
+			<ul>
+				<li><a href="http://www-900.ibm.com/cn/ai/">IBM 教育学院教育培养计划</a></li>
+				<li><a href="http://www.ibm.com/partnerworld/isv/">ISV 资源 (英语)</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-5">
+		</div>
+		<div class="dw-footer-col-6-6">
+		</div>
+	</div>
+	<!-- Language selector no-script -->
+	<noscript>
+	<div id="dw-footer-selectlang">
+		<h2><a name="SELECTLANG">选择语言：</a></h2>
+		<ul>
+			<li><a href="http://www.ibm.com/developerworks/">English</a></li>
+			<li><a href="http://www.ibm.com/developerworks/cn/">中文</a></li>
+			<li><a href="http://www.ibm.com/developerworks/jp/">日本語</a></li>
+			<li><a href="http://www.ibm.com/developerworks/ru/">Русский</a></li>
+			<li><a href="http://www.ibm.com/developerworks/br/">Português (Brasil)</a></li>
+			<li><a href="http://www.ibm.com/developerworks/ssa/">Español</a></li>
+			<li><a href="http://www.ibm.com/developerworks/vn/">Việt</a></li>
+		</ul>
+	</div>
+	</noscript>
+</div><!-- FOOTER_END -->
+
+ <!-- END_IBM-TOP -->
+<div id="ibm-overlay-top"></div></div>
+ 
+ <!-- SCRIPTS_INCLUDE_BEGIN -->
+<!-- JQuery start -->
+<script type="text/javascript" language="JavaScript" src="index_files/jquery.hoverIntent.minified.js"></script>
+<script type="text/javascript" language="JavaScript" src="index_files/jquery.cluetip.js"></script>
+<script type="text/javascript" language="JavaScript" src="index_files/ui.core-1.7.1.js"></script>
+<script type="text/javascript" language="JavaScript" src="index_files/ui.slider-1.7.1.js"></script>
+
+<!-- xM Masthead/Footer -->
+<script src="index_files/jquery.tools.min.js" type="text/javascript">//</script>
+<script src="index_files/jquery.jscroll.js" type="text/javascript">//</script>
+<script src="index_files/dw_v16.js" type="text/javascript">//</script>
+<script src="index_files/flash-detect-1.js" type="text/javascript">//</script>
+<script src="index_files/dwsi.js" type="text/javascript">//</script>
+<script type="text/javascript" language="JavaScript" src="index_files/dwjquerytags.js"></script>
+<script type="text/javascript" language="JavaScript" src="index_files/showcomments.js">//</script>
+<script language="JavaScript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+<script type="text/javascript" language="JavaScript"><!--
+/* Script removed by snapshot save */
+--></script>
+<!-- JQuery end -->
+<!-- Overlay js -->
+<script language="JavaScript" src="index_files/overlay.js" type="text/javascript"></script><!-- BEGIN: Use this section to set page specific variables for the Unica Page Tag -->
+<script language="JavaScript"><!--
+/* Script removed by snapshot save */
+--></script>
+<!--END --><!-- SCRIPTS_INCLUDE_END -->
+
+<div id="ibm-metrics">
+<script src="index_files/stats.js" type="text/javascript">//</script>
+</div>
+
+
+
+<div style="position: absolute; z-index: 95; display: none;" id="cluetip-waitimage"></div><div style="z-index: 96; display: none; position: absolute;" id="cluetip"><div style="z-index: 95; opacity: 0.1; top: 1px; left: 1px; position: absolute; background-color: rgb(0, 0, 0);"></div><div style="z-index: 94; opacity: 0.1; top: 2px; left: 2px; position: absolute; background-color: rgb(0, 0, 0);"></div><div style="z-index: 93; opacity: 0.1; top: 3px; left: 3px; position: absolute; background-color: rgb(0, 0, 0);"></div><div style="z-index: 92; opacity: 0.1; top: 4px; left: 4px; position: absolute; background-color: rgb(0, 0, 0);"></div><div style="z-index: 91; opacity: 0.1; top: 5px; left: 5px; position: absolute; background-color: rgb(0, 0, 0);"></div><div style="z-index: 90; opacity: 0.1; top: 6px; left: 6px; position: absolute; background-color: rgb(0, 0, 0);"></div><div style="position: relative; z-index: 97;" id="cluetip-outer"><div id="cluetip-title"></div><div id="cluetip-inner"></div></div><div id="cluetip-extra"></div><div style="z-index: 97;" id="cluetip-arrows" class="cluetip-arrows"></div></div></body></html>

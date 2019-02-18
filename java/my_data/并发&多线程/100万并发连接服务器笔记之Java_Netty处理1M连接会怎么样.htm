@@ -1,0 +1,861 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>100万并发连接服务器笔记之Java Netty处理1M连接会怎么样</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H2 
+style="FONT-SIZE: 1em; FONT-FAMILY: Verdana, Geneva, Arial, Helvetica, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT-STYLE: normal; MARGIN-TOP: 10px; LETTER-SPACING: normal; LINE-HEIGHT: 19px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+id=viewpost1_TitleUrl style="TEXT-DECORATION: none; COLOR: rgb(0,102,170)" 
+href="http://www.blogjava.net/yongboy/archive/2013/05/13/399203.html">100万并发连接服务器笔记之Java 
+Netty处理1M连接会怎么样</A></H2>
+<DIV class=postText 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<H2 style="FONT-SIZE: 1em; MARGIN-TOP: 10px">前言</H2>
+<P 
+style="MARGIN: 10px 0px">每一种该语言在某些极限情况下的表现一般都不太一样，那么我常用的Java语言，在达到100万个并发连接情况下，会怎么样呢，有些好奇，更有些期盼。<BR>这次使用经常使用的顺手的<STRONG><A 
+style="TEXT-DECORATION: none; COLOR: rgb(0,102,170)" 
+href="http://netty.io/">netty</A></STRONG><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>NIO框架（netty-3.6.5.Final），封装的很好，接口很全面，就像它现在的域名<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><STRONG>netty.io</STRONG>，专注于网络IO。<BR>整个过程没有什么技术含量，浅显分析过就更显得有些枯燥无聊，准备好，硬着头皮吧。</P>
+<H2 style="FONT-SIZE: 1em; MARGIN-TOP: 10px">测试服务器配置</H2>
+<P style="MARGIN: 10px 0px">运行在VMWare Workstation 9中，64位Centos 
+6.2系统，分配14.9G内存左右，4核。<BR>已安装有Java7版本：</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>java version "1.7.0_21"
+Java(TM) SE Runtime Environment (build 1.7.0_21-b11)
+Java HotSpot(TM) 64-Bit Server VM (build 23.21-b01, mixed mode)
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">在/etc/sysctl.conf中添加如下配置：</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>fs.file-max = 1048576
+net.ipv4.ip_local_port_range = 1024 65535
+net.ipv4.tcp_mem = 786432 2097152 3145728
+net.ipv4.tcp_rmem = 4096 4096 16777216
+net.ipv4.tcp_wmem = 4096 4096 16777216
+
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_tw_recycle = 1
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">在/etc/security/limits.conf中添加如下配置：</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>     *	soft nofile 1048576
+     *	hard nofile 1048576
+</CODE></PRE>
+<H2 style="FONT-SIZE: 1em; MARGIN-TOP: 10px">测试端</H2>
+<P 
+style="MARGIN: 10px 0px">测试端无论是配置还是程序和以前一样，翻看前几篇博客就可以看到client5.c的源码，以及相关的配置信息等。</P>
+<H2 style="FONT-SIZE: 1em; MARGIN-TOP: 10px">服务器程序</H2>
+<P style="MARGIN: 10px 0px">这次也是很简单呐，没有业务功能，客户端HTTP请求，服务端输出chunked编码内容。</P>
+<H3 
+style="FONT-SIZE: 10pt; BORDER-BOTTOM: rgb(214,214,214) 1px dotted; COLOR: rgb(0,0,0); BACKGROUND-COLOR: transparent">入口HttpChunkedServer.java：</H3>
+<DIV id=gist5558672 class=gist style="COLOR: rgb(0,0,0)">
+<DIV class=gist-file 
+style="MARGIN-BOTTOM: 1em; BORDER-TOP: rgb(221,221,221) 1px solid; FONT-FAMILY: Consolas, 'Liberation Mono', Courier, monospace; BORDER-RIGHT: rgb(221,221,221) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; BORDER-LEFT: rgb(221,221,221) 1px solid; border-top-left-radius: 3px; border-top-right-radius: 3px; border-bottom-right-radius: 3px; border-bottom-left-radius: 3px">
+<DIV class="gist-data gist-syntax" 
+style="OVERFLOW: auto; WORD-WRAP: normal; FONT-SIZE: 13px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; BACKGROUND-COLOR: rgb(248,248,255)">
+<DIV class=file-data>
+<TABLE class="lines highlight" style="WIDTH: 707px" cellSpacing=0 
+  cellPadding=0>
+  <TR>
+    <TD class=line-numbers 
+    style="FONT-SIZE: 12px; BORDER-RIGHT: rgb(221,221,221) 1px solid; COLOR: rgb(170,170,170); PADDING-BOTTOM: 0.5em; TEXT-ALIGN: right; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(236,236,236)"><SPAN 
+      id=file-httpchunkedserver-java-L1 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L1">1</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L2 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L2">2</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L3 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L3">3</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L4 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L4">4</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L5 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L5">5</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L6 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L6">6</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L7 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L7">7</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L8 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L8">8</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L9 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L9">9</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L10 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L10">10</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L11 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L11">11</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L12 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L12">12</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L13 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L13">13</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L14 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L14">14</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L15 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L15">15</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L16 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L16">16</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L17 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L17">17</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L18 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L18">18</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L19 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L19">19</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L20 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L20">20</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L21 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L21">21</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L22 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L22">22</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L23 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L23">23</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L24 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L24">24</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L25 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L25">25</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L26 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L26">26</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L27 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L27">27</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L28 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L28">28</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L29 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L29">29</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L30 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L30">30</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L31 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L31">31</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L32 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L32">32</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L33 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L33">33</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L34 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L34">34</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L35 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L35">35</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L36 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L36">36</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L37 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L37">37</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L38 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L38">38</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L39 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L39">39</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L40 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L40">40</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L41 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L41">41</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L42 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L42">42</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L43 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L43">43</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L44 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L44">44</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L45 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L45">45</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L46 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L46">46</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L47 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L47">47</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L48 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L48">48</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L49 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L49">49</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L50 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L50">50</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L51 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L51">51</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L52 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L52">52</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L53 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L53">53</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L54 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L54">54</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L55 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L55">55</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L56 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L56">56</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L57 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L57">57</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L58 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L58">58</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L59 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L59">59</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L60 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L60">60</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L61 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L61">61</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L62 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L62">62</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L63 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L63">63</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L64 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L64">64</SPAN><SPAN 
+      id=file-httpchunkedserver-java-L65 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserver-java-L65">65</SPAN></TD>
+    <TD class=line-data 
+    style="FONT-SIZE: 12px; PADDING-BOTTOM: 0.5em !important; PADDING-TOP: 0.5em !important; PADDING-LEFT: 0.5em !important; PADDING-RIGHT: 0.5em !important"><PRE class=line-pre style="WORD-WRAP: break-word; BORDER-TOP: medium none; FONT-FAMILY: Consolas, 'Liberation Mono', Courier, monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; BORDER-BOTTOM: medium none; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; PADDING-LEFT: 0px !important; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px !important; BACKGROUND-COLOR: transparent"><DIV id=file-httpchunkedserver-java-LC1 class=line><SPAN class=kn>package</SPAN> <SPAN class=n>com</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">test</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">server</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC2 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC3 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">static</SPAN> <SPAN class=n>org</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">jboss</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">netty</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">channel</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">Channels</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">pipeline</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC4 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC5 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">java.net.InetSocketAddress</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC6 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">java.util.concurrent.Executors</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC7 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC8 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.bootstrap.ServerBootstrap</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC9 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.channel.ChannelPipeline</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC10 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.channel.ChannelPipelineFactory</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC11 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC12 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.http.HttpChunkAggregator</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC13 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.http.HttpRequestDecoder</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC14 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.http.HttpResponseEncoder</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC15 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.stream.ChunkedWriteHandler</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC16 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC17 class=line><SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">public</SPAN> <SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">class</SPAN> <SPAN class=nc style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">HttpChunkedServer</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC18 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">private</SPAN> <SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">final</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">int</SPAN> <SPAN class=n>port</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC19 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC20 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">public</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">HttpChunkedServer</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">int</SPAN> <SPAN class=n>port</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC21 class=line>		<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">this</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">port</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=n>port</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC22 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC23 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC24 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">public</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">void</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">run</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">()</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC25 class=line>		<SPAN class=c1 style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// Configure the server.</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC26 class=line>		<SPAN class=n>ServerBootstrap</SPAN> <SPAN class=n>bootstrap</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>ServerBootstrap</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC27 class=line>				<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">NioServerSocketChannelFactory</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC28 class=line>						<SPAN class=n>Executors</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">newCachedThreadPool</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(),</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC29 class=line>						<SPAN class=n>Executors</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">newCachedThreadPool</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">()));</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC30 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC31 class=line>		<SPAN class=c1 style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// Set up the event pipeline factory.</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC32 class=line>		<SPAN class=n>bootstrap</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">setPipelineFactory</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>ChannelPipelineFactory</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">()</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC33 class=line>			<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">public</SPAN> <SPAN class=n>ChannelPipeline</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">getPipeline</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">()</SPAN> <SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">throws</SPAN> <SPAN class=n>Exception</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC34 class=line>				<SPAN class=n>ChannelPipeline</SPAN> <SPAN class=n>pipeline</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=n>pipeline</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">();</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC35 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC36 class=line>				<SPAN class=n>pipeline</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">addLast</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"decoder"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>HttpRequestDecoder</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">());</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC37 class=line>				<SPAN class=n>pipeline</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">addLast</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"aggregator"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>HttpChunkAggregator</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=mi style="COLOR: rgb(0,153,153)">65536</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">));</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC38 class=line>				<SPAN class=n>pipeline</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">addLast</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"encoder"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>HttpResponseEncoder</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">());</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC39 class=line>				<SPAN class=n>pipeline</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">addLast</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"chunkedWriter"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>ChunkedWriteHandler</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">());</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC40 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC41 class=line>				<SPAN class=n>pipeline</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">addLast</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"handler"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>HttpChunkedServerHandler</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">());</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC42 class=line>				<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">return</SPAN> <SPAN class=n>pipeline</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC43 class=line>			<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC44 class=line>		<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">});</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC45 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC46 class=line>		<SPAN class=n>bootstrap</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">setOption</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"child.reuseAddress"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=kc style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">true</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC47 class=line>		<SPAN class=n>bootstrap</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">setOption</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"child.tcpNoDelay"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=kc style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">true</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC48 class=line>		<SPAN class=n>bootstrap</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">setOption</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"child.keepAlive"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=kc style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">true</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC49 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC50 class=line>		<SPAN class=c1 style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// Bind and start to accept incoming connections.</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC51 class=line>		<SPAN class=n>bootstrap</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">bind</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>InetSocketAddress</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>port</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">));</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC52 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC53 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC54 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">public</SPAN> <SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">static</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">void</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">main</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>String</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">[]</SPAN> <SPAN class=n>args</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC55 class=line>		<SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">int</SPAN> <SPAN class=n>port</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC56 class=line>		<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">if</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>args</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">length</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">&gt;</SPAN> <SPAN class=mi style="COLOR: rgb(0,153,153)">0</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC57 class=line>			<SPAN class=n>port</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=n>Integer</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">parseInt</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>args</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">[</SPAN><SPAN class=mi style="COLOR: rgb(0,153,153)">0</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">]);</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC58 class=line>		<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">else</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC59 class=line>			<SPAN class=n>port</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=mi style="COLOR: rgb(0,153,153)">8080</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC60 class=line>		<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC61 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserver-java-LC62 class=line>		<SPAN class=n>System</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">out</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">format</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"server start with port %d \n"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>port</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC63 class=line>		<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">HttpChunkedServer</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>port</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">).</SPAN><SPAN class=na style="COLOR: teal">run</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">();</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC64 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserver-java-LC65 class=line><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV></PRE></TD></TR></TABLE></DIV></DIV>
+<DIV class=gist-meta 
+style="OVERFLOW: hidden; COLOR: rgb(153,153,153); PADDING-BOTTOM: 10px; PADDING-TOP: 10px; FONT: 12px 'Helvetica Neue', Helvetica, arial, freesans, clean, sans-serif; PADDING-LEFT: 10px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(232,232,232); text-shadow: rgba(255, 255, 255, 0.8) 1px 1px"><A 
+style="TEXT-DECORATION: none; FLOAT: right; FONT-WEIGHT: bold; COLOR: rgb(102,102,102)" 
+href="https://gist.githubusercontent.com/yongboy/5558672/raw/2131be6437a52d61cab74c11df4fe84098d3d585/HttpChunkedServer.java">view 
+raw</A><A 
+style="TEXT-DECORATION: none; FONT-WEIGHT: bold; COLOR: rgb(102,102,102)" 
+href="https://gist.github.com/yongboy/5558672#file-httpchunkedserver-java">HttpChunkedServer.java</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>hosted with ? by<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; FONT-WEIGHT: bold; COLOR: rgb(102,102,102)" 
+href="https://github.com/">GitHub</A></DIV></DIV></DIV>
+<H3 
+style="FONT-SIZE: 10pt; BORDER-BOTTOM: rgb(214,214,214) 1px dotted; COLOR: rgb(0,0,0); BACKGROUND-COLOR: transparent">唯一的自定义处理器HttpChunkedServerHandler.java:</H3>
+<DIV id=gist5558675 class=gist style="COLOR: rgb(0,0,0)">
+<DIV class=gist-file 
+style="MARGIN-BOTTOM: 1em; BORDER-TOP: rgb(221,221,221) 1px solid; FONT-FAMILY: Consolas, 'Liberation Mono', Courier, monospace; BORDER-RIGHT: rgb(221,221,221) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; BORDER-LEFT: rgb(221,221,221) 1px solid; border-top-left-radius: 3px; border-top-right-radius: 3px; border-bottom-right-radius: 3px; border-bottom-left-radius: 3px">
+<DIV class="gist-data gist-syntax" 
+style="OVERFLOW: auto; WORD-WRAP: normal; FONT-SIZE: 13px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; BACKGROUND-COLOR: rgb(248,248,255)">
+<DIV class=file-data>
+<TABLE class="lines highlight" style="WIDTH: 872px" cellSpacing=0 
+  cellPadding=0>
+  <TR>
+    <TD class=line-numbers 
+    style="FONT-SIZE: 12px; BORDER-RIGHT: rgb(221,221,221) 1px solid; COLOR: rgb(170,170,170); PADDING-BOTTOM: 0.5em; TEXT-ALIGN: right; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(236,236,236)"><SPAN 
+      id=file-httpchunkedserverhandler-java-L1 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L1">1</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L2 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L2">2</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L3 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L3">3</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L4 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L4">4</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L5 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L5">5</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L6 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L6">6</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L7 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L7">7</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L8 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L8">8</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L9 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L9">9</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L10 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L10">10</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L11 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L11">11</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L12 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L12">12</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L13 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L13">13</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L14 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L14">14</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L15 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L15">15</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L16 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L16">16</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L17 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L17">17</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L18 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L18">18</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L19 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L19">19</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L20 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L20">20</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L21 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L21">21</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L22 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L22">22</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L23 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L23">23</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L24 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L24">24</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L25 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L25">25</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L26 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L26">26</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L27 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L27">27</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L28 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L28">28</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L29 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L29">29</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L30 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L30">30</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L31 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L31">31</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L32 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L32">32</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L33 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L33">33</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L34 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L34">34</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L35 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L35">35</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L36 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L36">36</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L37 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L37">37</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L38 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L38">38</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L39 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L39">39</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L40 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L40">40</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L41 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L41">41</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L42 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L42">42</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L43 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L43">43</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L44 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L44">44</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L45 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L45">45</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L46 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L46">46</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L47 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L47">47</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L48 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L48">48</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L49 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L49">49</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L50 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L50">50</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L51 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L51">51</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L52 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L52">52</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L53 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L53">53</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L54 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L54">54</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L55 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L55">55</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L56 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L56">56</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L57 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L57">57</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L58 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L58">58</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L59 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L59">59</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L60 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L60">60</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L61 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L61">61</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L62 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L62">62</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L63 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L63">63</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L64 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L64">64</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L65 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L65">65</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L66 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L66">66</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L67 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L67">67</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L68 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L68">68</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L69 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L69">69</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L70 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L70">70</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L71 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L71">71</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L72 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L72">72</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L73 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L73">73</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L74 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L74">74</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L75 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L75">75</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L76 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L76">76</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L77 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L77">77</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L78 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L78">78</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L79 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L79">79</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L80 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L80">80</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L81 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L81">81</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L82 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L82">82</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L83 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L83">83</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L84 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L84">84</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L85 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L85">85</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L86 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L86">86</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L87 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L87">87</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L88 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L88">88</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L89 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L89">89</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L90 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L90">90</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L91 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L91">91</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L92 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L92">92</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L93 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L93">93</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L94 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L94">94</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L95 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L95">95</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L96 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L96">96</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L97 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L97">97</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L98 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L98">98</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L99 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L99">99</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L100 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L100">100</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L101 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L101">101</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L102 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L102">102</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L103 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L103">103</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L104 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L104">104</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L105 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L105">105</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L106 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L106">106</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L107 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L107">107</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L108 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L108">108</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L109 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L109">109</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L110 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L110">110</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L111 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L111">111</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L112 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L112">112</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L113 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L113">113</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L114 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L114">114</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L115 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L115">115</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L116 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L116">116</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L117 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L117">117</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L118 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L118">118</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L119 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L119">119</SPAN><SPAN 
+      id=file-httpchunkedserverhandler-java-L120 class=line-number 
+      style="CLEAR: right; DISPLAY: block" 
+      rel="file-httpchunkedserverhandler-java-L120">120</SPAN></TD>
+    <TD class=line-data 
+    style="FONT-SIZE: 12px; PADDING-BOTTOM: 0.5em !important; PADDING-TOP: 0.5em !important; PADDING-LEFT: 0.5em !important; PADDING-RIGHT: 0.5em !important"><PRE class=line-pre style="WORD-WRAP: break-word; BORDER-TOP: medium none; FONT-FAMILY: Consolas, 'Liberation Mono', Courier, monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; BORDER-BOTTOM: medium none; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; PADDING-LEFT: 0px !important; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px !important; BACKGROUND-COLOR: transparent"><DIV id=file-httpchunkedserverhandler-java-LC1 class=line><SPAN class=kn>package</SPAN> <SPAN class=n>com</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">test</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">server</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC2 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC3 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">static</SPAN> <SPAN class=n>org</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">jboss</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">netty</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">handler</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">codec</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">http</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">HttpHeaders</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">Names</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">CONTENT_TYPE</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC4 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">static</SPAN> <SPAN class=n>org</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">jboss</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">netty</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">handler</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">codec</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">http</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">HttpMethod</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">GET</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC5 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">static</SPAN> <SPAN class=n>org</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">jboss</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">netty</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">handler</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">codec</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">http</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">HttpResponseStatus</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">BAD_REQUEST</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC6 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">static</SPAN> <SPAN class=n>org</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">jboss</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">netty</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">handler</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">codec</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">http</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">HttpResponseStatus</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">METHOD_NOT_ALLOWED</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC7 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">static</SPAN> <SPAN class=n>org</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">jboss</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">netty</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">handler</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">codec</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">http</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">HttpResponseStatus</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">OK</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC8 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">static</SPAN> <SPAN class=n>org</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">jboss</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">netty</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">handler</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">codec</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">http</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">HttpVersion</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">HTTP_1_1</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC9 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC10 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">java.util.concurrent.atomic.AtomicInteger</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC11 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC12 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.buffer.ChannelBuffer</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC13 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.buffer.ChannelBuffers</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC14 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.channel.Channel</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC15 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.channel.ChannelFutureListener</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC16 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.channel.ChannelHandlerContext</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC17 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.channel.ChannelStateEvent</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC18 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.channel.ExceptionEvent</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC19 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.channel.MessageEvent</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC20 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.channel.SimpleChannelUpstreamHandler</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC21 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.frame.TooLongFrameException</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC22 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.http.DefaultHttpChunk</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC23 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.http.DefaultHttpResponse</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC24 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.http.HttpChunk</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC25 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.http.HttpHeaders</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC26 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.http.HttpRequest</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC27 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.http.HttpResponse</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC28 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.handler.codec.http.HttpResponseStatus</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC29 class=line><SPAN class=kn>import</SPAN> <SPAN class=nn style="COLOR: rgb(85,85,85)">org.jboss.netty.util.CharsetUtil</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC30 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC31 class=line><SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">public</SPAN> <SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">class</SPAN> <SPAN class=nc style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">HttpChunkedServerHandler</SPAN> <SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">extends</SPAN> <SPAN class=n>SimpleChannelUpstreamHandler</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC32 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">private</SPAN> <SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">static</SPAN> <SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">final</SPAN> <SPAN class=n>AtomicInteger</SPAN> <SPAN class=n>count</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>AtomicInteger</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=mi style="COLOR: rgb(0,153,153)">0</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC33 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC34 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">private</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">void</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">increment</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">()</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC35 class=line>		<SPAN class=n>System</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">out</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">format</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"online user %d\n"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>count</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">incrementAndGet</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">());</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC36 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC37 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC38 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">private</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">void</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">decrement</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">()</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC39 class=line>		<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">if</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>count</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">get</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">()</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">&lt;=</SPAN> <SPAN class=mi style="COLOR: rgb(0,153,153)">0</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC40 class=line>			<SPAN class=n>System</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">out</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">format</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"~online user %d\n"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=mi style="COLOR: rgb(0,153,153)">0</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC41 class=line>		<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">else</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC42 class=line>			<SPAN class=n>System</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">out</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">format</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"~online user %d\n"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>count</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">decrementAndGet</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">());</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC43 class=line>		<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC44 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC45 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC46 class=line>	<SPAN class=nd>@Override</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC47 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">public</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">void</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">messageReceived</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ChannelHandlerContext</SPAN> <SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>MessageEvent</SPAN> <SPAN class=n>e</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC48 class=line>			<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">throws</SPAN> <SPAN class=n>Exception</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC49 class=line>		<SPAN class=n>HttpRequest</SPAN> <SPAN class=n>request</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>HttpRequest</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=n>e</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">getMessage</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">();</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC50 class=line>		<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">if</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>request</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">getMethod</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">()</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">!=</SPAN> <SPAN class=n>GET</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC51 class=line>			<SPAN class=n>sendError</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>METHOD_NOT_ALLOWED</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC52 class=line>			<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">return</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC53 class=line>		<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC54 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC55 class=line>		<SPAN class=n>sendPrepare</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC56 class=line>		<SPAN class=n>increment</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">();</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC57 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC58 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC59 class=line>	<SPAN class=nd>@Override</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC60 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">public</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">void</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">channelDisconnected</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ChannelHandlerContext</SPAN> <SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC61 class=line>			<SPAN class=n>ChannelStateEvent</SPAN> <SPAN class=n>e</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">throws</SPAN> <SPAN class=n>Exception</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC62 class=line>		<SPAN class=n>decrement</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">();</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC63 class=line>		<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">super</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">channelDisconnected</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>e</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC64 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC65 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC66 class=line>	<SPAN class=nd>@Override</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC67 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">public</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">void</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">exceptionCaught</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ChannelHandlerContext</SPAN> <SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>ExceptionEvent</SPAN> <SPAN class=n>e</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC68 class=line>			<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">throws</SPAN> <SPAN class=n>Exception</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC69 class=line>		<SPAN class=n>Throwable</SPAN> <SPAN class=n>cause</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=n>e</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">getCause</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">();</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC70 class=line>		<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">if</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>cause</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">instanceof</SPAN> <SPAN class=n>TooLongFrameException</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC71 class=line>			<SPAN class=n>sendError</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>BAD_REQUEST</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC72 class=line>			<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">return</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC73 class=line>		<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC74 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC75 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC76 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">private</SPAN> <SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">static</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">void</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">sendError</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ChannelHandlerContext</SPAN> <SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC77 class=line>			<SPAN class=n>HttpResponseStatus</SPAN> <SPAN class=n>status</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC78 class=line>		<SPAN class=n>HttpResponse</SPAN> <SPAN class=n>response</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>DefaultHttpResponse</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>HTTP_1_1</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>status</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC79 class=line>		<SPAN class=n>response</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">setHeader</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>CONTENT_TYPE</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=s style="COLOR: rgb(221,17,68)">"text/plain; charset=UTF-8"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC80 class=line>		<SPAN class=n>response</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">setContent</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ChannelBuffers</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">copiedBuffer</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC81 class=line>				<SPAN class=s style="COLOR: rgb(221,17,68)">"Failure: "</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">+</SPAN> <SPAN class=n>status</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">toString</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">()</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">+</SPAN> <SPAN class=s style="COLOR: rgb(221,17,68)">"\r\n"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>CharsetUtil</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">UTF_8</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">));</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC82 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC83 class=line>		<SPAN class=c1 style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// Close the connection as soon as the error message is sent.</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC84 class=line>		<SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">getChannel</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">().</SPAN><SPAN class=na style="COLOR: teal">write</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>response</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC85 class=line>				<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">addListener</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ChannelFutureListener</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">CLOSE</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC86 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC87 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC88 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">private</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">void</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">sendPrepare</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>ChannelHandlerContext</SPAN> <SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC89 class=line>		<SPAN class=n>HttpResponse</SPAN> <SPAN class=n>response</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>DefaultHttpResponse</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>HTTP_1_1</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>OK</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC90 class=line>		<SPAN class=n>response</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">setChunked</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=kc style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">true</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC91 class=line>		<SPAN class=n>response</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">setHeader</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>HttpHeaders</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">Names</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">CONTENT_TYPE</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC92 class=line>				<SPAN class=s style="COLOR: rgb(221,17,68)">"text/html; charset=UTF-8"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC93 class=line>		<SPAN class=n>response</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">addHeader</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>HttpHeaders</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">Names</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">CONNECTION</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC94 class=line>				<SPAN class=n>HttpHeaders</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">Values</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">KEEP_ALIVE</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC95 class=line>		<SPAN class=n>response</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">setHeader</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>HttpHeaders</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">Names</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">TRANSFER_ENCODING</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC96 class=line>				<SPAN class=n>HttpHeaders</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">Values</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">CHUNKED</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC97 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC98 class=line>		<SPAN class=n>Channel</SPAN> <SPAN class=n>chan</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=n>ctx</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">getChannel</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">();</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC99 class=line>		<SPAN class=n>chan</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">write</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>response</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC100 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC101 class=line>		<SPAN class=c1 style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// 缓冲必须凑够256字节，浏览器端才能够正常接收 ...</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC102 class=line>		<SPAN class=n>StringBuilder</SPAN> <SPAN class=n>builder</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>StringBuilder</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">();</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC103 class=line>		<SPAN class=n>builder</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">append</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">"&lt;html&gt;&lt;body&gt;&lt;script&gt;var _ = function (msg) { parent.s._(msg, document); };&lt;/script&gt;"</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC104 class=line>		<SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">int</SPAN> <SPAN class=n>leftChars</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=mi style="COLOR: rgb(0,153,153)">256</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">-</SPAN> <SPAN class=n>builder</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">length</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">();</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC105 class=line>		<SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">for</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">int</SPAN> <SPAN class=n>i</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=mi style="COLOR: rgb(0,153,153)">0</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN> <SPAN class=n>i</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">&lt;</SPAN> <SPAN class=n>leftChars</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">;</SPAN> <SPAN class=n>i</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">++)</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC106 class=line>			<SPAN class=n>builder</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">append</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=s style="COLOR: rgb(221,17,68)">" "</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC107 class=line>		<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC108 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC109 class=line>		<SPAN class=n>writeStringChunk</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>chan</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>builder</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">toString</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">());</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC110 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC111 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC112 class=line>	<SPAN class=kd style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">private</SPAN> <SPAN class=kt style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">void</SPAN> <SPAN class=nf style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">writeStringChunk</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>Channel</SPAN> <SPAN class=n>channel</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">,</SPAN> <SPAN class=n>String</SPAN> <SPAN class=n>data</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">)</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">{</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC113 class=line>		<SPAN class=n>ChannelBuffer</SPAN> <SPAN class=n>chunkContent</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=n>ChannelBuffers</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">dynamicBuffer</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>channel</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC114 class=line>				<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">getConfig</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">().</SPAN><SPAN class=na style="COLOR: teal">getBufferFactory</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">());</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC115 class=line>		<SPAN class=n>chunkContent</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">writeBytes</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>data</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">getBytes</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">());</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC116 class=line>		<SPAN class=n>HttpChunk</SPAN> <SPAN class=n>chunk</SPAN> <SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN> <SPAN class=k style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">new</SPAN> <SPAN class=n>DefaultHttpChunk</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>chunkContent</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC117 class=line>&nbsp;</DIV><DIV id=file-httpchunkedserverhandler-java-LC118 class=line>		<SPAN class=n>channel</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">.</SPAN><SPAN class=na style="COLOR: teal">write</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">(</SPAN><SPAN class=n>chunk</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">);</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC119 class=line>	<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV><DIV id=file-httpchunkedserverhandler-java-LC120 class=line><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">}</SPAN></DIV></PRE></TD></TR></TABLE></DIV></DIV>
+<DIV class=gist-meta 
+style="OVERFLOW: hidden; COLOR: rgb(153,153,153); PADDING-BOTTOM: 10px; PADDING-TOP: 10px; FONT: 12px 'Helvetica Neue', Helvetica, arial, freesans, clean, sans-serif; PADDING-LEFT: 10px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(232,232,232); text-shadow: rgba(255, 255, 255, 0.8) 1px 1px"><A 
+style="TEXT-DECORATION: none; FLOAT: right; FONT-WEIGHT: bold; COLOR: rgb(102,102,102)" 
+href="https://gist.githubusercontent.com/yongboy/5558675/raw/f92a9013ecef4105187b1f7d5b0c4dea662bea89/HttpChunkedServerHandler.java">view 
+raw</A><A 
+style="TEXT-DECORATION: none; FONT-WEIGHT: bold; COLOR: rgb(102,102,102)" 
+href="https://gist.github.com/yongboy/5558675#file-httpchunkedserverhandler-java">HttpChunkedServerHandler.java</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>hosted with ? by<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; FONT-WEIGHT: bold; COLOR: rgb(102,102,102)" 
+href="https://github.com/">GitHub</A></DIV></DIV></DIV>
+<H3 
+style="FONT-SIZE: 10pt; BORDER-BOTTOM: rgb(214,214,214) 1px dotted; COLOR: rgb(0,0,0); BACKGROUND-COLOR: transparent">启动脚本start.sh</H3>
+<DIV id=gist5558701 class=gist style="COLOR: rgb(0,0,0)">
+<DIV class=gist-file 
+style="MARGIN-BOTTOM: 1em; BORDER-TOP: rgb(221,221,221) 1px solid; FONT-FAMILY: Consolas, 'Liberation Mono', Courier, monospace; BORDER-RIGHT: rgb(221,221,221) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; BORDER-LEFT: rgb(221,221,221) 1px solid; border-top-left-radius: 3px; border-top-right-radius: 3px; border-bottom-right-radius: 3px; border-bottom-left-radius: 3px">
+<DIV class="gist-data gist-syntax" 
+style="OVERFLOW: auto; WORD-WRAP: normal; FONT-SIZE: 13px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; BACKGROUND-COLOR: rgb(248,248,255)">
+<DIV class=file-data>
+<TABLE class="lines highlight" style="WIDTH: 4512px" cellSpacing=0 
+cellPadding=0>
+  
+  <TR>
+    <TD class=line-numbers 
+    style="FONT-SIZE: 12px; BORDER-RIGHT: rgb(221,221,221) 1px solid; COLOR: rgb(170,170,170); PADDING-BOTTOM: 0.5em; TEXT-ALIGN: right; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(236,236,236)"><SPAN 
+      id=file-start-sh-L1 class=line-number style="CLEAR: right; DISPLAY: block" 
+      rel="file-start-sh-L1">1</SPAN><SPAN id=file-start-sh-L2 class=line-number 
+      style="CLEAR: right; DISPLAY: block" rel="file-start-sh-L2">2</SPAN></TD>
+    <TD class=line-data 
+    style="FONT-SIZE: 12px; PADDING-BOTTOM: 0.5em !important; PADDING-TOP: 0.5em !important; PADDING-LEFT: 0.5em !important; PADDING-RIGHT: 0.5em !important"><PRE class=line-pre style="WORD-WRAP: break-word; BORDER-TOP: medium none; FONT-FAMILY: Consolas, 'Liberation Mono', Courier, monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; BORDER-BOTTOM: medium none; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; PADDING-LEFT: 0px !important; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px !important; BACKGROUND-COLOR: transparent"><DIV id=file-start-sh-LC1 class=line><SPAN class=nb style="COLOR: rgb(0,134,179)">set </SPAN><SPAN class=nv style="COLOR: teal">CLASSPATH</SPAN><SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN>.</DIV><DIV id=file-start-sh-LC2 class=line>nohup java -server -Xmx6G -Xms6G -Xmn600M -XX:PermSize<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN>50M -XX:MaxPermSize<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN>50M -Xss256K -XX:+DisableExplicitGC -XX:SurvivorRatio<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN>1 -XX:+UseConcMarkSweepGC -XX:+UseParNewGC -XX:+CMSParallelRemarkEnabled -XX:+UseCMSCompactAtFullCollection -XX:CMSFullGCsBeforeCompaction<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN>0 -XX:+CMSClassUnloadingEnabled -XX:LargePageSizeInBytes<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN>128M -XX:+UseFastAccessorMethods -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN>80 -XX:SoftRefLRUPolicyMSPerMB<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN>0 -XX:+PrintClassHistogram -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintHeapAtGC -Xloggc:gc.log -Djava.ext.dirs<SPAN class=o style="FONT-WEIGHT: bold; COLOR: rgb(0,0,0)">=</SPAN>lib com.test.server.HttpChunkedServer 8000 &gt;server.out 2&gt;<SPAN class=p>&amp;</SPAN>1 <SPAN class=p>&amp;</SPAN></DIV></PRE></TD></TR></TABLE></DIV></DIV>
+<DIV class=gist-meta 
+style="OVERFLOW: hidden; COLOR: rgb(153,153,153); PADDING-BOTTOM: 10px; PADDING-TOP: 10px; FONT: 12px 'Helvetica Neue', Helvetica, arial, freesans, clean, sans-serif; PADDING-LEFT: 10px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(232,232,232); text-shadow: rgba(255, 255, 255, 0.8) 1px 1px"><A 
+style="TEXT-DECORATION: none; FLOAT: right; FONT-WEIGHT: bold; COLOR: rgb(102,102,102)" 
+href="https://gist.githubusercontent.com/yongboy/5558701/raw/d46849a909c9024bbe7f349d54ceaac18aa461c2/start.sh">view 
+raw</A><A 
+style="TEXT-DECORATION: none; FONT-WEIGHT: bold; COLOR: rgb(102,102,102)" 
+href="https://gist.github.com/yongboy/5558701#file-start-sh">start.sh</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>hosted with ? by<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; FONT-WEIGHT: bold; COLOR: rgb(102,102,102)" 
+href="https://github.com/">GitHub</A></DIV></DIV></DIV>
+<H2 style="FONT-SIZE: 1em; MARGIN-TOP: 10px">达到100万并发连接时的一些信息</H2>
+<P 
+style="MARGIN: 10px 0px">每次服务器端达到一百万个并发持久连接之后，然后关掉测试端程序，断开所有的连接，等到服务器端日志输出在线用户为0时，再次重复以上步骤。在这反反复复的情况下，观察内存等信息的一些情况。以某次断开所有测试端为例后，当前系统占用为（设置为<CODE>list_free_1</CODE>）:</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>                  total       used       free     shared    buffers     cached
+     Mem:         15189       7736       7453          0         18        120
+     -/+ buffers/cache:       7597       7592
+     Swap:         4095        948       3147
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">通过top观察，其进程相关信息</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>    PID USER      PR  NI  VIRT  RES  SHR S %CPU %MEM    TIME+  COMMAND                                                                                       
+   4925 root      20   0 8206m 4.3g 2776 S  0.3 28.8  50:18.66 java
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">在启动脚本start.sh中，我们设置堆内存为6G。</P>
+<P style="MARGIN: 10px 0px"><STRONG>ps aux|grep java</STRONG>命令获得信息：</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>  root      4925 38.0 28.8 8403444 4484764 ?     Sl   15:26  50:18 java -server...HttpChunkedServer 8000
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">RSS占用内存为4484764K/1024K=4379M</P>
+<P style="MARGIN: 10px 0px">然后再次启动测试端，在服务器接收到<STRONG>online user 
+1023749</STRONG>时，<CODE>ps aux|grep java</CODE>内容为：</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>  root      4925 43.6 28.4 8403444 4422824 ?     Sl   15:26  62:53 java -server...
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">查看当前网络信息统计</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>  ss -s
+  Total: 1024050 (kernel 1024084)
+  TCP:   1023769 (estab 1023754, closed 2, orphaned 0, synrecv 0, timewait 0/0), ports 12
+
+  Transport Total     IP        IPv6
+  *    1024084   -         -        
+  RAW     0         0         0        
+  UDP     7         6         1        
+  TCP     1023767   12        1023755  
+  INET    1023774   18        1023756  
+  FRAG    0         0         0    
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">通过top查看一下</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>  top -p 4925
+  top - 17:51:30 up  3:02,  4 users,  load average: 1.03, 1.80, 1.19
+  Tasks:   1 total,   0 running,   1 sleeping,   0 stopped,   0 zombie
+  Cpu0  :  0.9%us,  2.6%sy,  0.0%ni, 52.9%id,  1.0%wa, 13.6%hi, 29.0%si,  0.0%st
+  Cpu1  :  1.4%us,  4.5%sy,  0.0%ni, 80.1%id,  1.9%wa,  0.0%hi, 12.0%si,  0.0%st
+  Cpu2  :  1.5%us,  4.4%sy,  0.0%ni, 80.5%id,  4.3%wa,  0.0%hi,  9.3%si,  0.0%st
+  Cpu3  :  1.9%us,  4.4%sy,  0.0%ni, 84.4%id,  3.2%wa,  0.0%hi,  6.2%si,  0.0%st
+  Mem:  15554336k total, 15268728k used,   285608k free,     3904k buffers
+  Swap:  4194296k total,  1082592k used,  3111704k free,    37968k cached
+
+    PID USER      PR  NI  VIRT  RES  SHR S %CPU %MEM    TIME+  COMMAND                                                                                       
+   4925 root      20   0 8206m 4.2g 2220 S  3.3 28.4  62:53.66 java
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">四核都被占用了，每一个核心不太平均。这是在虚拟机中得到结果，可能真实服务器会更好一些。 
+因为不是CPU密集型应用，CPU不是问题，无须多加关注。</P>
+<P style="MARGIN: 10px 0px">系统内存状况</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>  free -m
+               total       used       free     shared    buffers     cached
+  Mem:         15189      14926        263          0          5         56
+  -/+ buffers/cache:      14864        324
+  Swap:         4095       1057       3038
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">物理内存已经无法满足要求了，占用了1057M虚拟内存。</P>
+<P style="MARGIN: 10px 0px">查看一下堆内存情况</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>  jmap -heap 4925
+  Attaching to process ID 4925, please wait...
+  Debugger attached successfully.
+  Server compiler detected.
+  JVM version is 23.21-b01
+
+  using parallel threads in the new generation.
+  using thread-local object allocation.
+  Concurrent Mark-Sweep GC
+
+  Heap Configuration:
+     MinHeapFreeRatio = 40
+     MaxHeapFreeRatio = 70
+     MaxHeapSize      = 6442450944 (6144.0MB)
+     NewSize          = 629145600 (600.0MB)
+     MaxNewSize       = 629145600 (600.0MB)
+     OldSize          = 5439488 (5.1875MB)
+     NewRatio         = 2
+     SurvivorRatio    = 1
+     PermSize         = 52428800 (50.0MB)
+     MaxPermSize      = 52428800 (50.0MB)
+     G1HeapRegionSize = 0 (0.0MB)
+
+  Heap Usage:
+  New Generation (Eden + 1 Survivor Space):
+     capacity = 419430400 (400.0MB)
+     used     = 308798864 (294.49354553222656MB)
+     free     = 110631536 (105.50645446777344MB)
+     73.62338638305664% used
+  Eden Space:
+     capacity = 209715200 (200.0MB)
+     used     = 103375232 (98.5863037109375MB)
+     free     = 106339968 (101.4136962890625MB)
+     49.29315185546875% used
+  From Space:
+     capacity = 209715200 (200.0MB)
+     used     = 205423632 (195.90724182128906MB)
+     free     = 4291568 (4.0927581787109375MB)
+     97.95362091064453% used
+  To Space:
+     capacity = 209715200 (200.0MB)
+     used     = 0 (0.0MB)
+     free     = 209715200 (200.0MB)
+     0.0% used
+  concurrent mark-sweep generation:
+     capacity = 5813305344 (5544.0MB)
+     used     = 4213515472 (4018.321487426758MB)
+     free     = 1599789872 (1525.6785125732422MB)
+     72.48054631000646% used
+  Perm Generation:
+     capacity = 52428800 (50.0MB)
+     used     = 5505696 (5.250640869140625MB)
+     free     = 46923104 (44.749359130859375MB)
+     10.50128173828125% used
+
+  1439 interned Strings occupying 110936 bytes.
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">老生代占用内存为72%，较为合理，毕竟系统已经处理100万个连接。</P>
+<P style="MARGIN: 10px 0px">再次断开所有测试端，看看系统内存（free -m）</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(102,102,102) 1px dashed; BORDER-RIGHT: rgb(102,102,102) 1px dashed; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(102,102,102) 1px dashed; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 5px 20px; BORDER-LEFT: rgb(102,102,102) 1px dashed; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(248,248,248)"><CODE>               total       used       free     shared    buffers     cached
+  Mem:         15189       7723       7466          0         13        120
+  -/+ buffers/cache:       7589       7599
+  Swap:         4095        950       3145
+</CODE></PRE>
+<P style="MARGIN: 10px 0px">记为<CODE>list_free_2</CODE>。</P>
+<P 
+style="MARGIN: 10px 0px"><CODE>list_free_1</CODE>和<CODE>list_free_2</CODE>两次都释放后的内存比较结果，系统可用物理已经内存已经降到7589M，先前可是7597M物理内存。<BR>总之，我们的JAVA测试程序在内存占用方面已经，最低需要7589 
++ 950 = 8.6G内存为最低需求内存吧。</P>
+<H2 style="FONT-SIZE: 1em; MARGIN-TOP: 10px">GC日志</H2>
+<P style="MARGIN: 10px 0px">我们在启动脚本处设置的一大串参数，到底是否达到目标，还得从gc日志处获得具体效果，推荐使用<A 
+style="TEXT-DECORATION: none; COLOR: rgb(0,102,170)" 
+href="https://github.com/chewiebug/GCViewer">GCViewer</A>。</P>
+<P style="MARGIN: 10px 0px">GC事件概览：<BR><A 
+style="TEXT-DECORATION: none; COLOR: rgb(0,102,170)" 
+href="http://www.blogjava.net/images/blogjava_net/yongboy/Windows-Live-Writer/bf3eb5ad9dd9_9C7F/gc_eventdetails_2.png"><IMG 
+title=gc_eventdetails 
+style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BACKGROUND-IMAGE: none; BORDER-BOTTOM-WIDTH: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; DISPLAY: inline; PADDING-RIGHT: 0px; BORDER-TOP-WIDTH: 0px" 
+border=0 alt=gc_eventdetails 
+src="http://www.blogjava.net/images/blogjava_net/yongboy/Windows-Live-Writer/bf3eb5ad9dd9_9C7F/gc_eventdetails_thumb.png" 
+width=814 height=476></A></P>
+<P style="MARGIN: 10px 0px">其它:<BR><A 
+style="TEXT-DECORATION: none; COLOR: rgb(0,102,170)" 
+href="http://www.blogjava.net/images/blogjava_net/yongboy/Windows-Live-Writer/bf3eb5ad9dd9_9C7F/gc_total_1_2.png"><IMG 
+title=gc_total_1 
+style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BACKGROUND-IMAGE: none; BORDER-BOTTOM-WIDTH: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; DISPLAY: inline; PADDING-RIGHT: 0px; BORDER-TOP-WIDTH: 0px" 
+border=0 alt=gc_total_1 
+src="http://www.blogjava.net/images/blogjava_net/yongboy/Windows-Live-Writer/bf3eb5ad9dd9_9C7F/gc_total_1_thumb.png" 
+width=364 height=367></A>&nbsp;<A 
+style="TEXT-DECORATION: none; COLOR: rgb(0,102,170)" 
+href="http://www.blogjava.net/images/blogjava_net/yongboy/Windows-Live-Writer/bf3eb5ad9dd9_9C7F/gc_total_2_2.png"><IMG 
+title=gc_total_2 
+style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BACKGROUND-IMAGE: none; BORDER-BOTTOM-WIDTH: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; DISPLAY: inline; PADDING-RIGHT: 0px; BORDER-TOP-WIDTH: 0px" 
+border=0 alt=gc_total_2 
+src="http://www.blogjava.net/images/blogjava_net/yongboy/Windows-Live-Writer/bf3eb5ad9dd9_9C7F/gc_total_2_thumb.png" 
+width=363 height=367></A><SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; COLOR: rgb(0,102,170)" 
+href="http://www.blogjava.net/images/blogjava_net/yongboy/Windows-Live-Writer/bf3eb5ad9dd9_9C7F/gc_total_3_2.png"><IMG 
+title=gc_total_3 
+style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BACKGROUND-IMAGE: none; BORDER-BOTTOM-WIDTH: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; DISPLAY: inline; PADDING-RIGHT: 0px; BORDER-TOP-WIDTH: 0px" 
+border=0 alt=gc_total_3 
+src="http://www.blogjava.net/images/blogjava_net/yongboy/Windows-Live-Writer/bf3eb5ad9dd9_9C7F/gc_total_3_thumb.png" 
+width=367 height=368></A></P>
+<P style="MARGIN: 10px 0px">总之：</P>
+<UL>
+  <LI>只进行了一次Full GC，代价太高，停顿了12秒。</LI>
+  <LI>PartNew成为了停顿大户，导致整个系统停顿了41秒之久，不可接受。</LI>
+  <LI>当前JVM调优喜忧参半，还得继续努力等</LI></UL>
+<H2 style="FONT-SIZE: 1em; MARGIN-TOP: 10px">小结</H2>
+<P 
+style="MARGIN: 10px 0px">Java与与Erlang、C相比，比较麻烦的事情，需要在程序一开始就得准备好它的堆栈到底需要多大空间，换个说法就是JVM启动参数设置堆内存大小，设置合适的垃圾回收机制，若以后程序需要更多内存，需停止程序，编辑启动参数，然后再次启动。总之一句话，就是麻烦。单单JVM的调优，就得持续不断的根据检测、信息、日志等进行适当微调。</P>
+<UL>
+  <LI>JVM需要提前指定堆大小，相比Erlang/C，这可能是个麻烦</LI>
+  <LI>GC(垃圾回收)，相对比麻烦，需要持续不断的根据日志、JVM堆栈信息、运行时情况进行JVM参数微调</LI>
+  <LI>设置一个最大连接目标，多次测试达到顶峰，然后释放所有连接，反复观察内存占用，获得一个较为合适的系统运行内存值</LI>
+  <LI>Eclipse Memory Analyzer结合jmap导出堆栈DUMP文件，分析内存泄漏，还是很方便的</LI>
+  <LI>想修改运行时内容，或者称之为热加载，默认不可能</LI>
+  <LI>真实机器上会有更好的反映</LI></UL>
+<P style="MARGIN: 10px 0px">吐槽一下：<BR>JAVA 
+OSGI，相对比Erlang来说，需要人转换思路，不是那么原生的东西，总是有些别扭，社区或商业公司对此的修修补补，不过是实现一些面向对象所不具备的热加载的企业特性。</P></DIV></body>
+</html>

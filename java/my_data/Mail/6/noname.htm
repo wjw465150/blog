@@ -1,0 +1,108 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+<META name="GENERATOR" content="IBM HomePage Builder 2001 V5.0.0 for Windows">
+<title>用JavaMail在JSP中发Email</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</HEAD>
+<BODY bgcolor="#e4ebf1">
+<P>JavaMail是官方的 Java mail API，可参考 http://java.sun.com/products/javamail/。虽然该API比
+  sun.net.smtp.SmtpClient更丰富或者说更复杂，但它是可移植的。这里重新创建了一个
+  MailSender类，它包含了 JavaMail API。如下所示：<BR>
+  <BR>
+  <BR>
+  // ms_ prefix is for MailSender class variables<BR>
+  // str prefix is for String<BR>
+  // astr prefix is for array of Strings<BR>
+  // strbuf prefix is for StringBuffers, etc.<BR>
+  public MailSender(<BR>
+  String strFrom, // sender<BR>
+  String[] astrTo, // recipient(s)<BR>
+  String[] astrBCC, // bcc recipient(s), optional<BR>
+  String strSubject, // subject<BR>
+  boolean debugging)<BR>
+  {<BR>
+  ms_strFrom = strFrom; // who the message
+  is from<BR>
+  ms_astrTo = astrTo; // who (plural) the message
+  is to<BR>
+  ms_debugging = debugging; // who (plural)
+  the message is to<BR>
+  <BR>
+  // set the host<BR>
+  Properties props = new Properties();<BR>
+  props.put("mail.smtp.host", ms_strSMTPHost);<BR>
+  <BR>
+  // create some properties and get the default
+  Session<BR>
+  Session session =
+     Session.getDefaultInstance(props,
+  null);<BR>
+  session.setDebug(ms_debugging);<BR>
+  <BR>
+  try {<BR>
+  // create a message<BR>
+  ms_msg = new MimeMessage(session);<BR>
+  <BR>
+  // set the from<BR>
+  InternetAddress from = new InternetAddress(strFrom);<BR>
+  ms_msg.setFrom(from);<BR>
+  <BR>
+  // set the to<BR>
+  InternetAddress[] address = new InternetAddress[astrTo.length];<BR>
+  for (int i = 0; i astrTo.length; ++i)<BR>
+  {<BR>
+  address[i] = new InternetAddress(astrTo[i]);<BR>
+  }<BR>
+  ms_msg.setRecipients(Message.RecipientType.TO,
+  address);<BR>
+  <BR>
+  // set the bcc recipients<BR>
+  if (astrBCC != null)<BR>
+  {<BR>
+  address = new InternetAddress[astrBCC.length];<BR>
+  for (int i = 0; i astrBCC.length; ++i)<BR>
+  {<BR>
+  eh.dbg("astrBCC[" + i + "]
+  is: '" + astrBCC[i] + "'");<BR>
+  address[i] = new InternetAddress(astrBCC[i]);<BR>
+  }<BR>
+  ms_msg.setRecipients(Message.RecipientType.BCC,
+  address);<BR>
+  }<BR>
+  <BR>
+  // set the subject<BR>
+  ms_msg.setSubject(strSubject);<BR>
+  <BR>
+  // set up the string buffer which will hold
+  the message<BR>
+  ms_strbufMsg = new StringBuffer();<BR>
+  <BR>
+  } catch (MessagingException mex) {<BR>
+  mex.printStackTrace(System.err);<BR>
+  } catch (Exception ex) {<BR>
+  ex.printStackTrace(System.err);<BR>
+  }<BR>
+  }<BR>
+  <BR>
+  public void ms_add(String strText)<BR>
+  {<BR>
+  ms_strbufMsg.append(strText);<BR>
+  }<BR>
+  <BR>
+  public void ms_send()<BR>
+  {<BR>
+  try {<BR>
+  // set the content as plain text<BR>
+  ms_msg.setContent(new String(ms_strbufMsg),
+  "text/plain");<BR>
+  <BR>
+  // and away<BR>
+  Transport.send(ms_msg);<BR>
+  } catch (Exception ex) {<BR>
+  System.out.println("Caught exception
+  in MailSender.ms_send: " + ex);<BR>
+  }<BR><!-- #EndEditable --></P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

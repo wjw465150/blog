@@ -1,0 +1,128 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>java 随机生成一个中文、判断某个string是否是中文以及打印出全部的中文</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<DIV class=m_Box12 
+style="LIST-STYLE-TYPE: none; MAX-WIDTH: 850px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(64,63,63); PADDING-BOTTOM: 20px; PADDING-TOP: 20px; FONT: 14px/28px 'Microsoft YaHei', Arial, Helvetica, sans-serif, SimHei, ????; PADDING-LEFT: 20px; MARGIN: 10px 0px; LETTER-SPACING: normal; PADDING-RIGHT: 20px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="LIST-STYLE-TYPE: none">现在网上大多数用于判断中文字符的是 U+4E00..U+9FA5 
+这个范围是只是“中日韩统一表意文字”这个区间，但这不是全部，如果要全部包含，则还要他们的扩展集、部首、象形字、注间字母等等;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR 
+style="LIST-STYLE-TYPE: none">2E80－A4CF：<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR 
+style="LIST-STYLE-TYPE: none">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+包含了中日朝部首补充、康熙部首、表意文字描述符、中日朝符号和标点、日文平假名、日文片假名、注音字母、谚文兼容字母、象形字注释标志、注音字母扩展、中日朝笔画、日文片假名语音扩展、带圈中日朝字母和月份、中日朝兼容、中日朝统一表意文字扩展A、易经六十四卦符号、中日韩统一表意文字、彝文音节、彝文字根<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR 
+style="LIST-STYLE-TYPE: none">F900-FAFF：<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR 
+style="LIST-STYLE-TYPE: none">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 中日朝兼容表意文字<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR 
+style="LIST-STYLE-TYPE: none">FE30-FE4F：<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR 
+style="LIST-STYLE-TYPE: none">&nbsp;&nbsp;&nbsp;&nbsp; 中日朝兼容形式<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR 
+style="LIST-STYLE-TYPE: none"></SPAN>
+<P 
+style="LIST-STYLE-TYPE: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px; TEXT-INDENT: 2em"><SPAN 
+style="LIST-STYLE-TYPE: none">所以，一般用4E00－9FA5已经可以，如果要更广，则用2E80－A4CF&nbsp; 
+||&nbsp;&nbsp; F900-FAFF || FE30-FE4F</SPAN></P><PRE class=prettyprint style="LIST-STYLE-TYPE: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">package javaTest;
+
+import java.util.Random;
+
+public class Test {
+	private static int chineseStart = Integer.parseInt(String.valueOf(0x4e00));
+	private static int chineseEnd = Integer.parseInt(String.valueOf(0x9FA5));
+	
+	/**
+	 * unicode
+	 * 	汉字区间：4E00－9FA5
+	 * 	注音符号：3100-312F
+	 * 	注音符号（闽南语、客家语扩展）：31A0-31BF
+	 */
+	private static String randomChinese(){
+		Random random = new Random();
+		int position = random.nextInt(chineseEnd-chineseStart)+chineseStart;
+		System.out.println(position+"--"+chineseEnd);
+		String code = Integer.toHexString(position);
+		return decode("\\u"+code);
+	}
+	
+	/**
+	 * @return 所有的中文
+	 */
+	public String getAllChinese(){
+		StringBuilder sb =  new
+		StringBuilder(); for(inti=chineseStart;i&lt;=chineseEnd;i++){
+			String ss = Integer.toHexString(i);
+			sb.append(decode("\\u"+ss));
+		}
+		return sb.toString() ;
+	}
+	
+	/**
+	 * 判断是否为中文
+	 * @return
+	 */
+	public static boolean isChinese(String string){
+		boolean flag = false;
+		for (int i = 0; i &lt; string.length(); i++) {
+			char c = string.charAt(i);
+			if ((c &gt;= 0x4e00) &amp;&amp; (c &lt;= 0x9FA5)) {
+				flag = true;
+			}
+		}
+		return flag;
+	}
+	
+	
+	public static void main(String[] args) throws InterruptedException {
+		System.out.println(randomChinese());
+		System.out.println(isChinese("哈"));
+	}
+
+	/**
+	 * 将unicode编码转成中文字符
+	 * @param unicodeStr
+	 * @return
+	 */
+	public static String decode(String unicodeStr) {
+		if (unicodeStr == null) {
+			return null;
+		}
+		StringBuffer sb = new StringBuffer();
+		int maxLoop = unicodeStr.length();
+		for (int i = 0; i &lt; maxLoop; i++) {
+			if (unicodeStr.charAt(i) == '\\') {
+				if ((i &lt; maxLoop - 5)
+						&amp;&amp; ((unicodeStr.charAt(i + 1) == 'u') || (
+								unicodeStr.charAt(i + 1) == 'U')))
+					try {
+						sb.append((char) Integer.parseInt(unicodeStr.substring(i + 2, i + 6), 16));
+						i += 5;
+					} catch (NumberFormatException localNumberFormatException) {
+						sb.append(unicodeStr.charAt(i));
+					}
+				else
+					sb.append(unicodeStr.charAt(i));
+			} else {
+				sb.append(unicodeStr.charAt(i));
+			}
+		}
+		return sb.toString();
+	}
+}</PRE></DIV>
+<DIV class=m_Box12 
+style="LIST-STYLE-TYPE: none; MAX-WIDTH: 850px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(64,63,63); PADDING-BOTTOM: 20px; PADDING-TOP: 20px; FONT: 14px/28px 'Microsoft YaHei', Arial, Helvetica, sans-serif, SimHei, ????; PADDING-LEFT: 20px; MARGIN: 10px 0px; LETTER-SPACING: normal; PADDING-RIGHT: 20px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</DIV></body>
+</html>

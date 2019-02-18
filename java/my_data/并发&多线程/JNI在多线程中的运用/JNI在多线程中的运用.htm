@@ -1,0 +1,305 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML xmlns="http://www.w3.org/1999/xhtml" xmlns:o = 
+"urn:schemas-microsoft-com:office:office">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<title>JNI在多线程中的运用</title>
+<LINK 
+href="1.ico" 
+rel="Shortcut Icon">
+<LINK media=all 
+href="nature_1.css" type=text/css 
+rel=stylesheet>
+<LINK title=RSS href="rss.aspx" 
+type=application/rss+xml rel=alternate>
+<LINK 
+href="webimPopup.css" 
+type=text/css rel=stylesheet>
+</HEAD>
+
+<BODY id=defaultuser>
+<DIV id=csdnblog_allwrap>
+  <FORM language=javascript id=Form1 name=Form1 
+onsubmit="javascript:return WebForm_OnSubmit();" action=2793504.aspx 
+method=post>
+    <DIV id=csdnblog_midwrap>
+      <DIV id=csdnblog_content><!--StartFragment-->
+        <DIV class=gutter>
+          <DIV class=default_contents>
+            <DIV class=user_article> 
+              <SCRIPT src="LoadFeedbackCount.js" 
+type=text/javascript></SCRIPT>
+              <H1><IMG border=0 alt=原创 src="authorship.gif" width=15 height=16>&nbsp;<A 
+href="http://blog.csdn.net/lovingprince/archive/2008/08/19/2793504.aspx">JNI(Java 
+                Native Interface)在多线程中的运用</A><CITE class=fav_csdnstylebykimi><A 
+class=fav_csdnstylebykimi title=收藏到我的网摘中，并分享给我的朋友 
+href="javascript:d=document;t=d.selection%3F(d.selection.type!='None'?d.selection.createRange().text:''):(d.getSelection?d.getSelection():'');void(saveit=window.open('http://wz.csdn.net/storeit.aspx?t='+escape(d.title)+'&amp;u='+escape(d.location.href)+'&amp;c='+escape(t),'saveit','scrollbars=no,width=590,height=300,left=75,top=20,status=no,resizable=yes'));saveit.focus();">收藏</A></CITE></H1>
+              <DIV class=blogstory><SPAN id=Post.ascx_ViewPost_PreviousAndNextEntriesUp>
+                <H3>&nbsp;|&nbsp;<A 
+href="http://blog.csdn.net/lovingprince/archive/2008/08/06/2778059.aspx">旧一篇:&nbsp;java 
+                  全角字符转半角字符</A></H3>
+                </SPAN>
+                <P>引文地址：<A 
+href="http://blog.csdn.net/hust_liuX/archive/2006/12/25/1460486.aspx">http://blog.csdn.net/hust_liuX/archive/2006/12/25/1460486.aspx</A></P>
+                <P>&nbsp;我在这里将文章整理了一下，重新修改了部分描述和增加了一些重要的说明事项。修改文如下：</P>
+                <P>&nbsp;</P>
+                <P style="TEXT-INDENT: -6pt; MARGIN-LEFT: 6pt; mso-char-indent-count: -.5"><B 
+style="mso-bidi-font-weight: normal"><FONT size=3><FONT color=#000000><FONT face=宋体>问题描述<SPAN lang=EN-US>:
+                  <o:p></o:p>
+                  </SPAN></FONT></FONT></FONT></B></P>
+                <P style="TEXT-INDENT: 30pt; mso-char-indent-count: 2.5"><FONT size=3><FONT color=#000000><FONT face=宋体>一个<SPAN lang=EN-US>java</SPAN>对象通过<SPAN 
+lang=EN-US>JNI</SPAN>调用<SPAN lang=EN-US>DLL</SPAN>中一个<SPAN 
+lang=EN-US>send()</SPAN>函数向服务器发送消息<SPAN lang=EN-US>,</SPAN>不等服务器消息到来就立即返回<SPAN 
+lang=EN-US>,</SPAN>同时把<SPAN lang=EN-US>JNI</SPAN>接口的指针<SPAN lang=EN-US>JNIEnv 
+                  *env(</SPAN>虚拟机环境指针<SPAN lang=EN-US>),</SPAN>和<SPAN lang=EN-US>jobject 
+                  obj</SPAN>保存在<SPAN lang=EN-US>DLL</SPAN>中的变量里<SPAN 
+lang=EN-US>.</SPAN></FONT></FONT></FONT></P>
+                <P 
+style="TEXT-INDENT: 12pt; MARGIN-LEFT: 6pt; mso-char-indent-count: 1.0; mso-para-margin-left: .57gd"><FONT face=宋体 color=#000000 size=3>一段时间后<SPAN 
+lang=EN-US>,DLL</SPAN>中的消息接收线程接收到服务器发来的消息</FONT><FONT size=3><FONT color=#000000><FONT face=宋体><SPAN lang=EN-US>,<BR>
+                  </SPAN>并试图通过保存过的<SPAN 
+lang=EN-US>env</SPAN>和<SPAN lang=EN-US>obj</SPAN>来调用先前的<SPAN 
+lang=EN-US>java</SPAN>对象的方法<SPAN lang=EN-US>(</SPAN>相当于<SPAN 
+lang=EN-US>JAVA</SPAN>回调方法<SPAN lang=EN-US>)</SPAN>来处理此消息<SPAN 
+lang=EN-US>.</SPAN>此时程序会突然退出<SPAN lang=EN-US>(</SPAN>崩溃<SPAN 
+lang=EN-US>).</SPAN></FONT></FONT></FONT></P>
+                <P><B style="mso-bidi-font-weight: normal"><FONT size=3><FONT color=#000000><FONT face=宋体>解决办法<SPAN 
+lang=EN-US>:
+                  <o:p></o:p>
+                  </SPAN></FONT></FONT></FONT></B></P>
+                <P><FONT size=3><FONT color=#000000><FONT face=宋体><SPAN lang=EN-US><SPAN 
+style="mso-spacerun: yes">&nbsp;&nbsp; </SPAN></SPAN>解决此问题首先要明白造成这个问题的原因。那么崩溃的原因是什么呢？</FONT></FONT></FONT></P>
+                <P><FONT size=3><FONT color=#000000><FONT face=宋体><SPAN 
+lang=EN-US>JNI</SPAN>文档上有明确表述</FONT></FONT></FONT></P>
+                <P><SPAN lang=EN-US><FONT size=3><FONT color=#000000><FONT face=宋体><SPAN 
+style="mso-spacerun: yes">&nbsp; </SPAN>The <CODE>JNIEnv</CODE> pointer, passed as 
+                  the first argument to every native method, can only be used in the thread with 
+                  which it is associated. It is wrong to cache the <CODE>JNIEnv</CODE> interface 
+                  pointer obtained from one thread, and use that pointer in another 
+                  thread.</FONT></FONT></FONT></SPAN></P>
+                <P><FONT size=3><FONT color=#000000><FONT face=宋体><SPAN lang=EN-US><SPAN 
+style="mso-spacerun: yes">&nbsp;&nbsp; </SPAN></SPAN>意思就是<SPAN 
+lang=EN-US>JNIEnv</SPAN>指针不能直接在多线程中共享使用。上面描述的程序崩溃的原因就在这里：回调时的线程和之前保存变量的线程共享了这个<SPAN 
+lang=EN-US>JNIEnv *env</SPAN>指针和<SPAN lang=EN-US>jobject 
+                  obj</SPAN>变量。</FONT></FONT></FONT></P>
+                <P style="TEXT-INDENT: 12pt; mso-char-indent-count: 1.0"><FONT face=宋体 color=#000000 size=3>在 <A 
+href="http://java.sun.com/docs/books/jni/html/other.html#26206">http://java.sun.com/docs/books/jni/html/other.html#26206 </A>提到</FONT><FONT size=3><FONT color=#000000><FONT face=宋体><SPAN 
+lang=EN-US>,<BR>
+                  JNIEnv *env</SPAN>指针不可为多个线程共用<SPAN lang=EN-US>,</SPAN>但是<SPAN 
+lang=EN-US>java</SPAN>虚拟机的<SPAN lang=EN-US>JavaVM</SPAN>指针是整个<SPAN 
+lang=EN-US>jvm</SPAN>公用的，我们可以通过<SPAN lang=EN-US>JavaVM</SPAN>来得到当前线程的<SPAN 
+lang=EN-US>JNIEnv</SPAN>指针<SPAN lang=EN-US>. </SPAN></FONT></FONT></FONT></P>
+                <P style="TEXT-INDENT: 12pt; mso-char-indent-count: 1.0"><FONT size=3><FONT color=#000000><FONT face=宋体>于是<SPAN lang=EN-US>,</SPAN>在第一个线程<SPAN 
+lang=EN-US>A</SPAN>中调用<SPAN lang=EN-US>:</SPAN></FONT></FONT></FONT></P>
+                <P><FONT size=3><FONT color=#000000><FONT face=宋体></FONT></FONT></FONT>&nbsp;</P>
+                <FONT face=宋体 color=#000000 size=3>
+                <DIV class=highlighter>
+                  <OL class=highlighter-cpp>
+                    <LI><SPAN>JavaVM*&nbsp;gs_jvm;</SPAN>
+                    <LI class=alt><SPAN>env-&gt;GetJavaVM(&amp;gs_jvm);&nbsp;</SPAN><SPAN 
+class=comment>//来获取JavaVM指针.获取了这个指针后,将该JavaVM保存起来。</SPAN><SPAN></SPAN></LI>
+                  </OL>
+                </DIV>
+                <P style="TEXT-INDENT: 12pt; mso-char-indent-count: 1.0">在另一个线程<SPAN 
+lang=EN-US>B</SPAN>里<SPAN lang=EN-US>,</SPAN>调用</FONT><SPAN lang=EN-US><FONT face=宋体 color=#000000 size=3>:<BR>
+                  </FONT></SPAN></P>
+                <P style="TEXT-INDENT: 12pt; mso-char-indent-count: 1.0"><FONT size=3><FONT color=#000000><FONT face=宋体><SPAN lang=EN-US><BR>
+                  <BR>
+                </P>
+                <DIV class=highlighter>
+                  <OL class=highlighter-cpp>
+                    <LI><SPAN>JNIEnv&nbsp;*env;</SPAN>
+                    <LI class=alt><SPAN>gs_jvm-&gt;AttachCurrentThread((</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;**)&amp;env,&nbsp;NULL);</SPAN>
+                    <LI><SPAN></SPAN>
+                    <LI class=alt><SPAN></SPAN><SPAN class=comment>//这里就获得了B这个线程在jvm中的JNIEnv指针. </SPAN><SPAN></SPAN>
+                    <LI><SPAN></SPAN></LI>
+                  </OL>
+                </DIV>
+                <P 
+style="TEXT-INDENT: 12pt; mso-char-indent-count: 1.0">&nbsp;&nbsp;&nbsp;</SPAN>这里还必须获取那个<SPAN 
+lang=EN-US>java</SPAN>对象的<SPAN lang=EN-US>jobject</SPAN>指针<SPAN 
+lang=EN-US>,</SPAN>因为我们要回调<SPAN lang=EN-US>JAVA</SPAN>方法<SPAN 
+lang=EN-US>.</SPAN>同<SPAN lang=EN-US>&nbsp;JNIEnv </SPAN>指针一样<SPAN 
+lang=EN-US>,jobject</SPAN>指针也不能在多个线程中共享<SPAN lang=EN-US>. </SPAN>就是说<SPAN 
+lang=EN-US>,</SPAN>不能直接在保存一个线程中的<SPAN lang=EN-US>jobject</SPAN>指针到全局变量中<SPAN 
+lang=EN-US>,</SPAN>然后在另外一个线程中使用它<SPAN lang=EN-US>.</SPAN>幸运的是<SPAN 
+lang=EN-US>,</SPAN>可以用</FONT></FONT></FONT><SPAN lang=EN-US><BR>
+                  </SPAN><SPAN 
+lang=EN-US><BR>
+                  </SPAN><FONT size=3><FONT color=#000000><FONT face=宋体></P>
+                <DIV class=highlighter>
+                  <OL class=highlighter-cpp>
+                    <LI><SPAN>gs_object=env-&gt;NewGlobalRef(obj);</SPAN><SPAN 
+class=comment>//创建一个全局变量</SPAN><SPAN></SPAN></LI>
+                  </OL>
+                </DIV>
+                <P style="TEXT-INDENT: 12pt; mso-char-indent-count: 1.0">来将传入的<SPAN 
+lang=EN-US>obj(</SPAN>局部变量<SPAN lang=EN-US>)</SPAN>保存到<SPAN 
+lang=EN-US>gs_object</SPAN>中<SPAN lang=EN-US>,</SPAN>从而其他线程可以使用这个<SPAN 
+lang=EN-US>gs_object(</SPAN>全局变量<SPAN lang=EN-US>)</SPAN>来操纵这个<SPAN 
+lang=EN-US>java</SPAN>对象了<SPAN lang=EN-US>.</SPAN></FONT></FONT></FONT></P>
+                <P style="TEXT-INDENT: 12pt; mso-char-indent-count: 1.0"><SPAN 
+lang=EN-US><BR>
+                  </SPAN><FONT size=3><FONT color=#000000><FONT face=宋体>示例代码如下<SPAN 
+lang=EN-US>:</SPAN></FONT></FONT></FONT></P>
+                <P><FONT size=3><FONT color=#000000><FONT face=宋体><SPAN 
+lang=EN-US>(1)java</SPAN>代码<SPAN 
+lang=EN-US>:Test.java:</SPAN></FONT></FONT></FONT></P>
+                <FONT size=3><FONT color=#000000><FONT face=宋体><SPAN lang=EN-US>
+                <DIV class=highlighter>
+                  <OL class=highlighter-j>
+                    <LI><SPAN class=keyword>import</SPAN><SPAN>&nbsp;java.io.*;</SPAN>
+                    <LI class=alt><SPAN></SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>&nbsp;Test&nbsp;</SPAN><SPAN 
+class=keyword>implements</SPAN><SPAN>&nbsp;Runnable</SPAN>
+                    <LI><SPAN>{</SPAN>
+                    <LI class=alt><SPAN>&nbsp;</SPAN><SPAN class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>int</SPAN><SPAN>&nbsp;value&nbsp;&nbsp;=&nbsp;</SPAN><SPAN 
+class=number>0</SPAN><SPAN>;</SPAN>
+                    <LI><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>static</SPAN><SPAN>{&nbsp;System.loadLibrary(</SPAN><SPAN 
+class=string>"Test"</SPAN><SPAN>);}</SPAN>
+                    <LI class=alt><SPAN></SPAN>
+                    <LI><SPAN>&nbsp;</SPAN><SPAN class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>native</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;setEnev();</SPAN><SPAN class=comment>//本地方法 </SPAN><SPAN></SPAN>
+                    <LI class=alt><SPAN></SPAN>
+                    <LI><SPAN></SPAN><SPAN class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>static</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;main(String&nbsp;args[])&nbsp;</SPAN><SPAN 
+class=keyword>throws</SPAN><SPAN>&nbsp;Exception</SPAN>
+                    <LI class=alt><SPAN>&nbsp;{</SPAN>
+                    <LI><SPAN>&nbsp;&nbsp;&nbsp;Test&nbsp;t&nbsp;=&nbsp;</SPAN><SPAN class=keyword>new</SPAN><SPAN>&nbsp;Test();</SPAN>
+                    <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;t.setEnev();&nbsp;</SPAN><SPAN class=comment>//调用本地方法 </SPAN><SPAN></SPAN>
+                    <LI><SPAN></SPAN>
+                    <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=keyword>while</SPAN><SPAN>(</SPAN><SPAN 
+class=keyword>true</SPAN><SPAN>)</SPAN>
+                    <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;</SPAN>
+                    <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Thread.sleep(</SPAN><SPAN 
+class=number>1000</SPAN><SPAN>);</SPAN>
+                    <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(t.value);</SPAN>
+                    <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN>
+                    <LI><SPAN>&nbsp;&nbsp;}</SPAN>
+                    <LI class=alt><SPAN>}</SPAN>
+                    <LI><SPAN></SPAN>
+                    <LI class=alt><SPAN></SPAN></LI>
+                  </OL>
+                </DIV>
+                </SPAN></FONT></FONT></FONT>
+                <P><FONT color=#000000><FONT size=3><FONT face=宋体><SPAN lang=EN-US>(2) 
+                  DLL</SPAN>代码</FONT></FONT></FONT><SPAN lang=EN-US><FONT face=宋体 color=#000000 size=3>:Test.cpp:<BR>
+                  </FONT></SPAN></P>
+                <P><SPAN lang=EN-US><FONT face=宋体 color=#000000 size=3><BR 
+style="mso-special-character: line-break">
+                  </FONT></SPAN></P>
+                <FONT color=#000000><FONT face=宋体><B style="mso-bidi-font-weight: normal"><SPAN 
+lang=EN-US style="FONT-SIZE: 16pt">
+                <DIV class=highlighter>
+                  <OL class=highlighter-cpp>
+                    <LI><SPAN class=preprocessor>#include&nbsp;"test.h" </SPAN><SPAN></SPAN>
+                    <LI class=alt><SPAN></SPAN><SPAN class=preprocessor>#include&lt;windows.h&gt; </SPAN><SPAN></SPAN>
+                    <LI><SPAN></SPAN><SPAN class=preprocessor>#include&lt;stdio.h&gt; </SPAN><SPAN></SPAN>
+                    <LI class=alt><SPAN></SPAN><SPAN 
+class=keyword>static</SPAN><SPAN>&nbsp;JavaVM&nbsp;*gs_jvm=NULL;</SPAN>
+                    <LI><SPAN></SPAN><SPAN 
+class=keyword>static</SPAN><SPAN>&nbsp;jobject&nbsp;gs_object=NULL;</SPAN>
+                    <LI class=alt><SPAN></SPAN><SPAN class=keyword>static</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=datatypes>int</SPAN><SPAN>&nbsp;gs_i=10;</SPAN>
+                    <LI><SPAN></SPAN>
+                    <LI class=alt><SPAN>JNIEXPORT&nbsp;</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;JNICALL&nbsp;Java_Test_setEnev(JNIEnv&nbsp;*env,&nbsp;jobject&nbsp;obj)</SPAN>
+                    <LI><SPAN>{</SPAN>
+                    <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;env-&gt;GetJavaVM(&amp;gs_jvm);&nbsp;</SPAN><SPAN 
+class=comment>//保存到全局变量中JVM </SPAN><SPAN></SPAN>
+                    <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN class=comment>//直接赋值obj到DLL中的全局变量是不行的,应该调用以下函数: </SPAN><SPAN></SPAN>
+                    <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;gs_object=env-&gt;NewGlobalRef(obj);</SPAN>
+                    <LI><SPAN></SPAN>
+                    <LI class=alt><SPAN>&nbsp;</SPAN><SPAN 
+class=datatypes>HANDLE</SPAN><SPAN>&nbsp;ht=CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)ThreadFun,0,NULL,NULL);</SPAN>
+                    <LI><SPAN>}</SPAN>
+                    <LI class=alt><SPAN></SPAN>
+                    <LI><SPAN></SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;WINAPI&nbsp;ThreadFun(</SPAN><SPAN 
+class=datatypes>PVOID</SPAN><SPAN>&nbsp;argv)</SPAN><SPAN 
+class=comment>//JNI中线程回调这个方法 </SPAN><SPAN></SPAN>
+                    <LI class=alt><SPAN>{&nbsp;</SPAN>
+                    <LI><SPAN>&nbsp;JNIEnv&nbsp;*env;</SPAN>
+                    <LI class=alt><SPAN>&nbsp;gs_jvm-&gt;AttachCurrentThread((</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;**)&amp;env,&nbsp;NULL);</SPAN>
+                    <LI><SPAN>&nbsp;jclass&nbsp;cls&nbsp;=&nbsp;env-&gt;GetObjectClass(gs_object);</SPAN>
+                    <LI class=alt><SPAN>&nbsp;jfieldID&nbsp;fieldPtr&nbsp;=&nbsp;env-&gt;GetFieldID(cls,</SPAN><SPAN 
+class=string>"value"</SPAN><SPAN>,</SPAN><SPAN 
+class=string>"I"</SPAN><SPAN>);</SPAN>
+                    <LI><SPAN></SPAN>
+                    <LI class=alt><SPAN>&nbsp;</SPAN><SPAN class=keyword>while</SPAN><SPAN>(1)</SPAN>
+                    <LI><SPAN>&nbsp;{</SPAN>
+                    <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;Sleep(100);</SPAN>
+                    <LI><SPAN>&nbsp;&nbsp;&nbsp;</SPAN><SPAN class=comment>//这里改变JAVA对象的属性值（回调JAVA） </SPAN><SPAN></SPAN>
+                    <LI 
+class=alt><SPAN>&nbsp;&nbsp;&nbsp;env-&gt;SetIntField(gs_object,fieldPtr,(jint)gs_i++);</SPAN>
+                    <LI><SPAN>&nbsp;&nbsp;}</SPAN>
+                    <LI class=alt><SPAN>}</SPAN>
+                    <LI><SPAN></SPAN>
+                    <LI class=alt><SPAN></SPAN></LI>
+                  </OL>
+                </DIV>
+                <P>JNI</SPAN></B><B style="mso-bidi-font-weight: normal"><SPAN 
+style="FONT-SIZE: 16pt">限制：<SPAN 
+lang=EN-US>
+                  <o:p></o:p>
+                  </SPAN></SPAN></B></FONT></FONT></P>
+                <P class=MsoNormal 
+style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt; mso-pagination: widow-orphan; mso-margin-top-alt: auto; mso-margin-bottom-alt: auto" 
+align=left><SPAN lang=EN-US 
+style="FONT-FAMILY: 宋体; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt"><FONT color=#000000>There are certain constraints that you must keep in mind when 
+                  writing native methods that are to run in a multithreaded environment. By 
+                  understanding and programming within these constraints, your native methods will 
+                  execute safely no matter how many threads simultaneously execute a given native 
+                  method. For example:
+                  <o:p></o:p>
+                  </FONT></SPAN></P>
+                <UL type=disc>
+                  <LI class=MsoNormal 
+style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt; mso-pagination: widow-orphan; mso-margin-top-alt: auto; mso-margin-bottom-alt: auto; mso-list: l0 level1 lfo1; tab-stops: list 36.0pt"><A 
+name=4816></A><SPAN lang=EN-US 
+style="FONT-FAMILY: 宋体; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt"><FONT color=#000000>A </FONT></SPAN><SPAN lang=EN-US 
+style="FONT-FAMILY: 宋体; COLOR: red; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt; mso-bidi-font-size: 11.0pt">JNIEnv</SPAN><FONT color=#000000><SPAN lang=EN-US 
+style="FONT-FAMILY: 宋体; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt"> pointer is only valid in the thread associated with it. You must not pass this 
+                    pointer from one thread to another, or cache and use it in multiple threads. The 
+                    Java virtual machine passes a native method the same </SPAN><SPAN lang=EN-US 
+style="FONT-FAMILY: 宋体; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt; mso-bidi-font-size: 11.0pt">JNIEnv</SPAN><SPAN 
+lang=EN-US 
+style="FONT-FAMILY: 宋体; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt"> pointer in consecutive invocations from the same thread, but passes different </SPAN><SPAN lang=EN-US 
+style="FONT-FAMILY: 宋体; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt; mso-bidi-font-size: 11.0pt">JNIEnv</SPAN><SPAN 
+lang=EN-US 
+style="FONT-FAMILY: 宋体; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt"> pointers when invoking that native method from different threads. Avoid the 
+                    common mistake of caching the </SPAN><SPAN lang=EN-US 
+style="FONT-FAMILY: 宋体; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt; mso-bidi-font-size: 11.0pt">JNIEnv</SPAN><SPAN 
+lang=EN-US 
+style="FONT-FAMILY: 宋体; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt"> pointer of one thread and using the pointer in another thread.<A name=34889> </A>
+                    <o:p></o:p>
+                    </SPAN></FONT>
+                  <LI class=MsoNormal 
+style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt; mso-pagination: widow-orphan; mso-margin-top-alt: auto; mso-margin-bottom-alt: auto; mso-list: l0 level1 lfo1; tab-stops: list 36.0pt"><SPAN 
+lang=EN-US 
+style="FONT-FAMILY: 宋体; COLOR: red; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt">Local 
+                    references</SPAN><SPAN lang=EN-US 
+style="FONT-FAMILY: 宋体; FONT-SIZE: 12pt; mso-bidi-font-family: 宋体; mso-font-kerning: 0pt"><FONT color=#000000> are valid only in the thread that created them. You must not pass 
+                    local references from one thread to another. You should always convert local 
+                    references to global references whenever there is a possibility that multiple 
+                    threads may use the same reference.
+                    <o:p></o:p>
+                    </FONT></SPAN></LI>
+                </UL>
+              </DIV>
+            </DIV>
+          </DIV>
+        </DIV>
+        <!--EndFragment--></DIV>
+    </DIV>
+  </FORM>
+</DIV>
+</BODY>

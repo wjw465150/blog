@@ -1,0 +1,375 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<HTML>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Java_JDK1.6 的新特性 (HTTP 增强)</title>
+<STYLE type=text/css>
+.error {
+	color: #FF0000;
+	font-size: 12px
+}
+</STYLE>
+<SCRIPT type=text/javascript>
+    /*<![CDATA[*/
+
+window.onerror=function(){return true;}
+
+var RelatedDocData = null, GetAndEval = false;
+(function(){
+	var xhr = BdAjax.getXHR();
+	if(xhr == null){
+		RelatedDocData = -1;
+		return;
+	}
+
+	xhr.open("GET", "/sys/search?type=8&word=Java%5FJDK1%2E6%20%B5%C4%D0%C2%CC%D8%D0%D4%20%28HTTP%20%D4%F6%C7%BF%29&item=dd753d52f485290b0df3e354&t=" + new Date().getTime(), true);
+	xhr.onreadystatechange = function(){
+		if(xhr.readyState == 4){
+			if(xhr.status == 0 || xhr.status == 200){
+				if(GetAndEval){
+					eval(xhr.responseText);
+				}else{
+					RelatedDocData = xhr.responseText;
+				}
+			}
+		}
+	}
+	xhr.send(null);
+})();
+/*]]>*/
+</SCRIPT>
+</HEAD>
+
+<BODY onload=formatonlinpic();>
+<CENTER>
+  <DIV id=main style="WIDTH: 996px" align=left>
+    <DIV class=stage>
+      <DIV class=stagepad>
+        <DIV style="WIDTH: 100%">
+          <DIV class=modbox id=m_blog><!--StartFragment-->
+            <DIV class=tit>Java_JDK1.6 的新特性 (HTTP 增强)</DIV>
+            <DIV class=date>2008年05月14日 星期三 下午 07:20</DIV>
+            <TABLE style="TABLE-LAYOUT: fixed">
+              <TBODY>
+                <TR>
+                  <TD><DIV class=cnt id=blog_text>
+                      <P><A name=N10081><SPAN class=atitle>概述</SPAN></A></P>
+                      <P>Java 语言从诞生的那天起，就非常注重网络编程方面的应用。随着互联网应用的飞速发展，Java 的基础类库也不断地对网络相关的 API 进行加强和扩展。在 
+                        Java SE 6 当中，围绕着 HTTP 协议出现了很多实用的新特性：NTLM 认证提供了一种 Window 平台下较为安全的认证机制；JDK 
+                        当中提供了一个轻量级的 HTTP 服务器；提供了较为完善的 HTTP Cookie 管理功能；更为实用的 NetworkInterface；DNS 
+                        域名的国际化支持等等。</P>
+                      <P><A name=N1008B><SPAN class=atitle>NTLM 认证</SPAN></A></P>
+                      <P>不可避免，网络中有很多资源是被安全域保护起来的。访问这些资源需要对用户的身份进行认证。下面是一个简单的例子：</P>
+                      <TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+                        <TBODY>
+                          <TR>
+                            <TD class=code-outline><PRE class=displaycode>import java.net.*;
+import java.io.*;
+
+public class Test {
+ public static void main(String[] args) throws Exception {
+  URL url = new URL("http://PROTECTED.com");
+  URLConnection connection = url.openConnection();
+  InputStream in = connection.getInputStream();
+  byte[] data = new byte[1024];
+  while(in.read(data)&gt;0)
+  {
+   //do something for data
+  }
+  in.close();
+ }
+}</PRE></TD>
+                          </TR>
+                        </TBODY>
+                      </TABLE>
+                      <BR>
+                      <P>当 Java 程序试图从一个要求认证的网站读取信息的时候，也就是说，从联系于 http://Protected.com 这个 URLConnection 
+                        的 InputStream 中 read 数据时，会引发 FileNotFoundException。尽管笔者认为，这个 Exception 
+                        的类型与实际错误发生的原因实在是相去甚远；但这个错误确实是由网络认证失败所导致的。</P>
+                      <P>要解决这个问题，有两种方法：</P>
+                      <P>其一，是给 URLConnection 设定一个“Authentication”属性：</P>
+                      <TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+                        <TBODY>
+                          <TR>
+                            <TD class=code-outline><PRE class=displaycode>String credit = USERNAME + ":" + PASSWORD;
+String encoding = new sun.misc.BASE64Encoder().encode (credit.getBytes());
+connection.setRequestProperty ("Authorization", "Basic " + encoding);</PRE></TD>
+                          </TR>
+                        </TBODY>
+                      </TABLE>
+                      <BR>
+                      <P>这里假设 http://PROTECTED.COM 使用了基本（Basic）认证类型。</P>
+                      <P>从上面的例子，我们可以看出，设定 Authentication 
+                        属性还是比较复杂的：用户必须了解认证方式的细节，才能将用户名/密码以一定的规范给出，然后用特定的编码方式加以编码。Java 
+                        类库有没有提供一个封装了认证细节，只需要给出用户名/密码的工具呢？</P>
+                      <P>这就是我们要介绍的另一种方法，使用 java.net.Authentication 类。</P>
+                      <P>每当遇到网站需要认证的时候，HttpURLConnection 都会向 Authentication 类询问用户名和密码。</P>
+                      <P>Authentication 类不会知道究竟用户应该使用哪个 username/password 那么用户如何向 Authentication 
+                        类提供自己的用户名和密码呢?</P>
+                      <P>提供一个继承于 Authentication 的类，实现 getPasswordAuthentication 方法，在 
+                        PasswordAuthentication 中给出用户名和密码：</P>
+                      <TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+                        <TBODY>
+                          <TR>
+                            <TD class=code-outline><PRE class=displaycode>class DefaultAuthenticator extends Authenticator {
+ public PasswordAuthentication getPasswordAuthentication () {
+  return new PasswordAuthentication ("USER", "PASSWORD".toCharArray());
+ }
+}</PRE></TD>
+                          </TR>
+                        </TBODY>
+                      </TABLE>
+                      <BR>
+                      <P>然后，将它设为默认的（全局）Authentication:</P>
+                      <TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+                        <TBODY>
+                          <TR>
+                            <TD class=code-outline><PRE class=displaycode>Authenticator.setDefault (new DefaultAuthenticator());</PRE></TD>
+                          </TR>
+                        </TBODY>
+                      </TABLE>
+                      <BR>
+                      <P>那么，不同的网站需要不同的用户名/密码又怎么办呢?</P>
+                      <P>Authentication 提供了关于认证发起者的足够多的信息，让继承类根据这些信息进行判断，在 getPasswordAuthentication 
+                        方法中给出了不同的认证信息：</P>
+                      <UL>
+                        <LI>getRequestingHost()
+                        <LI>getRequestingPort()
+                        <LI>getRequestingPrompt()
+                        <LI>getRequestingProtocol()
+                        <LI>getRequestingScheme()
+                        <LI>getRequestingURL()
+                        <LI>getRequestingSite()
+                        <LI>getRequestorType() </LI>
+                      </UL>
+                      <P>另一件关于 Authentication 的重要问题是认证类型。不同的认证类型需要 Authentication 执行不同的协议。至 Java SE 
+                        6.0 为止，Authentication 支持的认证方式有：</P>
+                      <UL>
+                        <LI>HTTP Basic authentication
+                        <LI>HTTP Digest authentication
+                        <LI>NTLM
+                        <LI>Http SPNEGO Negotiate
+                          <UL>
+                            <LI>Kerberos
+                            <LI>NTLM </LI>
+                          </UL>
+                        </LI>
+                      </UL>
+                      <P>这里我们着重介绍 NTLM。</P>
+                      <P>NTLM 是 NT LAN Manager 的缩写。早期的 SMB 协议在网络上明文传输口令，这是很不安全的。微软随后提出了 WindowsNT 
+                        挑战/响应验证机制，即 NTLM。</P>
+                      <P>NTLM 协议是这样的：</P>
+                      <OL>
+                        <LI>客户端首先将用户的密码加密成为密码散列；
+                        <LI>客户端向服务器发送自己的用户名，这个用户名是用明文直接传输的；
+                        <LI>服务器产生一个 16 位的随机数字发送给客户端，作为一个 challenge（挑战） ；
+                        <LI>客户端用步骤1得到的密码散列来加密这个 challenge ，然后把这个返回给服务器；
+                        <LI>服务器把用户名、给客户端的 challenge 、客户端返回的 response 这三个东西，发送域控制器 ；
+                        <LI>域控制器用这个用户名在 SAM 密码管理库中找到这个用户的密码散列，然后使用这个密码散列来加密 challenge；
+                        <LI>域控制器比较两次加密的 challenge ，如果一样，那么认证成功； </LI>
+                      </OL>
+                      <P>Java 6 以前的版本，是不支持 NTLM 认证的。用户若想使用 HttpConnection 连接到一个使用有 Windows 
+                        域保护的网站时，是无法通过 NTLM 认证的。另一种方法，是用户自己用 Socket 这样的底层单元实现整个协议过程，这无疑是十分复杂的。</P>
+                      <P>终于，Java 6 的 Authentication 类提供了对 NTLM 的支持。使用十分方便，就像其他的认证协议一样：</P>
+                      <TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+                        <TBODY>
+                          <TR>
+                            <TD class=code-outline><PRE class=displaycode>class DefaultAuthenticator extends Authenticator {
+ private static String username = "username ";
+ private static String domain =  "domain ";
+ private static String password =  "password ";
+   
+ public PasswordAuthentication getPasswordAuthentication() {
+  String usernamewithdomain = domain + "/ "+username;
+  return (new PasswordAuthentication(usernamewithdomain, password.toCharArray()));
+ }
+}</PRE></TD>
+                          </TR>
+                        </TBODY>
+                      </TABLE>
+                      <BR>
+                      <P>这里，根据 Windows 域账户的命名规范，账户名为域名+”/”+域用户名。如果不想每生成 PasswordAuthentication 
+                        时，每次添加域名，可以设定一个系统变量名“http.auth.ntlm.domain“。</P>
+                      <P>Java 6 中 Authentication 
+                        的另一个特性是认证协商。目前的服务器一般同时提供几种认证协议，根据客户端的不同能力，协商出一种认证方式。比如，IIS 服务器会同时提供 NTLM with 
+                        kerberos 和 NTLM 两种认证方式，当客户端不支持 NTLM with kerberos 时，执行 NTLM 认证。</P>
+                      <P>目前，Authentication 的默认协商次序是：</P>
+                      <TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+                        <TBODY>
+                          <TR>
+                            <TD class=code-outline><PRE class=displaycode>GSS/SPNEGO -&gt; Digest -&gt; NTLM -&gt; Basic</PRE></TD>
+                          </TR>
+                        </TBODY>
+                      </TABLE>
+                      <BR>
+                      <P>那么 kerberos 的位置究竟在哪里呢?</P>
+                      <P>事实上，GSS/SPNEGO 以 JAAS 为基石，而后者实际上就是使用 kerberos 的。</P>
+                      <P><A name=N1013D><SPAN class=atitle>轻量级 HTTP 服务器</SPAN></A></P>
+                      <P>Java 6 还提供了一个轻量级的纯 Java Http 服务器的实现。下面是一个简单的例子：</P>
+                      <TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+                        <TBODY>
+                          <TR>
+                            <TD class=code-outline><PRE class=displaycode>public static void main(String[] args) throws Exception{
+ HttpServerProvider httpServerProvider = HttpServerProvider.provider();
+ InetSocketAddress addr = new InetSocketAddress(7778);
+ HttpServer httpServer = httpServerProvider.createHttpServer(addr, 1);
+ httpServer.createContext("/myapp/", new MyHttpHandler());
+ httpServer.setExecutor(null);
+ httpServer.start();
+ System.out.println("started");
+}
+
+static class MyHttpHandler implements HttpHandler{
+ public void handle(HttpExchange httpExchange) throws IOException {          
+  String response = "Hello world!";
+  httpExchange.sendResponseHeaders(200, response.length());
+  OutputStream out = httpExchange.getResponseBody();
+  out.write(response.getBytes());
+  out.close();
+ }  
+}</PRE></TD>
+                          </TR>
+                        </TBODY>
+                      </TABLE>
+                      <BR>
+                      <P>然后，在浏览器中访问 http://localhost:7778/myapp/，我们得到：</P>
+                      <P><BR>
+                        <A name=fig1><STRONG>图一 浏览器显示</STRONG></A><BR>
+                      </P>
+                      <P>Hellword !</P>
+                      <P></P>
+                      <P>首先，HttpServer 是从 HttpProvider 处得到的，这里我们使用了 JDK 6 提供的实现。用户也可以自行实现一个 
+                        HttpProvider 和相应的 HttpServer 实现。</P>
+                      <P>其次，HttpServer 是有上下文（context）的概念的。比如，http://localhost:7778/myapp/ 
+                        中“/myapp/”就是相对于 HttpServer Root 的上下文。对于每个上下文，都有一个 HttpHandler 来接收 http 
+                        请求并给出回答。</P>
+                      <P>最后，在 HttpHandler 给出具体回答之前，一般先要返回一个 Http head。这里使用 <CODE><FONT face=新宋体>HttpExchange.sendResponseHeaders(int code, int length)</FONT></CODE>。其中 
+                        code 是 Http 响应的返回值，比如那个著名的 404。length 指的是 response 的长度，以字节为单位。</P>
+                      <P><A name=N10168><SPAN class=atitle>Cookie 管理特性</SPAN></A></P>
+                      <P>Cookie 是 Web 应用当中非常常用的一种技术， 用于储存某些特定的用户信息。虽然，我们不能把一些特别敏感的信息存放在 Cookie 
+                        里面，但是，Cookie 依然可以帮助我们储存一些琐碎的信息，帮助 Web 
+                        用户在访问网页时获得更好的体验，例如个人的搜索参数，颜色偏好以及上次的访问时间等等。网络程序开发者可以利用 Cookie 
+                        来创建有状态的网络会话（Stateful Session）。 Cookie 的应用越来越普遍。在 Windows 里面，我们可以在“Documents And 
+                        Settings”文件夹里面找到IE使用的 Cookie，假设用户名为 admin，那么在 admin 文件夹的 Cookies 
+                        文件夹里面，我们可以看到名为“admin@(domain)”的一些文件，其中的 domain 就是表示创建这些 Cookie 文件的网络域， 
+                        文件里面就储存着用户的一些信息。</P>
+                      <P>JavaScript 等脚本语言对 Cookie 有着很不错的支持。 .NET 里面也有相关的类来支持开发者对 Cookie 的管理。 不过，在 Java 
+                        SE 6 之前， Java一直都没有提供 Cookie 管理的功能。在 Java SE 5 里面， java.net 包里面有一个 CookieHandler 
+                        抽象类，不过并没有提供其他具体的实现。到了 Java SE 6， Cookie 相关的管理类在 Java 类库里面才得到了实现。有了这些 Cookie 
+                        相关支持的类，Java 开发者可以在服务器端编程中很好的操作 Cookie， 更好的支持 HTTP 相关应用，创建有状态的 HTTP 会话。</P>
+                      <UL>
+                        <LI>用 HttpCookie 代表 Cookie
+                          <P>java.net.HttpCookie 类是 Java SE 6 新增的一个表示 HTTP Cookie 的新类， 其对象可以表示 Cookie 的内容， 
+                            可以支持所有三种 Cookie 规范：</P>
+                          <UL>
+                            <LI>Netscape 草案
+                            <LI>RFC 2109 - http://www.ietf.org/rfc/rfc2109.txt
+                            <LI>RFC 2965 - http://www.ietf.org/rfc/rfc2965.txt </LI>
+                          </UL>
+                          <P>这个类储存了 Cookie 的名称，路径，值，协议版本号，是否过期，网络域，最大生命期等等信息。</P>
+                        <LI>用 CookiePolicy 规定 Cookie 接受策略
+                          <P>java.net.CookiePolicy 接口可以规定 Cookie 的接受策略。 其中唯一的方法用来判断某一特定的 Cookie 
+                            是否能被某一特定的地址所接受。 这个类内置了 3 个实现的子类。一个类接受所有的 Cookie，另一个则拒绝所有，还有一个类则接受所有来自原地址的 
+                            Cookie。</P>
+                        <LI>用CookieStore 储存 Cookie
+                          <P>java.net.CookieStore 接口负责储存和取出 Cookie。 当有 HTTP 请求的时候，它便储存那些被接受的 Cookie； 当有 
+                            HTTP 回应的时候，它便取出相应的 Cookie。 另外，当一个 Cookie 过期的时候，它还负责自动删去这个 Cookie。</P>
+                        <LI>用 CookieManger/CookieHandler 管理 Cookie
+                          <P>java.net.CookieManager 是整个 Cookie 管理机制的核心，它是 CookieHandler 的默认实现子类。下图显示了整个 
+                            HTTP Cookie 管理机制的结构：</P>
+                          <BR>
+                          <BR>
+                          <A name=fig2><STRONG>图 2. Cookie 
+                          管理类的关系</STRONG></A><BR>
+                          <IMG alt="图 2. Cookie 管理类的关系" 
+src="fig002.jpg"> <BR>
+                          <BR>
+                          <P>一个 CookieManager 里面有一个 CookieStore 和一个 CookiePolicy，分别负责储存 Cookie 
+                            和规定策略。用户可以指定两者，也可以使用系统默认的 CookieManger。</P>
+                        <LI>例子
+                          <P>下面这个简单的例子说明了 Cookie 相关的管理功能：</P>
+                          <TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+                            <TBODY>
+                              <TR>
+                                <TD class=code-outline><PRE class=displaycode>// 创建一个默认的 CookieManager
+CookieManager manager = new CookieManager();
+
+// 将规则改掉，接受所有的 Cookie
+manager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+
+// 保存这个定制的 CookieManager
+CookieHandler.setDefault(manager);
+        
+// 接受 HTTP 请求的时候，得到和保存新的 Cookie
+HttpCookie cookie = new HttpCookie("...(name)...","...(value)...");
+manager.getCookieStore().add(uri, cookie);
+        
+// 使用 Cookie 的时候：
+// 取出 CookieStore        
+CookieStore store = manager.getCookieStore();
+
+// 得到所有的 URI        
+List&lt;URI&gt; uris = store.getURIs();
+for (URI uri : uris) {
+ // 筛选需要的 URI
+ // 得到属于这个 URI 的所有 Cookie
+ List&lt;HttpCookie&gt; cookies = store.get(uri);
+ for (HttpCookie cookie : cookies) {
+  // 取出了 Cookie
+ }
+}
+        
+// 或者，取出这个 CookieStore 里面的全部 Cookie
+// 过期的 Cookie 将会被自动删除
+List&lt;HttpCookie&gt; cookies = store.getCookies();
+for (HttpCookie cookie : cookies) {
+ // 取出了 Cookie
+}</PRE></TD>
+                              </TR>
+                            </TBODY>
+                          </TABLE>
+                        </LI>
+                      </UL>
+                      <P><A name=N101B9><SPAN class=atitle>其他新特性</SPAN></A></P>
+                      <P><A name=N101C0><SPAN class=smalltitle><STRONG><FONT size=3>NetworkInterface 
+                        的增强</FONT></STRONG></SPAN></A></P>
+                      <P>从 Java SE 1.4 开始，JDK 当中出现了一个网络工具类 java.net.NetworkInterface，提供了一些网络的实用功能。 在 
+                        Java SE 6 当中，这个工具类得到了很大的加强，新增了很多实用的方法。例如：</P>
+                      <UL>
+                        <LI><CODE><FONT face=新宋体>public boolean isUp()</FONT></CODE>
+                          <P>用来判断网络接口是否启动并运行</P>
+                        <LI><CODE><FONT face=新宋体>public boolean isLoopback()</FONT></CODE>
+                          <P>用来判断网络接口是否是环回接口（loopback）</P>
+                        <LI><CODE><FONT face=新宋体>public boolean isPointToPoint()</FONT></CODE>
+                          <P>用来判断网络接口是否是点对点（P2P）网络</P>
+                        <LI><CODE><FONT face=新宋体>public boolean supportsMulticast()</FONT></CODE>
+                          <P>用来判断网络接口是否支持多播</P>
+                        <LI><CODE><FONT face=新宋体>public byte[] getHardwareAddress()</FONT></CODE>
+                          <P>用来得到硬件地址（MAC）</P>
+                        <LI><CODE><FONT face=新宋体>public int getMTU()</FONT></CODE>
+                          <P>用来得到最大传输单位（MTU，Maximum Transmission Unit）</P>
+                        <LI><CODE><FONT face=新宋体>public boolean isVirtual()</FONT></CODE>
+                          <P>用来判断网络接口是否是虚拟接口</P>
+                        </LI>
+                      </UL>
+                      <P>关于此工具类的具体信息，请参考 Java SE 6 相应文档（见 <A 
+href="http://www.ibm.com/developerworks/cn/java/j-lo-jse62/index.html#resources" 
+cmimpressionsent="1"><FONT color=#996699>参考资源</FONT></A>）。</P>
+                      <P><A name=N1021A><SPAN class=smalltitle><STRONG><FONT size=3>域名的国际化</FONT></STRONG></SPAN></A></P>
+                      <P>在最近的一些 RFC 文档当中，规定 DNS 服务器可以解析除开 ASCII 以外的编码字符。有一个算法可以在这种情况下做 Unicode 与 ASCII 
+                        码之间的转换，实现域名的国际化。java.net.IDN 就是实现这个国际化域名转换的新类，IDN 是“国际化域名”的缩写（internationalized 
+                        domain names）。这个类很简单，主要包括 4 个静态函数，做字符的转换。</P>
+                    </DIV></TD>
+                </TR>
+              </TBODY>
+            </TABLE><!--EndFragment--></DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+        </DIV>
+      </DIV>
+    </DIV>
+  </DIV>
+</CENTER>
+</BODY>
+</HTML>

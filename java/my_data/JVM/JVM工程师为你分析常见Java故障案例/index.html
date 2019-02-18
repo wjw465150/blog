@@ -1,0 +1,711 @@
+﻿<!DOCTYPE html><html lang="zh-cn"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>听阿里巴巴JVM工程师为你分析常见Java故障案例 - 其他 - DBA+社群——一个专属于DBA的圈子,分享互助,搭建人脉,整合资源,提升自我</title>
+    <meta name="keywords" content="Java故障">
+    <meta name="description" content="大师开讲啦！! ! 曾就职于IBM Java技术中心，现就职于阿里巴巴技术保障部JVM组行业大师陆传胜深入剖析java常见故障。多年的经验积淀，独到的见解，丰厚的干货等你来拿。">
+
+    <!-- jQuery -->
+    <script src="index_files/hm.js"></script><script src="index_files/push.js"></script><script src="index_files/jquery-2.1.4.min.js"></script>
+
+    <!-- Bootstrap -->
+    <link href="index_files/bootstrap.css" rel="stylesheet">
+    <script src="index_files/bootstrap.min.js"></script>
+
+    <!-- App -->
+    <link href="index_files/style.css" rel="stylesheet">
+	
+	<link rel="shortcut icon" href="index_files/favicon_ico">
+
+    
+	
+	<!--百度自动推送-->
+	<script><!--
+/* Script removed by snapshot save */
+--></script>
+<script src="index_files/share.js"></script><link href="index_files/share_style0_24.css" rel="stylesheet"></head>
+<body>
+<div class="container">
+    <div class="row">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+
+        <div class="col-xs-12 col-md-8">
+            <div class="panel panel-default new-show">
+                <div class="panel-body">
+                    <h2 class="title mt20">听阿里巴巴JVM工程师为你分析常见Java故障案例</h2>
+                    <div class="adress">
+						<span class="user"><b class="glyphicon glyphicon-usera"></b>陆传胜</span>
+						<span class="time"><b class="glyphicon glyphicon-timea"></b>2015-12-25 09:47:12</span>
+						<b class="glyphicon glyphicon-hits"></b><span id="hits">29</span>
+                    </div><!--点击次数统计JS-->
+					<script src="index_files/api.php.js"></script>
+                    <div class="new-detailed mt20">
+                        <div style="text-align: center;"><IMG style="max-width: 300px;" alt="\" src="index_files/20151225095219521.jpg" ></div>
+<br>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" 
+helvetica="">本文根据12月23日阿里巴巴技术保障部JVM组软件工程师陆传胜老师在【DBA+社群，微信公众号：dbaplus】的主题分享整理！小编特别整理出其中精华内容，供大家学习交流。同时，也非常感谢<SPAN 
+style="margin: 0px; padding: 0px; line-height: 25.6px;">陆传胜</SPAN>老师对DBA+社群给予的大力支持。</p>
+<p 16px;'"="" sans-serif; ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21798" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><STRONG style="margin: 0px; padding: 0px;">
+目录</STRONG>
+ 
+</p>
+<ul class="list-paddingleft-2" sans-serif;="" arial,                           ="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="" square;'"="" 16px;="">
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">HotSpot常识</span></p>
+</li>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">Java故障排查方法论</span></p>
+</li>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">Java故障案例分析</span></p>
+</li>
+</ul>
+<SECTION class="135editor" data-id="85830" data-color                               ="rgb(255, 129, 36)" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" border-box;'"="">
+	<SECTION class="layout" style="margin: 0px auto; padding: 0px; border: 0px currentColor; border-image: none; text-align: center; box-sizing: border-box;">
+		<SECTION style="margin: 0px auto -50px; padding: 15px; width: 130px; height: 130px; display: inline-block; box-sizing: border-box; background-color: rgb(254, 254, 254);">
+			<SECTION style="margin: 0px; padding: 0px; border-radius: 50%; border: 1px solid rgb(255, 129, 36); border-image: none; width: 100px; height: 100px; display: inline-block; box-sizing: border-box;"      >
+				<p style="margin: 0px; padding: 0px; color: inherit; line-height: 6.5em; clear: both;"><span class="135brush" style="margin: 0px; padding: 0px; color: rgb(89, 89, 89); font-size: 28px;" data-brushtype="text">Part 1</span></p></SECTION>		  
+</SECTION>
+		<SECTION style="margin: -50px 20px 60px; padding: 0px; box-sizing: border-box;">
+			<SECTION style="border-color: rgb(255, 129, 36); margin: 3px 0px 0px; padding: 10px 0px; width: 100%; color: rgb(255, 129, 36); float: left; display: inline-block; box-sizing: border-box;" data-width="100%">
+				<SECTION style="margin: 1em 0px 0px; padding: 0px; border: 0px rgb(255, 129, 36); border-image: none; color: inherit; clear: both; box-sizing: border-box;">
+					<SECTION style="border-color: rgb(255, 129, 36); margin: 0px 0px -3px; padding: 0px; border-radius: 50%; width: 6px; height: 6px !important; color: rgb(255, 255, 255); float: right; box-sizing: border-box; background-color: rgb(255, 129, 36);"      >						&nbsp;</SECTION>
+					<SECTION style="border-color: rgb(255, 129, 36); margin: 0px 0px -2px; padding: 0px; border-radius: 50%; width: 6px; height: 6px !important; text-align: left; color: rgb(255, 255, 255); box-sizing: border-box; background-color: rgb(255, 129, 36);"      >						&nbsp;</SECTION>
+					<SECTION style="border-color: rgb(255, 129, 36); margin: -20px 0px 0px; padding: 0px; color: inherit; text-decoration: inherit; box-sizing: border-box; background-color: transparent;">
+						<SECTION style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; width: 100%; color: inherit; border-top-width: 1px; border-top-style: solid; float: left; box-sizing: border-box;" data-width="100%">
+							&nbsp;</SECTION></SECTION></SECTION></SECTION>		 </SECTION>
+		<SECTION style="margin: 30px auto; padding: 0px; display: inline-block; box-sizing: border-box;">
+			<p style="margin: 0px; padding: 0px; clear: both;"><span class="135brush" style="margin: 0px; padding: 0px; color: rgb(165, 165, 165); font-size: 20px;" data-brushtype="text">HotSpot常识</span></p></SECTION>	  
+</SECTION>
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">&nbsp;</SECTION></SECTION>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<UL class="list-paddingleft-2" designtimesp="21828" sans-serif;="" arial,="" 
+yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="" square;'"="" 16px;="">
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;">HotSpot是目前最常见的开源JVM（GPL协议），用来运行Java应用和applet，本次讨论基本都是基于这一软件来进行的。</p>
+<p style="margin: 0px; padding: 0px; clear: both;">&nbsp;</p>
+</li>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;">所有的Java对象都是分配在Java堆上的，Java代码中看到的引用，在JVM的实现中就是一个指针，指向一段被表示成对象的内存区域。这个区域可能被移动，引用指针的值不同于一般的C/C++指针，是会从外部改变的。</p>
+<p style="margin: 0px; padding: 0px; clear: both;">&nbsp;</p>
+</li>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;">执行的Java字节码都是动态加载、链接、编译的。</p>
+<p style="margin: 0px; padding: 0px; clear: both;">&nbsp;</p>
+</li>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;">JIT compiler，JVM里面有一个模块负责把Java字节码编译成优化过的native机器码，这样可以极大提高执行效率。</p>
+<p style="margin: 0px; padding: 0px; clear: both;">但是HotSpot的JIT编译器只会编译热点方法，一个Java方法load进来后会默认从解释器开始执行，只有部分或整体的解释执行次数超过一定次数才会被编译优化，在某些条件下，比如debug，会把方法去优化退回到解释器执行。解释器可以看做是一个没有优化的翻译器，会把每一条bytecode指令机械的翻译成汇编指令来执行。</p>
+</li></UL><SECTION 
+label="powered by 135editor.com" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica="">
+<P style="margin: 0px; padding: 0px; clear: both;" 
+designtimesp="21842">&nbsp;</P></SECTION>
+	<p 16px;'"="" sans-serif;          ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">1.6, 两个stack，interned 
+string放到heap</P>
+<P designtimesp="21844" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P>
+<P designtimesp="21845" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src="index_files/0.jpg" DESIGNTIMEURL="index_files/0.jpg" data-w="" data-type="png" data-s="300,640" data-ratio="0.5935251798561151" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgxGPtqwyp3FicJDqXHVbuDQh0IgIAu8iaibbDfNBmnyyc2e8jesYd8aL4A/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><SPAN style="margin: 0px; padding: 0px;">
+这张图里每一个小方块展开都可以写一系列文章，今天就不在这里展开了。</SPAN>
+</p>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21850" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">参考链接:</P>
+<P designtimesp="21851" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">http://blog.jamesdbloom.com/images_2013_11_17_17_56/JVM_Internal_Architecture.png</SPAN></p>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><SPAN style="margin: 0px; padding: 0px;"> http://blog.jamesdbloom.com/JVMInternals.html</SPAN>
+</p>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P><SECTION class="135editor" data-id="85830" data-color="rgb(255, 129, 36)" sans-serif;="" 
+arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" 
+neue",="" helvetica="" 16px;="" border-box;'"="">
+	<SECTION class="layout" style="margin: 0px auto; padding: 0px; border: 0px currentColor; border-image: none; text-align: center; box-sizing: border-box;">
+		<SECTION style="margin: 0px auto -50px; padding: 15px; width: 130px; height: 130px; display: inline-block; box-sizing: border-box; background-color: rgb(254, 254, 254);">
+			<SECTION style="margin: 0px; padding: 0px; border-radius: 50%; border: 1px solid rgb(255, 129, 36); border-image: none; width: 100px; height: 100px; display: inline-block; box-sizing: border-box;"      >
+				<p style="margin: 0px; padding: 0px; color: inherit; line-height: 6.5em; clear: both;"><span class="135brush" style="margin: 0px; padding: 0px; color: rgb(89, 89, 89); font-size: 28px;" data-brushtype="text">Part 2</span></p></SECTION>		  
+</SECTION>
+		<SECTION style="margin: -50px 20px 60px; padding: 0px; box-sizing: border-box;">
+			<SECTION style="border-color: rgb(255, 129, 36); margin: 3px 0px 0px; padding: 10px 0px; width: 100%; color: rgb(255, 129, 36); float: left; display: inline-block; box-sizing: border-box;" data-width="100%">
+				<SECTION style="margin: 1em 0px 0px; padding: 0px; border: 0px rgb(255, 129, 36); border-image: none; color: inherit; clear: both; box-sizing: border-box;">
+					<SECTION style="border-color: rgb(255, 129, 36); margin: 0px 0px -3px; padding: 0px; border-radius: 50%; width: 6px; height: 6px !important; color: rgb(255, 255, 255); float: right; box-sizing: border-box; background-color: rgb(255, 129, 36);"      >						&nbsp;</SECTION>
+					<SECTION style="border-color: rgb(255, 129, 36); margin: 0px 0px -2px; padding: 0px; border-radius: 50%; width: 6px; height: 6px !important; text-align: left; color: rgb(255, 255, 255); box-sizing: border-box; background-color: rgb(255, 129, 36);"      >						&nbsp;</SECTION>
+					<SECTION style="border-color: rgb(255, 129, 36); margin: -20px 0px 0px; padding: 0px; color: inherit; text-decoration: inherit; box-sizing: border-box; background-color: transparent;">
+						<SECTION style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; width: 100%; color: inherit; border-top-width: 1px; border-top-style: solid; float: left; box-sizing: border-box;" data-width="100%">
+							&nbsp;</SECTION></SECTION></SECTION></SECTION>		 </SECTION>
+		<SECTION style="margin: 30px auto; padding: 0px; display: inline-block; box-sizing: border-box;">
+			<p style="margin: 0px; padding: 0px; clear: both;"><span class="135brush" style="margin: 0px; padding: 0px; color: rgb(165, 165, 165); font-size: 20px;" data-brushtype="text">Java故障排查方法论</span></p></SECTION>	  
+</SECTION>
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">&nbsp;</SECTION></SECTION>
+<h1 sans-serif;="" arial,                     ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 32px;'"="">&nbsp;</h1>
+<h2 sans-serif;="" arial,                     ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 
+27px;'"="">&nbsp;</h2>
+<SECTION class="135editor" data-id="41173" data-color                               ="rgb(255, 129, 36)" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 
+border-box;'"="">
+	<h2 style="border-color: rgb(255, 129, 36); margin: 8px 0px 0px; padding: 0px; text-align: justify; color: rgb(255, 129, 36); line-height: 28px; font-size: 16px; border-bottom-width: 1.5px; border-bottom-style: solid; min-height: 32px; max-width: 100%;"><span class="autonum" style="margin: 0px 8px 0px 0px; padding: 4px 10px; color: rgb(255, 255, 255); line-height: 20px; float: left; display: block; -ms-word-wrap: break-word !important; max-width: 100%; background-color: rgb(255, 129, 36);" title  ="\" placeholder="1" data-original-title="\">1</span><strong class="135brush" style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; color: inherit;" data-brushtype="text">1参考书</strong></h2>
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">&nbsp;</SECTION></SECTION>
+<h2 sans-serif;="" arial,                     ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 27px;'"="">&nbsp;</h2>
+<p 16px;'"="" sans-serif;                     ="" arial,="" yahei",="" "microsoft="" 
+gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica=""><SPAN style="margin: 0px; padding: 0px;">&nbsp; &nbsp;</SPAN><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src     ="index_files/0-1.jpg"  data-w="357" data-type="png" data-s="300,640" data-ratio="1.226890756302521" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgiaDUVic6U4cPLkHZaKapkMiboYwLACEuf481fdm4bicO9iblibibTBcU02Mdg/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;="" arial,                            ="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21885" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">&nbsp;&nbsp;</SPAN><span style="margin: 0px; padding: 0px;"><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src     ="index_files/0-2.jpg"  data-w="318" data-type="png" data-s="300,640" data-ratio="1.2169811320754718" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgaj5zREcqxW4Cq7iaHpVBJCKVNyj3xepkA57Y70zWnPNeOKj4ib7933sQ/0?wx_fmt=png"></span></p>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<H2 designtimesp="21890" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 
+27px;'"="">&nbsp;</H2>
+<SECTION class="135editor" data-id="41173" data-color                               ="rgb(255, 129, 36)" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 
+border-box;'"="">
+	<h2 style="border-color: rgb(255, 129, 36); margin: 8px 0px 0px; padding: 0px; text-align: justify; color: rgb(255, 129, 36); line-height: 28px; font-size: 16px; border-bottom-width: 1.5px; border-bottom-style: solid; min-height: 32px; max-width: 100%;"><span class="autonum" style="margin: 0px 8px 0px 0px; padding: 4px 10px; color: rgb(255, 255, 255); line-height: 20px; float: left; display: block; -ms-word-wrap: break-word !important; max-width: 100%; background-color: rgb(255, 129, 36);" title  ="\" placeholder="1" data-original-title="\">2</span><strong class="135brush" style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; color: inherit;" data-brushtype="text">几个我个人常用的三个原则</strong></h2>
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">&nbsp;</SECTION></SECTION>
+<h2 sans-serif;="" arial,                     ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 27px;'"="">&nbsp;</h2>
+<ul class="list-paddingleft-2" sans-serif;="" arial,                           ="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="" square;'"="" 16px;="">
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;">从浅显和广泛开始。<br style="margin: 0px; padding: 0px;">
+分析问题应该尽量从高层入手，收集各种各样的现场信息，版本信息，尽量不要一开始就debugger跑起。</p>
+<p style="margin: 0px; padding: 0px; clear: both;">&nbsp;</p>
+</li>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;">分而治之，隔离问题。<br style="margin: 0px; padding: 0px;">
+将问题隔离到尽可能小的领域中，比如某个特定系统、特定版本、甚至特定机器中。之后如果是java的问题，还可以继续分析是java应用、容器、或者jdk的问题，最后应该能确定到某个模块的某些代码、一次commit、一行配置的问题。整个排查问题的过程就是一个从上到下，一步步缩小问题范围的过程。</p>
+<p style="margin: 0px; padding: 0px; clear: both;">&nbsp;</p>
+</li>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;">福尔摩斯法则。<br style="margin: 0px; padding: 0px;">
+当排除了所有的不可能，那么剩下的那个，不管多么荒谬，就是罪魁祸首了。</p>
+</li>
+</ul>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21910" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P><SECTION class="135editor" data-id="41173" 
+data-color="rgb(255, 129, 36)" sans-serif;="" arial,="" yahei",="" "microsoft="" 
+gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 
+border-box;'"="">
+	<h2 style="border-color: rgb(255, 129, 36); margin: 8px 0px 0px; padding: 0px; text-align: justify; color: rgb(255, 129, 36); line-height: 28px; font-size: 16px; border-bottom-width: 1.5px; border-bottom-style: solid; min-height: 32px; max-width: 100%;"><span class="autonum" style="margin: 0px 8px 0px 0px; padding: 4px 10px; color: rgb(255, 255, 255); line-height: 20px; float: left; display: block; -ms-word-wrap: break-word !important; max-width: 100%; background-color: rgb(255, 129, 36);" title  ="\" placeholder="1" data-original-title="\">3</span><strong class="135brush" style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; color: inherit;" data-brushtype="text">重现故障和收集数据</strong></h2>
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">&nbsp;</SECTION></SECTION>
+	<p 16px;'"="" sans-serif;          ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21917" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">不同于其他工业系统，软件工业的一个好处就是重新尝试的代价一般都特别小，重启一个进程总比重启一台发动机、一个核反应堆轻松很多。所以如果故障问题能稳定的通过重启复现，这对于修bug的同学将会是个天大的好消息。<BR 
+style="margin: 0px; padding: 0px;">
+<br style="margin: 0px; padding: 0px;"> 
+但是现实中，特别是在生产环境中，更多的事后故障问题不是你想发现就能发现，经常是重启后就没了，跑了不确定的时间就又出现了，所以只能通过收集故障时的系统状态数据来分析问题。状态数据大致可以分为两类：一是监控类数据，收集这类数据对于应用的性能影响很小，基本可以忽略不计，所以可以持续收集，比如GC 
+ log，应用log等；第二类是某些瞬时数据，这些数据要么收集的代价很大，很影响系统性能，要么时效性很高，过了故障点一切可能就都不一样了，所以不能持续收集，必须迅速的在故障出现点自动采集，比如Heap 
+ dump，core dump等。</p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P>
+<P designtimesp="21921" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;"      >       下面这个图描述了常见的Java故障和需要收集的数据之间的概要关系</SPAN></p>
+<p 16px;'"="" sans-serif;  ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21924" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src="index_files/0.png" DESIGNTIMEURL="index_files/0.png" data-w="" data-type="png" data-s="300,640" data-ratio="0.5809352517985612" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgf35UW2h7TKQoTiaOXP8YRh9vEoqV3yRGojsUmwmF7wGgAfsMMSfWteQ/0?wx_fmt=png"></p>
+<h3 sans-serif;="" arial,                       ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 
+400;'"="">&nbsp;</h3>
+<h3 sans-serif;="" arial,                       ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 
+400;'"=""><strong style="margin: 0px; padding: 0px;">JVM级别数据</strong></h3>
+	<p 16px;'"="" sans-serif;="" arial,            ="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21930" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">对于JVM，下面这些选项最好常年打开选项，对于收集故障数据很有帮助</P>
+<P designtimesp="21931" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P>
+<P designtimesp="21932" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">-XX:+PrintGCDetails<BR style="margin: 0px; padding: 0px;">
+<span style="margin: 0px; padding: 0px;">-XX:+PrintGCDateStamps<br style="margin: 0px; padding: 0px;">
+-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/log/gcdump</span></p>
+		<p 16px;'"="" sans-serif;      ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21937" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><STRONG style="margin: 0px; padding: 0px;">
+			系统级别数据</STRONG></p>
+					<p 16px;'"="" sans-serif;                                 ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21940" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">						Java进程运行的环境信息也是重要的诊断信息，如果能在故障点全部收集下来对于后续调试分析也是很有帮助的，这些信息主要包括： 
+ 系统基本软硬件信息、所有进程的情况、打开的文件描述符等等。</SPAN></p>
+						<p 16px;'"="" sans-serif;                   ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21943" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">
+							简单的做法可以在Java进程非正常返回的时候执行一个脚本，自动的去采集一遍这些信息。（HotSpot支持在致命错误或者oom时执行一个系统命令，可以设置让其去直接执行这个脚本）。或者说是使用一个监控程序，监视Java进程的输出结果，如果发现异常、crash等情况，就收集一次环境信息。</SPAN></p>
+			<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P><SECTION class="135editor" data-id="85830" data-color="rgb(255, 129, 36)" sans-serif;="" 
+arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" 
+neue",="" helvetica="" 16px;="" border-box;'"="">
+	<SECTION class="layout" style="margin: 0px auto; padding: 0px; border: 0px currentColor; border-image: none; text-align: center; box-sizing: border-box;">
+		<SECTION style="margin: 0px auto -50px; padding: 15px; width: 130px; height: 130px; display: inline-block; box-sizing: border-box; background-color: rgb(254, 254, 254);">
+			<SECTION style="margin: 0px; padding: 0px; border-radius: 50%; border: 1px solid rgb(255, 129, 36); border-image: none; width: 100px; height: 100px; display: inline-block; box-sizing: border-box;"      >
+				<p style="margin: 0px; padding: 0px; color: inherit; line-height: 6.5em; clear: both;"><span class="135brush" style="margin: 0px; padding: 0px; color: rgb(89, 89, 89); font-size: 28px;" data-brushtype="text">Part 3</span></p></SECTION>		  
+</SECTION>
+		<SECTION style="margin: -50px 20px 60px; padding: 0px; box-sizing: border-box;">
+			<SECTION style="border-color: rgb(255, 129, 36); margin: 3px 0px 0px; padding: 10px 0px; width: 100%; color: rgb(255, 129, 36); float: left; display: inline-block; box-sizing: border-box;" data-width="100%">
+				<SECTION style="margin: 1em 0px 0px; padding: 0px; border: 0px rgb(255, 129, 36); border-image: none; color: inherit; clear: both; box-sizing: border-box;">
+					<SECTION style="border-color: rgb(255, 129, 36); margin: 0px 0px -3px; padding: 0px; border-radius: 50%; width: 6px; height: 6px !important; color: rgb(255, 255, 255); float: right; box-sizing: border-box; background-color: rgb(255, 129, 36);"      >						&nbsp;</SECTION>
+					<SECTION style="border-color: rgb(255, 129, 36); margin: 0px 0px -2px; padding: 0px; border-radius: 50%; width: 6px; height: 6px !important; text-align: left; color: rgb(255, 255, 255); box-sizing: border-box; background-color: rgb(255, 129, 36);"      >						&nbsp;</SECTION>
+					<SECTION style="border-color: rgb(255, 129, 36); margin: -20px 0px 0px; padding: 0px; color: inherit; text-decoration: inherit; box-sizing: border-box; background-color: transparent;">
+						<SECTION style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; width: 100%; color: inherit; border-top-width: 1px; border-top-style: solid; float: left; box-sizing: border-box;" data-width="100%">
+							&nbsp;</SECTION></SECTION></SECTION></SECTION>		 </SECTION>
+		<SECTION style="margin: 30px auto; padding: 0px; display: inline-block; box-sizing: border-box;">
+			<p style="margin: 0px; padding: 0px; clear: both;"><span class="135brush" style="margin: 0px; padding: 0px; color: rgb(165, 165, 165); font-size: 20px;" data-brushtype="text">Java故障案例分析</span></p></SECTION>	  
+</SECTION></SECTION>
+<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">&nbsp;</SECTION>
+<SECTION class="135editor" data-id="41173" data-color                               ="rgb(255, 129, 36)" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 
+16px;="" border-box;'"="">
+	<h2 style="border-color: rgb(255, 129, 36); margin: 8px 0px 0px; padding: 0px; text-align: justify; color: rgb(255, 129, 36); line-height: 28px; font-size: 16px; border-bottom-width: 1.5px; border-bottom-style: solid; min-height: 32px; max-width: 100%;"><span class="autonum" style="margin: 0px 8px 0px 0px; padding: 4px 10px; color: rgb(255, 255, 255); line-height: 20px; float: left; display: block; -ms-word-wrap: break-word !important; max-width: 100%; background-color: rgb(255, 129, 36);" title  ="\" placeholder="1" data-original-title="\">故障1</span><strong class="135brush" style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; color: inherit;" data-brushtype="text">CPU</strong><strong class="135brush" style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; color: inherit; line-height: 25.6px; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;" data-brushtype="text">&nbsp;load过高</strong></h2>
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">&nbsp;</SECTION></SECTION>
+<SECTION class="135editor" data-id="41173" data-color                               ="rgb(255, 129, 36)" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" border-box;'"="">
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">		&nbsp;</SECTION></SECTION>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><BR designtimesp="21972">
+<span style="margin: 0px; padding: 0px;">问题一般是指CPU使用率很高，但是系统并没有很繁忙，一般有两种情形。</span></P>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp; </P         >       
+<P designtimesp="21975" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src="index_files/0-1.png" DESIGNTIMEURL="index_files/0-1.png" data-w="213" data-type="png" data-s="300,640" data-ratio="0.2300469483568075" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZg713MrLbTbj6AIaIxOVjhKT8ic73o1fw37o6RTvNvUCy4eIE8yWOUoIw/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;="" arial,                            ="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="21978" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src="index_files/0-2.png" DESIGNTIMEURL="index_files/0-2.png" data-w="" data-type="png" data-s="300,640" data-ratio="0.36151079136690645" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZg4zp7EqmBMicnzMzSKIV60zjbd2G1suomiaaD2uk0RgWqfSr8TrmTicyVg/0?wx_fmt=png"></p>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<H3 designtimesp="21981" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 19px;'"=""><span style="margin: 0px; padding: 0px; font-size: 16px;">情况1，启动阶段</span></H3>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P>
+<P designtimesp="21984" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;" 
+>应用刚启动之后或者刚放了用户流量之后，也是可能突然cpu  
+load飙到很高的，这一般不是java代码引起的，而是由于jvm的jit编译器引起的。（当然如果你使用的是一些非普遍的JDK，比如IBMJDK，并且启用了AOT之类的功能，是不可能遇到这个情况的，因为代码已经提前编译好了）</SPAN></p>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<UL class="list-paddingleft-2" designtimesp="21987" 16px;'"="" sans-serif;="" 
+arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" 
+neue",="" helvetica="">
+  <LI style="margin: 0px; padding: 0px; clear: both;" designtimesp="21988">
+<p style="margin: 0px; padding: 0px; clear: both;">-XX:+TieredCompilation</p></LI></UL>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;"      >       可以先一定程度上减轻这个问题，效果上相当于把消耗资源严重的一些优化处理延后进行了，先把java方法编译到一个低优化级别的native方法。值得注意的是，这个参数会消耗比较多的内存资源，同一个方法被编译了多次，存在多份native内存拷贝，建议是把codecache调大一点儿（-XX:+ReservedCodeCacheSize，InitialCodeCacheSize）。</SPAN></p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P>
+<P designtimesp="21993" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;"      >       Optional：</SPAN></p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp; </P         >       
+<P designtimesp="21996" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">CodeCache不足可能会引起性能问题，这是一种非常少见的故障，code  
+cache不足，jit需要编译新的方法的时候就会不停的尝试清理code  
+cache，丢弃掉无用的方法，频繁的尝试会导致大量资源消耗在JIT线程上。</SPAN></p>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<UL class="list-paddingleft-2" designtimesp="21999" 16px;'"="" sans-serif;="" 
+arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" 
+neue",="" helvetica="">
+  <LI style="margin: 0px; padding: 0px; clear: both;" designtimesp="22000">
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">&nbsp;-XX:+PrintCompilation</span></p></LI></UL>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;" >为了确认这个问题可以尝试使用这个参数，输出JIT编译的情况，如果初始阶段发生大量方法的编译，就可以确定是由于JIT编译引起的。一般情况下，忍一忍熬过一开始的编译阶段就好了。如果用户请求超时严重，无法忍受，可以尝试使用分层编译、提前预热系统。</SPAN></p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P>
+<P designtimesp="22006" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><STRONG style="margin: 0px; padding: 0px;" 
+>情况2，非启动阶段</STRONG></p>
+<p 16px;'"="" sans-serif;  ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22009" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">
+一般是一些计算密集型任务、忙等操作、或者过于密集的线程调度。一般需要定位出被频繁执行的代码逻辑（热点方法），然后再进行优化，目前可以使用各种profile工具来分析。比如Java 
+ Mission Control, ZProfiler(硬广：阿里自产的profiler工具)</SPAN>&lt;/p&gt;<p 16px;'"="" sans-serif;  ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22012" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src="index_files/0-3.jpg" DESIGNTIMEURL="index_files/0-3.jpg" data-w="" data-type="png" data-s="300,640" data-ratio="0.289568345323741" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgo70XM85MLnaBY4zpG3Lyeu39RuvicYkG0SkGr0GDJL7VFa3uSHdzpzQ/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><IMG style="margin: 0px; padding: 0px; 
+height: auto !important; max-width: 100%;" 
+src="index_files/0-4.jpg" DESIGNTIMEURL="index_files/0-4.jpg" 
+data-w="" data-type="png" data-s="300,640" data-ratio="0.39928057553956836" 
+_src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgVqdFkaFMfFytuyPo5QI4ERzz3kyUDf4fKsgLKHuvak6F0wPEyRWq9w/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp; </P    
+><SECTION class="135editor" data-id="41173" data-color="rgb(255, 129, 36)" sans-serif;="" 
+arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" 
+neue",="" helvetica="" 16px;="" border-box;'"="">
+	<h2 style="border-color: rgb(255, 129, 36); margin: 8px 0px 0px; padding: 0px; text-align: justify; color: rgb(255, 129, 36); line-height: 28px; font-size: 16px; border-bottom-width: 1.5px; border-bottom-style: solid; min-height: 32px; max-width: 100%;"><span class="autonum" style="margin: 0px 8px 0px 0px; padding: 4px 10px; color: rgb(255, 255, 255); line-height: 20px; float: left; display: block; -ms-word-wrap: break-word !important; max-width: 100%; background-color: rgb(255, 129, 36);" title  ="\" placeholder="1" data-original-title="\">故障2</span><strong class="135brush" style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; color: inherit;" data-brushtype="text">应用性能下降/较差</strong></h2>
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">&nbsp;</SECTION></SECTION>
+<h2 sans-serif;="" arial,                     ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 27px;'"="">&nbsp;</h2>
+<p 16px;'"="" sans-serif;      ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><SPAN style="margin: 0px; padding: 0px;">这个问题又两个层面，一个是应用的性能下降了，这一般是来自监控系统或者用户突然的报警  
+。从分割问题的角度看，性能下降一般是和之前时间点比较得出的结论，那么就肯定有一个分水岭，在某一个时间点（通常是一个改动发生的时候）之后就会开始性能下降。所以初始的解决方案比较简单，就是找到改动发生的时间点，挑出造成性能下降的改动，然后分析这个改动为什么会造成性能下降。</SPAN></p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P>
+<P designtimesp="22026" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;" 
+>但是如果就是一个应用性能较差的问题，就比较棘手了，这个通常意味着没有可以比较的时间点，相当于凭空设定一个性能指标，将系统性能优化提升到这个目标。通常这是一个需要多方合作，修改多个层次的代码、配置才能达到的目标。通常而言可以继续尝试profiling 
+ Java应用，分析性能瓶颈，优化瓶颈部分。</SPAN></p>
+	<p 16px;'"="" sans-serif;                          ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22029" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">可能有影响的瓶颈包括：</SPAN></p>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<H3 designtimesp="22032" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 19px;'"=""><span style="margin: 0px; padding: 0px; color: rgb(0, 252, 255); font-size: 16px;">锁</span></H3>
+<p 16px;'"="" sans-serif;  ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><SPAN style="margin: 0px; padding: 0px;">这个一般需要设计、代码层面的改动，使用更高效的加锁机制，减轻竞争，等等。</SPAN></p>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<H3 designtimesp="22037" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 19px;'"=""><span style="margin: 0px; padding: 0px; color: rgb(0, 252, 255); font-size: 16px;">GC</span></H3>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src="index_files/0-5.jpg" DESIGNTIMEURL="index_files/0-5.jpg" data-w="" data-type="png" data-s="300,640" data-ratio="0.39388489208633093" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgiaCMnCV5jqxTM82lN7No2Waq1DicibhEfnn8REc0n7ib42eicVj8XMC1S7w/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><SPAN style="margin: 0px; padding: 0px;">频繁full gc的又有两种情况，一种是说full  
+gc完了之后整个heap还是没有很多的可用空间，一般是可能是由于最大heap上限可能设置有点儿小了，或者应用有内存泄露，需要做个heap  
+dump具体分析下内存里面各个部分的使用情况。</SPAN></p>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><SPAN style="margin: 0px; padding: 0px;">另外一个情况是full  
+gc完了之后整个heap还是有不少的可用空间的，比如下图，这个一般是有一些“临时”对象晋升到了老年代，新生代没有滤掉足够的短生命周期对象，可能需要调整JVM参数-XX:MaxTenuringThreshold(15, 
+ 4bits)提高promote到老年代的门槛。</SPAN></p>
+<p 16px;'"="" sans-serif;  ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22046" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src="index_files/0-6.jpg" DESIGNTIMEURL="index_files/0-6.jpg" data-w="" data-type="png" data-s="300,640" data-ratio="0.368705035971223" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgItYCHLf35ibr9yhGjA6cc2n74oaBvUcWtibOjYbOZxPCaVKyqVrJ2M5A/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src="index_files/0-7.jpg" DESIGNTIMEURL="index_files/0-7.jpg" data-w="" data-type="png" data-s="300,640" data-ratio="0.3776978417266187" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZguicPXXibP0azeWwmbFj5QSw7ic84jTxmWYcbUdgzDmAKm4CSxSw1gS60Q/0?wx_fmt=png">
+</p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P>
+<P designtimesp="22051" 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" 
+gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">分析GC日志，一个开源的免费解决方案是eclipse的GCMV</SPAN></p>
+	<p 16px;'"="" sans-serif;                          ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src="index_files/0-8.jpg" DESIGNTIMEURL="index_files/0-8.jpg" data-w="" data-type="png" data-s="300,640" data-ratio="0.8183453237410072" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgtojQxranR2dX1QfXPlC6kEZHXKJOwumBCApJbzos2ZQYWRMGvGYUNw/0?wx_fmt=png"></p>
+	<p 16px;'"="" sans-serif;          ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22056" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px; color: rgb(0, 252, 255);"><strong style="margin: 0px; padding: 0px;">GC参数优化</strong></SPAN><br style="margin: 0px; padding: 0px;">
+<span style="margin: 0px; padding: 0px;">关于GC其实你能做的并不多，影响最大就是通过调整JVM启动时参数，来调节GC的各个行为，但是推荐读懂了官方文档中的说明再做调整：<br style="margin: 0px; padding: 0px;">
+http://www.oracle.com/technetwork/java/javase/tech/vmoptions-jsp-140102.html</span><br style="margin: 0px; padding: 0px;">&nbsp;</p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN
+ style="margin: 0px; padding: 0px;">             1. &nbsp; &nbsp;  
+仔细设计一个适合你自己环境、应用的参数模板。</SPAN></p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN
+ style="margin: 0px; padding: 0px;">  
+      
+     
+2. &nbsp; &nbsp;   
+收集应用信息，评估应用内存活动行为（参见“Java性能优化权威指南”），常驻内存对象大小，大对象比例，native内存使用，分配速度等。。。</SPAN></p>
+<p 16px;'"="" sans-serif;                       ="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN
+ style="margin: 0px; padding: 0px;">
+	  
+      
+
+      
+      
+    
+       
+      
+ 3. &nbsp; &nbsp;  调整下列参数（不是一条命令哦）</SPAN></p>
+		<p 16px;'"="" sans-serif;                                             ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22070" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">-Xms8888m<br style="margin: 0px; padding: 0px;">
+-Xmx8888m<br style="margin: 0px; padding: 0px;">
+-Xmn8888m<br style="margin: 0px; padding: 0px;">
+-Xss8888k<br style="margin: 0px; padding: 0px;">
+-XX:PermSize=8888m<br style="margin: 0px; padding: 0px;">
+-XX:MaxPermSize=8888m<br style="margin: 0px; padding: 0px;">
+-XX:+UseStringCache<br style="margin: 0px; padding: 0px;"> -XX:+UseConcMarkSweepGC</SPAN></p>
+<p 16px;'"="" sans-serif;                                   ="" arial,="" yahei",="" "microsoft="" 
+gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica="" > 
+<SPAN style="margin: 0px; padding: 0px;">-XX:+UseG1GC<br style="margin: 0px; padding: 0px;"> -XX:+UseParNewGC</SPAN>  </p>
+<p 16px;'"="" sans-serif;                                 ="" arial,="" yahei",="" "microsoft="" 
+gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica="" > 
+<SPAN style="margin: 0px; padding: 0px;">-XX:ParallelGCThreads=8888</SPAN></p>
+<p 16px;'"="" sans-serif;              ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><SPAN style="margin: 0px; padding: 0px;">-XX:+CMSClassUnloadingEnabled<br style="margin: 0px; padding: 0px;">
+-XX:+DisableExplicitGC<br style="margin: 0px; padding: 0px;">
+-XX:+UseCMSInitiatingOccupancyOnly<br style="margin: 0px; padding: 0px;"> -XX:CMSInitiatingOccupancyFraction=88</SPAN><br style="margin: 0px; padding: 0px;">&nbsp;</p>
+<h3 sans-serif;="" arial,                       ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 
+400;'"=""><span style="margin: 0px; padding: 0px; color: rgb(0, 252, 255);"><strong style="margin: 0px; padding: 0px;">GC停顿时间太长</strong></span></h3>
+<p 16px;'"="" sans-serif;="" arial,                           ="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="" > <SPAN style="margin: 0px; padding: 0px;"> 堆太大的时候，CMS  
+GC可能会停顿比较久的时间，-XX:+CMSScavengeBeforeRemark能通过在remark阶段前做一次young  
+gc减轻这个时间。</SPAN>
+</p>
+<p 16px;'"="" sans-serif;  ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22096" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">另外可以考虑换G1。</SPAN> </p>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" src="index_files/0-9.jpg" DESIGNTIMEURL="index_files/0-9.jpg" data-w="" data-type="png" data-s="300,640" data-ratio="0.8219424460431655" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgiazBe1JecQvA5GJVoWhyH2cxfcTxAxBeIGkhJoWFCicLSWWA4hlHEH9A/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;    ="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P><SECTION class="135editor" data-id="41173" data-color="rgb(255, 129, 36)" sans-serif;="" 
+arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" 
+neue",="" helvetica="" 16px;="" border-box;'"="">
+	<h2 style="border-color: rgb(255, 129, 36); margin: 8px 0px 0px; padding: 0px; text-align: justify; color: rgb(255, 129, 36); line-height: 28px; font-size: 16px; border-bottom-width: 1.5px; border-bottom-style: solid; min-height: 32px; max-width: 100%;"><span class="autonum" style="margin: 0px 8px 0px 0px; padding: 4px 10px; color: rgb(255, 255, 255); line-height: 20px; float: left; display: block; -ms-word-wrap: break-word !important; max-width: 100%; background-color: rgb(255, 129, 36);" title  ="\" placeholder="1" data-original-title="\">故障3</span><strong class="135brush" style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; color: inherit;" data-brushtype="text">内存耗尽OOM</strong></h2>
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">		&nbsp;</SECTION></SECTION>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><BR designtimesp="22107">
+<span style="margin: 0px; padding: 0px;">基本的解决思路，多给点儿或者少用点儿呗。</span></P>
+<UL class="list-paddingleft-2" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+  helvetica=""><LI style="margin: 0px; padding: 0px; clear: both;" designtimesp="22110">
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">Java对象真的耗尽了内存资源，Eclipse MAT<br style="margin: 0px; padding: 0px;">
+HeapDump，分析内存泄露，大对象，对象关系图。</span></p>
+<p style="margin: 0px; padding: 0px; clear: both;">&nbsp;</p></LI>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">Native内存耗尽， DirectBuffer，malloc</span></p>
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">JVM运行过程中，虽然会对Java堆做垃圾收集，但是如果jni或者非DirectBuffer的Unsafe分配的内存没有回收，会逐渐累积直至java进程结束。DirectBuffer虽然Java对象很小,但是使用的内存可能会很多。</span></p>
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">参考:http://lovestblog.cn/blog/2015/05/12/direct-buffer/</span></p>
+<p style="margin: 0px; padding: 0px; clear: both;">&nbsp;</p>
+</li>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">PermGen耗尽，一般动态类加载导致，已经成为历史，尽早升级吧。</span></p>
+</li></UL>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<H2 designtimesp="22127" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 
+27px;'"="">&nbsp;</H2>
+<SECTION class="135editor" data-id="41173" data-color                               ="rgb(255, 129, 36)" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 
+border-box;'"="">
+	<h2 style="border-color: rgb(255, 129, 36); margin: 8px 0px 0px; padding: 0px; text-align: justify; color: rgb(255, 129, 36); line-height: 28px; font-size: 16px; border-bottom-width: 1.5px; border-bottom-style: solid; min-height: 32px; max-width: 100%;"><span class="autonum" style="margin: 0px 8px 0px 0px; padding: 4px 10px; color: rgb(255, 255, 255); line-height: 20px; float: left; display: block; -ms-word-wrap: break-word !important; max-width: 100%; background-color: rgb(255, 129, 36);" title  ="\" placeholder="1" data-original-title="\">故障4</span><strong class="135brush" style="border-color: rgb(255, 129, 36); margin: 0px; padding: 0px; color: inherit;" data-brushtype="text">崩溃crash</strong></h2>
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; box-sizing: border-box;">		&nbsp;</SECTION></SECTION>
+<h2 sans-serif;="" arial,                     ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 27px;'"="">&nbsp;</h2>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><SPAN style="margin: 0px; padding: 0px;">现代JVM发展到今天已经很健壮了，一般很少会出现crash的情况，如果出现了，很有可能是Java代码执行了不安全的操作，比如使用Unsafe去直接操作内存、自己编写了JNI函数中crash了。</SPAN></p>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22137" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" 
+src="index_files/0-10.jpg" DESIGNTIMEURL="index_files/0-10.jpg" 
+data-w="" data-type="png" data-s="300,640" data-ratio="0.3039568345323741" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgcSOPL9GYanibfcG9AGxr43v3JscZzSFnT0dX1r80cll1ccIyeBst1yA/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22140" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">目前的现实是很多第三方的库确实直接使用了Unsafe去实现各种“高效”的操作，随便搜索下Github就可以看到大量的开源Java、Scala库使用了JDK提供的unsafe类</SPAN></p>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22143" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" 
+src="index_files/0-3.png" DESIGNTIMEURL="index_files/0-3.png" 
+data-w="" data-type="png" data-s="300,640" data-ratio="0.17266187050359713" 
+_src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgpozxJiafetPR7mVMnBDWkMocMUYvQ8wMdq6vjJlxLSoicvjNvhL1OZ2g/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22146" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">对于crash的情形，需要收集的信息包括各种dump，最关键的是系统core  
+dump，方便将来使用GDB做事后分析，在linux上一般需要使用ulimit –c unlimited   
+命令修改core文件尺寸上限才行。</SPAN></p>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22149" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">有了core  
+dump，剩下的分析一般都是使用GDB继续了，crash的情形一般反而比较直观。如果不是unsafe、自己jni引起的crash问题，恭喜你，真的发现bug了，这个问题直接给Oracle或者java社区报bug吧。</SPAN></p>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22152" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><IMG style="margin: 0px; padding: 0px; height: auto !important; max-width: 100%;" 
+src="index_files/0-11.jpg" DESIGNTIMEURL="index_files/0-11.jpg" 
+data-w="" data-type="png" data-s="300,640" data-ratio="0.8165467625899281" _src="https://mmbiz.qlogo.cn/mmbiz/tibrg3AoIJTuiahAleicibKhzqN4l0yMwRZgZd8bWoeiaX2pymuNgDqFkUx9dc2ERovLCTh27pLlIo2Qia3fLVjM992A/0?wx_fmt=png"></p>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22155" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px;">脚本太复杂，怎么知道最后跑起来的Java进程到底设置了哪些参数？</SPAN></p>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica=""><SPAN style="margin: 0px; padding: 0px;">-XX:-PrintCommandLineFlags</SPAN></p>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22160" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P>
+<P designtimesp="22161" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P><SECTION class="135editor" data-id="39" 
+sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" 
+helvetica,="" neue",="" helvetica="" 16px;="" border-box;'"="" 100%;="" 
+!important;="" break-word="">
+	<SECTION style="margin: 0.8em 0px 0.5em; padding: 0px; overflow: hidden; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box;">
+		<SECTION class="135brush" style="margin: 0px; padding: 0px 10px; height: 36px; color: rgb(255, 255, 255); line-height: 36px; font-weight: bold; vertical-align: top; float: left; display: inline-block; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box; background-color: rgb(255, 129, 36);" data-brushtype ="text" placeholder="请输入标题">			Q &amp;  
+ A</SECTION>
+		<SECTION style="margin: 0px; padding: 0px; height: 36px; vertical-align: top; border-top-color: transparent !important; border-right-color: rgb(255, 129, 36); border-bottom-color: transparent !important; border-left-color: rgb(255, 129, 36); border-top-width: 18px !important; border-bottom-width: 18px !important; border-left-width: 9px; border-top-style: solid !important; border-bottom-style: solid !important; border-left-style: solid; display: inline-block; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box;">			&nbsp;</SECTION>	 </SECTION>
+	<SECTION style="margin: 0px; padding: 0px; width: 0px; height: 0px; clear: both; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box;">		&nbsp;</SECTION></SECTION>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22168" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 100%;="" 
+!important;="" break-word="" !important;'"="" border-box="" 1em;="" 
+pre-wrap;="">&nbsp;</P>
+<p sans-serif;="" arial,                                 ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 100%;="" 
+!important;="" break-word="" !important;'"="" border-box="" 1em;=""><span style="margin: 0px; padding: 0px; color: rgb(255, 104, 39); -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;"><strong style="margin: 0px; padding: 0px; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;">Q1：</strong></span><span style="margin: 0px; padding: 0px; color: rgb(0, 0, 0); -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;"><span style="margin: 0px; padding: 0px; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;"><span style="margin: 0px; padding: 0px; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;">关于内存泄露，是不是可以用一些开源产品来加探针，这方面有没有好的建议?</span></span></span></p>
+<p sans-serif;="" arial,                                   ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 100%;="" 
+!important;="" break-word="" !important;'"="" border-box="" 1em;="" 
+pre-wrap;=""><span style="margin: 0px; padding: 0px; color: rgb(255, 104, 39); -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;"><strong style="margin: 0px; padding: 0px; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;">A1：</strong></span>内存泄露其实有两个方面，如果是native的malloc泄露，可以通过 valgrind，jemalloc等工具发现，这个和传统c++应用内存一样的；对于某些因为强引用链无法释放的java对象，一般都是 heapdump之后使用eclipse的mat工具分析“可能泄露的”，因为程序并没有结束，而且还持有强引用，很难得出结论说某些对象是不是内存泄露。</p>
+<p sans-serif;="" arial,                                 ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 100%;="" 
+!important;="" break-word="" !important;'"="" border-box="" 1em;="">&nbsp;</p>
+<p sans-serif;="" arial,                                 ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 100%;="" 
+!important;="" break-word="" !important;'"="" border-box="" 1em;=""><span style="margin: 0px; padding: 0px; color: rgb(255, 104, 39); -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;"><strong style="margin: 0px; padding: 0px; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;">Q2：</strong></span><span style="margin: 0px; padding: 0px; color: rgb(0, 0, 0); -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;">关于内存泄露, 怎么定位到具体代码？</span></p>
+<p sans-serif;="" arial,                                 ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 100%;="" 
+!important;="" break-word="" !important;'"="" border-box="" 1em;=""><span style="margin: 0px; padding: 0px; color: rgb(255, 104, 39); -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;"><strong style="margin: 0px; padding: 0px; -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;">A2：</strong></span><span style="margin: 0px; padding: 0px; color: rgb(0, 0, 0); -ms-word-wrap: break-word !important; max-width: 100%; box-sizing: border-box !important;">定位到代码目前比较可行的，就是用MAT分析出那些类型的对象发生了泄露,然后去扫描代码看看这些对象在哪里分配的，当然如果大量的string，byte.就不好办了，一般是以用户应用自定义的类为线索去查找。这样可以大大降低工作量。</span></p>
+<p 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22188" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica=""><SPAN style="margin: 0px; padding: 0px; color: rgb(255, 129, 36);"><strong style="margin: 0px; padding: 0px;">讲师介绍：陆传胜</strong></SPAN></p>
+<ul class="list-paddingleft-2" sans-serif;="" arial,                           ="" yahei",="" "microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="" square;'"="" 16px;="">
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">现就职于阿里巴巴技术保障部JVM组，主要工作是阿里巴巴定制化JDK的开发， 以及相关的Java技术支持。</span></p>
+</li>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">曾就职于IBM Java技术中心，负责IBMJDK开发、参与OpenJDK社区，是OpenJDK jdk8项目committer。</span></p>
+</li>
+<li style="margin: 0px; padding: 0px; clear: both;">
+<p style="margin: 0px; padding: 0px; clear: both;"><span style="margin: 0px; padding: 0px;">联系方式chuanshenglu@gmail.com</span></p>
+</li>
+</ul>
+<P 16px;'"="" sans-serif;="" arial,="" yahei",="" "microsoft="" gb",="" sans="" 
+"hiragino="" helvetica,="" neue",="" helvetica="">&nbsp;</P>
+<P designtimesp="22202" 16px;'"="" sans-serif;="" arial,="" yahei",="" 
+"microsoft="" gb",="" sans="" "hiragino="" helvetica,="" neue",="" 
+helvetica="">&nbsp;</P>
+<P style="margin: 0px; padding: 0px; color: rgb(62, 62, 62); line-height: 25.6px; clear: both; font-family: 微软雅黑; font-size: 16px; -ms-word-wrap: break-word !important; min-height: 1em; max-width: 100%; box-sizing: border-box !important;" 
+designtimesp="22203"></P>
+<h2 sans-serif;="" arial,                       ="" yahei",="" "microsoft="" gb",="" 
+sans="" "hiragino="" helvetica,="" neue",="" helvetica="" 16px;="" 
+400;'"="">&nbsp;</h2>
+                    </div>&nbsp;&nbsp;&nbsp;&nbsp;																
+					<script><
+
+
+
+!- - /* Script removed by snapshot
+save*
+/
+
+
+--></script>					
+                    <hr>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                                    </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<footer>&nbsp;&nbsp;&nbsp; </FOOTER>
+
+<script><
+
+
+
+!- - /* Script removed by snapshot
+save*
+/
+
+
+--></script>
+    <!--百度统计代码-->
+<script><
+
+
+
+!- - /* Script removed by snapshot
+save*
+/
+
+
+--></script>
+</body></html>

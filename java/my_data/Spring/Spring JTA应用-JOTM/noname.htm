@@ -1,0 +1,630 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+<HTML dir=ltr xml:lang="zh-CN" 
+xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Spring JTA应用-JOTM</title><LINK 
+href="favicon.ico" type=image/x-icon rel="shortcut icon"><LINK 
+title=tom.duan href="rss" type=application/rss+xml rel=alternate><LINK 
+media=screen href="blog.css_1248770300" 
+type=text/css rel=stylesheet><LINK media=screen 
+href="blue.css_1235723792" 
+type=text/css rel=stylesheet>
+<LINK media=screen 
+href="SyntaxHighlighter.css_1201588027" 
+type=text/css rel=stylesheet>
+<STYLE>
+    div#main {background-color: transparent; border: 0; padding: 0px; width: 740px;}
+  </STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+</HEAD>
+
+<BODY>
+
+<DIV id=page>
+
+<DIV class=clearfix id=content>
+
+<DIV id=main>
+
+<DIV class=blog_main><!--StartFragment-->
+<DIV class=blog_title><H3 title="" ><A href="http://tom-duan.javaeye.com/blog/147594">Spring JTA应用JOTM &amp; Atomikos II 
+JOTM</A></H3><STRONG>关键字: jta jotm atomikos</STRONG> </DIV>
+<DIV class=blog_content>上节建立了一个简单的Java 
+Application以及所需要的数据库和数据表，本节将介绍JOTM在Spring中的配置。 <BR><BR><BR>JOTM(Java Open 
+Transaction Manager)是ObjectWeb的一个开源JTA实现，本身也是开源应用程序服务器JOnAS(Java Open 
+Application 
+Server)的一部分，为其提供JTA分布式事务的功能。Spring对JOTM提供了较好的支持，提供了一个org.springframework.transaction.jta.JotmFactoryBean的支持类，在Spring2.0中也包含了JOTM相关的一些library。 
+<BR><BR>jotm的下载地址为http://jotm.objectweb.org,最新版本为2.0.10. 
+<BR><BR>下载完成后解压缩，然后打开jotm下面conf文件夹，拷贝carol.properties文件到classpath中，并修改这个文件如下 
+<BR>carol.properties <BR>
+<DIV class=dp-highlighter>
+<DIV class=bar>
+<DIV class=tools>Java代码 <A title=复制代码 
+onclick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147594#"><IMG alt=复制代码 
+src="icon_copy.gif"></A></DIV></DIV>
+<OL class=dp-j>
+<LI><SPAN><SPAN>#&nbsp;</SPAN><SPAN 
+class=keyword>do</SPAN><SPAN>&nbsp;not&nbsp;use&nbsp;CAROL&nbsp;JNDI&nbsp;wrapper&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>carol.start.jndi=</SPAN><SPAN class=keyword>false</SPAN><SPAN>&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>#&nbsp;</SPAN><SPAN 
+class=keyword>do</SPAN><SPAN>&nbsp;not&nbsp;start&nbsp;a&nbsp;name&nbsp;server&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>carol.start.ns=</SPAN><SPAN class=keyword>false</SPAN><SPAN>&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>#&nbsp;Naming&nbsp;Factory &nbsp;&nbsp;</SPAN>
+<LI><SPAN>carol.jndi.java.naming.factory.url.pkgs=org.apache.naming&nbsp;&nbsp;</SPAN></LI></OL></DIV><PRE class=java style="DISPLAY: none" name="code"># do not use CAROL JNDI wrapper   
+carol.start.jndi=false   
+   
+# do not start a name server   
+carol.start.ns=false   
+   
+# Naming Factory
+carol.jndi.java.naming.factory.url.pkgs=org.apache.naming
+</PRE><BR>上面配置文件的目的是不使用JNDI的方式来加载JOTM的配置，当然也可以根据需要选择其它的一些配置，例如JTOM所提供的默认配置。 
+<BR><BR>然后开始在Spring上下文中配置JOTM，在classpath中建立一个ApplicationContext-jotm.xml，配置如下 
+<BR><BR>ApplicationContext-jotm.xml <BR>
+<DIV class=dp-highlighter>
+<DIV class=bar>
+<DIV class=tools>Java代码 <A title=复制代码 
+onclick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147594#"><IMG alt=复制代码 
+src="icon_copy.gif"></A></DIV></DIV>
+<OL class=dp-j>
+<LI><SPAN><SPAN>&lt;?xml&nbsp;version=</SPAN><SPAN 
+class=string>"1.0"</SPAN><SPAN>&nbsp;encoding=</SPAN><SPAN 
+class=string>"UTF-8"</SPAN><SPAN>?&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&lt;beans&nbsp;xmlns=</SPAN><SPAN 
+class=string>"http://www.springframework.org/schema/beans"</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;xmlns:xsi=</SPAN><SPAN 
+class=string>"http://www.w3.org/2001/XMLSchema-instance"</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;xsi:schemaLocation=</SPAN><SPAN 
+class=string>"http://www.springframework.org/schema/beans&nbsp;http://www.springframework.org/schema/beans/spring-beans-2.0.xsd"</SPAN><SPAN>&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"jotm"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.springframework.transaction.jta.JotmFactoryBean"</SPAN><SPAN>/&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"txManager"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.springframework.transaction.jta.JtaTransactionManager"</SPAN><SPAN>&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"userTransaction"</SPAN><SPAN>&nbsp;ref=</SPAN><SPAN 
+class=string>"jotm"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"ds1"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.enhydra.jdbc.pool.StandardXAPoolDataSource"</SPAN><SPAN>&nbsp;destroy-method=</SPAN><SPAN 
+class=string>"shutdown"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"dataSource"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.enhydra.jdbc.standard.StandardXADataSource"</SPAN><SPAN>&nbsp;destroy-method=</SPAN><SPAN 
+class=string>"shutdown"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"transactionManager"</SPAN><SPAN>&nbsp;ref=</SPAN><SPAN 
+class=string>"jotm"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"driverName"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"com.mysql.jdbc.Driver"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"url"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"jdbc:MySQL://localhost:3306/test"</SPAN><SPAN>&nbsp;/&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"user"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"root"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"password"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"admin"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"ds2"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.enhydra.jdbc.pool.StandardXAPoolDataSource"</SPAN><SPAN>&nbsp;destroy-method=</SPAN><SPAN 
+class=string>"shutdown"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"dataSource"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.enhydra.jdbc.standard.StandardXADataSource"</SPAN><SPAN>&nbsp;destroy-method=</SPAN><SPAN 
+class=string>"shutdown"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"transactionManager"</SPAN><SPAN>&nbsp;ref=</SPAN><SPAN 
+class=string>"jotm"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"driverName"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"com.mysql.jdbc.Driver"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"url"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"jdbc:MySQL://localhost:3306/test2"</SPAN><SPAN>&nbsp;/&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"user"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"root"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"password"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"admin"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"template1"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.springframework.jdbc.core.JdbcTemplate"</SPAN><SPAN>&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"dataSource"</SPAN><SPAN>&nbsp;ref=</SPAN><SPAN 
+class=string>"ds1"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"template2"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.springframework.jdbc.core.JdbcTemplate"</SPAN><SPAN>&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"dataSource"</SPAN><SPAN>&nbsp;ref=</SPAN><SPAN 
+class=string>"ds2"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"dao1"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"com.xa.dao.UserDao1"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"jdbcTemplate"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ref&nbsp;bean=</SPAN><SPAN 
+class=string>"template1"</SPAN><SPAN>&gt;&lt;/ref&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"dao2"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"com.xa.dao.UserDao2"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"jdbcTemplate"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ref&nbsp;bean=</SPAN><SPAN 
+class=string>"template2"</SPAN><SPAN>&gt;&lt;/ref&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"userServiceTarget"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"com.xa.service.UserServiceImpl"</SPAN><SPAN>&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"dao1"</SPAN><SPAN>&nbsp;ref=</SPAN><SPAN 
+class=string>"dao1"</SPAN><SPAN>/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"dao2"</SPAN><SPAN>&nbsp;ref=</SPAN><SPAN 
+class=string>"dao2"</SPAN><SPAN>/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"userTest"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.springframework.transaction.interceptor.TransactionProxyFactoryBean"</SPAN><SPAN>&gt;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"transactionManager"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ref&nbsp;bean=</SPAN><SPAN 
+class=string>"txManager"</SPAN><SPAN>/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"target"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ref&nbsp;bean=</SPAN><SPAN 
+class=string>"userServiceTarget"</SPAN><SPAN>/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"transactionAttributes"</SPAN><SPAN>&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;props&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</SPAN><SPAN 
+class=string>"insert*"</SPAN><SPAN>&gt;PROPAGATION_REQUIRED,-Exception&lt;/prop&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/props&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&lt;/beans&gt;&nbsp;&nbsp;</SPAN></LI></OL></DIV><PRE class=java style="DISPLAY: none" name="code">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd"&gt;
+
+	&lt;bean id="jotm" class="org.springframework.transaction.jta.JotmFactoryBean"/&gt;
+	
+	&lt;bean id="txManager" class="org.springframework.transaction.jta.JtaTransactionManager"&gt;
+		&lt;property name="userTransaction" ref="jotm" /&gt;
+	&lt;/bean&gt;
+
+	&lt;bean id="ds1" class="org.enhydra.jdbc.pool.StandardXAPoolDataSource" destroy-method="shutdown"&gt;
+		&lt;property name="dataSource"&gt;
+			&lt;bean class="org.enhydra.jdbc.standard.StandardXADataSource" destroy-method="shutdown"&gt;
+				&lt;property name="transactionManager" ref="jotm" /&gt;
+				&lt;property name="driverName" value="com.mysql.jdbc.Driver" /&gt;
+				&lt;property name="url" value="jdbc:MySQL://localhost:3306/test" /&gt;
+			&lt;/bean&gt;
+		&lt;/property&gt;
+		&lt;property name="user" value="root" /&gt;
+		&lt;property name="password" value="admin" /&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="ds2" class="org.enhydra.jdbc.pool.StandardXAPoolDataSource" destroy-method="shutdown"&gt;
+		&lt;property name="dataSource"&gt;
+			&lt;bean class="org.enhydra.jdbc.standard.StandardXADataSource" destroy-method="shutdown"&gt;
+				&lt;property name="transactionManager" ref="jotm" /&gt;
+				&lt;property name="driverName" value="com.mysql.jdbc.Driver" /&gt;
+				&lt;property name="url" value="jdbc:MySQL://localhost:3306/test2" /&gt;
+			&lt;/bean&gt;
+		&lt;/property&gt;
+		&lt;property name="user" value="root" /&gt;
+		&lt;property name="password" value="admin" /&gt;
+	&lt;/bean&gt;
+
+	&lt;bean id="template1" class="org.springframework.jdbc.core.JdbcTemplate"&gt;
+		&lt;property name="dataSource" ref="ds1" /&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="template2" class="org.springframework.jdbc.core.JdbcTemplate"&gt;
+		&lt;property name="dataSource" ref="ds2" /&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="dao1" class="com.xa.dao.UserDao1"&gt;
+		&lt;property name="jdbcTemplate"&gt;
+			&lt;ref bean="template1"&gt;&lt;/ref&gt;
+		&lt;/property&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="dao2" class="com.xa.dao.UserDao2"&gt;
+		&lt;property name="jdbcTemplate"&gt;
+			&lt;ref bean="template2"&gt;&lt;/ref&gt;
+		&lt;/property&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="userServiceTarget" class="com.xa.service.UserServiceImpl"&gt;
+		&lt;property name="dao1" ref="dao1"/&gt;
+		&lt;property name="dao2" ref="dao2"/&gt;
+	&lt;/bean&gt;
+
+
+	&lt;bean id="userTest" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean"&gt;    
+		&lt;property name="transactionManager"&gt;
+			&lt;ref bean="txManager"/&gt;
+		&lt;/property&gt;    
+		&lt;property name="target"&gt;
+			&lt;ref bean="userServiceTarget"/&gt;
+		&lt;/property&gt;
+		&lt;property name="transactionAttributes"&gt;        
+			&lt;props&gt;
+				&lt;prop key="insert*"&gt;PROPAGATION_REQUIRED,-Exception&lt;/prop&gt;            
+			&lt;/props&gt;
+		&lt;/property&gt;
+	&lt;/bean&gt;
+&lt;/beans&gt;
+</PRE><BR>上面是一个完整的Spring上下文配置，可以看第一个bean 
+“jotm”，实际上引用了Spring内部所提供的对JOTM支持的工厂类，参考下面的配置代码段 <BR>
+<DIV class=dp-highlighter>
+<DIV class=bar>
+<DIV class=tools>Java代码 <A title=复制代码 
+onclick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147594#"><IMG alt=复制代码 
+src="icon_copy.gif"></A></DIV></DIV>
+<OL class=dp-j>
+<LI><SPAN><SPAN>&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"jotm"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.springframework.transaction.jta.JotmFactoryBean"</SPAN><SPAN>/&gt;&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV><PRE class=java style="DISPLAY: none" name="code">&lt;bean id="jotm" class="org.springframework.transaction.jta.JotmFactoryBean"/&gt;
+</PRE><BR><BR>随后，配置了JTA事务管理器，并且在管理器中使用上面所配置的jotm，如下面的代码 <BR>
+<DIV class=dp-highlighter>
+<DIV class=bar>
+<DIV class=tools>Java代码 <A title=复制代码 
+onclick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147594#"><IMG alt=复制代码 
+src="icon_copy.gif"></A></DIV></DIV>
+<OL class=dp-j>
+<LI><SPAN><SPAN>&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"txManager"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.springframework.transaction.jta.JtaTransactionManager"</SPAN><SPAN>&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"userTransaction"</SPAN><SPAN>&nbsp;ref=</SPAN><SPAN 
+class=string>"jotm"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&lt;/bean&gt;&nbsp;&nbsp;</SPAN></LI></OL></DIV><PRE class=java style="DISPLAY: none" name="code">&lt;bean id="txManager" class="org.springframework.transaction.jta.JtaTransactionManager"&gt;
+	&lt;property name="userTransaction" ref="jotm" /&gt;
+&lt;/bean&gt;
+</PRE><BR><BR>再接下来就是配置多个数据源了，使用jotm提供的org.enhydra.jdbc.pool.StandardXAPoolDataSource类，根据类名可以明确地看出它是用以配置多个数据源的啦,配置的代码如下 
+<BR>
+<DIV class=dp-highlighter>
+<DIV class=bar>
+<DIV class=tools>Java代码 <A title=复制代码 
+onclick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147594#"><IMG alt=复制代码 
+src="icon_copy.gif"></A></DIV></DIV>
+<OL class=dp-j>
+<LI><SPAN><SPAN>&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"ds1"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.enhydra.jdbc.pool.StandardXAPoolDataSource"</SPAN><SPAN>&nbsp;destroy-method=</SPAN><SPAN 
+class=string>"shutdown"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"dataSource"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.enhydra.jdbc.standard.StandardXADataSource"</SPAN><SPAN>&nbsp;destroy-method=</SPAN><SPAN 
+class=string>"shutdown"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"transactionManager"</SPAN><SPAN>&nbsp;ref=</SPAN><SPAN 
+class=string>"jotm"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"driverName"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"com.mysql.jdbc.Driver"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"url"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"jdbc:MySQL://localhost:3306/test"</SPAN><SPAN>&nbsp;/&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"user"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"root"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"password"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"admin"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</SPAN><SPAN 
+class=string>"ds2"</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.enhydra.jdbc.pool.StandardXAPoolDataSource"</SPAN><SPAN>&nbsp;destroy-method=</SPAN><SPAN 
+class=string>"shutdown"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"dataSource"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>=</SPAN><SPAN 
+class=string>"org.enhydra.jdbc.standard.StandardXADataSource"</SPAN><SPAN>&nbsp;destroy-method=</SPAN><SPAN 
+class=string>"shutdown"</SPAN><SPAN>&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"transactionManager"</SPAN><SPAN>&nbsp;ref=</SPAN><SPAN 
+class=string>"jotm"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"driverName"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"com.mysql.jdbc.Driver"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"url"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"jdbc:MySQL://localhost:3306/test2"</SPAN><SPAN>&nbsp;/&gt; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"user"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"root"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"password"</SPAN><SPAN>&nbsp;value=</SPAN><SPAN 
+class=string>"admin"</SPAN><SPAN>&nbsp;/&gt; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt;&nbsp;&nbsp;</SPAN></LI></OL></DIV><PRE class=java style="DISPLAY: none" name="code">&lt;bean id="ds1" class="org.enhydra.jdbc.pool.StandardXAPoolDataSource" destroy-method="shutdown"&gt;
+		&lt;property name="dataSource"&gt;
+			&lt;bean class="org.enhydra.jdbc.standard.StandardXADataSource" destroy-method="shutdown"&gt;
+				&lt;property name="transactionManager" ref="jotm" /&gt;
+				&lt;property name="driverName" value="com.mysql.jdbc.Driver" /&gt;
+				&lt;property name="url" value="jdbc:MySQL://localhost:3306/test" /&gt;
+			&lt;/bean&gt;
+		&lt;/property&gt;
+		&lt;property name="user" value="root" /&gt;
+		&lt;property name="password" value="admin" /&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="ds2" class="org.enhydra.jdbc.pool.StandardXAPoolDataSource" destroy-method="shutdown"&gt;
+		&lt;property name="dataSource"&gt;
+			&lt;bean class="org.enhydra.jdbc.standard.StandardXADataSource" destroy-method="shutdown"&gt;
+				&lt;property name="transactionManager" ref="jotm" /&gt;
+				&lt;property name="driverName" value="com.mysql.jdbc.Driver" /&gt;
+				&lt;property name="url" value="jdbc:MySQL://localhost:3306/test2" /&gt;
+			&lt;/bean&gt;
+		&lt;/property&gt;
+		&lt;property name="user" value="root" /&gt;
+		&lt;property name="password" value="admin" /&gt;
+	&lt;/bean&gt;
+</PRE><BR>这里配置的两个数据源都连接到本地的mysql，实际上可以连接到不同的db 
+server和不同类型的数据库，已经经过测试，这里为了方便，在本地建立了两个不同的数据库(test,test2)做测试。 
+<BR><BR>随后的配置基本上和普通的Spring上下文配置相同了，根据不同的数据源配置两个jdbcTemplate，两个dao分别引用不同的jdbcTemplate, 
+将两个dao注入到UserService中, 最后将service纳入事务管理,并在事务代理配置中配置回滚规则,意思为如遇异常，则强制回滚内容。配置如下所示 
+<BR>
+<DIV class=dp-highlighter>
+<DIV class=bar>
+<DIV class=tools>Java代码 <A title=复制代码 
+onclick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147594#"><IMG alt=复制代码 
+src="icon_copy.gif"></A></DIV></DIV>
+<OL class=dp-j>
+<LI><SPAN><SPAN>&lt;property&nbsp;name=</SPAN><SPAN 
+class=string>"transactionAttributes"</SPAN><SPAN>&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;props&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</SPAN><SPAN 
+class=string>"insert*"</SPAN><SPAN>&gt;PROPAGATION_REQUIRED,-Exception&lt;/prop&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/props&gt; &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&lt;/property&gt;&nbsp;&nbsp;</SPAN></LI></OL></DIV><PRE class=java style="DISPLAY: none" name="code">&lt;property name="transactionAttributes"&gt;        
+	&lt;props&gt;
+		&lt;prop key="insert*"&gt;PROPAGATION_REQUIRED,-Exception&lt;/prop&gt;            
+	&lt;/props&gt;
+&lt;/property&gt;
+</PRE><BR><BR>这样，一个使用JOTM JTA事务的简单应用算大致成型了，最后，写一个JUnit，来测试一下结果 <BR>TestXa.java 
+<BR>
+<DIV class=dp-highlighter>
+<DIV class=bar>
+<DIV class=tools>Java代码 <A title=复制代码 
+onclick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147594#"><IMG alt=复制代码 
+src="icon_copy.gif"></A></DIV></DIV>
+<OL class=dp-j>
+<LI><SPAN><SPAN class=keyword>package</SPAN><SPAN>&nbsp;com.xa; &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN>
+<LI><SPAN></SPAN><SPAN 
+class=keyword>import</SPAN><SPAN>&nbsp;org.springframework.context.ApplicationContext; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN></SPAN><SPAN 
+class=keyword>import</SPAN><SPAN>&nbsp;org.springframework.test.AbstractDependencyInjectionSpringContextTests; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN>
+<LI><SPAN></SPAN><SPAN 
+class=keyword>import</SPAN><SPAN>&nbsp;com.xa.service.UserService; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN>
+<LI><SPAN></SPAN><SPAN class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>class</SPAN><SPAN>&nbsp;TestXa&nbsp;</SPAN><SPAN 
+class=keyword>extends</SPAN><SPAN>&nbsp;AbstractDependencyInjectionSpringContextTests 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>{ &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=keyword>protected</SPAN><SPAN>&nbsp;String[]&nbsp;getConfigLocations()&nbsp;{ 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN class=keyword>return</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>new</SPAN><SPAN>&nbsp;String[]&nbsp;{&nbsp;</SPAN><SPAN 
+class=string>"classpath:ApplicationContext-jotm.xml"</SPAN><SPAN>&nbsp;}; 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;testInsertBothDatabase()&nbsp;{ &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ApplicationContext&nbsp;ctx&nbsp;=&nbsp;</SPAN><SPAN 
+class=keyword>this</SPAN><SPAN>.getApplicationContext(); &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;UserService&nbsp;ut&nbsp;=&nbsp;(UserService)ctx.getBean(</SPAN><SPAN 
+class=string>"userTest"</SPAN><SPAN>); &nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN class=keyword>try</SPAN><SPAN>&nbsp;{ 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ut.insertBothDatabase(</SPAN><SPAN 
+class=string>"1"</SPAN><SPAN>,&nbsp;</SPAN><SPAN class=keyword>null</SPAN><SPAN>); 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN class=keyword>catch</SPAN><SPAN>&nbsp;(Exception&nbsp;e)&nbsp;{ 
+&nbsp;&nbsp;</SPAN></SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace(); &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN>
+<LI><SPAN>}&nbsp;&nbsp;</SPAN></LI></OL></DIV><PRE class=java style="DISPLAY: none" name="code">package com.xa;
+
+import org.springframework.context.ApplicationContext;
+import org.springframework.test.AbstractDependencyInjectionSpringContextTests;
+
+import com.xa.service.UserService;
+
+public class TestXa extends AbstractDependencyInjectionSpringContextTests
+{
+	protected String[] getConfigLocations() {
+		return new String[] { "classpath:ApplicationContext-jotm.xml" };
+	}
+
+	public void testInsertBothDatabase() {
+		ApplicationContext ctx = this.getApplicationContext();
+		UserService ut = (UserService)ctx.getBean("userTest");
+		try {
+	        ut.insertBothDatabase("1", null);
+        }
+        catch (Exception e) {
+        	e.printStackTrace();
+        }
+	}
+}
+</PRE><BR>在test中，调用了UserService的insertBothDatabase方法，有两个参数，userId和UserName，另外在方法的实现中调用了两个使用不同数据源dao，分别向两个不同的数据库插入输入，而test2数据库的xa_test表中，name字段是不允许为空的，因此，在插入test2数据库时会失败. 
+<BR><BR>运行这个test，然后察看数据库结果：），test和test2数据库中都没有插入成功，看serviceImpl中的代码可以知道，逻辑上dao1会先于dao2执行，但是由于JTA事务，在dao2插入数据出现异常时整个事务被回滚，由于事务被配置在service层，dao1和dao2都被纳入一个事务进行管理，呵呵。修改一下方法的参数，修改为 
+<BR>
+<DIV class=dp-highlighter>
+<DIV class=bar>
+<DIV class=tools>Java代码 <A title=复制代码 
+onclick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147594#"><IMG alt=复制代码 
+src="icon_copy.gif"></A></DIV></DIV>
+<OL class=dp-j>
+<LI><SPAN><SPAN>ut.insertBothDatabase(</SPAN><SPAN 
+class=string>"1"</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+class=string>"name1"</SPAN><SPAN>);&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV><PRE class=java style="DISPLAY: none" name="code">ut.insertBothDatabase("1", "name1");
+</PRE><BR><BR>然后再试试test看数据库结果，如何？ <BR></DIV><!--EndFragment--></DIV>
+</DIV>
+</DIV>
+</DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

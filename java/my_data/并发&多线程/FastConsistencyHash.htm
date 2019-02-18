@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>FastConsistencyHash </title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P>RedisManager\src\org\apache\catalina\session\ext\FastConsistencyHash.java</P>
+<P>package org.apache.catalina.session.ext;</P>
+<P>import java.io.UnsupportedEncodingException;<BR>import 
+java.nio.ByteBuffer;<BR>import java.nio.ByteOrder;<BR>import 
+java.util.ArrayList;<BR>import java.util.List;<BR>import 
+java.util.SortedMap;<BR>import java.util.TreeMap;</P>
+<P>/**<BR>&nbsp;* 一致性哈希实现<BR>&nbsp;* <BR>&nbsp;* @author wjw<BR>&nbsp;* 
+<BR>&nbsp;*/<BR>public class FastConsistencyHash 
+{<BR>&nbsp;//圆环节点<BR>&nbsp;private final TreeMap&lt;Long, String&gt; nodes;</P>
+<P>&nbsp;//设置虚拟节点数目<BR>&nbsp;private int VIRTUAL_NUM = 160;</P>
+<P>&nbsp;public FastConsistencyHash(List&lt;String&gt; shards) 
+{<BR>&nbsp;&nbsp;super();<BR>&nbsp;&nbsp;this.nodes = new TreeMap&lt;Long, 
+String&gt;();<BR>&nbsp;&nbsp;for (int i = 0; i &lt; shards.size(); i++) 
+{<BR>&nbsp;&nbsp;&nbsp;String shardNode = 
+shards.get(i);<BR>&nbsp;&nbsp;&nbsp;for (int j = 0; j &lt; VIRTUAL_NUM; j++) 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;nodes.put(hash("SHARD-" + i + "-NODE-" + j), 
+shardNode);<BR>&nbsp;&nbsp;&nbsp;}<BR>&nbsp;&nbsp;}<BR>&nbsp;}</P>
+<P>&nbsp;/**<BR>&nbsp; * 根据key的hash值取得服务器节点信息<BR>&nbsp; * <BR>&nbsp; * @param 
+hash<BR>&nbsp; * @return<BR>&nbsp; */<BR>&nbsp;public String getNode(String key) 
+{<BR>&nbsp;&nbsp;long hashKey = hash(key);<BR>&nbsp;&nbsp;SortedMap&lt;Long, 
+String&gt; tailMap = nodes.tailMap(hashKey);<BR>&nbsp;&nbsp;if 
+(tailMap.isEmpty()) {<BR>&nbsp;&nbsp;&nbsp;hashKey = 
+nodes.firstKey();<BR>&nbsp;&nbsp;} else {<BR>&nbsp;&nbsp;&nbsp;hashKey = 
+tailMap.firstKey();<BR>&nbsp;&nbsp;}<BR>&nbsp;&nbsp;return 
+nodes.get(hashKey);<BR>&nbsp;}</P>
+<P>&nbsp;/**<BR>&nbsp; * 打印圆环节点数据<BR>&nbsp; */<BR>&nbsp;public void printMap() 
+{<BR>&nbsp;&nbsp;System.out.println(nodes);<BR>&nbsp;}</P>
+<P>&nbsp;private long hash64A(ByteBuffer buf, int seed) 
+{<BR>&nbsp;&nbsp;ByteOrder byteOrder = 
+buf.order();<BR>&nbsp;&nbsp;buf.order(ByteOrder.LITTLE_ENDIAN);</P>
+<P>&nbsp;&nbsp;long m = 0xc6a4a7935bd1e995L;<BR>&nbsp;&nbsp;int r = 47;</P>
+<P>&nbsp;&nbsp;long h = seed ^ (buf.remaining() * m);</P>
+<P>&nbsp;&nbsp;long k;<BR>&nbsp;&nbsp;while (buf.remaining() &gt;= 8) 
+{<BR>&nbsp;&nbsp;&nbsp;k = buf.getLong();</P>
+<P>&nbsp;&nbsp;&nbsp;k *= m;<BR>&nbsp;&nbsp;&nbsp;k ^= k &gt;&gt;&gt; 
+r;<BR>&nbsp;&nbsp;&nbsp;k *= m;</P>
+<P>&nbsp;&nbsp;&nbsp;h ^= k;<BR>&nbsp;&nbsp;&nbsp;h *= m;<BR>&nbsp;&nbsp;}</P>
+<P>&nbsp;&nbsp;if (buf.remaining() &gt; 0) {<BR>&nbsp;&nbsp;&nbsp;ByteBuffer 
+finish = 
+ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);<BR>&nbsp;&nbsp;&nbsp;// 
+for big-endian version, do this first:<BR>&nbsp;&nbsp;&nbsp;// 
+finish.position(8-buf.remaining());<BR>&nbsp;&nbsp;&nbsp;finish.put(buf).rewind();<BR>&nbsp;&nbsp;&nbsp;h 
+^= finish.getLong();<BR>&nbsp;&nbsp;&nbsp;h *= m;<BR>&nbsp;&nbsp;}</P>
+<P>&nbsp;&nbsp;h ^= h &gt;&gt;&gt; r;<BR>&nbsp;&nbsp;h *= m;<BR>&nbsp;&nbsp;h ^= 
+h &gt;&gt;&gt; r;</P>
+<P>&nbsp;&nbsp;buf.order(byteOrder);<BR>&nbsp;&nbsp;return h;<BR>&nbsp;}</P>
+<P>&nbsp;/**<BR>&nbsp; * 根据2^32把节点分布到圆环上面。<BR>&nbsp; * <BR>&nbsp; * @param 
+digest<BR>&nbsp; * @return<BR>&nbsp; */<BR>&nbsp;public long hash(String key) 
+{<BR>&nbsp;&nbsp;byte[] keyBytes = null;<BR>&nbsp;&nbsp;try 
+{<BR>&nbsp;&nbsp;&nbsp;keyBytes = 
+key.getBytes("UTF-8");<BR>&nbsp;&nbsp;&nbsp;return 
+hash64A(ByteBuffer.wrap(keyBytes), 0x1234ABCD);<BR>&nbsp;&nbsp;} catch 
+(UnsupportedEncodingException e) {<BR>&nbsp;&nbsp;&nbsp;throw new 
+RuntimeException("Unknown string :" + key, e);<BR>&nbsp;&nbsp;}</P>
+<P>&nbsp;}</P>
+<P>&nbsp;public static void main(String[] args) 
+{<BR>&nbsp;&nbsp;List&lt;String&gt; shards = new 
+ArrayList&lt;String&gt;();<BR>&nbsp;&nbsp;shards.add("192.168.0.0-服务器0");<BR>&nbsp;&nbsp;shards.add("192.168.0.1-服务器1");<BR>&nbsp;&nbsp;shards.add("192.168.0.2-服务器2");<BR>&nbsp;&nbsp;shards.add("192.168.0.3-服务器3");<BR>&nbsp;&nbsp;shards.add("192.168.0.4-服务器4");<BR>&nbsp;&nbsp;FastConsistencyHash 
+hash = new FastConsistencyHash(shards);<BR>&nbsp;&nbsp;//hash.printMap();</P>
+<P>&nbsp;&nbsp;//循环50次，是为了取50个数来测试效果，当然也可以用其他任何的数据来测试<BR>&nbsp;&nbsp;for (int i 
+= 0; i &lt; 50; i++) {<BR>&nbsp;&nbsp;&nbsp;System.out.println(i + "-&gt;" + 
+hash.getNode("key" + i));<BR>&nbsp;&nbsp;}<BR>&nbsp;}</P>
+<P>}<BR></P></body>
+</html>

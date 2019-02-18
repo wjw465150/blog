@@ -1,0 +1,128 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Hbase多master</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body><A name=2313>
+<DIV 
+style="OVERFLOW: hidden; WORD-WRAP: normal; FONT-SIZE: 14px; FONT-FAMILY: simsun; WIDTH: 690px; WORD-BREAK: normal; PADDING-BOTTOM: 30px; PADDING-TOP: 18px; CLEAR: both; LINE-HEIGHT: 21px">单台master的<SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 16px; -webkit-text-stroke-width: 0px">配置<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 16px; -webkit-text-stroke-width: 0px">hbase-site.xml</SPAN>配置
+<DIV>&lt;property&gt;<BR>&nbsp; 
+&lt;name&gt;hbase.master&lt;/name&gt;<BR>&nbsp; 
+&lt;value&gt;master:60000&lt;/value&gt;<BR>&lt;/property&gt;<BR></DIV>
+<DIV>这是我们通常配置的，这样就定义了master是的ip和端口。</DIV>
+<DIV>但是当我们需要配置多台master进行，我们只需要提供端口，因为选择真正的master的事情会又zookeeper去处理。</DIV>
+<DIV>多台master的<SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 16px; -webkit-text-stroke-width: 0px">hbase-site.xml</SPAN>配置</DIV>
+<DIV>
+<DIV>&lt;property&gt;<BR>&nbsp; 
+&lt;name&gt;hbase.master.port&lt;/name&gt;<BR>&nbsp; 
+&lt;value&gt;60000&lt;/value&gt;<BR>&lt;/property&gt;</DIV>
+<DIV><BR>将这个配置cp到其他备份master的服务器上。</DIV></DIV>
+<DIV><BR></DIV>
+<DIV>假设现在架构</DIV>
+<DIV>A：master、<SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">zookeeper、</SPAN>HRegionServer</DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">B：backup-master、</SPAN><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">zookeeper、</SPAN><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">HRegionServer</SPAN></DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px"><BR></SPAN></DIV>
+<DIV>在A上直接启动start-hbase.sh</DIV>
+<DIV>在B上启动<SPAN 
+style="WORD-WRAP: normal; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; WORD-BREAK: normal; TEXT-ALIGN: left; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(255,255,255)">hbase-daemon.sh 
+start master</SPAN></DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; WORD-BREAK: normal; TEXT-ALIGN: left; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(255,255,255)"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; WORD-BREAK: normal; TEXT-ALIGN: left; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(255,255,255)">这样我们在A和B上都启动了master，不用担心同时启动了2个，因为只有在A的master宕掉后，</SPAN><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">zookeeper才会切换B的master为主。</SPAN></DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">我们看下端口</SPAN></DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">A为主</SPAN></DIV>
+<DIV>tcp &nbsp; &nbsp; &nbsp; &nbsp;0 &nbsp; &nbsp; &nbsp;0 :::60000 &nbsp; 
+&nbsp; master进程端口</DIV>
+<DIV>tcp &nbsp; &nbsp; &nbsp; &nbsp;0 &nbsp; &nbsp; &nbsp;0 :::60010 &nbsp; 
+&nbsp; masterweb后台端口</DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">B为从</SPAN></DIV>
+<DIV>tcp &nbsp; &nbsp; &nbsp; &nbsp;0 &nbsp; &nbsp; &nbsp;0 :::60000 &nbsp; 
+&nbsp; master进程端口</DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px"><BR></SPAN></DIV>
+<DIV>这里虽然B已经启动master，但是<SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">zookeeper已经判断网络中已经存在存活的master，所以分配B为从。</SPAN></DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">我们现在宕掉A的master，来看看</SPAN><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">zookeeper是如何工作的。</SPAN></DIV>
+<DIV><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px">zookeeper 
+&nbsp;log：</SPAN></DIV>
+<DIV>2012-09-07 14:56:53,073 WARN org.apache.zookeeper.server.NIOServerCnxn: 
+caught end of stream exception</DIV>
+<DIV>EndOfStreamException: Unable to read additional data from client sessionid 
+0x1399f8281420000, likely client has closed socket</DIV>
+<DIV>at 
+org.apache.zookeeper.server.NIOServerCnxn.doIO(NIOServerCnxn.java:220)</DIV>
+<DIV>at 
+org.apache.zookeeper.server.NIOServerCnxnFactory.run(NIOServerCnxnFactory.java:224)</DIV>
+<DIV>at java.lang.Thread.run(Thread.java:662)</DIV>
+<DIV><FONT style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px" color=#ff0000>2012-09-07 14:56:53,074 INFO 
+org.apache.zookeeper.server.NIOServerCnxn: Closed socket connection for client 
+/192.168.1.149:56188 which had sessionid 0x1399f8281420000</FONT></DIV>
+<DIV>2012-09-07 14:57:54,002 INFO org.apache.zookeeper.server.ZooKeeperServer: 
+Expiring session 0x399f76c05b0003, timeout of 180000ms exceeded</DIV>
+<DIV>2012-09-07 14:57:54,002 INFO org.apache.zookeeper.server.ZooKeeperServer: 
+Expiring session 0x399f76c05b0005, timeout of 180000ms exceeded</DIV>
+<DIV>2012-09-07 14:57:54,002 INFO 
+org.apache.zookeeper.server.PrepRequestProcessor: Processed session termination 
+for sessionid: 0x399f76c05b0003</DIV>
+<DIV>2012-09-07 14:57:54,002 INFO 
+org.apache.zookeeper.server.PrepRequestProcessor: Processed session termination 
+for sessionid: 0x399f76c05b0005</DIV>
+<DIV>2012-09-07 14:59:18,002 INFO org.apache.zookeeper.server.ZooKeeperServer: 
+Expiring session 0x399f8287a20002, timeout of 180000ms exceeded</DIV>
+<DIV>2012-09-07 14:59:18,002 INFO 
+org.apache.zookeeper.server.PrepRequestProcessor: Processed session termination 
+for sessionid: 0x399f8287a20002</DIV>
+<DIV><FONT style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px" color=#ff0000>2012-09-07 14:59:23,679 INFO 
+org.apache.zookeeper.server.NIOServerCnxnFactory: Accepted socket connection 
+from /192.168.1.253:34507</FONT></DIV>
+<DIV><FONT style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 21px" color=#ff0000>2012-09-07 14:59:23,680 INFO 
+org.apache.zookeeper.server.ZooKeeperServer: Client attempting to establish new 
+session at /192.168.1.253:34507</FONT></DIV>
+<DIV>2012-09-07 14:59:23,690 INFO org.apache.zookeeper.server.ZooKeeperServer: 
+Established session 0x1399f8281420004 with negotiated timeout 180000 for client 
+/192.168.1.253:34507</DIV>
+<DIV>2012-09-07 14:59:24,002 INFO org.apache.zookeeper.server.ZooKeeperServer: 
+Expiring session 0x1399f8281420000, timeout of 180000ms exceeded</DIV>
+<DIV>2012-09-07 14:59:24,002 INFO 
+org.apache.zookeeper.server.PrepRequestProcessor: Processed session termination 
+for sessionid: 0x1399f8281420000</DIV>
+<DIV><BR></DIV>
+<DIV>当B切换成真master时，同时开启端口</DIV>
+<DIV>tcp &nbsp; &nbsp; &nbsp; &nbsp;0 &nbsp; &nbsp; &nbsp;0 :::60010</DIV>
+<DIV style="LINE-HEIGHT: 21px"><BR></DIV>
+<DIV>这时，B的master已经接管工作。</DIV></DIV></A></body>
+</html>

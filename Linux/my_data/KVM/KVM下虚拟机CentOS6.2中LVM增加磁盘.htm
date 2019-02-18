@@ -1,0 +1,156 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>KVM下虚拟机CentOS6.2中LVM增加磁盘</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: 宋体, Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+</style>
+
+</head>
+
+<body>
+<DIV 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: center; FONT: 12px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<H1 class=aTitle 
+style="FONT-SIZE: 16px; POSITION: relative; FONT-WEIGHT: bold; PADDING-TOP: 10px">KVM下虚拟机CentOS6.2 
+LVM增加磁盘</H1></DIV>
+<DIV id=content 
+style="WORD-WRAP: break-word; WIDTH: 630px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: hidden; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); FONT: 14px/1.6 tahoma, 宋体; MARGIN: 20px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=linux19 
+style="WORD-WRAP: break-word; FONT-SIZE: 14px; FONT-FAMILY: tahoma, 宋体; FLOAT: right; PADDING-LEFT: 10px; DISPLAY: block; LINE-HEIGHT: 1.6"></DIV>
+<P>公司现在虚拟机都是采用KVM虚拟机，由于业务需要，需要安装一台svn服务器，好吧，以前已经装过好多linux的虚拟机，现在就没有那么麻烦了，找到以前安装的干净的镜像（没有安装各种应用，只做好基本配置的镜像），cp一下并重命名，在KVM界面new一个新的，选择本地镜像安装很快就完成了。安装完成。</P>
+<P>首先要注意的是mac地址变了，需要更改下mac地址，先记下新虚拟机网卡的MAC地址，然后cd /etc/udev/rules.d/ ，vi&nbsp; 
+70-persistent-net.rules，看看符合新MAC地址的那行，应该是 eth1 了， 删除掉 eth0 (也就是原来的网卡)那行， 把 eth1 
+改成 eth0 ，或者是把以前的注释掉，然后vi /etc/sysconfig/network-scripts/ifcfg-eth0，修改 
+MAC地址为新的，修改 相应的 IP地址，重新启动，应该就可以认出新的网卡。</P>
+<P>因为使用的镜像磁盘空间比较小，我使用的默认的8G，这肯定不够，所以加一块磁盘吧，在kvm新建一块磁盘，重启机器，好了，现在新磁盘已经加好了，当初镜像使用了LVM，现在只需要把新加的磁盘加入LVM卷组就ok了。</P>
+<P>假设添加了一块硬盘 为 /dev/vdb , 那么</P>
+<P> 1、首先使用&nbsp; fdisk /dev/vdb , 然后添加分区 /dev/vdb1</P>
+<P>&nbsp;&nbsp;&nbsp; n 新建分区<BR>&nbsp;&nbsp;&nbsp; p 
+主分区<BR>&nbsp;&nbsp;&nbsp; t 改变分区格式 8e<BR>    &nbsp;&nbsp;&nbsp; w 修改存盘</P>
+<P>2、添加完分区之后，使用pvcreate , 将 /dev/vdb1 创建为 物理卷      </P>
+<P>pvcreate /dev/vdb1</P>
+<P>3、使用vgextend , 将 /dev/vdb1 添加到卷组</P>
+<P>vgextend vg /dev/vdb1</P>
+<P>4、使用ls /dev/mapper/ -l查看lvm的情况，现在添加到逻辑卷,我需要将剩下的所有剩余资源全部添加到 lv_root 卷</P>
+<P>lvextend -l+100%FREE /dev/vg/lv_root</P>
+<P>5、使用&nbsp; resize2fs 动态调整 lv_root 大小</P>
+<P>resize2fs -p /dev/vg/lv_root</P>
+<P>在安装的时候碰到一个问题，当时创建新磁盘的时候我只建了40G，后来领导觉得小，我又删掉重新添加了一个80G的，就是这一步导致后边出了一些错误，费了好半天的力气啊 
+，呵呵</P>
+<P>安装40G的时候，已经到了创建完物理卷，添加到卷组了，领导一句话，我又把它删掉了，从新添加，当添加80G的磁盘的时候，开始都很顺利，但是到添加到卷组的时候就开始报错</P>
+<P>[root@svn ~]# vgextend vg /dev/vdb1<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Couldn't find device with 
+uuid 0byR3l-EutA-Pqyh-AxaP-IN1k-KMz5-af6MTI.<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Cannot change VG vg while 
+PVs are missing.<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; 
+Consider vgreduce --removemissing.</P>
+<P>&nbsp; 这个错误百思不得其解，后来想想可能跟以前我删掉的那个硬盘有关。查看下物理卷信息</P>
+<P>[root@svn ~]# pvscan<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; 
+Couldn't find device with uuid 0byR3l-EutA-Pqyh-AxaP-IN1k-KMz5-af6MTI.<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; PV 
+/dev/vda2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; VG vg&nbsp;&nbsp; lvm2 [7.51 
+GiB / 0&nbsp;&nbsp;&nbsp; free]<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; PV unknown 
+device&nbsp;&nbsp; VG vg&nbsp;&nbsp; lvm2 [40.00 GiB / 40.00 GiB free]<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Total: 2 [47.50 GiB] / in 
+use: 2 [47.50 GiB] / in no VG: 0 [0&nbsp;&nbsp; ]</P>
+<P>果然，这里有个莫名的unknown device ，应该就是我刚才删掉的那个硬盘，我把他加到卷组里，但是没有从卷组里卸载，就直接把硬盘删掉了。</P>
+<P>[root@svn ~]# vgdisplay<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Couldn't find device with 
+uuid 0byR3l-EutA-Pqyh-AxaP-IN1k-KMz5-af6MTI.<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; --- Volume group ---<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; VG 
+Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+vg<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; System 
+ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; 
+Format&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+lvm2<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Metadata 
+Areas&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Metadata Sequence No&nbsp; 
+4<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; VG 
+Access&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+read/write<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; VG 
+Status&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+resizable<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; MAX 
+LV&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+0<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Cur 
+LV&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+2<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Open 
+LV&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+2<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Max 
+PV&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+0<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Cur 
+PV&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+2<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Act 
+PV&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+1<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; VG 
+Size&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+47.50 GiB<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; PE 
+Size&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+4.00 MiB<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Total 
+PE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+12161<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Alloc PE / 
+Size&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1922 / 7.51 GiB<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; Free&nbsp; PE / 
+Size&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 10239 / 40.00 GiB<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; VG 
+UUID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+mT5gCe-ihz3-CfTi-1IH2-deTA-EFTD-l1eiKD</P>
+<P>查看卷组信息，果然已经添加上了，没有被卸载。根据上面的错误提示，有这么一条Consider vgreduce --removemissing.</P>
+<P>vgreduce –removemissing vg&nbsp;&nbsp; 卸载掉未知或者已丢失的vg</P>
+<P>现在再</P>
+<P>[root@svn ~]# vgextend vg /dev/vdb1就没问题了。然后按着上边的步骤一步一步来就可以了</P>
+<P>[root@svn ~]# resize2fs -p /dev/vg/lv_root<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>resize2fs 1.41.12 
+(17-May-2010)<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>Filesystem at 
+/dev/vg/lv_root is mounted on /; on-line resizing required<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>old desc_blocks = 1, 
+new_desc_blocks = 6<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>Performing 
+an on-line resize of /dev/vg/lv_root to 22676480 (4k) blocks.</P>
+<P>这里要等一会哦，80G呢，呵呵</P>
+<P>The filesystem on /dev/vg/lv_root is now 22676480 blocks long.</P>
+<P>&nbsp;</P>
+<P>[root@svn ~]# df -h<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>Filesystem&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Size&nbsp; Used Avail Use% Mounted on<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>/dev/mapper/vg-lv_root<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+86G&nbsp; 908M&nbsp;&nbsp; 80G&nbsp;&nbsp; 2% /<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>tmpfs&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+499M&nbsp;&nbsp;&nbsp;&nbsp; 0&nbsp; 499M&nbsp;&nbsp; 0% /dev/shm<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>/dev/vda1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+485M&nbsp;&nbsp; 51M&nbsp; 409M&nbsp; 12% /boot</P>
+<P>&nbsp;</P>
+<P>OK，任务完成了哦。呵呵 ~~</P>
+<P>命令说明：<BR>pvcreate （创建物理卷）</P>
+<P>pvdisplay (显示物理卷信息）</P>
+<P>pvscan （扫描物理卷)<BR>pvremove (删除物理卷）</P>
+<P>vgcreate (创建卷组)</P>
+<P>vgdisplay (显示卷组信息)</P>
+<P>vgscan (扫描卷组)</P>
+<P>vgextend (扩展卷组)&nbsp;</P>
+<P>vgextend vg1 /dev/sdb7&nbsp; （把物理卷/dev/sdb7 加到vg1卷组中）</P>
+<P>vgreduce (删除卷组中的物理卷）</P>
+<P>vgreduce vg1 /dev/sdb7&nbsp; (把物理卷/dev/sdb7 从卷组vg1中删除)</P>
+<P>vgremove (删除卷组)&nbsp;</P>
+<P>vgremove vg1 （删除卷组vg1)</P>
+<P>&nbsp;</P>
+<P>lvcreate (创建逻辑卷）</P>
+<P>lvdisplay (显示逻辑卷信息）</P>
+<P>lvscan (扫描逻辑卷）</P>
+<P>lvextend (扩展逻辑卷）</P>
+<P>lvextend -l +5G /dev/vg1/lvm1&nbsp; (扩展逻辑卷/dev/vg1/lvm1 5个G）</P>
+<P><BR>lvreduce (减少LV大小)&nbsp;</P>
+<P>lvreduce -L-50M /dev/vg1/lvm1，调整lvm1分区大小，减小50M<BR>lvremove 
+(删除逻辑卷）</P></DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P></body>
+</html>

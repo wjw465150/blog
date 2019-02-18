@@ -1,0 +1,36 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>hbase+hadoop运维的一点经验</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">目前系统上线，不断的有新问题，也不断的在总结一些经验，发在这里，做下mark，同时也为hbase使用者提供一些思路吧。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">1、单条rowkey下虽然能支持百万列，但是建议不要这么做，因为真正一个rowkey下挂了这么多数据时会在两个地方出现问题，一是查询时单行记录数据量过大，client超时；第二个问题是regionserver做compact的过程有可能被单条rowkey的数据塞满内存造成OOM</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">2、datanode的handler的数量不要默认值，太少，要在100左右，另外regionserver的handler的数量在200左右比较合适</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">3、resultScannser使用完毕记得关闭</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">4、HTablePool可以管理HTable。查询结束后直接用HTablePool.put(HTable 
+t)来回收，入库结束后记得table.flushCommit()后再回收</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">5、mapred.local.dir这个参数是mapreduce会在机器的硬盘上做临时文件的存放，如果挂载的多块盘请将每个盘都配上，提升总体性能</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">6、map阶段的输出可以配置LZO压缩，这样能有效节省map-&gt;reduce阶段的网络带宽，不过会提高cpu的占用率</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">7、多网卡绑定能有效提高hadoop体系的网络带宽</P><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">8、bulkload目前测试的性能在单节点51GB/小时左右，希望其他有做过的同学能交流一下bulkload方面的问题。</SPAN></body>
+</html>

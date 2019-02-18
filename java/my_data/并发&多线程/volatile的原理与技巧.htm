@@ -1,0 +1,152 @@
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>volatile的原理与技巧</title>
+<body>
+<p> <font size="3"> <span> <strong>volatile, 用更低的代价替代同步</strong> <br>
+  <br>
+  </span> <font size="2"> <span></span> </font> </font> <strong> <font size="3"> <font size="2"> <span>为什么</span> </font> </font> </strong> <font size="3"> <font size="2"> <strong> <span>使用volatile比同步代价更低?</span> </strong> <br>
+  同步的代价, 主要由其覆盖范围决定, 如果可以降低同步的覆盖范围, 则可以大幅提升程序性能.&nbsp;<br>
+  <br>
+  而volatile的覆盖范围仅仅变量级别的. 因此它的同步代价很低.<br>
+  <br>
+  <span><strong>volatile原理是什么?</strong> <br>
+  </span>volatile的语义, 其实是告诉处理器, 不要将我放入工作内存, 请直接在主存操作我.(工作内存详见java内存模型)<br>
+  <br>
+  因此, 当多核或多线程在访问该变量时, 都将直接</font> </font> <font size="3"> <font size="2">操作</font> </font> <font size="3"> <font size="2">主存, 这从本质上, 做到了变量共享.<br>
+  <br>
+  <span><strong>volatile的有什么优势?</strong> <br>
+  </span>1, 更大的程序吞吐量<br>
+  2, 更少的代码实现多线程<br>
+  3, 程序的伸缩性较好<br>
+  </font> </font> <font size="3"> <font size="2">4, 比较好理解, 无需太高的学习成本<br>
+  <br>
+  <span><strong>volatile有什么劣势?</strong> <br>
+  </span>1, 容易出问题<br>
+  2, 比较难设计<br>
+  <span></span> </font> </font> <font size="3"> <font size="2"> <span></span> </font> </font> <font size="3"> <font size="2"> <br>
+  </font> </font> </p>
+<hr>
+<strong> <br>
+</strong> <font size="3"> <span> <strong>volatile运算存在脏数据问题</strong> <br>
+<br>
+</span> </font> <strong> <font size="3"> <font size="2">volatile仅仅能保证变量可见性, 无法保证原子性.</font> </font> </strong> <br>
+<font size="3"> <span> <br>
+</span> <font size="2">volatile的race condition示例:<br>
+<br>
+public class TestRaceCondition {<br>
+&nbsp;&nbsp;&nbsp; private volatile int i = 0;<br>
+&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; public void increase() {<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; i++;<br>
+&nbsp;&nbsp;&nbsp; }<br>
+<br>
+&nbsp;&nbsp;&nbsp; public int getValue() {<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; return i;<br>
+&nbsp;&nbsp;&nbsp; }<br>
+}<br>
+<strong><br>
+</strong> <span> <strong>当多线程执行increase方法时, 是否能保证它的值会是线性递增的呢?</strong> <br>
+</span>答案是否定的.<br>
+<br>
+原因:<br>
+这里的increase方法, 执行的操作是i++, 即 i = i + 1;<br>
+针对i = i + 1, 在多线程中的运算, 本身需要改变i的值.<br>
+如果, 在i已从内存中取到最新值, 但未与1进行运算, 此时其他线程已数次将运算结果赋值给i.<br>
+则当前线程结束时, 之前的数次运算结果都将被覆盖.<br>
+<br>
+即, 执行100次increase, 可能结果是 &lt; 100.<br>
+一般来说, 这种情况需要较高的压力与并发情况下, 才会出现.<br>
+<br>
+<span><strong>如何避免这种情况?</strong> <br>
+</span>解决以上问题的方法:<br>
+一种是 操作时, 加上同步.<br>
+这种方法, 无疑将大大降低程序性能, 且违背了volatile的初衷.<br>
+<br>
+第二种方式是, 使用硬件原语(CAS), 实现非阻塞算法<br>
+从CPU原语上,&nbsp; 支持变量级别的低开销同步.<br>
+<br>
+</font> </font>
+<hr>
+<font size="3"> <font size="2"> <br>
+<font size="3"> <span> <strong>CPU原语-比较并交换(CompareAndSet),实现非阻塞算法</strong> <br>
+<br>
+</span> <font size="2"> <span> <strong>什么是CAS?</strong> <br>
+</span>cas是现代CPU提供给并发程序使用的原语操作. 不同的CPU有不同的使用规范.<br>
+<br>
+</font> </font> </font> </font>在 Intel 处理器中，比较并交换通过指令的 cmpxchg 系列实现。<br>
+PowerPC 处理器有一对名为“加载并保留”和“条件存储”的指令，它们实现相同的目地；<br>
+MIPS 与 PowerPC 处理器相似，除了第一个指令称为“加载链接”。<font size="3"><font size="2"><font size="3"><font size="2"><br>
+<span></span> <br>
+</font> </font> </font> </font>CAS 操作包含三个操作数 —— 内存位置（V）、预期原值（A）和新值(B)<br>
+<br>
+<span><strong>什么是非阻塞算法?</strong> <br>
+</span>一个线程的失败或挂起不应该影响其他线程的失败或挂起.这类算法称之为非阻塞(nonblocking)算法<br>
+<br>
+对比阻塞算法:<br>
+如果有一类并发操作, 其中一个线程优先得到对象监视器的锁, 当其他线程到达同步边界时, 就会被阻塞.<br>
+直到前一个线程释放掉锁后, 才可以继续竞争对象锁.(当然,这里的竞争也可是公平的, 按先来后到的次序)<br>
+<span></span> <br>
+<span> <strong>CAS 原理:</strong> <br>
+<br>
+</span>我认为位置 V 应该包含值 A；如果包含该值，则将 B 放到这个位置；否则，不要更改该位置，只告诉我这个位置现在的值即可。<br>
+<font size="3"><font size="2"><font size="3"><span></span> </font> <span></span> <br>
+<span> <strong>CAS使用示例(jdk 1.5 并发包 AtomicInteger类分析:)</strong> <br>
+<br>
+</span>&nbsp;&nbsp;&nbsp; /**<br>
+&nbsp;&nbsp;&nbsp;&nbsp; * Atomically sets to the given value and returns the old value.<br>
+&nbsp;&nbsp;&nbsp;&nbsp; *<br>
+&nbsp;&nbsp;&nbsp;&nbsp; * @param newValue the new value<br>
+&nbsp;&nbsp;&nbsp;&nbsp; * @return the previous value<br>
+&nbsp;&nbsp;&nbsp;&nbsp; */<br>
+&nbsp;&nbsp;&nbsp; public final int getAndSet(int newValue) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (;;) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int current = get();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (compareAndSet(current, newValue))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return current;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp; }<br>
+<br>
+&nbsp;&nbsp;&nbsp; public final boolean compareAndSet(int expect, int update) {<br>
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; return unsafe.compareAndSwapInt(this, valueOffset, expect, update);<br>
+&nbsp;&nbsp;&nbsp; }<br>
+<br>
+这个方法是, AtomicInteger类的常用方法, 作用是, 将变量设置为指定值, 并返回设置前的值.<br>
+它利用了cpu原语compareAndSet来保障值的唯一性.<br>
+<br>
+另, AtomicInteger类中, 其他的实用方法, 也是基于同样的实现方式.<br>
+比如 getAndIncrement, getAndDecrement, getAndAdd等等.<br>
+<br>
+<span><strong>CAS语义上存在的</strong>"</span> </font> </font> <strong> <a name="sidebar1"> <font color="#42495b">ABA 问题"<br>
+<br>
+什么是ABA问题?<br>
+</font> </a> </strong> <a name="sidebar1"> <font color="#42495b">假设, 第一次读取V地址的A值, 然后通过CAS来判断V地址的值是否仍旧为A, 如果是, 就将B的值写入V地址,覆盖A值.<br>
+<br>
+但是, 语义上, 有一个漏洞, 当第一次读取V的A值, 此时, 内存V的值变为B值, 然后在未执行CAS前, 又变回了A值.<br>
+此时, CAS再执行时, 会判断其正确的, 并进行赋值.<br>
+<br>
+这种判断值的方式来断定内存是否被修改过, 针对某些问题, 是不适用的. <br>
+<br>
+为了解决这种问题, jdk 1.5并发包提供了<code>AtomicStampedReference</code>(有标记的原子引用)类, 通过控制变量值的版本来保证CAS正确性.<br>
+</font> </a> <a name="sidebar1"> <br>
+<font color="#000000">其实, 大部分通过值的变化来CAS, 已经够用了.</font> </a> <a name="sidebar1"> <br>
+<br>
+</a>
+<hr>
+<br>
+<font size="3"> <span> <strong>jdk1.5原子包介绍(基于volatile)</strong> <br>
+</span> </font> <font color="#800000"> <font color="#000000"> <strong></strong> </font> </font> <font color="#800000"> <font color="#000000"> <strong> <br>
+</strong>包的特色:<br>
+1, 普通原子数值类型AtomicInteger, AtomicLong提供一些原子操作的加减运算.<br>
+<br>
+2, 使用了解决脏数据问题的经典模式-"比对后设定", 即 查看主存中数据是否与预期提供的值一致,如果一致,才更新.<br>
+<br>
+3, 使用AtomicReference可以实现对所有对象的原子引用及赋值.包括Double与Float,<br>
+但不包括对其的计算.浮点的计算,只能依靠同步关键字或Lock接口来实现了.<br>
+<br>
+4, 对数组元素里的对象,符合以上特点的, 也可采用原子操作.包里提供了一些数组原子操作类<br>
+AtomicIntegerArray, AtomicLongArray等等.<br>
+<br>
+5, 大幅度提升系统吞吐量及性能.<br>
+</font> </font>
+</body>
+</html>

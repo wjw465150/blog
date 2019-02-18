@@ -1,0 +1,1193 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML xmlns="http://www.w3.org/1999/xhtml" sizcache="1" 
+sizset="16"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Quartz 在Spring中动态设置cronExpression</title>
+<LINK rel=stylesheet type=text/css 
+href="Cogitation_1.css_v=20091223" media=all><LINK 
+rel=stylesheet type=text/css href="csdn_favbykimi.css" media=all><LINK 
+rel="Shortcut Icon" href="1.ico"><LINK 
+title=RSS rel=alternate type=application/rss+xml 
+href="axzywan"></HEAD>
+
+<BODY id="defaultuser" sizcache="1" sizset="16">
+
+<DIV id="csdnblog_allwrap" sizcache="1" sizset="16">
+
+<DIV id="csdnblog_midwrap" sizcache="1" sizset="16">
+
+<DIV id="csdnblog_content" sizcache="1" sizset="16">
+
+<DIV class="gutter" sizcache="1" sizset="16">
+
+<DIV class="default_contents" sizcache="1" sizset="16">
+
+<DIV class="user_article" sizcache="0" sizset="8">
+
+<DIV class="blogstory" sizcache="0" sizset="8"><!--StartFragment--><P 
+style="BACKGROUND: white; TEXT-ALIGN: center; MARGIN: 0cm 0cm 0pt; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+class=MsoNormal align=center><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><STRONG><SPAN 
+style="COLOR: purple" lang=EN-US>Quartz</SPAN> </STRONG><STRONG><SPAN 
+style="COLOR: purple">在<SPAN lang=EN-US>Spring</SPAN>中动态设置<SPAN 
+lang=EN-US>cronExpression</SPAN></SPAN> </STRONG></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">什么是动态定时任务：是由客户制定生成的，服务端只知道该去执行什么任务，但任务的定时是不确定的（是由客户制定）。 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">这样总不能修改配置文件每定制个定时任务就增加一个<SPAN 
+lang=EN-US>trigger</SPAN>吧，即便允许客户修改配置文件，但总需要重新启动<SPAN 
+lang=EN-US>web</SPAN>服务啊，研究了下<SPAN lang=EN-US>Quartz</SPAN>在<SPAN 
+lang=EN-US>Spring</SPAN>中的动态定时，发现</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&lt;bean 
+id="cronTrigger" class="org.springframework.scheduling.quartz.CronTriggerBean" 
+&gt;</SPAN> </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="jobDetail" ref="schedulerJobDetail"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="cronExpression"&gt; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;value&gt;0/10 * 
+* * * ?&lt;/value&gt; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/property&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp; &nbsp; 
+</SPAN>中<SPAN style="COLOR: red" 
+lang=EN-US>cronExpression</SPAN>是关键，如果可以动态设置<SPAN style="COLOR: red" 
+lang=EN-US>cronExpression</SPAN>的值，也就说如果我们可以直接调用<SPAN 
+lang=EN-US>CronTriggerBean</SPAN>中设置<SPAN style="COLOR: red" 
+lang=EN-US>cronExpression</SPAN>的方法，就可以顺利解决问题了。 </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">熟悉<SPAN 
+lang=EN-US>1</SPAN>的朋友可以跳过不看，下面<SPAN lang=EN-US>2</SPAN>、<SPAN 
+lang=EN-US>3</SPAN>是动态定时任务的具体实现。 </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt 18pt; TEXT-INDENT: -18pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>1．<SPAN 
+style="FONT-VARIANT: normal; FONT-WEIGHT: normal; FONT-STYLE: normal; LINE-HEIGHT: normal; font-stretch: normal; font-size-adjust: none; x-system-font: none">&nbsp; 
+</SPAN></SPAN><SPAN lang=EN-US>Quartz</SPAN> 在<SPAN 
+lang=EN-US>Spring</SPAN>中的简单配置 </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Spring</SPAN> 
+配置文件： </SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;bean 
+id="schedulerJobDetail" 
+class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean"&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="targetObject" ref="scheduleInfoAction"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property name="<SPAN 
+style="COLOR: blue">targetMethod</SPAN>" value="<SPAN 
+style="COLOR: purple">simpleJobTest</SPAN>"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="concurrent" value="false"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;/bean&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;bean id="cronTrigger" 
+class="org.springframework.scheduling.quartz.CronTriggerBean" &gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="jobDetail" ref="schedulerJobDetail"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="<STRONG><SPAN style="COLOR: red">cronExpression</SPAN></STRONG>"&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;value&gt;0/10 * 
+* * * ?&lt;/value&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/property&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp; &lt;/bean&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;bean 
+id="schedulerFactory" 
+class="org.springframework.scheduling.quartz.SchedulerFactoryBean"&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="triggers"&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;list&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ref 
+local="cronTrigger"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/list&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/property&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp; 
+&lt;/bean&gt;</SPAN> </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">在上面的配置中设定了 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN style="FONT-FAMILY: arial,helvetica,sans-serif">① 
+<SPAN style="COLOR: blue" lang=EN-US>targetMethod</SPAN><SPAN lang=EN-US>: 
+</SPAN>指定需要定时执行<SPAN lang=EN-US>scheduleInfoAction</SPAN>中的<SPAN 
+lang=EN-US>simpleJobTest()</SPAN>方法 </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">② <SPAN 
+lang=EN-US>concurrent</SPAN>：对于相同的<SPAN lang=EN-US>JobDetail</SPAN>，当指定多个<SPAN 
+lang=EN-US>Trigger</SPAN>时<SPAN lang=EN-US>, </SPAN>很可能第一个<SPAN 
+lang=EN-US>job</SPAN>完成之前，第二个<SPAN lang=EN-US>job</SPAN>就开始了。指定<SPAN 
+lang=EN-US>concurrent</SPAN>设为<SPAN lang=EN-US>false</SPAN>，多个<SPAN 
+lang=EN-US>job</SPAN>不会并发运行，第二个<SPAN lang=EN-US>job</SPAN>将不会在第一个<SPAN 
+lang=EN-US>job</SPAN>完成之前开始。 </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">③ <STRONG><SPAN 
+style="COLOR: red" lang=EN-US>cronExpression</SPAN></STRONG>：<SPAN 
+lang=EN-US>0/10 * * * * ?</SPAN>表示每<SPAN lang=EN-US>10</SPAN>秒执行一次，具体可参考<SPAN 
+style="COLOR: purple">附表</SPAN>。 </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">④ <SPAN 
+lang=EN-US>triggers</SPAN>：通过再添加其他的<SPAN lang=EN-US>ref</SPAN>元素可在<SPAN 
+lang=EN-US>list</SPAN>中放置多个触发器。 </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+lang=EN-US>scheduleInfoAction</SPAN> 中的<SPAN lang=EN-US>simpleJobTest()</SPAN>方法 
+</SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">注意：此方法没有参数，如果<SPAN 
+lang=EN-US>scheduleInfoAction</SPAN>有两个方法<SPAN style="COLOR: purple" 
+lang=EN-US>simpleJobTest</SPAN><SPAN lang=EN-US>()</SPAN>和<SPAN 
+lang=EN-US>simpleJobTest(String argument)</SPAN>，则<SPAN 
+lang=EN-US>spring</SPAN>只会去执行无参的<SPAN style="COLOR: purple" 
+lang=EN-US>simpleJobTest</SPAN><SPAN lang=EN-US>().</SPAN> 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">public void <SPAN 
+style="COLOR: purple">simpleJobTest</SPAN>() {&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; log.warn("uh oh, Job is 
+scheduled !'" + "' Success..."); </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">} </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN style="COLOR: fuchsia" 
+lang=EN-US>2</SPAN> ．<SPAN lang=EN-US>Quartz</SPAN>在<SPAN 
+lang=EN-US>Spring</SPAN>中<STRONG><SPAN 
+style="COLOR: purple">动态设置</SPAN></STRONG><SPAN lang=EN-US>cronTrigger</SPAN>方法一 
+</SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Spring</SPAN> 
+配置文件： </SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;bean 
+id="scheduleInfoAction" 
+class="com.lively.happyoa.jobs.webapp.action.ScheduleInfoAction"&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="<STRONG><SPAN style="COLOR: #003366">scheduler</SPAN></STRONG>" 
+ref="schedulerFactory"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="<STRONG><SPAN style="COLOR: #003366">scheduleInfoManager</SPAN></STRONG>" 
+ref="scheduleInfoManager"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;/bean&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;bean 
+id="schedulerJobDetail" 
+class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean"&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="targetObject" ref="scheduleInfoAction"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="targetMethod" value="<STRONG><SPAN 
+style="COLOR: purple">reScheduleJob</SPAN></STRONG>"/&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="concurrent" value="false"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;/bean&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;bean id="<STRONG><SPAN 
+style="COLOR: olive">cronTrigger</SPAN></STRONG>" 
+class="org.springframework.scheduling.quartz.CronTriggerBean" &gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="jobDetail" ref="schedulerJobDetail"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="<STRONG><SPAN style="COLOR: red">cronExpression</SPAN></STRONG>"&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;value&gt;0/10 * 
+* * * ?&lt;/value&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/property&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp; &lt;/bean&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;bean 
+id="schedulerFactory" 
+class="org.springframework.scheduling.quartz.SchedulerFactoryBean"&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="triggers"&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;list&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;ref 
+local="cronTrigger"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/list&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/property&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;/bean&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+lang=EN-US>scheduleInfoAction</SPAN> 中的<STRONG><SPAN style="COLOR: purple" 
+lang=EN-US>reScheduleJob</SPAN></STRONG><SPAN lang=EN-US> ()</SPAN>方法及相关方法 
+</SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">① <STRONG><SPAN 
+style="COLOR: purple" lang=EN-US>reScheduleJob</SPAN></STRONG><SPAN 
+lang=EN-US>():</SPAN>读取数据库，获得自定义定时器调度时间 </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; private void <STRONG><SPAN 
+style="COLOR: purple">reScheduleJob</SPAN></STRONG>() throws SchedulerException, 
+ParseException { </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 
+</SPAN>运行时可通过动态注入的<SPAN lang=EN-US>scheduler</SPAN>得到<SPAN 
+lang=EN-US>trigger</SPAN> </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; CronTriggerBean trigger 
+= (CronTriggerBean) scheduler.getTrigger( </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "<STRONG><SPAN 
+style="COLOR: olive">cronTrigger</SPAN></STRONG>", Scheduler.DEFAULT_GROUP); 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String dbCronExpression 
+= <SPAN 
+style="BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial">getCronExpressionFromDB</SPAN>(); 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String 
+originCronExpression = trigger.getCronExpression(); </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 
+</SPAN>判断从<SPAN lang=EN-US>DB</SPAN>中取得的任务时间<SPAN 
+lang=EN-US>(dbCronExpression)</SPAN>和现在的<SPAN 
+lang=EN-US>quartz</SPAN>线程中的任务时间<SPAN 
+lang=EN-US>(originConExpression)</SPAN>是否相等 </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 
+</SPAN>如果<SPAN style="COLOR: blue">相等</SPAN>，则表示用户并没有重新设定数据库中的任务时间，这种情况<SPAN 
+style="COLOR: blue">不需要重新<SPAN lang=EN-US>rescheduleJob</SPAN></SPAN> 
+</SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+if(!originConExpression.equalsIgnoreCase(dbCronExpression)){ 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+trigger.setCronExpression(dbCronExpression); </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+scheduler.rescheduleJob("<STRONG><SPAN 
+style="COLOR: olive">cronTrigger</SPAN></STRONG>", Scheduler.DEFAULT_GROUP, 
+trigger); </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 
+</SPAN>下面是具体的<SPAN lang=EN-US>job</SPAN>内容，可自行设置 </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // executeJobDetail(); 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt; TEXT-INDENT: 18pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体" lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; } </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt; TEXT-INDENT: 18pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体" lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">② <SPAN 
+style="BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+lang=EN-US>getCronExpressionFromDB</SPAN><SPAN lang=EN-US>()</SPAN>：从数据库中获得<SPAN 
+lang=EN-US>dbCronExpression</SPAN>的具体代码，由于使用了<SPAN 
+lang=EN-US>scheduleInfoManager</SPAN>，所以要在定义相应的<SPAN lang=EN-US>setter</SPAN>方法 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; private String <SPAN 
+style="BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial">getCronExpressionFromDB</SPAN>() 
+{ </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String sql="from 
+ScheduleInfo scheduleInfo where 1=1 "; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sql=sql+" and 
+scheduleInfo.infoId = '"+"1" + "'"; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; List scheduleList = 
+scheduleInfoManager.queryScheduleInListBySql(sql); </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ScheduleInfo 
+scheduleInfo = (ScheduleInfo)scheduleList.get(0); </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String dbCronExpression 
+= scheduleInfo.getCronExpression(); </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return dbCronExpression; 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt; TEXT-INDENT: 18pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体" lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; } </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt; TEXT-INDENT: 18pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体" lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">③ 在<SPAN 
+lang=EN-US>spring</SPAN>配置文件的<SPAN 
+lang=EN-US>scheduleInfoAction</SPAN>配置了相应的<SPAN 
+lang=EN-US>property</SPAN>（<STRONG><SPAN style="COLOR: #003366" 
+lang=EN-US>scheduler</SPAN></STRONG><SPAN lang=EN-US>/<SPAN 
+style="COLOR: #003366"><STRONG>scheduleInfoManager</STRONG></SPAN></SPAN>）<SPAN 
+lang=EN-US>,</SPAN>要为其设置<SPAN lang=EN-US>setter</SPAN>方法 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; private Scheduler scheduler; 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp; // 
+</SPAN>设值注入，通过<SPAN lang=EN-US>setter</SPAN>方法传入被调用者的实例<SPAN 
+lang=EN-US>scheduler</SPAN> </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; public void <STRONG><SPAN 
+style="COLOR: #003366">setScheduler</SPAN></STRONG>(Scheduler scheduler) { 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.scheduler = 
+scheduler; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; &nbsp;&nbsp; } </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; private ScheduleInfoManager 
+scheduleInfoManager; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp; // 
+</SPAN>设值注入，通过<SPAN lang=EN-US>setter</SPAN>方法传入被调用者的实例<SPAN 
+lang=EN-US>scheduleInfoManager</SPAN> </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; public void <STRONG><SPAN 
+style="COLOR: #003366">setScheduleInfoManager</SPAN></STRONG>(ScheduleInfoManager 
+scheduleInfoManager){ </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.scheduleInfoManager 
+= scheduleInfoManager; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; } </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt 18pt; TEXT-INDENT: -18pt" 
+class=MsoNormal align=left><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>3．<SPAN 
+style="FONT-VARIANT: normal; FONT-WEIGHT: normal; FONT-STYLE: normal; LINE-HEIGHT: normal; font-stretch: normal; font-size-adjust: none; x-system-font: none">&nbsp; 
+</SPAN></SPAN><SPAN lang=EN-US>Quartz</SPAN> 在<SPAN 
+lang=EN-US>Spring</SPAN>中<STRONG><SPAN 
+style="COLOR: purple">动态设置</SPAN></STRONG><SPAN lang=EN-US>cronTrigger</SPAN>方法二 
+</SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">在上面的<SPAN style="COLOR: fuchsia" 
+lang=EN-US>2</SPAN>中我们可以看到，尽管 已经可以动态进行 <SPAN style="COLOR: blue" 
+lang=EN-US>rescheduleJob</SPAN> 了，不过依然需要我们设置一个 <STRONG><SPAN style="COLOR: red" 
+lang=EN-US>cronExpression</SPAN> </STRONG>，如果尝试一下拿掉<SPAN 
+lang=EN-US>spring</SPAN>配置中的 </SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+</SPAN><SPAN lang=EN-US>&lt;property name="<STRONG><SPAN 
+style="COLOR: red">cronExpression</SPAN></STRONG>"&gt;</SPAN> </SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;value&gt;0/10 * 
+* * * ?&lt;/value&gt; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/property&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">则容器（如<SPAN 
+lang=EN-US>tomcat</SPAN>）启动时会报错。 </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">实际中我们希望<SPAN 
+lang=EN-US>tomcat</SPAN>启动时就可以直接去读数据库，拿到相应的 <SPAN 
+lang=EN-US>dbCronExpression</SPAN> ，然后定时执行一个<SPAN 
+lang=EN-US>job</SPAN>，而不希望配置初始的 <STRONG><SPAN style="COLOR: red" 
+lang=EN-US>cronExpression </SPAN></STRONG>，</SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">观察下面的 <SPAN 
+lang=EN-US>CronTriggerBean</SPAN> ，考虑到<STRONG><SPAN style="COLOR: red" 
+lang=EN-US>cronExpression</SPAN></STRONG>需要初始化，如果设定一个类<STRONG><SPAN 
+style="COLOR: green" lang=EN-US>InitializingCronTrigger</SPAN></STRONG>继承<SPAN 
+lang=EN-US>CronTriggerBean</SPAN>，然后在这个类中做一些读取<SPAN 
+lang=EN-US>DB</SPAN>的初始化工作（设置<STRONG><SPAN style="COLOR: red" 
+lang=EN-US>cronExpression</SPAN></STRONG>），问题就可以解决了。 </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Spring</SPAN> 
+配置文件： </SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;bean 
+id="scheduleInfoAction" 
+class="com.lively.happyoa.jobs.webapp.action.ScheduleInfoAction"&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="<STRONG><SPAN style="COLOR: #003366">scheduler</SPAN></STRONG>" 
+ref="schedulerFactory"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="<STRONG><SPAN style="COLOR: #003366">scheduleInfoManager</SPAN></STRONG>" 
+ref="scheduleInfoManager"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;/bean&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;bean 
+id="schedulerJobDetail" 
+class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean"&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="targetObject" ref="scheduleInfoAction"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="targetMethod" value="<STRONG><SPAN 
+style="COLOR: purple">reScheduleJob</SPAN></STRONG>"/&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="concurrent" value="false"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;/bean&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp; &nbsp; <SPAN 
+style="BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial">&lt;bean 
+id="<STRONG><SPAN style="COLOR: olive">cronTrigger</SPAN></STRONG>" 
+class="com.lively.happyoa.jobs.webapp.action.ScheduleInfoAction.<STRONG><SPAN 
+style="COLOR: green">InitializingCronTrigger</SPAN></STRONG>"&gt;</SPAN> 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN 
+style="FONT-FAMILY: 宋体; BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="jobDetail" ref="schedulerJobDetail"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN 
+style="FONT-FAMILY: 宋体; BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <SPAN 
+style="COLOR: gray">&lt;!--&lt;property 
+name="<STRONG>cronExpression</STRONG>"&gt;</SPAN> </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN 
+style="FONT-FAMILY: 宋体; BACKGROUND: silver; COLOR: gray; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;value&gt;0/10 * 
+* * * ?&lt;/value&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+style="BACKGROUND: silver; COLOR: gray; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/property&gt;--&gt;</SPAN> </SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN 
+style="FONT-FAMILY: 宋体; BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="<STRONG><SPAN style="COLOR: #003366">scheduleInfoManager</SPAN></STRONG>" 
+ref="scheduleInfoManager"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+style="BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp; &lt;/bean&gt;</SPAN> </SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;bean 
+id="schedulerFactory" 
+class="org.springframework.scheduling.quartz.SchedulerFactoryBean"&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="triggers"&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;list&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;ref 
+local="cronTrigger"/&gt; </SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/list&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/property&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: 宋体" lang=EN-US><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; &lt;/bean&gt; 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><STRONG><SPAN 
+style="COLOR: green" lang=EN-US>InitializingCronTrigger</SPAN> </STRONG>中的相关方法 
+</SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">注意：在注入<SPAN 
+lang=EN-US>scheduleInfoManager</SPAN>属性的时候，我们可以去读取<SPAN 
+lang=EN-US>DB</SPAN>任务时间（之所以放在<SPAN lang=EN-US>setter</SPAN>方法中，是因为需要在设置<SPAN 
+lang=EN-US>scheduleInfoManager</SPAN>后进行</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+style="BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+lang=EN-US>getCronExpressionFromDB</SPAN><SPAN lang=EN-US>()</SPAN>，否则，也可以<SPAN 
+style="COLOR: blue">①②</SPAN>逻辑把放在类的构造函数中）<SPAN lang=EN-US>.</SPAN> 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">注意<STRONG><SPAN 
+style="COLOR: green" lang=EN-US>InitializingCronTrigger</SPAN></STRONG>必须<SPAN 
+style="COLOR: fuchsia" lang=EN-US>extends </SPAN><SPAN lang=EN-US><STRONG><SPAN 
+style="COLOR: fuchsia">CronTriggerBean</SPAN></STRONG>.</SPAN> 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">public class 
+InitializingCronTrigger <SPAN style="COLOR: fuchsia">extends</SPAN><STRONG><SPAN 
+style="COLOR: fuchsia">CronTriggerBean</SPAN></STRONG> implements Serializable { 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; private ScheduleInfoManager 
+scheduleInfoManager; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp; // 
+</SPAN>设值注入，通过<SPAN lang=EN-US>setter</SPAN>方法传入被调用者的实例<SPAN 
+lang=EN-US>scheduleInfoManager</SPAN> </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; public void <STRONG><SPAN 
+style="COLOR: #003366">setScheduleInfoManager</SPAN></STRONG>(ScheduleInfoManager 
+scheduleInfoManager){ </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.scheduleInfoManager 
+= scheduleInfoManager; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 
+</SPAN>因为在<SPAN 
+style="BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+lang=EN-US>getCronExpressionFromDB</SPAN>使用到了<SPAN 
+lang=EN-US>scheduleInfoManager</SPAN>，所以 </SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 
+</SPAN>必须上一行代码设置<SPAN lang=EN-US>scheduleInfoManager</SPAN>后进行<SPAN 
+style="BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial" 
+lang=EN-US>getCronExpressionFromDB</SPAN> </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String 
+cronExpression = <SPAN 
+style="BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial">getCronExpressionFromDB</SPAN> 
+();&nbsp;&nbsp; // </SPAN><SPAN style="COLOR: blue">①</SPAN> </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 
+</SPAN>因为<SPAN style="COLOR: fuchsia" lang=EN-US>extends</SPAN><SPAN 
+lang=EN-US><STRONG><SPAN style="COLOR: fuchsia">CronTriggerBean 
+</SPAN></STRONG></SPAN>，此处调用父类方法初始化<STRONG><SPAN style="COLOR: red" 
+lang=EN-US>cronExpression</SPAN></STRONG> </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN 
+style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+<STRONG><SPAN style="COLOR: blue">setCronExpression</SPAN> 
+</STRONG>(cronExpression);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // </SPAN><SPAN 
+style="COLOR: blue">②</SPAN> </SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt; TEXT-INDENT: 21pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体" lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; } </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; private String <SPAN 
+style="BACKGROUND: silver; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial">getCronExpressionFromDB</SPAN>(){ 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String sql="from 
+ScheduleInfo scheduleInfo where 1=1 "; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sql=sql+" and 
+scheduleInfo.infoId = '"+"1" + "'"; </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; List scheduleList = 
+scheduleInfoManager.queryScheduleInListBySql(sql); </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ScheduleInfo 
+scheduleInfo = (ScheduleInfo)scheduleList.get(0); </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;String dbCronExpression 
+= scheduleInfo.getCronExpression(); </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return dbCronExpression; 
+</SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt; TEXT-INDENT: 21pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体" lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp;&nbsp; } </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt; TEXT-INDENT: 21pt" class=MsoNormal><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;&nbsp; …… </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">} </SPAN></SPAN></SPAN></P>
+<P style="MARGIN: 0cm 0cm 0pt" class=MsoNormal><SPAN style="FONT-FAMILY: 宋体" 
+lang=EN-US><SPAN style="FONT-SIZE: small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif">&nbsp;&nbsp;</SPAN></SPAN></SPAN>&nbsp;</P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+style="FONT-SIZE: small"><SPAN style="COLOR: purple">附表</SPAN> <SPAN 
+lang=EN-US>CronTrigger Expression(</SPAN> 来自<SPAN 
+lang=EN-US>http://quartz.sourceforge.net/javadoc/org/quartz/CronTrigger.html)</SPAN> 
+</SPAN></SPAN></SPAN></P>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal align=left>
+<TABLE style="WIDTH: 550px" class=MsoNormalTable border=0 cellSpacing=8 
+cellPadding=0>
+<TBODY>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><STRONG><SPAN lang=EN-US><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+style="FONT-SIZE: x-small">Expression</SPAN> </SPAN></SPAN></STRONG></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><STRONG><SPAN lang=EN-US><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+style="FONT-SIZE: x-small">Meaning</SPAN> </SPAN></SPAN></STRONG></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 0 12 * * 
+?"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 12pm 
+(noon) every day</SPAN> </SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 15 10 ? * 
+*"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 10:15am 
+every day</SPAN> </SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 15 10 * * 
+?"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 10:15am 
+every day</SPAN> </SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 15 10 * * ? 
+*"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 10:15am 
+every day</SPAN> </SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 15 10 * * ? 
+2005"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 10:15am 
+every day during the year 2005</SPAN> </SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 * 14 * * 
+?"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire every 
+minute starting at 2pm and ending at 2:59pm, every day</SPAN> 
+</SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 0/5 14 * * 
+?"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire every 5 
+minutes starting at 2pm and ending at 2:55pm, every day</SPAN> 
+</SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 0/5 14,18 * 
+* ?"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire every 5 
+minutes starting at 2pm and ending at 2:55pm, AND fire every 5 minutes starting 
+at 6pm and ending at 6:55pm, every day</SPAN> </SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 0-5 14 * * 
+?"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire every 
+minute starting at 2pm and ending at 2:05pm, every day</SPAN> 
+</SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 10,44 14 ? 3 
+WED"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 2:10pm 
+and at 2:44pm every Wednesday in the month of March.</SPAN> 
+</SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 15 10 ? * 
+MON-FRI"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 10:15am 
+every Monday, Tuesday, Wednesday, Thursday and Friday</SPAN> 
+</SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 15 10 15 * 
+?"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 10:15am 
+on the 15th day of every month</SPAN> </SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 15 10 L * 
+?"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 10:15am 
+on the last day of every month</SPAN> </SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 15 10 ? * 
+6L"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 10:15am 
+on the last Friday of every month</SPAN> </SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 15 10 ? * 
+6L"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>Fire at 10:15am 
+on the last Friday of every month</SPAN> </SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+style="FONT-SIZE: small"><SPAN style="FONT-FAMILY: times new roman,times"><SPAN 
+lang=EN-US>"0 15 10 ? * 6L 2002-2005"</SPAN> 
+</SPAN></SPAN></SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+style="FONT-SIZE: small"><SPAN style="FONT-FAMILY: times new roman,times"><SPAN 
+lang=EN-US>Fire at 10:15am on every last friday of every month during the years 
+2002, 2003, 2004 and 2005</SPAN> </SPAN></SPAN></SPAN></SPAN></P></TD></TR>
+<TR>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 105.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=141>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-SIZE: x-small"><SPAN 
+style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN lang=EN-US>"0 15 10 ? * 
+6#3"</SPAN> </SPAN></SPAN></P></TD>
+<TD 
+style="BORDER-TOP-COLOR: #d4d0c8; WIDTH: 288.75pt; BORDER-LEFT-COLOR: #d4d0c8; PADDING-BOTTOM: 0.75pt; BORDER-BOTTOM-COLOR: #d4d0c8; PADDING-TOP: 0.75pt; PADDING-LEFT: 0.75pt; BORDER-RIGHT-COLOR: #d4d0c8; PADDING-RIGHT: 0.75pt; BACKGROUND-COLOR: transparent" 
+width=385>
+<P style="TEXT-ALIGN: left; MARGIN: 0cm 0cm 0pt" class=MsoNormal 
+align=left><SPAN style="FONT-FAMILY: arial,helvetica,sans-serif"><SPAN 
+lang=EN-US>Fire at 10:15am on the third Friday of every 
+month</SPAN></SPAN></P></TD></TR></TBODY></TABLE></P><!--EndFragment--></DIV>
+</DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</DIV>
+</DIV>
+</DIV>
+</DIV>
+</DIV>
+</BODY>
+</HTML>

@@ -1,0 +1,839 @@
+﻿<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>通过sftp操作Linux服务器上的文件(java)</title>
+  </head>
+  <body><span style="FONT-SIZE: x-large; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"    >本
+      文为实现对linux服务器文件的操作。windows服务器不支持。<span>&nbsp;</span><br>
+    </span><span style="FONT-SIZE: 14px; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"    ></span><br
+      style="FONT-SIZE: 14px; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"    >
+    <span style="FONT-SIZE: x-large; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"    >引
+      入jar包：jsch-0.1.42.jar</span><span style="FONT-SIZE: 14px; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"    ><span>&nbsp;</span></span><br
+      style="FONT-SIZE: 14px; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"    >
+    <div class="dp-highlighter" style="'OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Consolas, "Courier New", monospace; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">
+      <div class="bar">
+        <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Java代码<span>&nbsp;</span>&nbsp;<a
+            title="收藏这段代码" ><img class="star" src="http://1197581932.iteye.com/images/icon_star.png"
+              alt="收藏代码" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px"></a></div>
+      </div>
+      <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >package</span><span
+              style="COLOR: black">&nbsp;com.csvreader.sftp;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;java.io.File;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;java.io.FileInputStream;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;java.io.FileOutputStream;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;java.util.List;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;java.util.Properties;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;java.util.Vector;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;org.junit.Test;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;com.jcraft.jsch.Channel;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;com.jcraft.jsch.ChannelSftp;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;com.jcraft.jsch.JSch;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;com.jcraft.jsch.JSchException;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;com.jcraft.jsch.Session;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</span><span
+              style="COLOR: black">&nbsp;com.jcraft.jsch.SftpException;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</span><span
+              style="COLOR: black">&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >class</span><span
+              style="COLOR: black">&nbsp;SftpUtil&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >/**</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;host</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;port</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;username</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;password</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@return</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@throws&nbsp;JSchException</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</span><span
+               
+  style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</span><span
+              style="COLOR: black">&nbsp;ChannelSftp&nbsp;connect(String&nbsp;host,&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >int</span><span
+              style="COLOR: black">&nbsp;port,&nbsp;String&nbsp;username,String&nbsp;password)&nbsp;</span><span class="keyword"
+              style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >throws</span><span style="COLOR: black">&nbsp;JSchException&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;1.
+              声明连接Sftp的通道</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ChannelSftp&nbsp;nChannelSftp&nbsp;=&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >null</span><span style="COLOR: black">;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;2.
+              实例化JSch</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;JSch&nbsp;nJSch&nbsp;=&nbsp;<span class="keyword"
+              style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >new</span><span style="COLOR: black">&nbsp;JSch();&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;3.
+              获取session</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Session&nbsp;nSShSession&nbsp;=&nbsp;nJSch.getSession(username,&nbsp;host,&nbsp;port);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<span class="string"
+              style="COLOR: blue">"Session创建成功"</span><span style="COLOR: black">);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;4.
+              设置密码</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nSShSession.setPassword(password);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;5.
+              实例化Properties</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Properties&nbsp;nSSHConfig&nbsp;=&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >new</span><span style="COLOR: black">&nbsp;Properties();&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;6.
+              设置配置信息</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nSSHConfig.put(<span class="string" style="COLOR: blue">"StrictHostKeyChecking"</span><span
+              style="COLOR: black">,&nbsp;</span><span class="string" style="COLOR: blue">"no"</span><span style="COLOR: black">);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;7.session
+              中设置配置信息</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nSShSession.setConfig(nSSHConfig);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;8.session
+              连接</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nSShSession.connect();&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<span class="string"
+              style="COLOR: blue">"Session已连接"</span><span style="COLOR: black">);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;9.
+              打开sftp通道</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Channel&nbsp;channel&nbsp;=&nbsp;nSShSession.openChannel(<span
+                
+  class="string" style="COLOR: blue">"sftp"</span><span style="COLOR: black">);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;10.
+              开始连接</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;channel.connect();&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nChannelSftp&nbsp;=&nbsp;(ChannelSftp)&nbsp;channel;&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<span class="string"
+              style="COLOR: blue">"连接到主机"</span><span style="COLOR: black">&nbsp;+&nbsp;host&nbsp;+&nbsp;</span><span
+              class="string" style="COLOR: blue">"."</span><span style="COLOR: black">);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >return</span><span
+              style="COLOR: black">&nbsp;nChannelSftp;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >/**</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;
+              文件重命名</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;directory</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;oldname</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;newname</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;sftp</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</span><span
+               
+  style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</span><span
+              style="COLOR: black">&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >void</span><span
+              style="COLOR: black">&nbsp;renameFile(String&nbsp;directory,&nbsp;String&nbsp;oldname,&nbsp;String&nbsp;newname,ChannelSftp&nbsp;sftp)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >try</span><span
+              style="COLOR: black">&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sftp.cd(directory);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sftp.rename(oldname,&nbsp;newname);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >catch</span><span
+              style="COLOR: black">&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >/**</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;
+              上传文件</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;directory</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;uploadFile</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;sftp</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</span><span
+               
+  style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</span><span
+              style="COLOR: black">&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >void</span><span
+              style="COLOR: black">&nbsp;upload(String&nbsp;directory,&nbsp;String&nbsp;uploadFile,&nbsp;ChannelSftp&nbsp;sftp)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >try</span><span
+              style="COLOR: black">&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sftp.cd(directory);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;File&nbsp;file&nbsp;=&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >new</span><span style="COLOR: black">&nbsp;File(uploadFile);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sftp.put(<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >new</span><span style="COLOR: black">&nbsp;FileInputStream(file),&nbsp;file.getName());&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >catch</span><span
+              style="COLOR: black">&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >/**</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;
+              下载文件</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;directory</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;downloadFile</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;saveFile</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;sftp</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</span><span
+               
+  style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</span><span
+              style="COLOR: black">&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >void</span><span
+              style="COLOR: black">&nbsp;download(String&nbsp;directory,&nbsp;String&nbsp;downloadFile,String&nbsp;saveFile,&nbsp;ChannelSftp&nbsp;sftp)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >try</span><span
+              style="COLOR: black">&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sftp.cd(directory);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;File&nbsp;file&nbsp;=&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >new</span><span style="COLOR: black">&nbsp;File(saveFile);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sftp.get(downloadFile,&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >new</span><span style="COLOR: black">&nbsp;FileOutputStream(file));&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >catch</span><span
+              style="COLOR: black">&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >/**</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;
+              删除文件</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;directory</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;deleteFile</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;sftp</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</span><span
+               
+  style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</span><span
+              style="COLOR: black">&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >void</span><span
+              style="COLOR: black">&nbsp;delete(String&nbsp;directory,&nbsp;String&nbsp;deleteFile,&nbsp;ChannelSftp&nbsp;sftp)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >try</span><span
+              style="COLOR: black">&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sftp.cd(directory);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sftp.rm(deleteFile);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<span
+                
+  class="string" style="COLOR: blue">"删除成功"</span><span style="COLOR: black">);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >catch</span><span
+              style="COLOR: black">&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<span
+                
+  class="string" style="COLOR: blue">"删除失败"</span><span style="COLOR: black">);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >/**</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;
+              列出列表下的文件</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;directory</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;sftp</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@return</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@throws&nbsp;SftpException</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</span><span
+               
+  style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</span><span
+              style="COLOR: black">&nbsp;Vector&nbsp;listFiles(String&nbsp;directory,&nbsp;ChannelSftp&nbsp;sftp)</span><span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >throws</span><span style="COLOR: black">&nbsp;SftpException&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >return</span><span
+              style="COLOR: black">&nbsp;sftp.ls(directory);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >/**</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;
+              下载文件夹下面的所有文件</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;viDirectory&nbsp;
+              文件夹</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;viHost&nbsp;
+              主机名</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;viPort&nbsp;
+              端口号</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;viUserName&nbsp;
+              用户名</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;viPassWord&nbsp;
+              用户密码</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;viSaveDir&nbsp;
+              保存路径</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@return</span>&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black"><span class="comment" style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</span><span
+               
+  style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="annotation" style="COLOR: rgb(100,100,100)"  >@Test</span><span
+               
+  style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</span><span
+              style="COLOR: black">&nbsp;List&lt;String&gt;&nbsp;downloadDirFile(String&nbsp;viDirectory,&nbsp;String&nbsp;viHost,</span><span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >int</span><span style="COLOR: black">&nbsp;viPort,&nbsp;String&nbsp;viUserName,&nbsp;String&nbsp;viPassWord,&nbsp;String&nbsp;viSaveDir)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ChannelSftp&nbsp;nChannelSftp&nbsp;=&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >null</span><span style="COLOR: black">;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;List&lt;String&gt;&nbsp;nFileNameList&nbsp;=&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >null</span><span style="COLOR: black">;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >try</span><span
+              style="COLOR: black">&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"
+                         
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;1.实例化nSftpUtil
+              工具类</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SftpUtil&nbsp;nSftpUtil&nbsp;=&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >new</span><span style="COLOR: black">&nbsp;SftpUtil();&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"
+                         
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;2.建立Sftp通道</span><span
+              style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nChannelSftp&nbsp;=&nbsp;nSftpUtil.connect(viHost,&nbsp;<span
+                  
+  class="number" style="COLOR: rgb(192,0,0)">22</span><span style="COLOR: black">,&nbsp;viUserName,&nbsp;viPassWord);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"
+                         
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;3.获取目录下面所有文件</span><span
+              style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Vector&nbsp;nVector&nbsp;=&nbsp;nChannelSftp.ls(viDirectory);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"
+                         
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;4.循环遍历文件</span><span
+              style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword"
+              style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >for</span><span style="COLOR: black">&nbsp;(</span><span
+              class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >int</span><span style="COLOR: black">&nbsp;i&nbsp;=&nbsp;</span><span
+              class="number" style="COLOR: rgb(192,0,0)"  >0</span><span style="COLOR: black">;&nbsp;i&nbsp;&lt;&nbsp;nVector.size();&nbsp;i++)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                          
+  class="comment" 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;5.
+              进入服务器文件夹</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nChannelSftp.cd(viDirectory);&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                          
+  class="comment" 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;6.
+              实例化文件对象</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;nFileName&nbsp;=&nbsp;nVector.get(i).toString().substring(<span
+                  
+  class="number" style="COLOR: rgb(192,0,0)">56</span><span style="COLOR: black">,&nbsp;nVector.get(i).toString().length());&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >if</span><span style="COLOR: black">&nbsp;(!nFileName.contains(</span><span
+              class="string" style="COLOR: blue">"csv"</span><span style="COLOR: black">))&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >continue</span><span style="COLOR: black">;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;File&nbsp;nFile&nbsp;=&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >new</span><span style="COLOR: black">&nbsp;File(viSaveDir&nbsp;+&nbsp;File.separator&nbsp;+&nbsp;nFileName);&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+                          
+  class="comment" 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px" 
+ >//&nbsp;7.
+              下载文件</span><span style="COLOR: black">&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nChannelSftp.get(nFileName,&nbsp;<span
+                    
+  class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+ >new</span><span style="COLOR: black">&nbsp;FileOutputStream(nFile));&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >catch</span><span
+              style="COLOR: black">&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >finally</span><span
+              style="COLOR: black">&nbsp;{&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nChannelSftp.disconnect();&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >return</span><span
+              style="COLOR: black">&nbsp;nFileNameList;&nbsp;&nbsp;</span></span>
+        <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+ ><span
+            style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp; <br>
+          </span></li>
+      </ol>
+    </div>
+  </body>
+</html>

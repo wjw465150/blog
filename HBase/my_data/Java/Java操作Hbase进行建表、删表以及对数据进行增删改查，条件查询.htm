@@ -1,0 +1,1579 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Java操作Hbase进行建表、删表以及对数据进行增删改查，条件查询</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">1、搭建环境</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+新建JAVA项目，添加的包有:</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp; 
+有关Hadoop的hadoop-core-0.20.204.0.jar</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp; 
+有关Hbase的hbase-0.90.4.jar、hbase-0.90.4-tests.jar以及Hbase资源包中lib目录下的所有jar包</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">2、主要程序</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<DIV class=dp-highlighter 
+style="OVERFLOW: auto; WORD-WRAP: break-word; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Java代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EMBED 
+type=application/x-shockwave-flash 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=15 width=14 
+src=http://javacrazyer.iteye.com/javascripts/syntaxhighlighter/clipboard_new.swf 
+allowscriptaccess="always" quality="high" 
+flashvars="clipboard=package%20com.wujintao.hbase.test%3B%0A%0Aimport%20java.io.IOException%3B%0Aimport%20java.util.ArrayList%3B%0Aimport%20java.util.List%3B%0A%0Aimport%20org.apache.hadoop.conf.Configuration%3B%0Aimport%20org.apache.hadoop.hbase.HBaseConfiguration%3B%0Aimport%20org.apache.hadoop.hbase.HColumnDescriptor%3B%0Aimport%20org.apache.hadoop.hbase.HTableDescriptor%3B%0Aimport%20org.apache.hadoop.hbase.KeyValue%3B%0Aimport%20org.apache.hadoop.hbase.MasterNotRunningException%3B%0Aimport%20org.apache.hadoop.hbase.ZooKeeperConnectionException%3B%0Aimport%20org.apache.hadoop.hbase.client.Delete%3B%0Aimport%20org.apache.hadoop.hbase.client.Get%3B%0Aimport%20org.apache.hadoop.hbase.client.HBaseAdmin%3B%0Aimport%20org.apache.hadoop.hbase.client.HTable%3B%0Aimport%20org.apache.hadoop.hbase.client.HTablePool%3B%0Aimport%20org.apache.hadoop.hbase.client.Put%3B%0Aimport%20org.apache.hadoop.hbase.client.Result%3B%0Aimport%20org.apache.hadoop.hbase.client.ResultScanner%3B%0Aimport%20org.apache.hadoop.hbase.client.Scan%3B%0Aimport%20org.apache.hadoop.hbase.filter.Filter%3B%0Aimport%20org.apache.hadoop.hbase.filter.FilterList%3B%0Aimport%20org.apache.hadoop.hbase.filter.SingleColumnValueFilter%3B%0Aimport%20org.apache.hadoop.hbase.filter.CompareFilter.CompareOp%3B%0Aimport%20org.apache.hadoop.hbase.util.Bytes%3B%0A%0Apublic%20class%20JinTaoTest%20%7B%0A%0A%09public%20static%20Configuration%20configuration%3B%0A%09static%20%7B%0A%09%09configuration%20%3D%20HBaseConfiguration.create()%3B%0A%09%09configuration.set(%22hbase.zookeeper.property.clientPort%22%2C%20%222181%22)%3B%0A%09%09configuration.set(%22hbase.zookeeper.quorum%22%2C%20%22192.168.1.100%22)%3B%0A%09%09configuration.set(%22hbase.master%22%2C%20%22192.168.1.100%3A600000%22)%3B%0A%09%7D%0A%0A%09public%20static%20void%20main(String%5B%5D%20args)%20%7B%0A%09%09%2F%2F%20createTable(%22wujintao%22)%3B%0A%09%09%2F%2F%20insertData(%22wujintao%22)%3B%0A%09%09%2F%2F%20QueryAll(%22wujintao%22)%3B%0A%09%09%2F%2F%20QueryByCondition1(%22wujintao%22)%3B%0A%09%09%2F%2F%20QueryByCondition2(%22wujintao%22)%3B%0A%09%09%2F%2FQueryByCondition3(%22wujintao%22)%3B%0A%09%09%2F%2FdeleteRow(%22wujintao%22%2C%22abcdef%22)%3B%0A%09%09deleteByCondition(%22wujintao%22%2C%22abcdef%22)%3B%0A%09%7D%0A%0A%09%2F**%0A%09%20*%20%E5%88%9B%E5%BB%BA%E8%A1%A8%0A%09%20*%20%40param%20tableName%0A%09%20*%2F%0A%09public%20static%20void%20createTable(String%20tableName)%20%7B%0A%09%09System.out.println(%22start%20create%20table%20......%22)%3B%0A%09%09try%20%7B%0A%09%09%09HBaseAdmin%20hBaseAdmin%20%3D%20new%20HBaseAdmin(configuration)%3B%0A%09%09%09if%20(hBaseAdmin.tableExists(tableName))%20%7B%2F%2F%20%E5%A6%82%E6%9E%9C%E5%AD%98%E5%9C%A8%E8%A6%81%E5%88%9B%E5%BB%BA%E7%9A%84%E8%A1%A8%EF%BC%8C%E9%82%A3%E4%B9%88%E5%85%88%E5%88%A0%E9%99%A4%EF%BC%8C%E5%86%8D%E5%88%9B%E5%BB%BA%0A%09%09%09%09hBaseAdmin.disableTable(tableName)%3B%0A%09%09%09%09hBaseAdmin.deleteTable(tableName)%3B%0A%09%09%09%09System.out.println(tableName%20%2B%20%22%20is%20exist%2Cdetele....%22)%3B%0A%09%09%09%7D%0A%09%09%09HTableDescriptor%20tableDescriptor%20%3D%20new%20HTableDescriptor(tableName)%3B%0A%09%09%09tableDescriptor.addFamily(new%20HColumnDescriptor(%22column1%22))%3B%0A%09%09%09tableDescriptor.addFamily(new%20HColumnDescriptor(%22column2%22))%3B%0A%09%09%09tableDescriptor.addFamily(new%20HColumnDescriptor(%22column3%22))%3B%0A%09%09%09hBaseAdmin.createTable(tableDescriptor)%3B%0A%09%09%7D%20catch%20(MasterNotRunningException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%20catch%20(ZooKeeperConnectionException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%20catch%20(IOException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%0A%09%09System.out.println(%22end%20create%20table%20......%22)%3B%0A%09%7D%0A%0A%09%2F**%0A%09%20*%20%E6%8F%92%E5%85%A5%E6%95%B0%E6%8D%AE%0A%09%20*%20%40param%20tableName%0A%09%20*%2F%0A%09public%20static%20void%20insertData(String%20tableName)%20%7B%0A%09%09System.out.println(%22start%20insert%20data%20......%22)%3B%0A%09%09HTablePool%20pool%20%3D%20new%20HTablePool(configuration%2C%201000)%3B%0A%09%09HTable%20table%20%3D%20(HTable)%20pool.getTable(tableName)%3B%0A%09%09Put%20put%20%3D%20new%20Put(%22112233bbbcccc%22.getBytes())%3B%2F%2F%20%E4%B8%80%E4%B8%AAPUT%E4%BB%A3%E8%A1%A8%E4%B8%80%E8%A1%8C%E6%95%B0%E6%8D%AE%EF%BC%8C%E5%86%8DNEW%E4%B8%80%E4%B8%AAPUT%E8%A1%A8%E7%A4%BA%E7%AC%AC%E4%BA%8C%E8%A1%8C%E6%95%B0%E6%8D%AE%2C%E6%AF%8F%E8%A1%8C%E4%B8%80%E4%B8%AA%E5%94%AF%E4%B8%80%E7%9A%84ROWKEY%EF%BC%8C%E6%AD%A4%E5%A4%84rowkey%E4%B8%BAput%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95%E4%B8%AD%E4%BC%A0%E5%85%A5%E7%9A%84%E5%80%BC%0A%09%09put.add(%22column1%22.getBytes()%2C%20null%2C%20%22aaa%22.getBytes())%3B%2F%2F%20%E6%9C%AC%E8%A1%8C%E6%95%B0%E6%8D%AE%E7%9A%84%E7%AC%AC%E4%B8%80%E5%88%97%0A%09%09put.add(%22column2%22.getBytes()%2C%20null%2C%20%22bbb%22.getBytes())%3B%2F%2F%20%E6%9C%AC%E8%A1%8C%E6%95%B0%E6%8D%AE%E7%9A%84%E7%AC%AC%E4%B8%89%E5%88%97%0A%09%09put.add(%22column3%22.getBytes()%2C%20null%2C%20%22ccc%22.getBytes())%3B%2F%2F%20%E6%9C%AC%E8%A1%8C%E6%95%B0%E6%8D%AE%E7%9A%84%E7%AC%AC%E4%B8%89%E5%88%97%0A%09%09try%20%7B%0A%09%09%09table.put(put)%3B%0A%09%09%7D%20catch%20(IOException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%0A%09%09System.out.println(%22end%20insert%20data%20......%22)%3B%0A%09%7D%0A%0A%09%2F**%0A%09%20*%20%E5%88%A0%E9%99%A4%E4%B8%80%E5%BC%A0%E8%A1%A8%0A%09%20*%20%40param%20tableName%0A%09%20*%2F%0A%09public%20static%20void%20dropTable(String%20tableName)%20%7B%0A%09%09try%20%7B%0A%09%09%09HBaseAdmin%20admin%20%3D%20new%20HBaseAdmin(configuration)%3B%0A%09%09%09admin.disableTable(tableName)%3B%0A%09%09%09admin.deleteTable(tableName)%3B%0A%09%09%7D%20catch%20(MasterNotRunningException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%20catch%20(ZooKeeperConnectionException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%20catch%20(IOException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%0A%0A%09%7D%0A%09%2F**%0A%09%20*%20%E6%A0%B9%E6%8D%AE%20rowkey%E5%88%A0%E9%99%A4%E4%B8%80%E6%9D%A1%E8%AE%B0%E5%BD%95%0A%09%20*%20%40param%20tablename%0A%09%20*%20%40param%20rowkey%0A%09%20*%2F%0A%09%20public%20static%20void%20deleteRow(String%20tablename%2C%20String%20rowkey)%20%20%7B%0A%09%09try%20%7B%0A%09%09%09HTable%20table%20%3D%20new%20HTable(configuration%2C%20tablename)%3B%0A%09%09%09List%20list%20%3D%20new%20ArrayList()%3B%0A%09%09%09Delete%20d1%20%3D%20new%20Delete(rowkey.getBytes())%3B%0A%09%09%09list.add(d1)%3B%0A%09%09%09%0A%09%09%09table.delete(list)%3B%0A%09%09%09System.out.println(%22%E5%88%A0%E9%99%A4%E8%A1%8C%E6%88%90%E5%8A%9F!%22)%3B%0A%09%09%09%0A%09%09%7D%20catch%20(IOException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%0A%09%09%0A%0A%09%7D%0A%0A%09%20%2F**%0A%09%20%20*%20%E7%BB%84%E5%90%88%E6%9D%A1%E4%BB%B6%E5%88%A0%E9%99%A4%0A%09%20%20*%20%40param%20tablename%0A%09%20%20*%20%40param%20rowkey%0A%09%20%20*%2F%0A%09%20public%20static%20void%20deleteByCondition(String%20tablename%2C%20String%20rowkey)%20%20%7B%0A%09%09%09%2F%2F%E7%9B%AE%E5%89%8D%E8%BF%98%E6%B2%A1%E6%9C%89%E5%8F%91%E7%8E%B0%E6%9C%89%E6%95%88%E7%9A%84API%E8%83%BD%E5%A4%9F%E5%AE%9E%E7%8E%B0%20%E6%A0%B9%E6%8D%AE%E9%9D%9Erowkey%E7%9A%84%E6%9D%A1%E4%BB%B6%E5%88%A0%E9%99%A4%20%E8%BF%99%E4%B8%AA%E5%8A%9F%E8%83%BD%E8%83%BD%EF%BC%8C%E8%BF%98%E6%9C%89%E6%B8%85%E7%A9%BA%E8%A1%A8%E5%85%A8%E9%83%A8%E6%95%B0%E6%8D%AE%E7%9A%84API%E6%93%8D%E4%BD%9C%0A%0A%09%7D%0A%0A%0A%09%2F**%0A%09%20*%20%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E6%95%B0%E6%8D%AE%0A%09%20*%20%40param%20tableName%0A%09%20*%2F%0A%09public%20static%20void%20QueryAll(String%20tableName)%20%7B%0A%09%09HTablePool%20pool%20%3D%20new%20HTablePool(configuration%2C%201000)%3B%0A%09%09HTable%20table%20%3D%20(HTable)%20pool.getTable(tableName)%3B%0A%09%09try%20%7B%0A%09%09%09ResultScanner%20rs%20%3D%20table.getScanner(new%20Scan())%3B%0A%09%09%09for%20(Result%20r%20%3A%20rs)%20%7B%0A%09%09%09%09System.out.println(%22%E8%8E%B7%E5%BE%97%E5%88%B0rowkey%3A%22%20%2B%20new%20String(r.getRow()))%3B%0A%09%09%09%09for%20(KeyValue%20keyValue%20%3A%20r.raw())%20%7B%0A%09%09%09%09%09System.out.println(%22%E5%88%97%EF%BC%9A%22%20%2B%20new%20String(keyValue.getFamily())%0A%09%09%09%09%09%09%09%2B%20%22%3D%3D%3D%3D%E5%80%BC%3A%22%20%2B%20new%20String(keyValue.getValue()))%3B%0A%09%09%09%09%7D%0A%09%09%09%7D%0A%09%09%7D%20catch%20(IOException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%0A%09%7D%0A%0A%09%2F**%0A%09%20*%20%E5%8D%95%E6%9D%A1%E4%BB%B6%E6%9F%A5%E8%AF%A2%2C%E6%A0%B9%E6%8D%AErowkey%E6%9F%A5%E8%AF%A2%E5%94%AF%E4%B8%80%E4%B8%80%E6%9D%A1%E8%AE%B0%E5%BD%95%0A%09%20*%20%40param%20tableName%0A%09%20*%2F%0A%09public%20static%20void%20QueryByCondition1(String%20tableName)%20%7B%0A%0A%09%09HTablePool%20pool%20%3D%20new%20HTablePool(configuration%2C%201000)%3B%0A%09%09HTable%20table%20%3D%20(HTable)%20pool.getTable(tableName)%3B%0A%09%09try%20%7B%0A%09%09%09Get%20scan%20%3D%20new%20Get(%22abcdef%22.getBytes())%3B%2F%2F%20%E6%A0%B9%E6%8D%AErowkey%E6%9F%A5%E8%AF%A2%0A%09%09%09Result%20r%20%3D%20table.get(scan)%3B%0A%09%09%09System.out.println(%22%E8%8E%B7%E5%BE%97%E5%88%B0rowkey%3A%22%20%2B%20new%20String(r.getRow()))%3B%0A%09%09%09for%20(KeyValue%20keyValue%20%3A%20r.raw())%20%7B%0A%09%09%09%09System.out.println(%22%E5%88%97%EF%BC%9A%22%20%2B%20new%20String(keyValue.getFamily())%0A%09%09%09%09%09%09%2B%20%22%3D%3D%3D%3D%E5%80%BC%3A%22%20%2B%20new%20String(keyValue.getValue()))%3B%0A%09%09%09%7D%0A%09%09%7D%20catch%20(IOException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%0A%09%7D%0A%0A%09%2F**%0A%09%20*%20%E5%8D%95%E6%9D%A1%E4%BB%B6%E6%8C%89%E6%9F%A5%E8%AF%A2%EF%BC%8C%E6%9F%A5%E8%AF%A2%E5%A4%9A%E6%9D%A1%E8%AE%B0%E5%BD%95%0A%09%20*%20%40param%20tableName%0A%09%20*%2F%0A%09public%20static%20void%20QueryByCondition2(String%20tableName)%20%7B%0A%0A%09%09try%20%7B%0A%09%09%09HTablePool%20pool%20%3D%20new%20HTablePool(configuration%2C%201000)%3B%0A%09%09%09HTable%20table%20%3D%20(HTable)%20pool.getTable(tableName)%3B%0A%09%09%09Filter%20filter%20%3D%20new%20SingleColumnValueFilter(Bytes%0A%09%09%09%09%09.toBytes(%22column1%22)%2C%20null%2C%20CompareOp.EQUAL%2C%20Bytes%0A%09%09%09%09%09.toBytes(%22aaa%22))%3B%20%2F%2F%20%E5%BD%93%E5%88%97column1%E7%9A%84%E5%80%BC%E4%B8%BAaaa%E6%97%B6%E8%BF%9B%E8%A1%8C%E6%9F%A5%E8%AF%A2%0A%09%09%09Scan%20s%20%3D%20new%20Scan()%3B%0A%09%09%09s.setFilter(filter)%3B%0A%09%09%09ResultScanner%20rs%20%3D%20table.getScanner(s)%3B%0A%09%09%09for%20(Result%20r%20%3A%20rs)%20%7B%0A%09%09%09%09System.out.println(%22%E8%8E%B7%E5%BE%97%E5%88%B0rowkey%3A%22%20%2B%20new%20String(r.getRow()))%3B%0A%09%09%09%09for%20(KeyValue%20keyValue%20%3A%20r.raw())%20%7B%0A%09%09%09%09%09System.out.println(%22%E5%88%97%EF%BC%9A%22%20%2B%20new%20String(keyValue.getFamily())%0A%09%09%09%09%09%09%09%2B%20%22%3D%3D%3D%3D%E5%80%BC%3A%22%20%2B%20new%20String(keyValue.getValue()))%3B%0A%09%09%09%09%7D%0A%09%09%09%7D%0A%09%09%7D%20catch%20(Exception%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%0A%0A%09%7D%0A%0A%09%2F**%0A%09%20*%20%E7%BB%84%E5%90%88%E6%9D%A1%E4%BB%B6%E6%9F%A5%E8%AF%A2%0A%09%20*%20%40param%20tableName%0A%09%20*%2F%0A%09public%20static%20void%20QueryByCondition3(String%20tableName)%20%7B%0A%0A%09%09try%20%7B%0A%09%09%09HTablePool%20pool%20%3D%20new%20HTablePool(configuration%2C%201000)%3B%0A%09%09%09HTable%20table%20%3D%20(HTable)%20pool.getTable(tableName)%3B%0A%0A%09%09%09List%3CFilter%3E%20filters%20%3D%20new%20ArrayList%3CFilter%3E()%3B%0A%0A%09%09%09Filter%20filter1%20%3D%20new%20SingleColumnValueFilter(Bytes%0A%09%09%09%09%09.toBytes(%22column1%22)%2C%20null%2C%20CompareOp.EQUAL%2C%20Bytes%0A%09%09%09%09%09.toBytes(%22aaa%22))%3B%0A%09%09%09filters.add(filter1)%3B%0A%0A%09%09%09Filter%20filter2%20%3D%20new%20SingleColumnValueFilter(Bytes%0A%09%09%09%09%09.toBytes(%22column2%22)%2C%20null%2C%20CompareOp.EQUAL%2C%20Bytes%0A%09%09%09%09%09.toBytes(%22bbb%22))%3B%0A%09%09%09filters.add(filter2)%3B%0A%0A%09%09%09Filter%20filter3%20%3D%20new%20SingleColumnValueFilter(Bytes%0A%09%09%09%09%09.toBytes(%22column3%22)%2C%20null%2C%20CompareOp.EQUAL%2C%20Bytes%0A%09%09%09%09%09.toBytes(%22ccc%22))%3B%0A%09%09%09filters.add(filter3)%3B%0A%0A%09%09%09FilterList%20filterList1%20%3D%20new%20FilterList(filters)%3B%0A%0A%09%09%09Scan%20scan%20%3D%20new%20Scan()%3B%0A%09%09%09scan.setFilter(filterList1)%3B%0A%09%09%09ResultScanner%20rs%20%3D%20table.getScanner(scan)%3B%0A%09%09%09for%20(Result%20r%20%3A%20rs)%20%7B%0A%09%09%09%09System.out.println(%22%E8%8E%B7%E5%BE%97%E5%88%B0rowkey%3A%22%20%2B%20new%20String(r.getRow()))%3B%0A%09%09%09%09for%20(KeyValue%20keyValue%20%3A%20r.raw())%20%7B%0A%09%09%09%09%09System.out.println(%22%E5%88%97%EF%BC%9A%22%20%2B%20new%20String(keyValue.getFamily())%0A%09%09%09%09%09%09%09%2B%20%22%3D%3D%3D%3D%E5%80%BC%3A%22%20%2B%20new%20String(keyValue.getValue()))%3B%0A%09%09%09%09%7D%0A%09%09%09%7D%0A%09%09%09rs.close()%3B%0A%0A%09%09%7D%20catch%20(Exception%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7D%0A%0A%09%7D%0A%0A%7D" 
+wmode="transparent">&nbsp;<A 
+onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 
+src="http://javacrazyer.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">package</SPAN><SPAN 
+  style="COLOR: black">&nbsp;com.wujintao.hbase.test;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.io.IOException;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.util.ArrayList;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.util.List;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.conf.Configuration;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.HBaseConfiguration;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.HColumnDescriptor;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.HTableDescriptor;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.KeyValue;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.MasterNotRunningException;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.ZooKeeperConnectionException;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.client.Delete;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.client.Get;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.client.HBaseAdmin;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.client.HTable;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.client.HTablePool;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.client.Put;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.client.Result;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.client.ResultScanner;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.client.Scan;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.filter.Filter;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.filter.FilterList;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.filter.SingleColumnValueFilter;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.hbase.util.Bytes;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">&nbsp;JinTaoTest&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Configuration&nbsp;configuration;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;configuration&nbsp;=&nbsp;HBaseConfiguration.create();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;configuration.set(<SPAN 
+  class=string 
+  style="COLOR: blue">"hbase.zookeeper.property.clientPort"</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">"2181"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;configuration.set(<SPAN 
+  class=string style="COLOR: blue">"hbase.zookeeper.quorum"</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">"192.168.1.100"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;configuration.set(<SPAN 
+  class=string style="COLOR: blue">"hbase.master"</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">"192.168.1.100:600000"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;main(String[]&nbsp;args)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;createTable("wujintao");</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;insertData("wujintao");</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;QueryAll("wujintao");</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;QueryByCondition1("wujintao");</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;QueryByCondition2("wujintao");</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//QueryByCondition3("wujintao");</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//deleteRow("wujintao","abcdef");</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;deleteByCondition(<SPAN 
+  class=string style="COLOR: blue">"wujintao"</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">"abcdef"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/**</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;创建表</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;tableName</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;createTable(String&nbsp;tableName)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string 
+  style="COLOR: blue">"start&nbsp;create&nbsp;table&nbsp;......"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">try</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HBaseAdmin&nbsp;hBaseAdmin&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HBaseAdmin(configuration);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">if</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(hBaseAdmin.tableExists(tableName))&nbsp;{</SPAN><SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;如果存在要创建的表，那么先删除，再创建</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hBaseAdmin.disableTable(tableName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hBaseAdmin.deleteTable(tableName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(tableName&nbsp;+&nbsp;<SPAN 
+  class=string style="COLOR: blue">"&nbsp;is&nbsp;exist,detele...."</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTableDescriptor&nbsp;tableDescriptor&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HTableDescriptor(tableName);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tableDescriptor.addFamily(<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HColumnDescriptor(</SPAN><SPAN class=string 
+  style="COLOR: blue">"column1"</SPAN><SPAN 
+  style="COLOR: black">));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tableDescriptor.addFamily(<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HColumnDescriptor(</SPAN><SPAN class=string 
+  style="COLOR: blue">"column2"</SPAN><SPAN 
+  style="COLOR: black">));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tableDescriptor.addFamily(<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HColumnDescriptor(</SPAN><SPAN class=string 
+  style="COLOR: blue">"column3"</SPAN><SPAN 
+  style="COLOR: black">));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hBaseAdmin.createTable(tableDescriptor);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(MasterNotRunningException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(ZooKeeperConnectionException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(IOException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string 
+  style="COLOR: blue">"end&nbsp;create&nbsp;table&nbsp;......"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/**</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;插入数据</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;tableName</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;insertData(String&nbsp;tableName)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string 
+  style="COLOR: blue">"start&nbsp;insert&nbsp;data&nbsp;......"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTablePool&nbsp;pool&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HTablePool(configuration,&nbsp;</SPAN><SPAN 
+  class=number style="COLOR: rgb(192,0,0)">1000</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;(HTable)&nbsp;pool.getTable(tableName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Put&nbsp;put&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Put(</SPAN><SPAN class=string 
+  style="COLOR: blue">"112233bbbcccc"</SPAN><SPAN 
+  style="COLOR: black">.getBytes());</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;一个PUT代表一行数据，再NEW一个PUT表示第二行数据,每行一个唯一的ROWKEY，此处rowkey为put构造方法中传入的值</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(<SPAN 
+  class=string style="COLOR: blue">"column1"</SPAN><SPAN 
+  style="COLOR: black">.getBytes(),&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">null</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">"aaa"</SPAN><SPAN 
+  style="COLOR: black">.getBytes());</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;本行数据的第一列</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(<SPAN 
+  class=string style="COLOR: blue">"column2"</SPAN><SPAN 
+  style="COLOR: black">.getBytes(),&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">null</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">"bbb"</SPAN><SPAN 
+  style="COLOR: black">.getBytes());</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;本行数据的第三列</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(<SPAN 
+  class=string style="COLOR: blue">"column3"</SPAN><SPAN 
+  style="COLOR: black">.getBytes(),&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">null</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">"ccc"</SPAN><SPAN 
+  style="COLOR: black">.getBytes());</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;本行数据的第三列</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">try</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.put(put);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(IOException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string 
+  style="COLOR: blue">"end&nbsp;insert&nbsp;data&nbsp;......"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/**</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;删除一张表</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;tableName</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;dropTable(String&nbsp;tableName)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">try</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HBaseAdmin&nbsp;admin&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HBaseAdmin(configuration);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.disableTable(tableName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.deleteTable(tableName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(MasterNotRunningException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(ZooKeeperConnectionException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(IOException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/**</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;根据&nbsp;rowkey删除一条记录</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;tablename</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;rowkey</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;deleteRow(String&nbsp;tablename,&nbsp;String&nbsp;rowkey)&nbsp;&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">try</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HTable(configuration,&nbsp;tablename);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;List&nbsp;list&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;ArrayList();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Delete&nbsp;d1&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Delete(rowkey.getBytes());&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;list.add(d1);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.delete(list);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"删除行成功!"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(IOException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/**</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;组合条件删除</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;tablename</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;rowkey</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;deleteByCondition(String&nbsp;tablename,&nbsp;String&nbsp;rowkey)&nbsp;&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//目前还没有发现有效的API能够实现&nbsp;根据非rowkey的条件删除&nbsp;这个功能能，还有清空表全部数据的API操作</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/**</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;查询所有数据</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;tableName</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;QueryAll(String&nbsp;tableName)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTablePool&nbsp;pool&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HTablePool(configuration,&nbsp;</SPAN><SPAN 
+  class=number style="COLOR: rgb(192,0,0)">1000</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;(HTable)&nbsp;pool.getTable(tableName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">try</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Scan());&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"获得到rowkey:"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(r.getRow()));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(KeyValue&nbsp;keyValue&nbsp;:&nbsp;r.raw())&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"列："</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(keyValue.getFamily())&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+  class=string style="COLOR: blue">"====值:"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(keyValue.getValue()));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(IOException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/**</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;单条件查询,根据rowkey查询唯一一条记录</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;tableName</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;QueryByCondition1(String&nbsp;tableName)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTablePool&nbsp;pool&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HTablePool(configuration,&nbsp;</SPAN><SPAN 
+  class=number style="COLOR: rgb(192,0,0)">1000</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;(HTable)&nbsp;pool.getTable(tableName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">try</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Get&nbsp;scan&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Get(</SPAN><SPAN class=string 
+  style="COLOR: blue">"abcdef"</SPAN><SPAN 
+  style="COLOR: black">.getBytes());</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;根据rowkey查询</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Result&nbsp;r&nbsp;=&nbsp;table.get(scan);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"获得到rowkey:"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(r.getRow()));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(KeyValue&nbsp;keyValue&nbsp;:&nbsp;r.raw())&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"列："</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(keyValue.getFamily())&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+  class=string style="COLOR: blue">"====值:"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(keyValue.getValue()));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(IOException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/**</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;单条件按查询，查询多条记录</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;tableName</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;QueryByCondition2(String&nbsp;tableName)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">try</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTablePool&nbsp;pool&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HTablePool(configuration,&nbsp;</SPAN><SPAN 
+  class=number style="COLOR: rgb(192,0,0)">1000</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;(HTable)&nbsp;pool.getTable(tableName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Filter&nbsp;filter&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;SingleColumnValueFilter(Bytes&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.toBytes(<SPAN 
+  class=string style="COLOR: blue">"column1"</SPAN><SPAN 
+  style="COLOR: black">),&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">null</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;CompareOp.EQUAL,&nbsp;Bytes&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.toBytes(<SPAN 
+  class=string style="COLOR: blue">"aaa"</SPAN><SPAN 
+  style="COLOR: black">));&nbsp;</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;当列column1的值为aaa时进行查询</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;s&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Scan();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s.setFilter(filter);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(s);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"获得到rowkey:"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(r.getRow()));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(KeyValue&nbsp;keyValue&nbsp;:&nbsp;r.raw())&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"列："</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(keyValue.getFamily())&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+  class=string style="COLOR: blue">"====值:"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(keyValue.getValue()));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/**</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;组合条件查询</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;tableName</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;QueryByCondition3(String&nbsp;tableName)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">try</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTablePool&nbsp;pool&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HTablePool(configuration,&nbsp;</SPAN><SPAN 
+  class=number style="COLOR: rgb(192,0,0)">1000</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;(HTable)&nbsp;pool.getTable(tableName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;List&lt;Filter&gt;&nbsp;filters&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;ArrayList&lt;Filter&gt;();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Filter&nbsp;filter1&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;SingleColumnValueFilter(Bytes&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.toBytes(<SPAN 
+  class=string style="COLOR: blue">"column1"</SPAN><SPAN 
+  style="COLOR: black">),&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">null</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;CompareOp.EQUAL,&nbsp;Bytes&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.toBytes(<SPAN 
+  class=string style="COLOR: blue">"aaa"</SPAN><SPAN 
+  style="COLOR: black">));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filters.add(filter1);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Filter&nbsp;filter2&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;SingleColumnValueFilter(Bytes&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.toBytes(<SPAN 
+  class=string style="COLOR: blue">"column2"</SPAN><SPAN 
+  style="COLOR: black">),&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">null</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;CompareOp.EQUAL,&nbsp;Bytes&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.toBytes(<SPAN 
+  class=string style="COLOR: blue">"bbb"</SPAN><SPAN 
+  style="COLOR: black">));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filters.add(filter2);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Filter&nbsp;filter3&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;SingleColumnValueFilter(Bytes&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.toBytes(<SPAN 
+  class=string style="COLOR: blue">"column3"</SPAN><SPAN 
+  style="COLOR: black">),&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">null</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;CompareOp.EQUAL,&nbsp;Bytes&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.toBytes(<SPAN 
+  class=string style="COLOR: blue">"ccc"</SPAN><SPAN 
+  style="COLOR: black">));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filters.add(filter3);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FilterList&nbsp;filterList1&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;FilterList(filters);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Scan();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(filterList1);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"获得到rowkey:"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(r.getRow()));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(KeyValue&nbsp;keyValue&nbsp;:&nbsp;r.raw())&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"列："</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(keyValue.getFamily())&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+  class=string style="COLOR: blue">"====值:"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(keyValue.getValue()));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rs.close();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">}&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;注意：可能大家没看到更新数据的操作，其实更新的操作跟添加完全一致，只不过是添加呢rowkey不存在，更新呢rowkey已经存在，并且timstamp相同的情况下，还有就是目前好像还没办法实现hbase数据的分页查询，不知道有没有人知道怎么做</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">HBase性能优化建议：</STRONG></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">&nbsp;</STRONG>针对前面的代码，有很多不足之处，在此我就不修改上面的代码了，只是提出建议的地方，大家自己加上</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp; 
+1)配置</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+当你调用create方法时将会加载两个配置文件:hbase-default.xml and hbase-site.xml,利用的是当前的java类路径， 
+代码中configuration设置的这些配置将会覆盖hbase-default.xml和hbase-site.xml中相同的配置,如果两个配置文件都存在并且都设置好了相应参上面的属性下面的属性即可</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;2)关于建表</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;</P>
+<DIV 
+style="BACKGROUND: rgb(255,255,153); WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1pt; TEXT-ALIGN: left; PADDING-TOP: 1pt; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 4pt; LETTER-SPACING: normal; PADDING-RIGHT: 4pt; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P class=Code 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><SPAN>public 
+void createTable(HTableDescriptor desc)</SPAN></P></DIV>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>HTableDescriptor 
+代表的是表的</SPAN><SPAN>schema,<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN>提供的方法中比较有用的有</SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>setMaxFileSize</SPAN><SPAN>，指定最大的</SPAN><SPAN>region 
+size</SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>setMemStoreFlushSize<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN>指定</SPAN><SPAN>memstore 
+flush</SPAN><SPAN>到</SPAN><SPAN>HDFS</SPAN><SPAN>上的文件大小</SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>增加</SPAN><SPAN>family</SPAN><SPAN>通过</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>addFamily</SPAN><SPAN>方法</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<DIV 
+style="BACKGROUND: rgb(255,255,153); WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1pt; TEXT-ALIGN: left; PADDING-TOP: 1pt; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 4pt; LETTER-SPACING: normal; PADDING-RIGHT: 4pt; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P class=Code 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><SPAN>public 
+void addFamily(final HColumnDescriptor family)</SPAN></P></DIV>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+class=keywordChar><SPAN 
+style="FONT-FAMILY: 'Times New Roman'">HColumnDescriptor</SPAN></SPAN><SPAN>代表的是</SPAN><SPAN>column</SPAN><SPAN>的</SPAN><SPAN>schema</SPAN><SPAN>，提供的方法比较常用的有</SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>setTimeToLive:</SPAN><SPAN>指定最大的</SPAN><SPAN>TTL,</SPAN><SPAN>单位是</SPAN><SPAN>ms,</SPAN><SPAN>过期数据会被自动删除。</SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>setInMemory:</SPAN><SPAN>指定是否放在内存中，对小表有用，可用于提高效率。默认关闭</SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>setBloomFilter:</SPAN><SPAN>指定是否使用</SPAN><SPAN>BloomFilter,</SPAN><SPAN>可提高随机查询效率。默认关闭</SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>setCompressionType:</SPAN><SPAN>设定数据压缩类型。默认无压缩。</SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>setMaxVersions:</SPAN><SPAN>指定数据最大保存的版本个数。默认为</SPAN><SPAN>3</SPAN><SPAN>。</SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN>注意的是，一般我们不去<SPAN><SPAN 
+style="FONT-FAMILY: Verdana">setInMemory为true,默认是关闭的</SPAN></SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: Verdana; COLOR: rgb(0,0,0)">3)关于入库</SPAN></SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: Verdana; COLOR: rgb(0,0,0)">&nbsp;&nbsp; 
+官方建议</SPAN></SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: Verdana"><SPAN style="COLOR: rgb(0,0,0)">&nbsp;<SPAN 
+style="FONT-SIZE: x-small">table.setAutoFlush(false); 
+//数据入库之前先设置此项为false</SPAN></SPAN></SPAN></SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN><SPAN 
+style="FONT-SIZE: x-small; FONT-FAMILY: Verdana; COLOR: rgb(0,0,0)">&nbsp;table.setflushCommits();//入库完成后，手动刷入数据</SPAN></SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN><SPAN 
+style="FONT-SIZE: x-small; FONT-FAMILY: Verdana; COLOR: rgb(0,0,0)">注意：</SPAN></SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN><SPAN 
+style="FONT-SIZE: x-small; FONT-FAMILY: Verdana; COLOR: rgb(0,0,0)">&nbsp; 
+在入库过程中，put.setWriteToWAL(true/flase);</SPAN></SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN><SPAN 
+style="FONT-SIZE: x-small; FONT-FAMILY: Verdana; COLOR: rgb(0,0,0)">&nbsp; 
+关于这一项如果不希望大量数据在存储过程中丢失，建议设置为true,如果仅是在测试演练阶段，为了节省入库时间建议设置为false</SPAN></SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN><SPAN 
+style="FONT-SIZE: x-small; FONT-FAMILY: Verdana; COLOR: rgb(0,0,0)">4)关于获取表实例</SPAN></SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN>HTablePool 
+pool = new HTablePool(configuration, Integer.MAX_VALUE);</SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN>HTable 
+table = (HTable) pool.getTable(tableName);</SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN>建议用表连接池的方式获取表，具体池有什么作用，我想用过数据库连接池的同学都知道，我就不再重复</SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN>不建议使用new 
+HTable(configuration,tableName);的方式获取表</SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN>5)关于查询</SPAN></SPAN></P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN><SPAN>&nbsp;建议每个查询语句都放入try 
+catch语句块，并且finally中要进行关闭ResultScanner实例以及将不使用的表重新放入到HTablePool中的操作，具体做法如下</SPAN></SPAN></P>
+<DIV class=dp-highlighter 
+style="OVERFLOW: auto; WORD-WRAP: break-word; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Java代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EMBED 
+type=application/x-shockwave-flash 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=15 width=14 
+src=http://javacrazyer.iteye.com/javascripts/syntaxhighlighter/clipboard_new.swf 
+allowscriptaccess="always" quality="high" 
+flashvars="clipboard=public%20static%20void%20QueryAll(String%20tableName)%20%7B%0A%09%09HTablePool%20pool%20%3D%20new%20HTablePool(configuration%2C%20Integer.MAX_VALUE)%3B%0A%09%09HTable%20table%20%3D%20null%3B%0A%09%09ResultScanner%20rs%20%3D%20null%3B%0A%09%09try%20%7B%0A%09%09%09Scan%20scan%20%3D%20new%20Scan()%3B%0A%09%09%09table%20%3D%20(HTable)%20pool.getTable(tableName)%3B%0A%09%09%09rs%20%3D%20table.getScanner(scan)%3B%0A%09%09%09for%20(Result%20r%20%3A%20rs)%20%7B%0A%09%09%09%09System.out.println(%22%E8%8E%B7%E5%BE%97%E5%88%B0rowkey%3A%22%20%2B%20new%20String(r.getRow()))%3B%0A%09%09%09%09for%20(KeyValue%20keyValue%20%3A%20r.raw())%20%7B%0A%09%09%09%09%09System.out.println(%22%E5%88%97%EF%BC%9A%22%20%2B%20new%20String(keyValue.getFamily())%0A%09%09%09%09%09%09%09%2B%20%22%3D%3D%3D%3D%E5%80%BC%3A%22%20%2B%20new%20String(keyValue.getValue()))%3B%0A%09%09%09%09%7D%0A%09%09%09%7D%0A%09%09%7D%20catch%20(IOException%20e)%20%7B%0A%09%09%09e.printStackTrace()%3B%0A%09%09%7Dfinally%7B%0A%09%09%09rs.close()%3B%2F%2F%20%E6%9C%80%E5%90%8E%E8%BF%98%E5%BE%97%E5%85%B3%E9%97%AD%0A%09%09%09pool.putTable(table)%3B%20%2F%2F%E5%AE%9E%E9%99%85%E5%BA%94%E7%94%A8%E8%BF%87%E7%A8%8B%E4%B8%AD%EF%BC%8Cpool%E8%8E%B7%E5%8F%96%E5%AE%9E%E4%BE%8B%E7%9A%84%E6%96%B9%E5%BC%8F%E5%BA%94%E8%AF%A5%E6%8A%BD%E5%8F%96%E4%B8%BA%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F%E7%9A%84%EF%BC%8C%E4%B8%8D%E5%BA%94%E5%9C%A8%E6%AF%8F%E4%B8%AA%E6%96%B9%E6%B3%95%E9%83%BD%E9%87%8D%E6%96%B0%E8%8E%B7%E5%8F%96%E4%B8%80%E6%AC%A1(%E5%8D%95%E4%BE%8B%E6%98%8E%E7%99%BD%EF%BC%9F%E5%B0%B1%E6%98%AF%E6%8A%BD%E5%8F%96%E5%88%B0%E4%B8%93%E9%97%A8%E8%8E%B7%E5%8F%96pool%E7%9A%84%E9%80%BB%E8%BE%91%E7%B1%BB%E4%B8%AD%EF%BC%8C%E5%85%B7%E4%BD%93%E9%80%BB%E8%BE%91%E4%B8%BA%E5%A6%82%E6%9E%9Cpool%E5%AD%98%E5%9C%A8%E7%9D%80%E7%9B%B4%E6%8E%A5%E4%BD%BF%E7%94%A8%EF%BC%8C%E5%A6%82%E6%9E%9C%E4%B8%8D%E5%AD%98%E5%9C%A8%E5%88%99new)%0A%09%09%7D%0A%09%7D" 
+wmode="transparent">&nbsp;<A 
+onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 
+src="http://javacrazyer.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;QueryAll(String&nbsp;tableName)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTablePool&nbsp;pool&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HTablePool(configuration,&nbsp;Integer.MAX_VALUE);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">null</SPAN><SPAN 
+  style="COLOR: black">;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">null</SPAN><SPAN 
+  style="COLOR: black">;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">try</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Scan();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table&nbsp;=&nbsp;(HTable)&nbsp;pool.getTable(tableName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"获得到rowkey:"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(r.getRow()));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(KeyValue&nbsp;keyValue&nbsp;:&nbsp;r.raw())&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string style="COLOR: blue">"列："</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(keyValue.getFamily())&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<SPAN 
+  class=string style="COLOR: blue">"====值:"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;+&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;String(keyValue.getValue()));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(IOException&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">finally</SPAN><SPAN 
+  style="COLOR: black">{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rs.close();<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;最后还得关闭</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pool.putTable(table);&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//实际应用过程中，pool获取实例的方式应该抽取为单例模式的，不应在每个方法都重新获取一次(单例明白？就是抽取到专门获取pool的逻辑类中，具体逻辑为如果pool存在着直接使用，如果不存在则new)</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;所以，以上代码有缺陷的地方，感兴趣的同学可以针对优化建议作出相应修改</P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P></body>
+</html>

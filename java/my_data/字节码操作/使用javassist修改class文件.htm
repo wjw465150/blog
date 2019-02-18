@@ -1,0 +1,120 @@
+<html>
+<title>使用javassist修改class文件</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<body>
+<!--StartFragment-->
+<div class="postTitle"> <a id="viewpost1_TitleUrl" class="postTitle2" href="http://www.blogjava.net/bukebushuo/articles/229703.html">使用javassist修改class文件</a> </div>
+Firestorm是一个用JAVA写的代码生成工具，可以替你节省很多的代码量，可以说同类软件中功能最强的一个。<br>
+<br>
+Firestorm是一个用JAVA写的代码生成工具，可以替你节省很多的代码量，可以说同类软件中功能最强的一个。<br>
+你可以在网上下载到最新的2.3试用版本，同时网站会发给你一个试用的license文件。既然是试用，<br>
+那么在使用上肯定有一定的限制。主要限制有3个：<br>
+&nbsp;&nbsp; &nbsp;1.只能最多生成5张表的DAO；<br>
+&nbsp;&nbsp; &nbsp;2.有时间限制；<br>
+&nbsp;&nbsp; &nbsp;3.不能自己定制代码生成；<br>
+<br>
+为了能够更好的试用这个软件，我得改改它，去掉这些限制。将firestorm.jar打开后，可以看到它使用了<br>
+混淆器进行代码保护，不同于大多数的混淆器生成的文件，它的class和package大部分都是以关键字来命名，<br>
+所以如果你用JAD之类的工具把它反编译后是不能再把它编译成功，编译器会提示出错误。<br>
+<br>
+反编译后，找到几个有关注册的关键文件，发现它使用的是数字签名技术来做的保护，所以想逆向找出<br>
+注册码的计算方法是不可行的了，只能通过修改文件的方法来破解。通常我们是先反编译，然后再修改<br>
+反编译后生成的原文件，最后再重新编译。但是由于文件名和包名的关系我们无法进行编译，除非把它的<br>
+这些‘非法'的文件名和包名全部改成符合java语言规范的名称，由于类，包众多，互相调用也很<br>
+频繁，所以这种方法几乎不可能的。<br>
+<br>
+另外一种方法就是使用softice之类的调试软件来破解，不过这个脱离JAVA的范畴，这里不做讨论。<br>
+<br>
+还有一种方法可能很少有人用，就是先反编译得到原文件，然后找到关键的方法后修改它的字节码，<br>
+也就是class文件，这中方法往往需要你知道一些有关CLASS文件格式方面的知识（如果没有也不用担心），<br>
+有许多的处理字节码的工具可以帮助你，比较流行的这类工具主要有：apache.org的BCEL; <br>
+jboss.com的javassist；objectweb.org的asm。都是出身名门哈。这3个工具各有特点，<br>
+这次我选用javassist，因为它修改class文件最方便，甚至不需要懂得字节码和class文件格式。<br>
+<br>
+让我们来看看具体步骤：<br>
+<br>
+<br>
+step1:<br>
+&nbsp;&nbsp; &nbsp;下载并安装FIRESTORM。<br>
+step2:<br>
+&nbsp;&nbsp; &nbsp;反编译jar文件，阅读代码，找到关键的方法。当然，我这里写出来，你就不用再麻烦了。（其实这步是最<br>
+&nbsp;&nbsp; &nbsp;麻烦的）。<br>
+&nbsp;&nbsp; &nbsp;找到com.codefutures.if.if文件中的方法<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; <font color="#0066ff">&nbsp;public static boolean a(java.security.PublicKey publickey, <br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;byte abyte0[], byte abyte1[])<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;throws java.security.NoSuchAlgorithmException, <br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;java.security.NoSuchProviderException, <br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;java.security.InvalidKeyException, <br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;java.security.SignatureException {<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+&nbsp;java.security.Signature signature =
+java.security.Signature.getInstance("SHA1withDSA", "SUN");<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;signature.initVerify(publickey);<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;signature.update(abyte0);<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;return signature.verify(abyte1);<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;}<br>
+</font><br>
+&nbsp;&nbsp; &nbsp;这个方法是对公钥进行检验，修改的思路就是直接让他返回一个true.<br>
+<br>
+step2:<br>
+&nbsp;&nbsp; &nbsp;收到firestorm.license文件后不要急着安装，先修改如下：<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<font color="#0066ff">&lt;custom-codegen&gt;no&lt;/custom-codegen&gt;</font><br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;改为<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; <font color="#0066ff">&nbsp;&lt;custom-codegen&gt;yes&lt;/custom-codegen&gt;</font><br>
+<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<font color="#0066ff">&lt;restriction&gt;5&lt;/restriction&gt;</font><br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;改为<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<font color="#0066ff">&lt;restriction&gt;none&lt;/restriction&gt;</font><br>
+<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; <font color="#0066ff">&nbsp;&lt;expiry-date&gt;[日期]&lt;/expiry-date&gt;</font><br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;改为<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; <font color="#0066ff">&nbsp;&lt;expiry-date&gt;never&lt;/expiry-date&gt;</font><br>
+<br>
+&nbsp;&nbsp; &nbsp;修改后放到firestorm的安装路径的license目录。<br>
+<br>
+step3:<br>
+&nbsp;&nbsp; &nbsp;修改com.codefutures.if.if的class文件.这里我们需要写一个小程序来完成实现：<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<font color="#0066ff">import javassist.ClassPool;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;import javassist.CtClass;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;import javassist.CtMethod;<br>
+<br>
+<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;public class Test {<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;public static void main(String[] args) throws Exception {<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;ClassPool pool = ClassPool.getDefault();<br>
+<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<font color="#00cc00">//设置目标类的路径，确保能够找到需要修改的类，这里我指向firestorm.jar</font><br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<font color="#00cc00">//解包后的路径</font><br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+&nbsp;pool.insertClassPath("d:/work/firestorm/firestorm") ;&nbsp;&nbsp;
+&nbsp;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; <font color="#00cc00">&nbsp;//获得要修改的类</font><br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;CtClass cc = pool.get("com.codefutures.if.if");<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<font color="#00cc33">//设置方法需要的参数</font><br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+&nbsp;CtClass[] param = new CtClass[3] ;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;param[0] = pool.get("java.security.PublicKey") ;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;param[1] = pool.get("byte[]") ;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;param[2] = pool.get("byte[]") ;<br>
+<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<font color="#00cc00">//得到方法</font><br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;CtMethod m = cc.getDeclaredMethod("a", param);<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; <font color="#00cc00">&nbsp;//插入新的代码</font><br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;m.insertBefore("{return true ;}") ;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;<font color="#00cc00">//保存到文件里</font><br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;cc.writeFile() ;<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;}<br>
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; &nbsp;}</font> <br>
+&nbsp;&nbsp; &nbsp;<br>
+&nbsp;&nbsp; &nbsp;修改完后，你可以反编译修改过的的class文件，看看代码是否加入成功。<br>
+<br>
+step4:<br>
+&nbsp;&nbsp; &nbsp;将所有的class文件重新打包成firestorm.jar，然后替换<br>
+&nbsp;&nbsp; &nbsp;[firestorm安装路径]/lib/firestorm.jar，再启动firestorm即可。 
+
+<!--EndFragment-->
+</body>
+</htm>

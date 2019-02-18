@@ -1,0 +1,60 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>LVM卷管理指南</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: 宋体, Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+</style>
+
+</head>
+
+<body>
+<P><STRONG><FONT size=3>第1步：在硬盘上创建一个LVM分区。使用fdisk或者其它的分区工具来创建一个LVM分区。Linux 
+LVM的分区类型为8e。</FONT></STRONG>  <BR>　　# fdisk 
+/dev/hda<BR>　　press p (to print the partition table) <BR>　　and n (to create a 
+new partition)<BR>　　 <BR>
+<strong>第2步：创建一个物理卷。下述命令将在分区的起始处创建一个卷组描述符：</strong><BR>　　# pvcreate 
+/dev/hda6<BR>　　pvcreate -- -physical volume "/dev/hda6" successfully 
+created<BR>　　# pvcreate /dev/hda7<BR>　　pvcreate- -- physical volume "/dev/hda7" 
+successfully created<BR>　　 <BR>
+<strong>第3步：创建一个卷组。通过下面的方法创建一个新的卷组，并且添加两个物理卷：</strong><BR>　　# 
+vgcreate test_vg /dev/hda6 /dev/hda7<BR>　　vgcreate- -- INFO: using default 
+physical extent size 4 MB<BR>　　vgcreate- -- INFO: maximum logical volume size is 
+255.99 Gigabyte<BR>　　vgcreate- -- doing automatic backup of volume group 
+"test_vg"<BR>　　vgcreate- -- volume group "test_vg" successfully created and 
+activated<BR>　　 
+<BR>　　上述命令将创建一个名为test_vg，包含有/dev/hda6和/dev/hda7两个物理卷的卷组。使用下面命令来激活卷组： <BR>　　# 
+vgchange -ay test_vg<BR>　　 <BR>　　使用“vgdisplay”命令来查看所建立卷组的细节信息。 <BR>　　# 
+vgdisplay<BR>　　--- Volume group ---<BR>　　VG Name test_vg<BR>　　VG Access 
+read/write<BR>　　VG Status available/resizable<BR>　　VG # 0<BR>　　MAX LV 
+256<BR>　　Cur LV 1<BR>　　Open LV 0<BR>　　MAX LV Size 255.99 GB<BR>　　Max PV 
+256<BR>　　Cur PV 2<BR>　　Act PV 2<BR>　　VG Size 3.91 GB<BR>　　PE Size 4 
+MB<BR>　　Total PE 1000<BR>　　Alloc PE / Size 256 / 1 GB<BR>　　Free PE / Size 744 / 
+2.91 GB<BR>　　VG UUID 
+T34zIt-HDPs-uo6r-cBDT-UjEq-EEPB-GF435E<BR>　　<BR>
+<strong>第4步：创建一个逻辑卷。使用lvcreate命令在卷组中创建一个逻辑卷： 
+</strong><BR>　　# lvcreate -L 2G -n logvol1 
+test_vg<BR>　　<BR>
+<strong>第5步：创建文件系统。在该逻辑卷上选择使用reiserfs日志文件系统：</strong><BR>　　# mkreiserfs 
+/dev/test_vg/logvol1<BR>　　 <BR>　　使用mount命令来加载新创建的文件系统。 <BR>　　# mount -t reiserfs 
+/dev/test_vg/logvol1 
+/mnt/lv1<BR>　　<BR>
+<strong>第6步：在/etc/fstab和/etc/lilo.conf中添加一个入口。在/etc/fstab中加入以下入口，在启动时加载文件系统：</strong><BR>　　/dev/test_vg/logvol1 /mnt/lv1 reiserfs defaults 1 1</P>
+<P><strong>第7步：修改逻辑卷的大小。可以使用lvextend命令方便地修改逻辑卷的大小，增加逻辑卷大小的方法如下：</strong><BR>　　# lvextend -L +1G 
+/dev/test_vg/logvol1<BR>　　lvextend -- extending logical volume 
+"/dev/test_vg/logvol1" to 3GB<BR>　　lvextend -- doing automatic backup of volume 
+group "test_vg"<BR>　　lvextend -- logical volume "/dev/test_vg/logvol1" 
+successfully extended<BR>　　 <BR>
+<strong>第8步： 类似的，减小逻辑卷大小的方法如下：</strong><BR>　　# lvreduce -L -1G 
+/dev/test_vg/logvol1<BR>　　lvreduce -- -Warning: reducing active logical volume to 
+2GB<BR>　　lvreduce- -- This may destroy your data (filesystem etc.)<BR>　　lvreduce 
+-- -do you really want to reduce "/dev/test_vg/lv1"? [y/n]: y<BR>　　lvreduce- -- 
+doing automatic backup of volume group "test_vg"<BR>　　lvreduce- -- logical 
+volume "/dev/test_vg/lv1" successfully reduced<BR></P>
+<P>&nbsp;</P></body>

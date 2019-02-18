@@ -1,0 +1,308 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>HDFS高可用方案之QJM</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">喜欢一个人，可以为TA做任何事，得到不接受却依然心甘情愿鞍前马后，苦苦等候那一线希望。对，这就是备胎，挂在汽车背后，可能一辈子也用不到的那个圆圈状的玩意儿，大部分情况下，它都会默默地挂在那里，等待几千分之一的机会，有个倒霉的轮子兄弟出事了，于是它就能派上用场了……(</SPAN><A 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; BACKGROUND: rgb(255,255,255) 0px 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(21,95,170); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+href="http://www.douban.com/note/152647869/" rel=nofollow 
+target=_blank>摘自豆瓣</A><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">)</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在Hadoop的分布式文件系统HDFS中，NameNode用来保存文件系统的元数据（包含目录结构/数据块位置等），如果NameNode上的数据丢失，HDFS上对应的文件数据就无法找回来了。Hadoop在2.0.0之前的版本，使用SecondaryNameNode备份NameNode的数据，但SecondaryNameNode无法转成NameNode,如果NameNode挂了，整个HDFS就会挂掉，无法实现真正的failover。</SPAN><A 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; BACKGROUND: rgb(255,255,255) 0px 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(21,95,170); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+href="http://www.cnblogs.com/ZisZ/p/3259865.html" rel=nofollow 
+target=_blank>这篇博文</A><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">总结了5种Hadoop 
+HA(High Available，高可用)方案，Hadoop2之后官方引入了QJM(Quorum Journal 
+Manager)和NFS用于NameNode的备份和切换。本方将介绍的是QJM方案，它使用第二个NameNode实时同步当前NameNode的数据，相比于SecondaryNameNode，他可以随时切换成为真正的NameNode（一个可转正的高级备胎）。</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">先看看没有HA的HDFS的系统架构（用draw.io画的，尼马这么好的网站也被墙了）：</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class="aw-upload-img-list active" 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; BACKGROUND: 0px 0px; COLOR: rgb(21,95,170)" 
+href="http://openskill.cn/uploads/article/20150912/ac1c02014eb80209ae4c86981c903659.png" 
+rel=lightbox target=_blank data-fancybox-group="thumb"><IMG title=hd21.png 
+class=img-polaroid 
+style="BOX-SIZING: border-box; MAX-WIDTH: 540px; BORDER-TOP: 0px; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=hd21.png 
+src="http://openskill.cn/uploads/article/20150912/ac1c02014eb80209ae4c86981c903659.png"></A></DIV><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">然后有HA方案的系统架构：</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class="aw-upload-img-list active" 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; BACKGROUND: 0px 0px; COLOR: rgb(21,95,170)" 
+href="http://openskill.cn/uploads/article/20150912/399774c25f844700ba6b5ea79d7ddcd2.png" 
+rel=lightbox target=_blank data-fancybox-group="thumb"><IMG title=hd22.png 
+class=img-polaroid 
+style="BOX-SIZING: border-box; MAX-WIDTH: 540px; BORDER-TOP: 0px; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=hd22.png 
+src="http://openskill.cn/uploads/article/20150912/399774c25f844700ba6b5ea79d7ddcd2.png"></A></DIV><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">以下的实验基于4个节点的Hadoop集群。其中每个节点的运行的进程列表如下：</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class="aw-upload-img-list active" 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; BACKGROUND: 0px 0px; COLOR: rgb(21,95,170)" 
+href="http://openskill.cn/uploads/article/20150912/112b7cd6af18e2b34961ee0f27c21a15.png" 
+rel=lightbox target=_blank data-fancybox-group="thumb"><IMG title=hd23.png 
+class=img-polaroid 
+style="BOX-SIZING: border-box; MAX-WIDTH: 540px; BORDER-TOP: 0px; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=hd23.png 
+src="http://openskill.cn/uploads/article/20150912/112b7cd6af18e2b34961ee0f27c21a15.png"></A></DIV><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">实验环境中，所有节点的运行环境基本相同：</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<UL 
+style="LIST-STYLE-TYPE: disc; BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; PADDING-LEFT: 40px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 40px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI style="BOX-SIZING: border-box">Ubuntu14.04 X64</LI>
+  <LI style="BOX-SIZING: border-box">4G内存</LI>
+  <LI style="BOX-SIZING: border-box">OpenJDK-1.7.0</LI>
+  <LI style="BOX-SIZING: border-box">100Mbps以太网</LI></UL><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">下面是实现这个系统的流程（官方文档+个人注解+辅助Shell命令）。</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<BLOCKQUOTE 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(119,119,119); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; PADDING-LEFT: 15px; MARGIN: 0px 0px 16px; BORDER-LEFT: rgb(0,153,255) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <P 
+  style="BOX-SIZING: border-box; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 0px; PADDING-RIGHT: 5px">1. 
+  安装Hadoop系统</P></BLOCKQUOTE><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">严格按照</SPAN><A 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; BACKGROUND: rgb(255,255,255) 0px 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(21,95,170); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+href="http://hadoop.apache.org/docs/r2.4.1/hadoop-project-dist/hadoop-common/SingleCluster.html" 
+rel=nofollow target=_blank>单节点搭建</A><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">和</SPAN><A 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; BACKGROUND: rgb(255,255,255) 0px 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(21,95,170); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+href="http://hadoop.apache.org/docs/r2.4.1/hadoop-project-dist/hadoop-common/ClusterSetup.html" 
+rel=nofollow target=_blank>集群搭建</A><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">两个步骤，系统建起来完全没压力。我遇到的问题是刚开始在配置文件(salves和core-site.xml等文件)中使用的是ip地址而非主机名，然后在log文件里看到各种无法连接。解决方案是修改主机名并在hosts文件里建立映射关系。</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">hostname {new_hostname} # 修改主机名，只有当前Session有效
+sudo vi /etc/hostname   # 永久修改主机名的方法</PRE><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">另外，对于64位的系统，最好重新编译源码。</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<BLOCKQUOTE 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(119,119,119); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; PADDING-LEFT: 15px; MARGIN: 0px 0px 16px; BORDER-LEFT: rgb(0,153,255) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <P 
+  style="BOX-SIZING: border-box; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 0px; PADDING-RIGHT: 5px">2. 
+  修改配置文件</P></BLOCKQUOTE><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">hdfs-site.xml文件：</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">&lt;configuration&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.namenode.name.dir&lt;/name&gt;
+    &lt;value&gt;/data/hadoop/namenode&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.datanode.data.dir&lt;/name&gt;
+    &lt;value&gt;/data/hadoop/datanode&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.replication&lt;/name&gt;
+    &lt;value&gt;2&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.nameservices&lt;/name&gt;
+    &lt;value&gt;mycluster&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.ha.namenodes.mycluster&lt;/name&gt;
+    &lt;value&gt;nn1,nn2&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.namenode.rpc-address.mycluster.nn1&lt;/name&gt;
+    &lt;value&gt;hd1:8020&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.namenode.rpc-address.mycluster.nn2&lt;/name&gt;
+    &lt;value&gt;hd3:8020&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.namenode.http-address.mycluster.nn1&lt;/name&gt;
+    &lt;value&gt;hd1:50070&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.namenode.http-address.mycluster.nn2&lt;/name&gt;
+    &lt;value&gt;hd3:50070&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.namenode.shared.edits.dir&lt;/name&gt;
+    &lt;value&gt;qjournal://hd1:8485;hd2:8485;hd4:8485/mycluster&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.client.failover.proxy.provider.mycluster&lt;/name&gt;
+    &lt;value&gt;org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.ha.fencing.methods&lt;/name&gt;
+    &lt;value&gt;sshfence&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.ha.fencing.ssh.private-key-files&lt;/name&gt;
+    &lt;value&gt;/home/hduser/.ssh/id_rsa&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.journalnode.edits.dir&lt;/name&gt;
+    &lt;value&gt;/data/hadoop/journalnode&lt;/value&gt;
+  &lt;/property&gt;
+&lt;/configuration&gt;</PRE><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<UL 
+style="LIST-STYLE-TYPE: disc; BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; PADDING-LEFT: 40px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 40px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="BOX-SIZING: border-box">其中nameservices是集群的命名空间，即使有多个集群，可以共用配置文件，但是要注意某些配置项的顺序。</LI>
+  <LI 
+  style="BOX-SIZING: border-box">dfs.ha.namenodes.mycluster中的mycluster是可以任取的，但是要和dfs.nameservices对应。</LI>
+  <LI 
+  style="BOX-SIZING: border-box">dfs.namenode.rpc-address.mycluster.nn1参考上一条。</LI>
+  <LI 
+  style="BOX-SIZING: border-box">dfs.namenode.shared.edits.dir值的格式是"qjournal://host1:port1;host2:port2;host3:port3/journalId"，用来指定对应的JN节点，journalId建议使用和nameservices相同的名称。</LI>
+  <LI 
+  style="BOX-SIZING: border-box">dfs.client.failover.proxy.provider.mycluster指定激活NameNode的Java类，目前Hadoop内置的只有上面那个。</LI>
+  <LI 
+  style="BOX-SIZING: border-box">dfs.ha.fencing.methods是来用来隔离失效的NameNode的方法，有sshfence和Shell两种方式。sshfence需要配置dfs.ha.fencing.ssh.private-key-files私钥文件，以便交互的过程不需要输入密码。</LI>
+  <LI 
+style="BOX-SIZING: border-box">dfs.journalnode.edits.dir是JN保存数据的文件。</LI></UL><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">core-site.xml文件：</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">&lt;configuration&gt;
+    &lt;property&gt;
+        &lt;name&gt;fs.defaultFS&lt;/name&gt;
+        &lt;value&gt;hdfs://mycluster&lt;/value&gt;
+    &lt;/property&gt;
+&lt;/configuration&gt;</PRE><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<UL 
+style="LIST-STYLE-TYPE: disc; BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; PADDING-LEFT: 40px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 40px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="BOX-SIZING: border-box">注意mycluster要和dhfs-site.xml中的dfs.nameservices对应。fs.defaultFS不用端口号。</LI></UL><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<BLOCKQUOTE 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(119,119,119); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; PADDING-LEFT: 15px; MARGIN: 0px 0px 16px; BORDER-LEFT: rgb(0,153,255) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <P 
+  style="BOX-SIZING: border-box; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 0px; PADDING-RIGHT: 5px">3. 
+  部署</P></BLOCKQUOTE><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">改好配置文件好，就要将配置文件同步到所有的机器上了。可以用rsync将文件同步到多台机器上。rsync是一个增量同步工具，需要先安装。下面的rsync.sh的功能是将当前目录的所有文件发送到文件或参数对应的机器上。</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">$ cat rsync.sh 
+#! /bin/bash
+
+dir=`pwd`
+pdir=`dirname $dir`
+
+send(){
+    echo "Sending to $2:$1"
+    rsync -avez -e ssh $1 $2:$3
+}
+
+mul_send(){
+    while read host
+    do
+        send $dir $host $pdir
+    done &lt; $1
+}
+
+<SPAN style="BOX-SIZING: border-box">[</SPAN> -f $1 ] &amp;&amp; mul_send $1 || send $dir $1 $pdir</PRE><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">将rsync.sh放在etc/hadoop目录下，进入目录运行</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">chmod +x rsync.sh
+./rsync.sh slaves
+# or ./rsync.sh hostname</PRE><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">发送完文件之后，就是启动系统。步骤如下：</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 700 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">启动JNs.</STRONG><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在所有JournalNode上运行</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">sbin/hadoop-daemon.sh --script hdfs start journalnode</PRE><STRONG 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 700 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">启动NameNode.</STRONG><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 700 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在原NameNode上运行</STRONG><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">bin/hadoop --script hdfs start namenode # NameNode需要已经format。</PRE><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">(使用上面的rsync.sh文件)将原NameNode(nn1)上的数据复制到第二个NameNode(nn2)。然后在nn2上运行：</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">bin/hdfs namenode -bootstrapStandby</PRE><STRONG 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 700 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">启动其他节点</STRONG><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在NameNode上运行</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">sbin/start-dfs.sh</PRE><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<BLOCKQUOTE 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(119,119,119); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; PADDING-LEFT: 15px; MARGIN: 0px 0px 16px; BORDER-LEFT: rgb(0,153,255) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <P 
+  style="BOX-SIZING: border-box; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 0px; PADDING-RIGHT: 5px">4. 
+  切换NameNode</P></BLOCKQUOTE><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 700 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">手动方式</STRONG><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">上面的NameNode默认以standby的状态启动，这时因为没有active的NameNode,所以是不能在HDFS读写文件，需要将其中的一个转成active状态。比如将nn1(对应前面的配置)转成Active:</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">bin/hdfs haadmin -transitionToActive nn1</PRE><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">然后在NameNode的web页面上部的括号里的standby变成active。</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">转成standby的命令是：</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">bin/hdfs 
+haadmin -transitionToStandby nn1</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 700 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">自动切换</STRONG><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 700 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在当前NameNode不能使用时自动切换到第二个NameNode上，需要借助于<A 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; BACKGROUND: 0px 0px; COLOR: rgb(21,95,170)" 
+href="http://zookeeper.apache.org/" rel=nofollow 
+target=_blank>ZooKeeper</A>(ZK)。<BR style="BOX-SIZING: border-box"><BR 
+style="BOX-SIZING: border-box">ZK的安装过程和Hadoop差不多，就是下载文件、修改配置、复制到所有机器、启动。具体步骤在<A 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; BACKGROUND: 0px 0px; COLOR: rgb(21,95,170)" 
+href="http://zookeeper.apache.org/doc/trunk/zookeeperAdmin.html#sc_zkMulitServerSetup" 
+rel=nofollow target=_blank>这里。</A><BR style="BOX-SIZING: border-box"><BR 
+style="BOX-SIZING: border-box">配置文件conf/zoo.conf:</STRONG><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">tickTime=2000
+dataDir=/data/hadoop/zookeeper
+clientPort=2181
+initLimit=5
+syncLimit=2
+server.1=hd2:2888:3888
+server.2=hd3:2888:3888
+server.3=hd4:2888:3888</PRE><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">hd2,hd3,hd4是主机名，至少需要三台，这个在一台机挂了整个系统还能用，ZK的数量一般是奇数，为什么为奇数可以参考</SPAN><A 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; BACKGROUND: rgb(255,255,255) 0px 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(21,95,170); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+href="http://openskill.cn/question/19" rel=nofollow target=_blank>这里。</A><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">然后要在hdfs-site.xml上添加配置：</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">&lt;property&gt;
+    &lt;name&gt;dfs.ha.automatic-failover.enabled&lt;/name&gt;
+    &lt;value&gt;true&lt;/value&gt;
+&lt;/property&gt;
+&lt;property&gt;
+    &lt;name&gt;ha.zookeeper.quorum&lt;/name&gt;
+    &lt;value&gt;hd2:2181,hd3:2181,hd4:2181&lt;/value&gt;
+&lt;/property&gt;</PRE><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">然后就是在NameNode的机器上初始化NameNode在ZK的状态了：</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">bin/hdfs zkfc -formatZK</PRE><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">重启HDFS或手动启动DFSZKFailoverController(ZKFC):</SPAN><PRE style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,153,51); PADDING-BOTTOM: 16px; PADDING-TOP: 16px; FONT: 14px/20px monospace; PADDING-LEFT: 16px; MARGIN: 0px 0px 10px; BORDER-LEFT: medium none; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 16px; BACKGROUND-COLOR: rgb(247,247,247); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 3px">sbin/stop-dfs.sh # 重启hdfs
+sbin/start-dfs.sh
+sbin/hadoop-daemon.sh start zkfc # 启动ZKFC</PRE><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在该HA方案中，每一个NameNode都有一个对应的ZKFC。ZKFC会随NameNode启动。</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 700 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">测试</STRONG><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><BR 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: 14px/25px 'Helvetica Neue', STHeiti, 微软雅黑, 'Microsoft YaHei', Helvetica, Arial, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在当前NameNode运行jps看NameNode的进程ID，然后kill掉。通过Web页面( 
+http://hdx:50070 )，可以看到standby的NameNode几乎在kill的同时转成active了。</SPAN></body>
+</html>

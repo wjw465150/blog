@@ -1,0 +1,758 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>如何在Linux系统下制作RamDisk</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 18px"><STRONG>概念:</STRONG></SPAN></P><SPAN 
+style="FONT-SIZE: 18px">
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>ramdisk</STRONG>就是指使用一部分内存空间来模拟硬盘分区,也就是说ramdisk是一个块设备,要用mkfs格式化,才能真正使用它.</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">.ramdisk在内核2.0/2.2版本就已经支持.<BR>.ramdisk设备是它不允许重新声明它的内存空间,所以ramdisk块通常会一直占用空间的内存直到系统重启.<BR>.ramdisk的一个缺点是在它上面创建一个文件系统,它同时会消耗缓冲区高速缓存和文件系统缓存,理论上,它可以消耗一个磁盘文件的两倍随机内存.<BR>.ramdisk的另一个缺点是它大小固定,之后不能改变<BR>.现在大多数需要RAM临时存储的应用程序会使用tmpfs文件系统而不是ramdisk设备.</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>tmpfs</STRONG>是一种基于内存的文件系统,也可以使用swap分区来存储.tmpfs是一个文件系统,并不是块设备,只要安装它,就可以使用了.</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">.tmpfs在存储时不需要块设备.<BR>.tmpfs文件系统的数据完全存放在文件系统的缓存中.也可以是交换存储.<BR>.可以在得到高速RAM硬盘优势的同时还享有虚拟内存的灵活性.<BR>.tmpfs基本上是所有版本中共享内存设备/dev/shm的默认文件系统.<BR>.在Linux内核中,虚拟内存资源由物理内存和交换分区组成,tmpfs向虚拟内存子系统请求页来存储文件,它同其它请求页的部分一样,不知道分配给自己的是物理内存还是交换分区存储.</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>/dev/shm</STRONG><BR>/dev/shm类型是tmpfs,也就是用shm_open,shm_unlink请求共享内存时,系统会通过/dev/shm来响应请求,tmpfs本身也用的是文件系统缓存.<BR>/dev/shm默认是物理内存的一半.</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">修改/dev/shm的大小&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">修改/etc/fstab的这行： 默认的：<BR>none /dev/shm tmpfs defaults 0 
+0<BR>改成：<BR>none /dev/shm tmpfs defaults,size=1024M 0 
+0<BR>size参数也可以用G作单位：size＝1G。<BR>重新mount /dev/shm使之生效：<BR># mount -o remount 
+/dev/shm<BR>马上可以用"df -h"命令检查变化。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><U>RamDisk有三种实现方式:</U></STRONG><BR>在Linux中可以将一部分内存mount为分区来使用，通常称之为RamDisk，分为:Ramdisk, 
+ramfs, tmpfs.</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">① 
+第一种就是传统意义上的，可以格式化，然后加载。<BR>这在<STRONG>Linux内核2.0/2.2</STRONG>就已经支持，其不足之处是大小固定，之后不能改变。为了能够使用Ramdisk，我们在编译内核时须将block 
+device中的Ramdisk支持选上，它下面还有两个选项，一个是设定Ramdisk的大小，默认是4096k;另一个是initrd的支持。<BR>如果对Ramdisk的支持已经编译进内核，我们就可以使用它了:<BR>首先查看一下可用的RamDisk，使用ls 
+/dev/ram*<BR>首先创建一个目录，比如test，运行mkdir /mnt/test;<BR>然后对/dev/ram0 创建文件系统，运行mke2fs 
+/dev/ram0;<BR>最后挂载 /dev/ram0，运行mount /dev/ram /mnt/test，就可以象对普通硬盘一样对它进行操作了。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="COLOR: rgb(241,11,0)"><U>&nbsp;装载后写入速度在700M/S-800M/S之间，如果umount再加载，只要不重启linux，那文件依然会保存在/dev/ramX中。</U></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">② 
+另两种则是<STRONG>内核2.4</STRONG>才支持的，通过Ramfs或者Tmpfs来实现:<BR>它们不需经过格式化，用起来灵活，其大小随所需要的空间而增加或减少。Ramfs顾名思义是内存文件系统，它处于虚拟文件系统(VFS)层，而不像ramdisk那样基于虚拟在内存中的其他文件系统(ex2fs)。因而，它无需格式化，可以创建多个，只要内存足够，在创建时可以指定其最大能使用的内存大小。如果你的Linux已经将Ramfs编译进内核，你就可以很容易地使用Ramfs了。创建一个目录，加载Ramfs到该目录即可:<BR></P>
+<DIV id=highlighter_593192 class="syntaxhighlighter  " 
+style="BORDER-TOP: 0px; HEIGHT: auto !important; BORDER-RIGHT: 0px; WIDTH: 484px; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: relative !important; TEXT-TRANSFORM: none; FLOAT: none !important; COLOR: rgb(0,0,0); OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 1px !important; TEXT-ALIGN: left; PADDING-TOP: 1px !important; FONT: 14px/1.1em Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace; OUTLINE-STYLE: none !important; PADDING-LEFT: 1px !important; LEFT: auto !important; MARGIN: 1em 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; LETTER-SPACING: normal; OUTLINE-COLOR: invert !important; TOP: auto !important; PADDING-RIGHT: 1px !important; BOTTOM: auto !important; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=lines 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+<DIV class="line alt1" 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important; BACKGROUND-COLOR: rgb(255,255,255)">
+<TABLE 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-COLLAPSE: collapse !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TBODY 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TR 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+    <TD class=number 
+    style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 3em !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(175,175,175) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"><CODE 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 2.7em !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: right !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; DISPLAY: block !important; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0.3em !important; BOTTOM: auto !important">1</CODE></TD>
+    <TD class=content 
+    style="OVERFLOW: hidden; FONT-SIZE: 1em !important; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT-WIDTH: 0px !important; WIDTH: auto !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; BORDER-BOTTOM-WIDTH: 0px !important; RIGHT: auto !important; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,0,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0.5em !important; CLEAR: both; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: rgb(108,226,108) 3px solid; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BORDER-TOP-WIDTH: 0px !important; BOTTOM: auto !important"><CODE 
+      class=comments 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,130,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"># 
+      mkdir /testRam</CODE></TD></TR></TBODY></TABLE></DIV>
+<DIV class="line alt2" 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important; BACKGROUND-COLOR: rgb(248,248,248)">
+<TABLE 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-COLLAPSE: collapse !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TBODY 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TR 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+    <TD class=number 
+    style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 3em !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(175,175,175) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"><CODE 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 2.7em !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: right !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; DISPLAY: block !important; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0.3em !important; BOTTOM: auto !important">2</CODE></TD>
+    <TD class=content 
+    style="OVERFLOW: hidden; FONT-SIZE: 1em !important; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT-WIDTH: 0px !important; WIDTH: auto !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; BORDER-BOTTOM-WIDTH: 0px !important; RIGHT: auto !important; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,0,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0.5em !important; CLEAR: both; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: rgb(108,226,108) 3px solid; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BORDER-TOP-WIDTH: 0px !important; BOTTOM: auto !important"><CODE 
+      class=comments 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,130,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"># 
+      mount -t ramfs none /testRAM</CODE></TD></TR></TBODY></TABLE></DIV></DIV></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">缺省情况下，<STRONG><SPAN 
+style="COLOR: rgb(212,10,0)">Ramfs被限制最多可使用内存大小的一半</SPAN></STRONG>。可以通过maxsize(以kbyte为单位)选项来改变。</P>
+<DIV id=highlighter_242416 class="syntaxhighlighter  " 
+style="BORDER-TOP: 0px; HEIGHT: auto !important; BORDER-RIGHT: 0px; WIDTH: 484px; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: relative !important; TEXT-TRANSFORM: none; FLOAT: none !important; COLOR: rgb(0,0,0); OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 1px !important; TEXT-ALIGN: left; PADDING-TOP: 1px !important; FONT: 14px/1.1em Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace; OUTLINE-STYLE: none !important; PADDING-LEFT: 1px !important; LEFT: auto !important; MARGIN: 1em 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; LETTER-SPACING: normal; OUTLINE-COLOR: invert !important; TOP: auto !important; PADDING-RIGHT: 1px !important; BOTTOM: auto !important; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=lines 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+<DIV class="line alt1" 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important; BACKGROUND-COLOR: rgb(255,255,255)">
+<TABLE 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-COLLAPSE: collapse !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TBODY 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TR 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+    <TD class=number 
+    style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 3em !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(175,175,175) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"><CODE 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 2.7em !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: right !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; DISPLAY: block !important; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0.3em !important; BOTTOM: auto !important">1</CODE></TD>
+    <TD class=content 
+    style="OVERFLOW: hidden; FONT-SIZE: 1em !important; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT-WIDTH: 0px !important; WIDTH: auto !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; BORDER-BOTTOM-WIDTH: 0px !important; RIGHT: auto !important; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,0,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0.5em !important; CLEAR: both; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: rgb(108,226,108) 3px solid; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BORDER-TOP-WIDTH: 0px !important; BOTTOM: auto !important"><CODE 
+      class=comments 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,130,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"># 
+      mount -t ramfs none /testRAM -o 
+maxsize=2000</CODE></TD></TR></TBODY></TABLE></DIV></DIV></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;(创建了一个限定最大使用内存为2M的ramdisk)</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="COLOR: rgb(241,11,0)"><U>写入速度在900M/S-1100M/S之间，umount后再加载数据消失。</U></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">③ 
+Tmpfs是一个虚拟内存文件系统，它不同于传统的用块设备形式来实现的Ramdisk，也不同于针对物理内存的Ramfs。<STRONG><SPAN 
+style="COLOR: rgb(212,10,0)">Tmpfs可以使用物理内存，也可以使用交换分区</SPAN></STRONG>。在Linux内核中，虚拟内存资源由物理内存(RAM)和交换分区组成，这些资源是由内核中的虚拟内存子系统来负责分配和管理。Tmpfs向虚拟内存子系统请求页来存储文件，它同Linux的其它请求页的部分一样，不知道分配给自己的页是在内存中还是在交换分区中。同Ramfs一样，其大小也不是固定的，而是随着所需要的空间而动态的增减。使用tmpfs，首先你编译内核时得选择”虚拟内存文件系统支持(Virtual 
+memory filesystem support)” 。<BR>然后就可以加载tmpfs文件系统了:</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<DIV id=highlighter_724633 class="syntaxhighlighter  " 
+style="BORDER-TOP: 0px; HEIGHT: auto !important; BORDER-RIGHT: 0px; WIDTH: 484px; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: relative !important; TEXT-TRANSFORM: none; FLOAT: none !important; COLOR: rgb(0,0,0); OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 1px !important; TEXT-ALIGN: left; PADDING-TOP: 1px !important; FONT: 14px/1.1em Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace; OUTLINE-STYLE: none !important; PADDING-LEFT: 1px !important; LEFT: auto !important; MARGIN: 1em 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; LETTER-SPACING: normal; OUTLINE-COLOR: invert !important; TOP: auto !important; PADDING-RIGHT: 1px !important; BOTTOM: auto !important; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=lines 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+<DIV class="line alt1" 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important; BACKGROUND-COLOR: rgb(255,255,255)">
+<TABLE 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-COLLAPSE: collapse !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TBODY 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TR 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+    <TD class=number 
+    style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 3em !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(175,175,175) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"><CODE 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 2.7em !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: right !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; DISPLAY: block !important; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0.3em !important; BOTTOM: auto !important">1</CODE></TD>
+    <TD class=content 
+    style="OVERFLOW: hidden; FONT-SIZE: 1em !important; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT-WIDTH: 0px !important; WIDTH: auto !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; BORDER-BOTTOM-WIDTH: 0px !important; RIGHT: auto !important; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,0,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0.5em !important; CLEAR: both; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: rgb(108,226,108) 3px solid; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BORDER-TOP-WIDTH: 0px !important; BOTTOM: auto !important"><CODE 
+      class=comments 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,130,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"># 
+      mkdir -p /mnt/tmpfs</CODE></TD></TR></TBODY></TABLE></DIV>
+<DIV class="line alt2" 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important; BACKGROUND-COLOR: rgb(248,248,248)">
+<TABLE 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-COLLAPSE: collapse !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TBODY 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TR 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+    <TD class=number 
+    style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 3em !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(175,175,175) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"><CODE 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 2.7em !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: right !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; DISPLAY: block !important; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0.3em !important; BOTTOM: auto !important">2</CODE></TD>
+    <TD class=content 
+    style="OVERFLOW: hidden; FONT-SIZE: 1em !important; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT-WIDTH: 0px !important; WIDTH: auto !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; BORDER-BOTTOM-WIDTH: 0px !important; RIGHT: auto !important; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,0,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0.5em !important; CLEAR: both; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: rgb(108,226,108) 3px solid; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BORDER-TOP-WIDTH: 0px !important; BOTTOM: auto !important"><CODE 
+      class=comments 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,130,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"># 
+      mount tmpfs /mnt/tmpfs -t 
+tmpfs</CODE></TD></TR></TBODY></TABLE></DIV></DIV></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">同样可以在加载时指定tmpfs文件系统大小的最大限制:</SPAN></P>
+<DIV id=highlighter_772947 class="syntaxhighlighter  " 
+style="BORDER-TOP: 0px; HEIGHT: auto !important; BORDER-RIGHT: 0px; WIDTH: 484px; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: relative !important; TEXT-TRANSFORM: none; FLOAT: none !important; COLOR: rgb(0,0,0); OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 1px !important; TEXT-ALIGN: left; PADDING-TOP: 1px !important; FONT: 14px/1.1em Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace; OUTLINE-STYLE: none !important; PADDING-LEFT: 1px !important; LEFT: auto !important; MARGIN: 1em 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; LETTER-SPACING: normal; OUTLINE-COLOR: invert !important; TOP: auto !important; PADDING-RIGHT: 1px !important; BOTTOM: auto !important; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=lines 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+<DIV class="line alt1" 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important; BACKGROUND-COLOR: rgb(255,255,255)">
+<TABLE 
+style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-COLLAPSE: collapse !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TBODY 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+  <TR 
+  style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">
+    <TD class=number 
+    style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 3em !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(175,175,175) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"><CODE 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: 2.7em !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: right !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; DISPLAY: block !important; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0.3em !important; BOTTOM: auto !important">1</CODE></TD>
+    <TD class=content 
+    style="OVERFLOW: hidden; FONT-SIZE: 1em !important; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT-WIDTH: 0px !important; WIDTH: auto !important; VERTICAL-ALIGN: top !important; BACKGROUND-IMAGE: none; BORDER-BOTTOM-WIDTH: 0px !important; RIGHT: auto !important; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,0,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0.5em !important; CLEAR: both; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: rgb(108,226,108) 3px solid; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BORDER-TOP-WIDTH: 0px !important; BOTTOM: auto !important"><CODE 
+      class=comments 
+      style="FONT-SIZE: 1em !important; BORDER-TOP: 0px; HEIGHT: auto !important; FONT-FAMILY: Consolas, 'Bitstream Vera Sans Mono', 'Courier New', Courier, monospace !important; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; BACKGROUND-IMAGE: none; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,130,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; MIN-HEIGHT: auto !important; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"># 
+      mount tmpfs /mnt/tmpfs -t tmpfs -o 
+size=32m</CODE></TD></TR></TBODY></TABLE></DIV></DIV></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(241,11,0); TEXT-ALIGN: left; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><U>&nbsp;写入速度在1.2G/S-1.3G/S，umount后再加载数据消失。</U></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/20px 微软雅黑, Tahoma, Verdana, Arial, Helvetica, '&amp;#23435; &amp;#20307; ', sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR class=Apple-interchange-newline>&nbsp;</P></SPAN>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 18px"><STRONG>简介</STRONG></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">什么是</SPAN><SPAN style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">？</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">就是将内存（</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">Ram</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">）的一部分当做硬盘（</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">Disk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">）来使用。</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">有固定的大小，可以像正常硬盘分区那样去使用。&nbsp;就操作时间来讲，</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">比真实的物理硬盘快很多，当系统关闭或断电时，保存在</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">中的数据会全部丢失。</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">可以成为一个存放临时数据的好地方。</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">Linux</SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">2.4</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">内核已经内建支持</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">。</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">在很多情况下是很有用的，包括：</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">使用加密文件中的未加密数据；</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">某些类型的网页内容服务；</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">挂载</SPAN><SPAN style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">loopback</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">文件系统（例如，从软盘或</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">CD</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">运行）</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">我为什么要写这个文档？因为我需要设置一个</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">16M</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">来查看、创建加密文件。我不想让未加密的文件写入我的工作平台的任何物理介质。我还发现一个有趣的地方，可以轻易的在</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">Ram</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">中创建一个比我的第一个物理硬盘（</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">20M</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">）还大的虚拟硬盘，当时，我根本无法想象怎样填满这个虚拟硬盘。</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">这个文档将会带你一步步地经历创建和使用</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的过程。</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 18px"><STRONG>平台</STRONG></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">我使用</SPAN><SPAN style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">Red&nbsp;Hat&nbsp;9</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">进行测试，但是这应该适用于其他的</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">2.4</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">内核的</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">Linux</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">系统，我还假设你的</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">Linux</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">系统已经将</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">支持编译到了内核。我的计算机使用</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">Pentium&nbsp;4</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: 16px">处理器，</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">256M</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">内存，确切的内核版本是：</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 16px">2.4.20-20.9&nbsp;</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="FONT-SIZE: 13px"></SPAN></STRONG></P><SPAN 
+style="FONT-SIZE: 16px; FONT-FAMILY: tahoma, 宋体; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>1.&nbsp;查看你的系统已经创建了什么</STRONG></SPAN>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px"><A title=RedHat 
+style="TEXT-DECORATION: underline; COLOR: rgb(179,43,213)" 
+href="http://www.linuxidc.com/topicnews.aspx?tid=10" 
+target=_blank>RedHat</A></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">默认创建</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">16</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">个</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，虽然它们没有激活或使用任何</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">Ram</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">。系统列出的设备是</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">ram0~ram19</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: 16px">，但是只有</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">ram0~ram15</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">是默认可用的。使用下面的命令可用检出这些块设备：</SPAN></SPAN></P>
+<DIV class="dp-highlighter bg_plain" 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL>
+  <LI 
+  class=alt><SPAN><SPAN>[root]#&nbsp;ls&nbsp;-l&nbsp;/dev/ram*&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV><SPAN><SPAN>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">默认只有</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">4MB</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">。我想要一个</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">16MB</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，所以，www.linuxidc.com下一步要配置</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">Linux</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，使得在启动过程中使用一个更大的</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk。</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>2.&nbsp;增加</STRONG></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>RamDisk</STRONG></SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>的大小</STRONG></SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的大小是被一个命令行选项控制的，这个选项会在系统启动时传给内核。由于</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RedHat9</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的默认</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">bootloader</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: 16px">是</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">GRUB</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，我将用新的选项修改</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">/etc/grub.conf</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: 16px">，</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">大小的内核选项是：</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 16px">ramdisk_size=xxxxx&nbsp;，xxxxx</SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: 16px">是指大小为</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Times New Roman'"><SPAN 
+style="FONT-SIZE: 16px">1024-Byte</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的块的个数。下面是我要添加到</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Times New Roman'"><SPAN 
+style="FONT-SIZE: 16px">/etc/grub.conf</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: 16px">的内容，它将</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Times New Roman'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">配置为</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Times New Roman'"><SPAN 
+style="FONT-SIZE: 16px">16MB</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">：</SPAN></SPAN></P>
+<DIV class="dp-highlighter bg_plain" 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL>
+  <LI 
+  class=alt><SPAN><SPAN>#&nbsp;grub.conf&nbsp;generated&nbsp;by&nbsp;anaconda&nbsp;&nbsp;</SPAN></SPAN>
+  <LI><SPAN>#&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>#&nbsp;Note&nbsp;that&nbsp;you&nbsp;do&nbsp;not&nbsp;have&nbsp;to&nbsp;rerun&nbsp;grub&nbsp;after&nbsp;making&nbsp;changes&nbsp;to&nbsp;this&nbsp;file&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>#&nbsp;NOTICE:&nbsp;&nbsp;You&nbsp;have&nbsp;a&nbsp;/boot&nbsp;partition.&nbsp;&nbsp;This&nbsp;means&nbsp;that&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;all&nbsp;kernel&nbsp;and&nbsp;initrd&nbsp;paths&nbsp;are&nbsp;relative&nbsp;to&nbsp;/boot/,&nbsp;eg.&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;root&nbsp;(hd0,0)&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;kernel&nbsp;/vmlinuz-version&nbsp;ro&nbsp;root=/dev/hda5&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;initrd&nbsp;/initrd-version.img&nbsp;&nbsp;</SPAN>
+  <LI class=alt><SPAN>#boot=/dev/hda&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>default=0&nbsp;&nbsp;</SPAN>
+  <LI class=alt><SPAN>timeout=10&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>splashimage=(hd0,0)/grub/splash.xpm.gz&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>title&nbsp;Red&nbsp;Hat&nbsp;Linux&nbsp;(2.4.20-20.9)&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;root&nbsp;(hd0,0)&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;kernel&nbsp;/vmlinuz-2.4.20-20.9&nbsp;ro&nbsp;root=LABEL=/&nbsp;hdc=ide-scsi&nbsp;ramdisk_size=16000&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;initrd&nbsp;/initrd-2.4.20-20.9.img&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">将文件保存后，你需要重启系统。重启后，通过查看</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">dmesg</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的输出来确认修改已经生效：</SPAN></SPAN></P>
+<DIV class="dp-highlighter bg_plain" 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL>
+  <LI 
+  class=alt><SPAN><SPAN>[root]#&nbsp;dmesg&nbsp;|&nbsp;grep&nbsp;RAMDISK&nbsp;&nbsp;</SPAN></SPAN>
+  <LI><SPAN>RAMDISK&nbsp;driver&nbsp;initialized:&nbsp;16&nbsp;RAM&nbsp;disks&nbsp;of&nbsp;16000K&nbsp;size&nbsp;1024&nbsp;blocksize&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>RAMDISK:&nbsp;Compressed&nbsp;image&nbsp;found&nbsp;at&nbsp;block&nbsp;0&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px"></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>3.&nbsp;格式化</STRONG></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>RamDisk</STRONG></SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">无需将</SPAN><SPAN style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">格式化为日志文件系统，我们将使用</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">EXT2</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">文件系统。我只想使用一个</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，所以我只格式化</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">ram0</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">。</SPAN></SPAN></P>
+<DIV class="dp-highlighter bg_plain" 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL>
+  <LI 
+  class=alt><SPAN><SPAN>[root]#&nbsp;mke2fs&nbsp;-m&nbsp;0&nbsp;/dev/ram0&nbsp;&nbsp;</SPAN></SPAN>
+  <LI><SPAN>mke2fs&nbsp;1.32&nbsp;(09-Nov-2002)&nbsp;&nbsp;</SPAN>
+  <LI class=alt><SPAN>Filesystem&nbsp;label=&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>OS&nbsp;type:&nbsp;Linux&nbsp;&nbsp;</SPAN>
+  <LI class=alt><SPAN>Block&nbsp;size=1024&nbsp;(log=0)&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Fragment&nbsp;size=1024&nbsp;(log=0)&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>4000&nbsp;inodes,&nbsp;16000&nbsp;blocks&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>0&nbsp;blocks&nbsp;(0.00%)&nbsp;reserved&nbsp;for&nbsp;the&nbsp;super&nbsp;user&nbsp;&nbsp;</SPAN>
+  <LI class=alt><SPAN>First&nbsp;data&nbsp;block=1&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>2&nbsp;block&nbsp;groups&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>8192&nbsp;blocks&nbsp;per&nbsp;group,&nbsp;8192&nbsp;fragments&nbsp;per&nbsp;group&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>2000&nbsp;inodes&nbsp;per&nbsp;group&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Superblock&nbsp;backups&nbsp;stored&nbsp;on&nbsp;blocks:&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8193&nbsp;&nbsp;</SPAN>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Writing&nbsp;inode&nbsp;tables:&nbsp;done&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Writing&nbsp;superblocks&nbsp;and&nbsp;filesystem&nbsp;accounting&nbsp;information:&nbsp;done&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>This&nbsp;filesystem&nbsp;will&nbsp;be&nbsp;automatically&nbsp;checked&nbsp;every&nbsp;22&nbsp;mounts&nbsp;or&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>180&nbsp;days,&nbsp;whichever&nbsp;comes&nbsp;first.&nbsp;&nbsp;Use&nbsp;tune2fs&nbsp;-c&nbsp;or&nbsp;-i&nbsp;to&nbsp;override.&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">-m&nbsp;0</SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">选项指定了文件系统上</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">root</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">用户保留区块的比例为</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">0</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，这是默认的特性。我希望普通用户可以使用所有的</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">空间。</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px"></SPAN></SPAN>&nbsp;</P><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN style="FONT-SIZE: 16px">
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>4.&nbsp;新建一个挂载点并挂载</STRONG></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>RamDisk</STRONG></SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">你已经格式化了</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，现在要为它新建一个挂载点。然后就可以挂载你的</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">并使用它。我们将会使用</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">/mnt/rd</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">文件夹。</SPAN></SPAN></P>
+<DIV class="dp-highlighter bg_plain" 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL>
+  <LI 
+  class=alt><SPAN><SPAN>[root]#&nbsp;mkdir&nbsp;/mnt/rd&nbsp;&nbsp;</SPAN></SPAN>
+  <LI><SPAN>[root]#&nbsp;mount&nbsp;/dev/ram0&nbsp;/mnt/rd&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">检测新挂载的</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN></P>
+<DIV class="dp-highlighter bg_plain" 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL>
+  <LI 
+  class=alt><SPAN><SPAN>[root]#&nbsp;mount&nbsp;|&nbsp;grep&nbsp;ram0&nbsp;&nbsp;</SPAN></SPAN>
+  <LI><SPAN>/dev/ram0&nbsp;on&nbsp;/mnt/rd&nbsp;type&nbsp;ext2&nbsp;(rw)&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>[root]#&nbsp;df&nbsp;-h&nbsp;|&nbsp;grep&nbsp;ram0&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>/dev/ram0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;16M&nbsp;&nbsp;&nbsp;13K&nbsp;&nbsp;&nbsp;16M&nbsp;&nbsp;&nbsp;1%&nbsp;/mnt/rd&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">你可以用</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">tune2fs</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">命令查看新</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的详细信息</SPAN></SPAN></P>
+<DIV class="dp-highlighter bg_plain" 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL>
+  <LI 
+  class=alt><SPAN><SPAN>[root]#&nbsp;tune2fs&nbsp;-l&nbsp;/dev/ram0&nbsp;&nbsp;</SPAN></SPAN>
+  <LI><SPAN>tune2fs&nbsp;1.32&nbsp;(09-Nov-2002)&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Filesystem&nbsp;volume&nbsp;name:&nbsp;&nbsp;&nbsp;none&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Last&nbsp;mounted&nbsp;on:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;not&nbsp;available&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Filesystem&nbsp;UUID:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fbb80e9a-8e7c-4bd4-b3d9-37c29813a5f5&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Filesystem&nbsp;magic&nbsp;number:&nbsp;&nbsp;0xEF53&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Filesystem&nbsp;revision&nbsp;#:&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;(dynamic)&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Filesystem&nbsp;features:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filetype&nbsp;sparse_super&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Default&nbsp;mount&nbsp;options:&nbsp;&nbsp;&nbsp;&nbsp;(none)&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Filesystem&nbsp;state:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;not&nbsp;clean&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Errors&nbsp;behavior:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Continue&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Filesystem&nbsp;OS&nbsp;type:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Linux&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Inode&nbsp;count:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4000&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Block&nbsp;count:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;16000&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Reserved&nbsp;block&nbsp;count:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Free&nbsp;blocks:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;15478&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Free&nbsp;inodes:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3989&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>First&nbsp;block:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Block&nbsp;size:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1024&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Fragment&nbsp;size:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1024&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Blocks&nbsp;per&nbsp;group:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8192&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Fragments&nbsp;per&nbsp;group:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8192&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Inodes&nbsp;per&nbsp;group:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2000&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Inode&nbsp;blocks&nbsp;per&nbsp;group:&nbsp;&nbsp;&nbsp;250&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Filesystem&nbsp;created:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mon&nbsp;Dec&nbsp;&nbsp;8&nbsp;14:33:57&nbsp;2003&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Last&nbsp;mount&nbsp;time:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mon&nbsp;Dec&nbsp;&nbsp;8&nbsp;14:35:39&nbsp;2003&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Last&nbsp;write&nbsp;time:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mon&nbsp;Dec&nbsp;&nbsp;8&nbsp;14:35:39&nbsp;2003&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Mount&nbsp;count:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Maximum&nbsp;mount&nbsp;count:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;22&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Last&nbsp;checked:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mon&nbsp;Dec&nbsp;&nbsp;8&nbsp;14:33:57&nbsp;2003&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Check&nbsp;interval:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;15552000&nbsp;(6&nbsp;months)&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Next&nbsp;check&nbsp;after:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sat&nbsp;Jun&nbsp;&nbsp;5&nbsp;14:33:57&nbsp;2004&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>Reserved&nbsp;blocks&nbsp;uid:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;(user&nbsp;root)&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Reserved&nbsp;blocks&nbsp;gid:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;(group&nbsp;root)&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>First&nbsp;inode:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;11&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>Inode&nbsp;size:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;128&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">在我的系统中，我需要</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">'var'</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">用户能够读写</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，所以必须修改</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">/mnt/rd</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">文件夹的所有者和权限。</SPAN></SPAN></P>
+<DIV class="dp-highlighter bg_plain" 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL>
+  <LI 
+  class=alt><SPAN><SPAN>[root]#&nbsp;chown&nbsp;van:root&nbsp;/mnt/rd&nbsp;&nbsp;</SPAN></SPAN>
+  <LI><SPAN>[root]#&nbsp;chmod&nbsp;0770&nbsp;/mnt/rd&nbsp;&nbsp;</SPAN>
+  <LI 
+  class=alt><SPAN>[root]#&nbsp;ls&nbsp;-ald&nbsp;/mnt/rd&nbsp;&nbsp;</SPAN>
+  <LI><SPAN>drwxrwx---&nbsp;&nbsp;&nbsp;&nbsp;2&nbsp;van&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;root&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4096&nbsp;Dec&nbsp;&nbsp;8&nbsp;11:09&nbsp;/mnt/rd&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">挂载点的所有者和权限要根据你的特定情况进行修改。</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>5.&nbsp;使用</STRONG></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>RamDisk</STRONG></SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">已经创建成功，现在，你可以像在物理硬盘分区那样，在</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">上复制、移动、删除、编辑或列出文件。这是一个查看加密的</SPAN></SPAN><A 
+style="TEXT-DECORATION: underline; COLOR: rgb(179,43,213)" 
+href="http://www.gnupg.org/"><SPAN style="FONT-SIZE: 16px"><FONT color=#336699>GPG</FONT></SPAN></A><SPAN style="FONT-SIZE: 16px">或</SPAN><A 
+style="TEXT-DECORATION: underline; COLOR: rgb(179,43,213)" 
+href="http://www.openssl.org/"><SPAN style="FONT-SIZE: 16px"><FONT color=#336699>OpenSSL</FONT></SPAN></A><SPAN 
+style="FONT-SIZE: 16px">文件的好地方，也是一个创建加密文件的好地方。你的主机关闭后，所有在</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">上创建的文件都会消失。</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">用下面的命令可以轻易的卸载</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">：</SPAN></SPAN></P>
+<DIV class="dp-highlighter bg_plain" 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL>
+  <LI 
+  class=alt><SPAN><SPAN>[root]#&nbsp;umount&nbsp;-v&nbsp;/mnt/rd&nbsp;&nbsp;</SPAN></SPAN>
+  <LI><SPAN>/dev/ram0&nbsp;umounted&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>Note</STRONG></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px"><STRONG>：</STRONG></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 16px">如果你卸载了</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，你的数据依然会保存在那里。一旦内存被分配给了</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，它就会被标记，之后内核就不会试图重用这块内存。因此，使用了</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">后，就不能回收那块内存。正因如此，你要考虑清楚???不要给</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">分配太多的内存。在我的系统里，我分配了小于</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">10%</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的物理内存。你要根据自己的需要确定</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">的大小。当然，也可以重启后释放空间。</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="FONT-SIZE: 18px">自动创建</SPAN></STRONG><SPAN 
+style="FONT-FAMILY: 'Courier New'"><STRONG><SPAN 
+style="FONT-SIZE: 18px">RamDisk</SPAN></STRONG></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">如果你需要每次系统启动后创建和挂载</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">，可以通过在</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">/etc/rc.local</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">启动脚本里添加命令来自动执行这个进程。</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">下面是我添加的命令：</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">#&nbsp;Formats,&nbsp;mounts,&nbsp;and&nbsp;sets&nbsp;permissions&nbsp;on&nbsp;my&nbsp;16MB&nbsp;ramdisk</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">/sbin/mke2fs&nbsp;-q&nbsp;-m&nbsp;0&nbsp;/dev/ram0</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">/bin/mount&nbsp;/dev/ram0&nbsp;/mnt/rd</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">/bin/chown&nbsp;van:root&nbsp;/mnt/rd</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">/bin/chmod&nbsp;0750&nbsp;/mnt/rd</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 18px"><STRONG>结语</STRONG></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 16px">现在你可以尝试在你的</SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">UNIX/Linux</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">系统上创建和使用</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: 'Courier New'"><SPAN 
+style="FONT-SIZE: 16px">RamDisk</SPAN></SPAN><SPAN style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px">。希望这些信息对你有用。</SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-FAMILY: 宋体"><SPAN 
+style="FONT-SIZE: 16px"></SPAN></SPAN>&nbsp;</P></SPAN></SPAN></SPAN></SPAN></body>
+</html>

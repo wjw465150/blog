@@ -1,0 +1,95 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>hadoop2中ResourceManager的HA</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">大家都知道在hadoop2中对HDFS的改进很大，实现了NameNode的HA；也增加了ResourceManager。但是ResourceManager也可以实现HA。你没看错，确实是ResourceManager的HA。注意是在Apache 
+Hadoop 2.4.1版本中开始加入的，可不是任意一个版本。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp; 
+我们不讲单点问题的危害，直接讲如何配置ResourceManager的HA。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><STRONG 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><FONT style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px" size=3>HA的架构</FONT></STRONG></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+style="FONT-SIZE: 12px; COLOR: rgb(255,131,115); OUTLINE-WIDTH: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; OUTLINE-STYLE: none; PADDING-LEFT: 0px; MARGIN: 0px; OUTLINE-COLOR: invert; PADDING-RIGHT: 0px" 
+href="http://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/images/rm-ha-overview.png" 
+target=_blank><IMG 
+style="CURSOR: pointer; MAX-WIDTH: 640px; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(244,247,249); BORDER-BOTTOM: rgb(221,221,221) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 5px; PADDING-LEFT: 5px; MARGIN: 10px 0px; BORDER-LEFT: rgb(221,221,221) 1px solid; PADDING-RIGHT: 5px" 
+alt="Overview of ResourceManager High Availability" 
+src="rm-ha-overview.png"></A></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp; 
+如果大家理解HDFS的HA，那么ResourceManager的HA与之是相同道理的：也是Active/Standby架构，任意时刻，都一个是Active，其余处于Standby状态的ResourceManager可以随时转换成Active状态。状态转换可以手工完成，也可以自动完成。手工完成时通过命令行的管理命令(命令是“yarn 
+rmadmin”)。自动完成是通过配置自动故障转移(automatic-failover)，使用集成的failover-controller完成状态的自动切换。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp; 
+自动故障转移是依赖于ZooKeeper集群，依赖ZooKeeper的ActiveStandbyElector会嵌入到ResourceManager中，当Active状态的ResourceManager失效时，处于 
+Standby状态的ResourceManager就会被选举为Active状态的，实现切换。注意：这里没有ZooKeeperFailoverController进程，这点和HDFS的HA不同。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp; 
+对于客户端而言，必须知道所有的ResourceManager中。因此，需要在yarn-site.xml中配置所有的ResourceManager。那么，当一个Active状态的ResourceManager失效时，客户端怎么办哪？客户端会采用轮询机制，轮询配置在yarn-site.xml中的ResourceManager，直到找到一个active状态的ResourceManager。如果我们想修改这种寻找ResourceManager的机制，可以继承类<TT 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">org.apache.hadoop.yarn.client.RMFailoverProxyProvider，实现</TT>自己的逻辑。然后把类的名字配置到yarn-site.xml的配置项<TT 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">yarn.client.failover-proxy-provider</TT>中。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><FONT style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px" size=3><STRONG 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">配置</STRONG></FONT></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp; 
+在yarn-site.xml中配置如下</P><PRE style="BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(246,246,246); WORD-SPACING: 0px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 5px; TEXT-ALIGN: left; PADDING-TOP: 5px; FONT: 9pt/18px 'Courier New', Arial; PADDING-LEFT: 5px; MARGIN: 10px 0px 10px 20px; BORDER-LEFT: rgb(108,226,108) 5px solid; LETTER-SPACING: normal; PADDING-RIGHT: 5px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"> &lt;property&gt;
+   &lt;name&gt;yarn.resourcemanager.ha.enabled&lt;/name&gt;
+   &lt;value&gt;true&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+   &lt;name&gt;yarn.resourcemanager.cluster-id&lt;/name&gt;
+   &lt;value&gt;cluster1&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+   &lt;name&gt;yarn.resourcemanager.ha.rm-ids&lt;/name&gt;
+   &lt;value&gt;rm1,rm2&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+   &lt;name&gt;yarn.resourcemanager.hostname.rm1&lt;/name&gt;
+   &lt;value&gt;master1&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+   &lt;name&gt;yarn.resourcemanager.hostname.rm2&lt;/name&gt;
+   &lt;value&gt;master2&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+   &lt;name&gt;yarn.resourcemanager.zk-address&lt;/name&gt;
+   &lt;value&gt;zk1:2181,zk2:2181,zk3:2181&lt;/value&gt;
+ &lt;/property&gt;</PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><STRONG 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><FONT style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px" size=3>命令</FONT></STRONG></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp; 
+查看状态的命令</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp; 
+yarn rmadmin –getServiceState rm1</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp; 
+状态切换的命令</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/22px 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 8px 0px; LETTER-SPACING: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp; 
+yarn rmadmin –transitionToStandby rm1</P></body>
+</html>

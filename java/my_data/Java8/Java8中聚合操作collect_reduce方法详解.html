@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Java8中聚合操作collect、reduce方法详解</title>
+  </head>
+  <body>
+    <h1 class="csdn_top" style="box-sizing: border-box; margin: 0px; font-size: 24px; font-family: &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, SimHei, Arial, SimSun; font-weight: 700; line-height: 38px; color: rgb(44, 48, 51); padding: 0px 29px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;">Java8
+      中聚合操作collect、reduce方法详解</h1>
+    <div class="article_bar clearfix" style="box-sizing: border-box; margin: 5px 0px 0px; padding: 0px 29px 8px; font-weight: 400; color: rgb(136, 136, 136); border-bottom: 1px solid rgb(229, 229, 229); font-size: 14px; line-height: 38px; font-family: &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, SimHei, Arial, SimSun; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;">
+      <div class="artical_tag" style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; float: left;"><span
+          class="original" style="box-sizing: border-box; margin: 0px 20px 0px 0px; padding: 2px 6px; font-weight: 400; border: 1px solid rgb(228, 235, 244); font-size: 14px; color: rgb(120, 144, 156);">转
+          载<span>&nbsp;</span></span><span class="time" style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; display: inline-block; color: rgb(187, 187, 187); font-size: 14px;">2016
+          年12月22日 23:51:42</span></div>
+      <ul class="right_bar" style="box-sizing: border-box; margin: 5px 0px 0px; padding: 0px; font-weight: 400; list-style: none; float: right;">
+        <li style="box-sizing: border-box; margin: 0px 0px 0px 30px; padding: 0px; font-weight: 400; list-style: none; float: left; line-height: 28px;"><button
+            class="btn-noborder" style="box-sizing: border-box; margin: 0px; font-family: inherit; font-size: 14px; line-height: 24px; text-transform: none; cursor: auto; -webkit-appearance: button; outline: 0px; border: 0px; padding: 0px; font-weight: 400; display: inline-block; height: 24px; text-align: center; background: rgba(0, 0, 0, 0); color: rgb(136, 136, 136);"><i
+              class="icon iconfont icon-read" style="box-sizing: border-box; font-style: normal; font-size: 16px; -webkit-font-smoothing: antialiased; font-family: iconfont !important; display: inline-block; vertical-align: middle; margin-right: 8px; color: rgb(187, 187, 187);"></i><span
+              class="txt" style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(187, 187, 187); display: inline-block; vertical-align: middle;">5648</span></button></li>
+      </ul>
+    </div>
+    <div id="article_content" class="article_content csdn-tracking-statistics tracking-click" data-mod="popu_519" data-dsm="post"
+      style="box-sizing: border-box; margin: 0px 0px 30px; padding: 20px 30px 0px; font-weight: 400; color: rgb(69, 69, 69); font-family: &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, SimHei, Arial, SimSun; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; overflow: hidden;">
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">Stream
+          的基本概念</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">Stream
+          和集合的区别：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">1.Stream
+          不会自己存储元素。元素储存在底层集合或者根据需要产生。<br style="box-sizing: border-box;">
+          2.Stream操作符不会改变源对象。相反，它会返回一个持有结果的新的Stream。<br style="box-sizing: border-box;">
+          3.Stream操作可能是延迟执行的，这意味着它们会等到需要结果的时候才执行。<br style="box-sizing: border-box;">
+          <br style="box-sizing: border-box;">
+        </span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">Stream
+          操作的基本过程,可以归结为3个部分：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">创
+          建一个Stream。<br style="box-sizing: border-box;">
+          在一个或者多个操作中，将指定的Stream转换为另一个Stream的中间操作。<br style="box-sizing: border-box;">
+          &nbsp; &nbsp; 通过终止（terminal）方法来产生一个结果。该操作会强制它之前的延时操作立即执行，这之后该Stream就不能再被使用了。<br style="box-sizing: border-box;">
+          &nbsp; &nbsp; 中间操作都是filter()、distinct()、sorted()、map()、flatMap()等，其一般是对数据集的整理（过滤、排序、匹配、抽取等）。</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">&nbsp;&nbsp;&nbsp;
+          终止方法往往是完成对数据集中数据的处理，如forEach()，还有allMatch()、anyMatch()、findAny()、
+          findFirst()，数值计算类的方法有sum、max、min、average等等。终止方法也可以是对集合的处理，如reduce()、
+          collect()等等。reduce()方法的处理方式一般是每次都产生新的数据集，而collect()方法是在原数据集的基础上进行更新，过程中不产生新的数据集。</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">List
+          nums = Arrays.asList(1, 3, null, 8, 7, 8, 13, 10);<br style="box-sizing: border-box;">
+          nums.stream().filter(num -&gt; num != null).distinct().forEach(System.out::println);<br style="box-sizing: border-box;">
+          &nbsp; 上面代码实现为过滤null值并去重，遍历结果，实现简洁明了。使用传统方法就相对繁琐的多。另外其中
+          forEach即为终止操作方法，如果无该方法上面代码就没有任何操作。filter、map、forEach、findAny等方法的使用都比较简单，这里省略。</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">下
+          面介绍强大的聚合操作，其主要分为两种：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">可
+          变聚合：把输入的元素们累积到一个可变的容器中，比如Collection或者StringBuilder；<br style="box-sizing: border-box;">
+          其他聚合：除去可变聚合，剩下的，一般都不是通过反复修改某个可变对象，而是通过把前一次的汇聚结果当成下一次的入参，反复如此。比如reduce，count，allMatch；<br style="box-sizing: border-box;">
+          <br style="box-sizing: border-box;">
+        </span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">聚
+          合操作reduce</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px;"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;"><span
+            style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">&nbsp;&nbsp;&nbsp;
+            Stream.reduce，返回</span><span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(255, 255, 255); background-color: rgb(255, 0, 0);">单
+            个的结果值</span><span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">，
+            并且reduce操作</span><span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(255, 255, 255); background-color: rgb(255, 0, 0);">每
+            处理一个元素总是创建一个新值</span><span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">。
+            常用的方法有average, sum, min, max, count，使用reduce方法都可实现。这里主要介绍reduce方法：</span></span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">T
+          reduce(T identity, BinaryOperator accumulator)<br style="box-sizing: border-box;">
+          &nbsp;&nbsp; identity：它允许用户提供一个循环计算的初始值。accumulator：计算的累加器，其方法签名为apply(T t,U
+          u)，在该reduce方法中第一个参数t为上次函数计算的返回值，第二个参数u为Stream中的元素，这个函数把这两个值计算apply，得到的和会被赋值给下次执行这个方法的第一个参数。有点绕看代码：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">int
+          value = Stream.of(1, 2, 3, 4).reduce(100, (sum, item) -&gt; sum + item);<br style="box-sizing: border-box;">
+          Assert.assertSame(value, 110);<br style="box-sizing: border-box;">
+          /* 或者使用方法引用 */<br style="box-sizing: border-box;">
+          value = Stream.of(1, 2, 3, 4).reduce(100, Integer::sum);<br style="box-sizing: border-box;">
+          &nbsp; 这个例子中100即为计算初始值，每次相加计算值都会传递到下一次计算的第一个参数。</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">reduce
+          还有其它两个重载方法：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">Optional
+          reduce(BinaryOperatoraccumulator):与上面定义基本一样，无计算初始值，所以他返回的是一个Optional。<br style="box-sizing: border-box;">
+          U reduce(U identity, BiFunction&nbsp;accumulator,
+          BinaryOperator&nbsp;combiner):与前面两个参数的reduce方法几乎一致，你只要注意到BinaryOperator其实实现了BiFunction和BinaryOperator两个接口。<br
+            style="box-sizing: border-box;">
+          <br style="box-sizing: border-box;">
+        </span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">收
+          集结果collect</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">&nbsp;
+          当你处理完流时，通常只是想查看一下结果，而不是将他们聚合为一个值。先看collect的基础方法，它接受三个参数：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">R
+          collect(Supplier supplier, BiConsumer accumulator, BiConsumer combiner)<br style="box-sizing: border-box;">
+          supplier：<strong style="box-sizing: border-box; font-weight: bold;">一个能创造目标类型实例的方法。accumulator：一个将当元素添加到目标中的方
+            法。combiner：一个将中间状态的多个结果整合到一起的方法（并发的时候会用到）</strong>。接着看代码：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">Stream
+          stream = Stream.of(1, 2, 3, 4).filter(p -&gt; p &gt; 2);</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">List
+          result = stream.collect(() -&gt; new ArrayList&lt;&gt;(), (list, item) -&gt; list.add(item), (one, two) -&gt;
+          one.addAll(two));<br style="box-sizing: border-box;">
+          /* 或者使用方法引用 */<br style="box-sizing: border-box;">
+          result = stream.collect(ArrayList::new, List::add, List::addAll);<br style="box-sizing: border-box;">
+          这个例子即为过滤大于2的元素，将剩余结果收集到一个新的list中。</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px;"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;"><span
+            style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">第一个方法生成
+            一个新的ArrayList；</span><br style="box-sizing: border-box;">
+          <span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">第二个
+            方法中第一个参数是前面生成的ArrayList对象，第二个参数是stream中包含的元素，方法体就是把stream中的元素加入ArrayList对象中。</span><span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(255, 255, 255); background-color: rgb(255, 0, 0);">第
+            二个方法被反复调用直到原stream的元素被消费完毕</span><span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">；</span><br
+            style="box-sizing: border-box;">
+          <span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">第三个
+            方法也是接受两个参数，这两个都是ArrayList类型的，方法体就是把第二个ArrayList全部加入到第一个中；</span><br style="box-sizing: border-box;">
+          <span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">代码有
+            点繁琐，或者使用collect的另一个重载方法:</span></span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">R
+          collect(Collector&nbsp;collector)<br style="box-sizing: border-box;">
+          注意到Collector其实是上面supplier、accumulator、combiner的聚合体。那么上面代码就变成：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">List
+          list = Stream.of(1, 2, 3, 4).filter(p -&gt; p &gt; 2).collect(Collectors.toList());<br style="box-sizing: border-box;">
+          将结果收集到map中</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">先
+          定义如下Person对象</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">class
+          Person{<br style="box-sizing: border-box;">
+          &nbsp;&nbsp;&nbsp; public String name;<br style="box-sizing: border-box;">
+          &nbsp;&nbsp;&nbsp; public int age;</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">&nbsp;&nbsp;&nbsp;
+          Person(String name, int age){<br style="box-sizing: border-box;">
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.name = name;<br style="box-sizing: border-box;">
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.age = age;<br style="box-sizing: border-box;">
+          &nbsp;&nbsp;&nbsp; }</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">&nbsp;&nbsp;&nbsp;
+          @Override<br style="box-sizing: border-box;">
+          &nbsp;&nbsp;&nbsp; public String toString(){<br style="box-sizing: border-box;">
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return String.format("Person{name='%s', age=%d}", name, age);<br style="box-sizing: border-box;">
+          &nbsp;&nbsp;&nbsp; }<br style="box-sizing: border-box;">
+          &nbsp; }<br style="box-sizing: border-box;">
+          假设你有一个Stream对象，希望将其中元素收集到一个map中，这样就可以根据他的名称来查找对应年龄，例如：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px;"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;"><span
+            style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">Map
+            result = people.collect(HashMap::new,(map,p)-&gt;map.put(p.name,p.age),Map::putAll);</span><br style="box-sizing: border-box;">
+          <span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">/*使
+            用Collectors.toMap形式*/</span><br style="box-sizing: border-box;">
+          <span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">Map
+            result = people.collect(Collectors.toMap(p -&gt; p.name, p -&gt; p.age, (exsit, newv) -&gt; newv));</span><br
+            style="box-sizing: border-box;">
+          <span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">其中</span><span
+            style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(255, 255, 255); background-color: rgb(255, 0, 0);">Collectors.toMap
+            方法的第三个参数为键值重复处理策略，如果不传入第三个参数，当有相同的键时，会抛出一个IlleageStateException</span><span style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; color: rgb(68, 68, 68);">。</span></span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">或
+          者你想将Person分解为Map存储:</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">List&lt;Map&gt;
+          personToMap = people.collect(ArrayList::new, (list, p) -&gt; {<br style="box-sizing: border-box;">
+          &nbsp;&nbsp; Mapmap = new HashMap&lt;&gt;();<br style="box-sizing: border-box;">
+          &nbsp;&nbsp; map.put("name", p.name);<br style="box-sizing: border-box;">
+          &nbsp;&nbsp; map.put("age", p.age);<br style="box-sizing: border-box;">
+          &nbsp;&nbsp; list.add(map);<br style="box-sizing: border-box;">
+          }, List::addAll);</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;"><br
+            style="box-sizing: border-box;">
+          分组和分片</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">对
+          具有相同特性的值进行分组是一个很常见的任务，Collectors提供了一个groupingBy方法，方法签名为：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">Collector&lt;T,?,Map&gt;
+          groupingBy(Function&nbsp;classifier, Collector&nbsp;downstream)<br style="box-sizing: border-box;">
+          classifier：一个获取Stream元素中主键方法。downstream：一个操作对应分组后的结果的方法。</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">假
+          如要根据年龄来分组：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">Map&lt;Integer,
+          List&gt; peopleByAge = people.filter(p -&gt; p.age &gt; 12).collect(Collectors.groupingBy(p -&gt; p.age,
+          Collectors.toList()));<br style="box-sizing: border-box;">
+          假如我想要根据年龄分组，年龄对应的键值List存储的为Person的姓名，怎么做呢:</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">Map&lt;Integer,
+          List&gt; peopleByAge = people.collect(Collectors.groupingBy(p -&gt; p.age, Collectors.mapping((Person p) -&gt;
+          p.name, Collectors.toList())));<br style="box-sizing: border-box;">
+          mapping即为对各组进行投影操作，和Stream的map方法基本一致。</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">假
+          如要根据姓名分组，获取每个姓名下人的年龄总和(好像需求有些坑爹）:</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">Map
+          sumAgeByName = people.collect(Collectors.groupingBy(p -&gt; p.name, Collectors.reducing(0, (Person p) -&gt;
+          p.age, Integer::sum)));<br style="box-sizing: border-box;">
+          /* 或者使用summingInt方法 */<br style="box-sizing: border-box;">
+          sumAgeByName = people.collect(Collectors.groupingBy(p -&gt; p.name, Collectors.summingInt((Person p) -&gt;
+          p.age)));<br style="box-sizing: border-box;">
+          可以看到Java8的分组功能相当强大，当然你还可以完成更复杂的功能。另外Collectors中还存在一个类似groupingBy的方法：partitioningBy，它们的区别是partitioningBy为键值为
+          Boolean类型的groupingBy，这种情况下它比groupingBy更有效率。</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">join
+          和统计功能</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">话
+          说Java8中新增了一个StringJoiner，Collectors的join功能和它基本一样。用于将流中字符串拼接并收集起来，使用很简单：</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">String
+          names = people.map(p-&gt;p.name).collect(Collectors.joining(","))<br style="box-sizing: border-box;">
+          Collectors分别提供了求平均值averaging、总数couting、最小值minBy、最大值maxBy、求和suming等操作。但是假如你希望将流中结果聚合为一个总和、平均值、最大值、最小值，那么
+          Collectors.summarizing(Int/Long/Double)就是为你准备的，它可以一次行获取前面的所有结果，其返回值为(Int/Long/Double)SummaryStatistics。</span></p>
+      <p style="box-sizing: border-box; margin: 0px; padding: 8px 0px; font-weight: 400; list-style: none; line-height: 26px; color: rgb(68, 68, 68);"><span
+          style="box-sizing: border-box; margin: 0px; padding: 0px; font-weight: 400; font-family: SimHei; font-size: 18px;">DoubleSummaryStatistics
+          dss = people.collect(Collectors.summarizingDouble((Person p)-&gt;p.age));<br style="box-sizing: border-box;">
+          double average=dss.getAverage();<br style="box-sizing: border-box;">
+          double max=dss.getMax();<br style="box-sizing: border-box;">
+          double min=dss.getMin();<br style="box-sizing: border-box;">
+          double sum=dss.getSum();<br style="box-sizing: border-box;">
+          double count=dss.getCount();</span></p>
+    </div>
+  </body>
+</html>

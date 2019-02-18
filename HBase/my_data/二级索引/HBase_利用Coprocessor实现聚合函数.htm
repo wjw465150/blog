@@ -1,0 +1,357 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>HBase 利用Coprocessor实现聚合函数</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body><STRONG><FONT color=#444444 size=3 face=Tahoma>问题导读：<BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></FONT></STRONG><STRONG 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 700 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><FONT style="WORD-WRAP: break-word" color=#ff0000>1、HBase默认不支持聚合函数，那我们该用什么来实现呢 
+？</FONT></STRONG><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 700 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><FONT style="WORD-WRAP: break-word" color=#ff0000>2、怎么用编程的方式去实现呢 ？</FONT></STRONG><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><IMG 
+onclick="zoom(this, this.src, 0, 0, 0)" onmouseover=img_onmouseoverfunc(this) 
+id=aimg_iC2Z1 class=zoom onload=thumbImg(this) 
+style="WORD-WRAP: break-word; CURSOR: pointer; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+border=0 alt="" src="http://www.aboutyun.com/static/image/hrline/4.gif" 
+width=500 height=35><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">HBase默认不支持聚合函数（sum,avg等）。可利用HBase的coprocessor特性实现。这样做的好处是利用regionserver在服务端进行运算。效率高，避免客户端取回大量数据，占用网络带宽，消耗大量内存等。</SPAN><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 700 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">实现方式：</STRONG><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">利用HBase提供的endPoint类型的AggregateImplementation 
+Coprocess，配合AggregationClient访问客户端实现RegionServer端的集合计算。AggregationClient访问代码如下：</SPAN><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=blockcode 
+style="OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; BACKGROUND: url(http://www.aboutyun.com/static/image/common/codebg.gif) rgb(247,247,247) repeat-y 0px 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; ZOOM: 1; COLOR: rgb(102,102,102); PADDING-BOTTOM: 5px; PADDING-TOP: 10px; FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; PADDING-LEFT: 10px; MARGIN: 10px 0px; BORDER-LEFT: rgb(204,204,204) 1px solid; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV id=code_s4D style="WORD-WRAP: break-word">
+<OL 
+style="WORD-WRAP: break-word; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; PADDING-LEFT: 0px !important; MARGIN: 0px 0px 0px 10px; PADDING-RIGHT: 0px !important">
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">aggregationClient.avg(Bytes. 
+  toBytes("TableName"), ci, scan);</LI></OL></DIV><EM 
+onclick="copycode($('code_s4D'));" 
+style="WORD-WRAP: break-word; CURSOR: pointer; FONT-SIZE: 12px; COLOR: rgb(51,102,153) !important; FONT-STYLE: normal; MARGIN-LEFT: 43px">复制代码</EM></DIV><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><FONT style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" color=#000><FONT style="WORD-WRAP: break-word" face="Arial, 宋体">scan即为要计算列的查询条件。这里有一个ColumnInterperter类型的参数ci。即列解释器，用于解析列中的值。HBase默认提供了LongColumnInterpreter。而我要处理的值是double类型的，所以先实现了一个DoubleColumnInterpreter。（从JIRA上看Doulbe类型的解释器好像正在开发中）。ColumnInterpreter接口的实现会在AggregateImplementation</FONT></FONT><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><FONT style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" color=#000><FONT style="WORD-WRAP: break-word" face="Arial, 宋体">
+<DIV class=blockcode 
+style="OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; BACKGROUND: url(http://www.aboutyun.com/static/image/common/codebg.gif) rgb(247,247,247) repeat-y 0px 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; ZOOM: 1; COLOR: rgb(102,102,102); PADDING-BOTTOM: 5px; PADDING-TOP: 10px; PADDING-LEFT: 10px; MARGIN: 10px 0px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 0px">
+<DIV id=code_ai4 style="WORD-WRAP: break-word">
+<OL 
+style="WORD-WRAP: break-word; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; PADDING-LEFT: 0px !important; MARGIN: 0px 0px 0px 10px; PADDING-RIGHT: 0px !important">
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">/**<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">* 
+  Double类型的列解释器实现<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">*<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">* 
+  @author OneCoder<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">*/<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">public 
+  class DoubleColumnInterpreter implements<BR 
+style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;ColumnInterpreter&lt;Double, 
+  Double&gt; {<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public void write(DataOutput out) throws IOException {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public void readFields(DataInput in) throws IOException {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public Double getValue( byte[] colFamily, byte[] 
+  colQualifier, KeyValue kv)<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;throws 
+  IOException {<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;if (kv == null)<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;return 
+  null;<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;// 
+  临时解决方案，如果采用Bytes.toDouble(kv.getValue())会报错，偏移量大于总长度。<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;// toDouble(getBuffer(), 
+  getValueOffset)，偏移量也不对。<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;return Double. valueOf(new 
+  String(kv.getValue()));<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public Double add(Double l1, Double l2) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;if (l1 == null ^ l2 == null) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;return 
+  l1 == null ? l2 : l1;<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;} else if (l1 == null) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;return 
+  null;<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;}<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;return l1 + l2;<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public Double getMaxValue() {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;// TODO Auto-generated method 
+  stub<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;return null;<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public Double getMinValue() {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;// TODO Auto-generated method 
+  stub<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;return null;<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public Double multiply(Double o1, Double o2) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;if (o1 == null ^ o2 == null) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;return 
+  o1 == null ? o2 : o1;<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;} else if (o1 == null) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;return 
+  null;<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;}<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;return o1 * o2;<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public Double increment(Double o) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;// TODO Auto-generated method 
+  stub<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;return null;<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public Double castToReturnType(Double o) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;return o.doubleValue();<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public int compare(Double l1, Double l2) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;if (l1 == null ^ l2 == null) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;return 
+  l1 == null ? -1 : 1; // either of one is null.<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;} else if (l1 == null)<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;return 
+  0; // both are null<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;return l1.compareTo(l2); // 
+  natural ordering.<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;@Override<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;public double divideForAvg(Double o, Long l) {<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;return (o == null || l == null) ? 
+  Double. NaN : (o.doubleValue() / l<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; 
+  &nbsp;.doubleValue());<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp;&nbsp;}<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">}</LI></OL></DIV><EM 
+onclick="copycode($('code_ai4'));" 
+style="WORD-WRAP: break-word; CURSOR: pointer; FONT-SIZE: 12px; COLOR: rgb(51,102,153) !important; FONT-STYLE: normal; MARGIN-LEFT: 43px">复制代码</EM></DIV><BR 
+style="WORD-WRAP: break-word"></FONT></FONT><FONT style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" color=#000><FONT style="WORD-WRAP: break-word; BACKGROUND-COLOR: rgb(247,247,247)"><FONT style="WORD-WRAP: break-word" face="Arial, 宋体">导出jar包上传到HBase 
+Region节点的lib下。然后配置RegionServer的Coprocessor。在服务端hbase-site.xml中，增加</FONT></FONT></FONT><BR 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><FONT style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT: 14px/21px Tahoma, 'Microsoft Yahei', Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" color=#000><FONT style="WORD-WRAP: break-word" face="Arial, 宋体">
+<DIV class=blockcode 
+style="OVERFLOW: hidden; WORD-WRAP: break-word; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; BACKGROUND: url(http://www.aboutyun.com/static/image/common/codebg.gif) rgb(247,247,247) repeat-y 0px 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; ZOOM: 1; COLOR: rgb(102,102,102); PADDING-BOTTOM: 5px; PADDING-TOP: 10px; PADDING-LEFT: 10px; MARGIN: 10px 0px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 0px">
+<DIV id=code_v48 style="WORD-WRAP: break-word">
+<OL 
+style="WORD-WRAP: break-word; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; PADDING-LEFT: 0px !important; MARGIN: 0px 0px 0px 10px; PADDING-RIGHT: 0px !important">
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&lt;property&gt;<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&lt;name 
+  &gt;hbase.coprocessor.region.classes &lt;/name &gt;<BR 
+  style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&nbsp; 
+  &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&lt;value 
+  &gt;org.apache.hadoop.hbase.coprocessor.AggregateImplementation &lt;/value 
+  &gt;<BR style="WORD-WRAP: break-word"></LI>
+  <LI 
+  style="LIST-STYLE-TYPE: decimal-leading-zero; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, Consolas, 'Lucida Console', 'Courier New', serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 2em; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">&lt;/property 
+  &gt;&nbsp; &nbsp;</LI></OL></DIV><EM onclick="copycode($('code_v48'));" 
+style="WORD-WRAP: break-word; CURSOR: pointer; FONT-SIZE: 12px; COLOR: rgb(51,102,153) !important; FONT-STYLE: normal; MARGIN-LEFT: 43px">复制代码</EM></DIV><BR 
+style="WORD-WRAP: break-word"></FONT></FONT>
+<P 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Tahoma, 'Microsoft Yahei', Simsun; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><FONT style="WORD-WRAP: break-word; COLOR: rgb(0,0,0)"><FONT style="WORD-WRAP: break-word" face="Arial, 宋体">最后，我们重启服务，使配置和jar生效。然后调用AggregationClient中提供的avg, 
+max等聚合函数，即可在region端计算出结果，返回。</FONT></FONT></P></body>
+</html>

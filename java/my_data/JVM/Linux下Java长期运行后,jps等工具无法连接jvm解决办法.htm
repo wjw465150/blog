@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Linux下Java长期运行后,jps等工具无法连接jvm解决办法</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: 宋体, Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">Java长期运行后， 
+jps等工具无法连接jvm。 相信很多朋友都遇见过， 一个Java应用长期运行后， 发现jps， jstack, jstat等工具都无法连接正在运行的jvm了。 
+如果这个时候发生故障， 非常难以诊断。 一直以来， 我都以为是Java的bug.</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">最近偶然得知， 
+jps的工作模式是读取了系统临时文件夹下的pid文件里的内容获得连接信息的。 这个文件夹在Linux下的名字是：/tmp/hsperfdata_$USER 
+($USER是启动Java程序的用户)。 我们都知道系统临时文件夹可能会被某些临时文件夹工具自动删除， 比如：</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">1. 
+tmpwatch:? redhat linux发行版使用的删除工具</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">2. 
+tmpreaper： ubuntu linux 发行版使用的删除工具</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">这些工具可能是没有安装的。 
+那么就不会发生删除/tmp/hsperfdata_$USER的事情。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">我们观察到， 
+redhat5.2/5.3 的删除工具的存在一些瑕疵， tmpwatch -umc 会按照最长时间来确定删除。看看umc参数定义：</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">&nbsp;</P><PRE class=java style="FONT-VARIANT: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px" name="code">－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－
+
+If the --atime, --ctime or --mtime options are used in combination, the decision about deleting a file will be based on the maximum of these times.
+
+－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－
+
+       -u, --atime
+              Make the decision about deleting a file based on the file's atime (access time). This is the default.
+
+              Note that the periodic updatedb file system scans keep the atime of directories recent.
+
+       -m, --mtime
+              Make the decision about deleting a file based on the file's mtime (modification time) instead of the atime.
+
+       -c, --ctime
+              Make the decision about deleting a file based on the file's ctime (inode change time) instead of the atime;  for
+              directories, make the decision based on the mtime.
+
+－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－</PRE><SPAN 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FLOAT: none; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; DISPLAY: inline !important; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px"></SPAN>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">我们看到， 
+-c 参数是使用文件的inode改变时间。 这就意味着三个参数结合使用， 最后其实仅仅是 -c 参数发挥了作用。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">以上的解释比较废话， 
+其实发生问题关键原因是java进程的数据文件被删除了。 这些工具其实都能实现删除文件的时候排除某些文件／文件夹的功能。 这样就能避免发生错误删除。 
+比如排除/tmp/hsperfdata_$USER 文件夹。 我们作了点小小的测试：</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">1. 
+如果java程序是正常退出， /tmp/hsperfdata_$USER/$JAVA_PID 文件是能被正常清理</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">2. 
+如果java程序是非正常退出， 比如使用kill -9 等办法， 那么pid文件将会残留在目录里。 但是， 如果你执行任意一次java命令， 
+或者加载了jvm程序的命令(比如jps, javac, jstat)， 所有无用的pid文件都能被正确的清理。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">一句话， 
+jvm能够自己管理/tmp/hsperfdata_$USER 下的文件有效性。 不用担心残留pid文件过多的情况。</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">附录</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">redhat修改文件：</P>
+<P 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">/etc/cron.daily/tmpwatch</P>
+<P><SPAN 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FLOAT: none; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; DISPLAY: inline !important; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">flags=-umc<BR>/usr/sbin/tmpwatch "$flags" -x /tmp/.X11-unix 
+-x /tmp/.XIM-unix \<BR>&nbsp;-x /tmp/.font-unix -x /tmp/.ICE-unix -x 
+/tmp/.Test-unix \<BR>&nbsp;<FONT style="BACKGROUND-COLOR: #ffff00">-X 
+'/tmp/hsperfdata_*'</FONT>  240 /tmp<BR>/usr/sbin/tmpwatch 
+"$flags" 720 /var/tmp<BR>for d in 
+/var/{cache/man,catman}/{cat?,X11R6/cat?,local/cat?}; do<BR>&nbsp;&nbsp;&nbsp; 
+if [ -d "$d" ]; then<BR>&nbsp;/usr/sbin/tmpwatch "$flags" -f 720 
+"$d"<BR>&nbsp;&nbsp;&nbsp; fi<BR> 
+  done</SPAN></P>
+<P><SPAN 
+style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FLOAT: none; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; DISPLAY: inline !important; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 
+  0px"></SPAN>&nbsp;</P></body>
+</html>

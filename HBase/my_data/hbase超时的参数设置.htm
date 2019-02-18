@@ -1,0 +1,1736 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>关于hbase超时的参数设置</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizelegibility"><EM 
+style="FONT-STYLE: italic">1.</EM><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>摘要</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">今天意外翻到了以前整理的hbase连接超时的研究，在这里存一份。针对hbase0.96版本。</P>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizelegibility"><EM 
+style="FONT-STYLE: italic">2.</EM><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>参数分析</H2>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">socket建连时间</P>
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">默认值：</P></LI></UL>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint java" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> String SOCKET_TIMEOUT = <SPAN class=string style="COLOR: rgb(221,17,68)">"ipc.socket.timeout"</SPAN>;
+    <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> DEFAULT_SOCKET_TIMEOUT = <SPAN class=number style="COLOR: rgb(0,153,153)">20000</SPAN>; <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// 20 seconds</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>final</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>private</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>String</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>SOCKET_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>"ipc.socket.timeout"</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>final</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_SOCKET_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>20000</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>// 20 
+      seconds</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">生效位置：</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint java" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">RpcClient.Connection:<SPAN class=number style="COLOR: rgb(0,153,153)">575</SPAN>
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">protected</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">synchronized</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> setupConnection()
+         NetUtils.connect(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.socket, remoteId.getAddress(),
+             getSocketTimeout(conf));
+RpcClient.Connection:<SPAN class=number style="COLOR: rgb(0,153,153)">259</SPAN>
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> getSocketTimeout(Configuration conf) {
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> conf.getInt(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT);
+ }</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>RpcClient</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Connection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>575</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>protected</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>synchronized</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>void</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>setupConnection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>NetUtils</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>connect</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>socket</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>remoteId</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getAddress</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>getSocketTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>RpcClient</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Connection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>259</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getSocketTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Configuration</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>return</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>SOCKET_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_SOCKET_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>}</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">socket建连重试次数，对io错误和socket超时分别计算重试次数 
+  默认值：</LI></UL>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint cs" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">RpcClient.Connection:<SPAN class=number style="COLOR: rgb(0,153,153)">1246</SPAN>
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.maxRetries = conf.getInt(<SPAN class=string style="COLOR: rgb(221,17,68)">"hbase.ipc.client.connect.max.retries"</SPAN>, <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>);</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>RpcClient</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Connection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>1246</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>maxRetries</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>"hbase.ipc.client.connect.max.retries"</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>0</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">生效位置：</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint java" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">RpcClient.Connection:<SPAN class=number style="COLOR: rgb(0,153,153)">582</SPAN>
+    <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">catch</SPAN> (SocketTimeoutException toe) {
+         <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/* The max number of retries is 45,
+          * which amounts to 20s*45 = 15 minutes retries.
+          */</SPAN>
+         handleConnectionFailure(timeoutFailures++, maxRetries, toe);
+       } <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">catch</SPAN> (IOException ie) {
+         handleConnectionFailure(ioFailures++, maxRetries, ie);
+       }
+  <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> handleConnectionFailure(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> curRetries, <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> maxRetries, IOException ioe)
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throws</SPAN> IOException {
+
+     closeConnection();
+
+     <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// throw the exception if the maximum number of retries is reached</SPAN>
+     <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (curRetries &gt;= maxRetries) {
+       <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throw</SPAN> ioe;
+     }
+}</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>RpcClient</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Connection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>582</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>catch</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>SocketTimeoutException</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>toe</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>/* 
+      The max number of retries is 45,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      which amounts to 20s*45 = 15 minutes retries.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>*/</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>handleConnectionFailure</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>timeoutFailures</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>++</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>maxRetries</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>toe</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>}</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>catch</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>IOException</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>ie</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>handleConnectionFailure</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>ioFailures</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>++</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>maxRetries</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>ie</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>}</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>private</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>void</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>handleConnectionFailure</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>curRetries</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>maxRetries</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN>IOException</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>ioe</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>throws</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>IOException</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>closeConnection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>// 
+      throw the exception if the maximum number of retries is reached</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>if</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>curRetries</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>&gt;=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>maxRetries</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>throw</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>ioe</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>}</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>}</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">注释里的45不知道怎么来的。</P>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">socket超时 
+  初始值：</LI></UL>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint java" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">RpcClient.rpcTimeout:<SPAN class=number style="COLOR: rgb(0,153,153)">156</SPAN>
+ <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// thread-specific RPC timeout, which may override that of what was passed in.</SPAN>
+ <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// This is used to change dynamically the timeout (for read only) when retrying: if</SPAN>
+ <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//  the time allowed for the operation is less than the usual socket timeout, then</SPAN>
+ <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//  we lower the timeout. This is subject to race conditions, and should be used with</SPAN>
+ <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//  extreme caution.</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> ThreadLocal&lt;Integer&gt; rpcTimeout = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> ThreadLocal&lt;Integer&gt;() {
+   <SPAN class=annotation>@Override</SPAN>
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">protected</SPAN> Integer initialValue() {
+     <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
+   }
+ };</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>RpcClient</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>rpcTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>156</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>// 
+      thread-specific RPC timeout, which may override that of what was passed 
+      in.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>// 
+      This is used to change dynamically the timeout (for read only) when 
+      retrying: if</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>//&nbsp;&nbsp;the 
+      time allowed for the operation is less than the usual socket timeout, 
+      then</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>//&nbsp;&nbsp;we 
+      lower the timeout. This is subject to race conditions, and should be used 
+      with</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>//&nbsp;&nbsp;extreme 
+      caution.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>private</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>ThreadLocal</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>&lt;</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Integer</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>&gt;</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>rpcTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>new</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>ThreadLocal</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>&lt;</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Integer</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>&gt;</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>@</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Override</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>protected</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Integer</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>initialValue</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>return</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>}</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>}</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">这个值在RpcRetryingCaller:87被改写：</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint cs" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> beforeCall() {
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> remaining = (<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN>)(callTimeout -
+     (EnvironmentEdgeManager.currentTimeMillis() - <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.globalStartTime));
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (remaining &lt; MIN_RPC_TIMEOUT) {
+     <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// If there is no time left, we're trying anyway. It's too late.</SPAN>
+     <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// 0 means no timeout, and it's not the intent here. So we secure both cases by</SPAN>
+     <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// resetting to the minimum.</SPAN>
+     remaining = MIN_RPC_TIMEOUT;
+   }
+   RpcClient.setRpcTimeout(remaining);
+ }</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>private</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>void</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>beforeCall</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>remaining</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>-</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>EnvironmentEdgeManager</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>currentTimeMillis</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>-</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>globalStartTime</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>if</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>remaining</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>&lt;</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>MIN_RPC_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>// 
+      If there is no time left, we're trying anyway. It's too late.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>// 
+      0 means no timeout, and it's not the intent here. So we secure both cases 
+      by</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>// 
+      resetting to the minimum.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>remaining</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>MIN_RPC_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>}</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>RpcClient</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>setRpcTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>remaining</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>}</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">calltimeout默认值：</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint java" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.callTimeout = conf.getInt(
+       HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+       HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+ <SPAN class=javadoc style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/** Parameter name for HBase client operation timeout, which overrides RPC timeout */</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN> String HBASE_CLIENT_OPERATION_TIMEOUT = <SPAN class=string style="COLOR: rgb(221,17,68)">"hbase.client.operation.timeout"</SPAN>;
+ <SPAN class=javadoc style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/** Default HBase client operation timeout, which is tantamount to a blocking call */</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = Integer.MAX_VALUE;</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/** 
+      Parameter name for HBase client operation timeout, which overrides RPC 
+      timeout */</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>final</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>String</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN>"hbase.client.operation.timeout"</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/** 
+      Default HBase client operation timeout, which is tantamount to a blocking 
+      call */</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>final</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN>Integer</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>MAX_VALUE</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">每次调用时会把这个值跟default做比较，取小的那个</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint java" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">RpcClient.Connection:<SPAN class=number style="COLOR: rgb(0,153,153)">1612</SPAN>
+ <SPAN class=javadoc style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/**
+  * Returns the lower of the thread-local RPC time from {<SPAN class=javadoctag>@link</SPAN> #setRpcTimeout(int)} and the given
+  * default timeout.
+  */</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> getRpcTimeout(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> defaultTimeout) {
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> Math.min(defaultTimeout, rpcTimeout.get());
+ }</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>RpcClient</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Connection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>1612</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/**</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      Returns the lower of the thread-local RPC time from {@link 
+      #setRpcTimeout(int)} and the given</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      default timeout.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>*/</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getRpcTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>defaultTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>return</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Math</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>min</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>defaultTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>rpcTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>get</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>}</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">传入的timeout是由HConnectionImplementation传下来的：</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint php" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">HConnectionManager:<SPAN class=number style="COLOR: rgb(0,153,153)">674</SPAN>
+     <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.rpcTimeout = conf.getInt(
+         HConstants.HBASE_RPC_TIMEOUT_KEY,
+         HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+ <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/**
+  * timeout for each RPC
+  */</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> String HBASE_RPC_TIMEOUT_KEY = <SPAN class=string style="COLOR: rgb(221,17,68)">"hbase.rpc.timeout”;
+ /**
+  * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}
+  */
+ public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>HConnectionManager</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>674</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>rpcTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_RPC_TIMEOUT_KEY</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_RPC_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/**</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      timeout for each RPC</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>*/</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>String</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_RPC_TIMEOUT_KEY</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>"<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>hbase</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>rpc</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>timeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>”<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/**</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      Default value of {@link #HBASE_RPC_TIMEOUT_KEY}</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>*/</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_RPC_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>60000</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">每次rpc调用的超时是hbase.client.operation.timeout和hbase.rpc.timeout里较小的那个，并且每次重试会重算hbase.client.operation.timeout，hbase.client.operation.timeout最小为2s。</P>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">异常重试sleep时间，包含建连异常、调用异常等</LI></UL>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint php" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.failureSleep = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
+       HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+ <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/**
+  * Parameter name for client pause value, used mostly as value to wait
+  * before running a retry of a failed get, region lookup, etc.
+  */</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> String HBASE_CLIENT_PAUSE = <SPAN class=string style="COLOR: rgb(221,17,68)">"hbase.client.pause”;
+ /**
+  * Default value of {@link #HBASE_CLIENT_PAUSE}.
+  */
+ public static long DEFAULT_HBASE_CLIENT_PAUSE = 100;</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>failureSleep</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getLong</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_CLIENT_PAUSE</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_PAUSE</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/**</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      Parameter name for client pause value, used mostly as value to 
+      wait</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      before running a retry of a failed get, region lookup, etc.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>*/</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>String</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_CLIENT_PAUSE</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>"<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>hbase</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>client</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>pause</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>”<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/**</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      Default value of {@link #HBASE_CLIENT_PAUSE}.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>*/</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>long</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_PAUSE</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>100</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">调用异常重试次数</LI></UL>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint php" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">RpcRetryingCaller:<SPAN class=number style="COLOR: rgb(0,153,153)">70</SPAN>
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.retries =
+       conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+ <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/**
+  * Parameter name for maximum retries, used as maximum for all retryable
+  * operations such as fetching of the root region from root region server,
+  * getting a cell's value, starting a row update, etc.
+  */</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> String HBASE_CLIENT_RETRIES_NUMBER = <SPAN class=string style="COLOR: rgb(221,17,68)">"hbase.client.retries.number”;
+ /**
+  * Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.
+  */
+ public static int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 31;</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>RpcRetryingCaller</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>70</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>retries</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_CLIENT_RETRIES_NUMBER</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_RETRIES_NUMBER</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/**</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      Parameter name for maximum retries, used as maximum for all 
+      retryable</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      operations such as fetching of the root region from root region 
+      server,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      getting a cell's value, starting a row update, etc.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>*/</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>String</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_CLIENT_RETRIES_NUMBER</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>"<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>hbase</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>client</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN>retries</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>number</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>”<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/**</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>* 
+      Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>*/</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_RETRIES_NUMBER</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>31</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">operation超时时间 
+  初始值：</LI></UL>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint php" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">RpcRetryingCaller:<SPAN class=number style="COLOR: rgb(0,153,153)">73</SPAN>
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.callTimeout = conf.getInt(
+       HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+       HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+
+ <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/** Parameter name for HBase client operation timeout, which overrides RPC timeout */</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN> String HBASE_CLIENT_OPERATION_TIMEOUT = <SPAN class=string style="COLOR: rgb(221,17,68)">"hbase.client.operation.timeout”;
+
+ /** Default HBase client operation timeout, which is tantamount to a blocking call */
+ public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = Integer.MAX_VALUE;
+
+在callWithRetries(RetryingCallable&lt;T&gt; callable, int callTimeout)里这个值被覆盖
+this.callTimeout = callTimeout;</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>RpcRetryingCaller</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>73</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/** 
+      Parameter name for HBase client operation timeout, which overrides RPC 
+      timeout */</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>final</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>String</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>"<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>hbase</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN>client</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>operation</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>timeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>”<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/** 
+      Default HBase client operation timeout, which is tantamount to a blocking 
+      call */</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>final</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN>Integer</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>MAX_VALUE</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">在<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callWithRetries</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>RetryingCallable</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>&lt;</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>T</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>&gt;</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callable</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>里这个值被覆盖</P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">参数的callTimeout从HTable里传进来：</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint php" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">Htable:<SPAN class=number style="COLOR: rgb(0,153,153)">327</SPAN>
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.operationTimeout = tableName.isSystemTable() ?
+     <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.configuration.getInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
+       HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT):
+     <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.configuration.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+       HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN> String HBASE_CLIENT_META_OPERATION_TIMEOUT =
+   <SPAN class=string style="COLOR: rgb(221,17,68)">"hbase.client.meta.operation.timeout”;
+ public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = Integer.MAX_VALUE; 
+ public static final String HBASE_CLIENT_OPERATION_TIMEOUT = "</SPAN>hbase.client.operation.timeout”;</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>Htable</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>327</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>operationTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>tableName</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>isSystemTable</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>?</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>configuration</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN>HBASE_CLIENT_META_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>configuration</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN>HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>final</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>String</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBASE_CLIENT_META_OPERATION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>"hbase.client.meta.operation.timeout”;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public 
+      static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = 
+      Integer.MAX_VALUE;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public 
+      static final String HBASE_CLIENT_OPERATION_TIMEOUT = "</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>hbase</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN>client</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>operation</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>timeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>”<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">生效位置：</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint cs" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">RpcRetryingCaller:<SPAN class=number style="COLOR: rgb(0,153,153)">142</SPAN>
+<SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// If, after the planned sleep, there won't be enough time left, we stop now.</SPAN>
+       <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">long</SPAN> duration = singleCallDuration(expectedSleep);
+       <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (duration &gt; <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.callTimeout) {
+         String msg = <SPAN class=string style="COLOR: rgb(221,17,68)">"callTimeout="</SPAN> + <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.callTimeout + <SPAN class=string style="COLOR: rgb(221,17,68)">", callDuration="</SPAN> + duration +
+             <SPAN class=string style="COLOR: rgb(221,17,68)">": "</SPAN> + callable.getExceptionMessageAdditionalDetail();
+         <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throw</SPAN> (SocketTimeoutException)(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> SocketTimeoutException(msg).initCause(t));
+       }</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>RpcRetryingCaller</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>142</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>// 
+      If, after the planned sleep, there won't be enough time left, we stop 
+      now.</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>long</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>duration</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>singleCallDuration</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>expectedSleep</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>if</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>duration</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>&gt;</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>String</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>msg</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>"callTimeout="</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>+</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>+</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>", 
+      callDuration="</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>+</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>duration</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>+</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>": 
+      "</SPAN><SPAN class=Apple-converted-space>&nbsp;</SPAN><SPAN>+</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>callable</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getExceptionMessageAdditionalDetail</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>throw</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>SocketTimeoutException</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>new</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>SocketTimeoutException</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>msg</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN>initCause</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>t</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>}</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">zk超时</LI></UL>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint java" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">ZKUtil：<SPAN class=number style="COLOR: rgb(0,153,153)">122</SPAN>
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT,
+       HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
+  <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> retry = conf.getInt(<SPAN class=string style="COLOR: rgb(221,17,68)">"zookeeper.recovery.retry"</SPAN>, <SPAN class=number style="COLOR: rgb(0,153,153)">3</SPAN>);
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> retryIntervalMillis =
+     conf.getInt(<SPAN class=string style="COLOR: rgb(221,17,68)">"zookeeper.recovery.retry.intervalmill"</SPAN>, <SPAN class=number style="COLOR: rgb(0,153,153)">1000</SPAN>);
+
+ <SPAN class=javadoc style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/** Configuration key for ZooKeeper session timeout */</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN> String ZK_SESSION_TIMEOUT = <SPAN class=string style="COLOR: rgb(221,17,68)">"zookeeper.session.timeout"</SPAN>;
+
+ <SPAN class=javadoc style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/** Default value for ZooKeeper session timeout */</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> DEFAULT_ZK_SESSION_TIMEOUT = <SPAN class=number style="COLOR: rgb(0,153,153)">180</SPAN> * <SPAN class=number style="COLOR: rgb(0,153,153)">1000</SPAN>;</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>ZKUtil</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN>：<SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>122</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>timeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>ZK_SESSION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>HConstants</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_ZK_SESSION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>retry</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>"zookeeper.recovery.retry"</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>3</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>retryIntervalMillis</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>conf</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getInt</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>"zookeeper.recovery.retry.intervalmill"</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>1000</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/** 
+      Configuration key for ZooKeeper session timeout */</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>final</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>String</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>ZK_SESSION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>"zookeeper.session.timeout"</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>/** 
+      Default value for ZooKeeper session timeout */</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>static</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>final</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>int</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>DEFAULT_ZK_SESSION_TIMEOUT</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>180</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>*</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>1000</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">这个值没仔细看究竟是干啥的</P>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">zk取meta超时 
+  使用的是Hconncetion的timeout：hbase.rpc.timeout</LI></UL>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px" 
+data-settings=" minimize scroll-mouseover">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em" 
+data-settings=" mouseover overlay hide delay">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P></DIV></DIV>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P><PRE class="prettyprint java" style="WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">ZooKeeperRegistry:<SPAN class=number style="COLOR: rgb(0,153,153)">43</SPAN>
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> init(HConnection connection) {
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (!(connection <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">instanceof</SPAN> HConnectionManager.HConnectionImplementation)) {
+     <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throw</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> RuntimeException(<SPAN class=string style="COLOR: rgb(221,17,68)">"This registry depends on HConnectionImplementation"</SPAN>);
+   }
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.hci = (HConnectionManager.HConnectionImplementation)connection;
+ }
+
+ <SPAN class=annotation>@Override</SPAN>
+ <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> HRegionLocation getMetaRegionLocation() <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throws</SPAN> IOException {
+   ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher();
+
+   <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">try</SPAN> {
+     <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (LOG.isTraceEnabled()) {
+       LOG.trace(<SPAN class=string style="COLOR: rgb(221,17,68)">"Looking up meta region location in ZK,"</SPAN> + <SPAN class=string style="COLOR: rgb(221,17,68)">" connection="</SPAN> + <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>);
+     }
+     ServerName servername = MetaRegionTracker.blockUntilAvailable(zkw, hci.rpcTimeout);
+}</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"></P>
+<TABLE 
+style="FONT-SIZE: 16px; MAX-WIDTH: 100%; BORDER-COLLAPSE: collapse; BORDER-SPACING: 0px; LINE-HEIGHT: 1.8em; BACKGROUND-COLOR: transparent">
+  
+  <TR style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+    <TD style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>ZooKeeperRegistry</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>:</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>43</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>void</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>init</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConnection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>connection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>if</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>!</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>connection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>instanceof</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConnectionManager</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConnectionImplementation</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>throw</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>new</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>RuntimeException</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>"This registry depends on 
+      HConnectionImplementation"</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>}</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>hci</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConnectionManager</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HConnectionImplementation</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>connection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>}</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>@</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>Override</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>public</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>HRegionLocation</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getMetaRegionLocation</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>throws</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>IOException</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>ZooKeeperKeepAliveConnection</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>zkw</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>hci</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>getKeepAliveZooKeeperWatcher</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>try</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>if</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>LOG</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>isTraceEnabled</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>{</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>LOG</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>trace</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>"Looking up meta region 
+      location in ZK,"</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>+</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>" connection="</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>+</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>this</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>}</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN></SPAN><SPAN>ServerName</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>servername</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>=</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>MetaRegionTracker</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>blockUntilAvailable</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>(</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>zkw</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>,</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>hci</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>.</SPAN><SPAN>rpcTimeout</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>)</SPAN><SPAN 
+      class=Apple-converted-space>&nbsp;</SPAN><SPAN>;</SPAN></P>
+      <P 
+      style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em"><SPAN>}</SPAN></P></DIV></TD></TR></TABLE></DIV>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizelegibility"><EM 
+style="FONT-STYLE: italic">3.</EM><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>总结：</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">一次调用的时间轴大概是：（带*的为可缓存操作）</P>
+<OL 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">getconnection在初始化时完成，不考虑。</P></LI>
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+  <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">hConnection.getTable 
+  -&gt;</P>
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">*zk取meta(hci.rpcTimeout) 
+  -&gt;</P>
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">*meta 
+  ragion scan数据 ，超时与get类似，但callWithRetries里没有限制超时。</P></DIV></LI>
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">hTable.get 
+  -&gt;RpcRetryingCaller.callWithRetries（最小为callable.call超时+hbase.client.pause，最大为Max((callable.call超时+hbase.client.pause),(callable.call超时+hbase.client.pause+hbase.client.operation.timeout)) 
+  -&gt;</P>
+  <DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">RpcClient.call中：</P>
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">socket建连超时：(ipc.socket.timeout+hbase.client.pause)*hbase.ipc.client.connect.max.retries</P>
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">socket超时：Min(hbase.rpc.timeout,Max(hbase.client.operation.timeout-已用时间,2000))</P></DIV></LI></OL></body>
+</html>

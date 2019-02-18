@@ -1,0 +1,571 @@
+<!-- saved from url=http://today.java.net/pub/a/today/2007/06/26/generating-pdfs-with-flying-saucer-and-itext.html -->
+<script>
+window.onerror = new Function("return(false);")
+</script><!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<HTML class=js><HEAD><TITLE>Generating PDFs for Fun and Profit with Flying Saucer and iText | Java.net</TITLE><LINK 
+title="Java.net Atom" href="feed" type=application/atom+xml 
+rel=alternate><LINK href="favicon.ico" type=image/x-icon 
+rel="shortcut icon"><LINK media=all 
+href="css_af4e7d6b9b2939fd69526c5b49804d2a.css" 
+type=text/css rel=stylesheet><LINK href="ie.css" 
+rel=stylesheet><LINK href="favicon.ico" 
+rel="shortcut icon"><!--  Begin SiteCatalyst code  -->
+<SCRIPT language=JavaScript>
+<!--
+var s_channel="article";
+//--></SCRIPT>
+<!--  End SiteCatalyst code  --><LINK 
+href="sharethis.ba9f7a6c94677952fcaa1fc0ec7cfe79.css" 
+type=text/css rel=stylesheet></HEAD>
+
+<BODY id=page-body bgColor=#ffffff leftMargin=0 topMargin=0 rightMargin=0 
+marginwidth="0" marginheight="0">
+
+<DIV class=topline>
+
+<TABLE id=main cellSpacing=2 cellPadding=2 width="100%" border=0>
+
+<TBODY>
+
+<TR>
+
+<TD id=article-td-main vAlign=top width="100%">
+
+<DIV class="article-node node">
+
+<DIV class=content><!--StartFragment--><P>PDFs are one of the most common and most significant document formats on the 
+internet. Typically, developers must use expensive tools from Adobe or 
+cumbersome APIs to generate PDFs. In this article, you will learn how to 
+programmatically generate PDFs easily with plain XHTML and CSS using two open 
+source Java libraries: Flying Saucer and iText.</P>
+<H3 id=the-problem-with-pdfs>The Problem with PDFs</H3>
+<P>PDFs are a great technology. When Adobe created the PDF format, they had a 
+vision for a portable document format (hence the name) that could be viewed on 
+any computer and printed to any printer. Unlike web pages, PDFs will look 
+exactly the same on every device, thanks to the rigorous PDF specification. And 
+the best thing about PDFs is that the specification is open so you can generate 
+them on the fly, using readily available open source libraries.</P>
+<P>There is one big problem with PDFs, however: the spec is complicated and the 
+APIs for generating PDFs tend to be cumbersome, requiring a lot of low-level 
+coding of paragraphs and headers. More importantly, you have to use <I>code</I> 
+to generate PDFs. But to make good-looking PDFs, you need a graphic designer to 
+create the layout. Even if graphic designers are up to the task of programming, 
+they still must convert their layout from some other format to code, which can 
+be cumbersome, buggy, and time-consuming. Fortunately, there is a better 
+way.</P>
+<P>The way to make good looking PDFs is to let the programmers do what they are 
+good at: writing code that manipulates data, and let the graphic designers do 
+what they are good at: making attractive graphic designs. Flying Saucer and 
+iText are tools that do this. They let you render CSS stylesheets and XHTML, 
+either static or generated, directly to PDFs.</P>
+<H3 id=an-introduction-to-flying-saucer-and-itext>An Introduction to Flying 
+Saucer and iText</H3>
+<P>Flying Saucer, which is the common name for the <A 
+href="https://xhtmlrenderer.dev.java.net/">xhtmlrenderer project on java.net</A>, 
+is an LGPLed Java library on java.net originally created by me and continually 
+developed by the java.net community. Download it from the project page, or use 
+the copy included with this article's sample code (see <A 
+href="http://today.java.net/pub/a/today/2007/06/26/generating-pdfs-with-flying-saucer-and-itext.html#resources">Resources</A>). Flying Saucer's primary purpose is to render 
+spec-compliant XHTML and CSS 2.1 to the screen as a Swing component. Though it 
+was originally intended for embedding markup into desktop applications (things 
+like the iTunes Music Store), Flying Saucer has been extended work with iText as 
+well. This makes it very easy to render XHTML to PDFs, as well as to images and 
+to the screen. Flying Saucer requires Java 1.4 or higher.</P>
+<P><CODE>iText</CODE> is a PDF generation library created by Bruno Lowagie and 
+Paulo Soares, licensed under the LGPL and the Mozilla Public License. You can 
+download iText from <A href="http://www.lowagie.com/iText/" target=_blank>its 
+home page</A> or use the copy in the download bundle at the end of this article 
+(see <A href="http://today.java.net/pub/a/today/2007/06/26/generating-pdfs-with-flying-saucer-and-itext.html#resources">Resources</A>). Using the iText API, you can produce 
+paragraphs, headers, or any other PDF feature. Since the PDF imaging model is 
+fairly similar to Java2D's model, Flying Saucer and iText can easily work 
+together to produce PDFs. In fact, the PDF version of the <A 
+href="https://xhtmlrenderer.dev.java.net/r6/users-guide-r6.pdf">Flying Saucer 
+user manual</A> was itself produced using Flying Saucer and iText.</P>
+<H3 id=generating-a-simple-pdf>Generating a Simple PDF</H3>
+<P>To get started, I'm going to show you how to render a very simple HTML 
+document as a PDF file. You can see in the <I>samples/firstdoc.xhtml</I> file 
+below that it's a plain XHTML document (note the XHTML DTD in the header) and 
+contains only a single formatting rule: <CODE>b { color: green; }</CODE>. This 
+means the default HTML formatting for paragraphs and text will apply, with the 
+exception that all <CODE>b</CODE> elements will be green.</P><PRE><CODE>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"&gt;
+&lt;html xmlns="http://www.w3.org/1999/xhtml"&gt;
+    &lt;head&gt;
+        &lt;title&gt;My First Document&lt;/title&gt;
+        &lt;style type="text/css"&gt; b { color: green; } &lt;/style&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+        &lt;p&gt;
+            &lt;b&gt;Greetings Earthlings!&lt;/b&gt;
+            We've come for your Java.
+        &lt;/p&gt;
+    &lt;/body&gt;
+&lt;/html&gt;
+</CODE>
+</PRE>
+<P>Now that we have a document, we need code to produce the PDF. The 
+<I>FirstDoc.java</I> file below is the simplest possible way to render a PDF 
+document.</P><PRE><CODE>package flyingsaucerpdf;
+
+import java.io.*;
+import com.lowagie.text.DocumentException;
+import org.xhtmlrenderer.pdf.ITextRenderer;
+
+public class FirstDoc {
+    
+    public static void main(String[] args) 
+            throws IOException, DocumentException {
+        String inputFile = "samples/firstdoc.xhtml";
+        String url = new File(inputFile).toURI().toURL().toString();
+        String outputFile = "firstdoc.pdf";
+        OutputStream os = new FileOutputStream(outputFile);
+        
+        ITextRenderer renderer = new ITextRenderer();
+        renderer.setDocument(url);
+        renderer.layout();
+        renderer.createPDF(os);
+        
+        os.close();
+    }
+}
+</CODE>
+</PRE>
+<P>There are two main parts to the code. First it prepares the input and output 
+files. Since Flying Saucer deals with input URLs, the code above converts a 
+local file string into a <CODE>file://</CODE> URL using the <CODE>File</CODE> 
+class. The output document is just a <CODE>FileOutputStream</CODE> that writes 
+to the <I>firstdoc.pdf</I> file in the current working directory.</P>
+<P>The second part of the code creates a new <CODE>ITextRenderer</CODE> object. 
+This is the Flying Saucer class that knows how to render PDFs using iText. You 
+must first set the <CODE>document</CODE> property of the renderer using the 
+<CODE>setDocument(String)</CODE> method. There are other methods for setting the 
+document using URLs and W3C DOM objects. Once the document is installed you must 
+call <CODE>layout()</CODE> to perform the actual layout of the document and then 
+<CODE>createPDF()</CODE> to draw the document into a PDF file on disk.</P>
+<P>To compile and run this code you need the Flying Saucer .jar, 
+<I>core-renderer.jar</I>. For this article I am using a recent development build 
+(<CODE>R7 HEAD</CODE>). R7 final should be out in a few weeks, perhaps by the 
+time you read this. I chose to use a recent R7 build instead of the year-old R6 
+because R7 has a rewritten CSS parser, better table support, and of course, 
+many, many bugfixes. You will also need the iText .jar 
+<I>itext_paulo-155.jar</I> (this is actually an early access copy of iText from 
+<A href="http://itextpdf.sourceforge.net/" target=_blank>its SourceForge project 
+page</A>). All of these .jars are included in the standard Flying Saucer R6 
+download, and also in the <I>examples.zip</I> file in this article's <A 
+href="http://today.java.net/pub/a/today/2007/06/26/generating-pdfs-with-flying-saucer-and-itext.html#resources">Resources</A> section. Once you put these .jars in your 
+classpath everything will compile and run. The finished PDF looks like Figure 
+1:</P>
+<P><A href="http://today.java.net/today/2007/06/26/firstdoc.pdf"><IMG height=145 
+alt="Screenshot of firstdoc.pdf" src="firstdoc.thumb.png" 
+width=375><BR><I>Figure 1. Screenshot of</I> firstdoc.pdf <I>(click to download 
+full PDF document)</I></A></P>
+<H3 id=generating-content-on-the-fly>Generating Content on the Fly</H3>
+<P>Producing a PDF from static documents is useful, but it would be more 
+interesting if you could generate the markup programmatically. Then you could 
+produce documents that contain more interesting content than simple static 
+text.</P>
+<P>Below is the code for a simple program that generates the lyrics to the song 
+"99 Bottles of Beer on the Wall." This song has a repeated structure, so we can 
+easily produce the lyrics with a simple loop. This document also uses some extra 
+CSS styles like color, text transformation, and modified padding.</P>
+<P>In first part of the <I>OneHundredBottles.java</I> code, all of the style and 
+markup is appended to a <CODE>StringBuffer</CODE>. Note that the style rule for 
+<CODE>h3</CODE> includes the <CODE>text-transform</CODE> property. This will 
+capitalize the first letter of every word in the title. The body of the document 
+is produced by the loop that goes from 99 to 0. Notice that there is an image, 
+<CODE>100bottles.jpg</CODE>, included at the top of the document. iText will 
+embed the image in the resulting PDF, meaning the user will not need to load any 
+other images once they receive the PDF. This is an advantage of PDFs over HTML, 
+where images must be stored separately.</P><PRE><CODE>public class OneHundredBottles {
+
+public static void main(String[] args) throws Exception {
+    
+    StringBuffer buf = new StringBuffer();
+    buf.append("&lt;html&gt;");
+    
+    // put in some style
+    buf.append("&lt;head&gt;&lt;style language='text/css'&gt;");
+    buf.append("h3 { border: 1px solid #aaaaff; background: #ccccff; ");
+    buf.append("padding: 1em; text-transform: capitalize; font-family: sansserif; font-weight: normal;}");
+    buf.append("p { margin: 1em 1em 4em 3em; } p:first-letter { color: red; font-size: 150%; }");
+    buf.append("h2 { background: #5555ff; color: white; border: 10px solid black; padding: 3em; font-size: 200%; }");
+    buf.append("&lt;/style&gt;&lt;/head&gt;");
+    
+    // generate the body
+    buf.append("&lt;body&gt;");
+    buf.append("&lt;p&gt;&lt;img src='100bottles.jpg'/&gt;&lt;/p&gt;");
+    for(int i=99; i&gt;0; i--) {
+        buf.append("&lt;h3&gt;"+i+" bottles of beer on the wall, "
+                + i + " bottles of beer!&lt;/h3&gt;");
+        buf.append("&lt;p&gt;Take one down and pass it around, "
+                + (i-1) + " bottles of beer on the wall&lt;/p&gt;\n");
+    }
+    buf.append("&lt;h2&gt;No more bottles of beer on the wall, no more bottles of beer. ");
+    buf.append("Go to the store and buy some more, 99 bottles of beer on the wall.&lt;/h2&gt;");
+    buf.append("&lt;/body&gt;");
+    buf.append("&lt;/html&gt;");
+</CODE>
+</PRE>
+<P>The second part of the code parses the <CODE>StringBuffer</CODE>into a DOM 
+document using the standard Java XML APIs and then sets that as the document on 
+the <CODE>ITextRenderer</CODE> object. The renderer needs a <I>base URL</I> to 
+load resources like images and external CSS files. If you pass a URL for the 
+document to the renderer, then it will infer the base URL. For example the 
+document URL <I>http://myserver.com/pdf/mydoc.xhtml</I> would result in a base 
+URL of <I>http://myserver.com/pdf/</I> However, if you pass in a pre-parsed 
+<CODE>Document</CODE> object instead of a URL, then the renderer will have no 
+idea what the base URL is. You can manually set the base URL using the second 
+argument to the <CODE>setDocument()</CODE> method. In this case I have used a 
+value of <CODE>null</CODE>, since I am not referencing any external 
+resources.</P><PRE><CODE>    // parse the markup into an xml Document
+    DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+    Document doc = builder.parse(new StringBufferInputStream(buf.toString()));
+
+    ITextRenderer renderer = new ITextRenderer();
+    renderer.setDocument(doc, null);
+
+    String outputFile = "100bottles.pdf";
+    OutputStream os = new FileOutputStream(outputFile);
+    renderer.layout();
+    renderer.createPDF(os);
+    os.close();
+}
+}
+</CODE>
+</PRE>
+<P>The final document looks like Figure 2:</P>
+<P><A href="http://today.java.net/today/2007/06/26/100bottles.pdf"><IMG height=280 
+alt="Screenshot of 100bottles.pdf" src="100bottles.thumb.png" 
+width=398><BR><I>Figure 2. Screenshot of</I> 100bottles.pdf<I> (click to 
+download full PDF document)</I></A></P>
+<H3 id=page-specific-features>Page-Specific Features</H3>
+<P>So far the documents we have rendered are basically just web pages in PDF 
+form. They don't have any features that take advantage of pages. Paged media 
+like printed documents or slideshows have certain features specific to pages. In 
+particular, pages have specific sizes and margins. Text laid out for an 8 1/2 by 
+11 inch piece of paper will look very different than text for a paperback book, 
+or a CD cover. In short, pages matter, and Flying Saucer gives you some control 
+over pages using page-specific features in CSS.</P>
+<P>This next example will print the first chapter of Lewis Carroll's <I>Alice in 
+Wonderland</I> in a paperback format. The markup is pretty straightforward, just 
+a bunch of headers and paragraphs. Below are the first few paragraphs of the 
+document (see the download for the entire chapter). There are two things to 
+notice in this document. First, all of the style is included in the 
+<I>alice.css</I> file linked in the header with a <CODE>link</CODE> element. The 
+<CODE>media="print"</CODE> attribute must be included, or the style will not be 
+loaded. The other important thing to notice are the two <CODE>div</CODE>s at the 
+top: <CODE>header</CODE> and <CODE>footer</CODE>. The footer has two special 
+elements in it, <CODE>pagenumber</CODE> and <CODE>pagecount</CODE>, which are 
+used to generate the page numbers. These <CODE>div</CODE>s and the page number 
+elements will not be rendered at the top of the page. Instead, we will use some 
+special CSS to make these <CODE>div</CODE>s repeat on every page and generate 
+the proper page numbers at runtime.</P><PRE><CODE>&lt;html xmlns="http://www.w3.org/1999/xhtml"&gt;
+    &lt;head&gt;
+        &lt;title&gt;Alice's Adventures in Wonderland -- Chapter I&lt;/title&gt;
+        &lt;link rel="stylesheet" type="text/css" href="alice.css" media="print"/&gt;
+    &lt;/head&gt;
+    
+    &lt;body&gt;
+        &lt;div id="header" style=""&gt;Alice's Adventures in Wonderland&lt;/div&gt;
+        &lt;div id="footer" style=""&gt;  Page &lt;span id="pagenumber"/&gt; of &lt;span id="pagecount"/&gt; &lt;/div&gt;
+                
+        &lt;h1&gt;CHAPTER I&lt;/h1&gt;
+        
+        &lt;h2&gt;Down the Rabbit-Hole&lt;/h2&gt;
+        
+        &lt;p class="dropcap-holder"&gt;
+            &lt;div class="dropcap"&gt;A&lt;/div&gt;
+            lice was beginning to get very tired of sitting by her sister
+            on the bank, and of having nothing to do: once or twice she had
+            peeped into the book her sister was reading, but it had no pictures
+            or conversations in it, `and what is the use of a book,' thought
+            Alice `without pictures or conversation?'
+        &lt;/p&gt;
+        
+        &lt;p&gt;So she was considering in her own mind (as well as she could,
+            for the hot day made her feel very sleepy and stupid), whether the
+            pleasure of making a daisy-chain would be worth the trouble of
+            getting up and picking the daisies, when suddenly a White Rabbit
+        with pink eyes ran close by her. &lt;/p&gt;
+        
+        &lt;p class="figure"&gt;
+            &lt;img src="alice2.gif" width="200px" height="300px"/&gt;
+            &lt;br/&gt;
+            &lt;b&gt;White Rabbit checking watch&lt;/b&gt;
+        &lt;/p&gt;
+        ... the rest of the chapter
+</CODE>
+</PRE>
+<P>Most of the <I>alice.css</I> file contains normal CSS rules that can apply to 
+any kind XHTML document, printed or not. There are a few, however, that are 
+page-specific extensions:</P><PRE><CODE>@page { 
+size: 4.18in 6.88in;
+margin: 0.25in; 
+-fs-flow-top: "header";
+-fs-flow-bottom: "footer";
+-fs-flow-left: "left";
+-fs-flow-right: "right";
+border: thin solid black;
+padding: 1em;
+}
+
+#header {
+font: bold serif;
+position: absolute; top: 0; left: 0; 
+-fs-move-to-flow: "header";
+}
+
+#footer {
+font-size: 90%; font-style: italic; 
+position: absolute; top: 0; left: 0;
+-fs-move-to-flow: "footer";
+}
+
+
+#pagenumber:before {
+content: counter(page); 
+}
+
+#pagecount:before {
+content: counter(pages);  
+}
+
+</CODE>
+</PRE>
+<P>The first thing you'll notice in the CSS above is the <CODE>@page</CODE> 
+rule. This is a rule that is attached to the page itself rather than to any 
+particular elements within the document. Within this <CODE>@page</CODE> rule, 
+you can set the size of the page as well as page margins using the 
+<CODE>size</CODE> and <CODE>margin</CODE> properties. Note that I have set the 
+size to <CODE>4.18in 6.88in</CODE>, which is the size of a standard mass-market 
+paperback book in the U.S. (according to <A href="http://www.cafepress.com/" 
+target=_blank>CafePress</A>). Also in the <CODE>@page</CODE> rule are four 
+special properties beginning with <CODE>-fs-flow-</CODE>. These are Flying 
+Saucer-specific properties that tell the renderer to move content marked with 
+the specified names: <CODE>header</CODE>, <CODE>footer</CODE>, 
+<CODE>left</CODE>, and <CODE>right</CODE> to every page in the top, bottom, 
+left, and right positions.</P>
+<P>In the rules for the header and footer <CODE>div</CODE>s, you can see another 
+Flying Saucer-specific property called <CODE>-fs-move-to-flow</CODE>, which will 
+take the <CODE>div</CODE> out of the normal document and put it in the special 
+place marked by <CODE>"footer"</CODE> or <CODE>"header"</CODE>. This property 
+works in conjunction with the <CODE>-fs-flow-</CODE>* properties in the 
+<CODE>@page</CODE> element to make repeated content work. These custom 
+properties are needed because CSS 2.1 does not define any way to have repeated 
+headers and footers. CSS 3 <EM>does</EM> define a way to have repeated content, 
+and Flying Saucer will support the new standard mechanism in the future.</P>
+<P>After the <CODE>@page</CODE> and header rules, you'll find two more rules for 
+the <CODE>pagenumber</CODE> and <CODE>pagecount</CODE> elements. These are 
+made-up elements (not standard XHTML) that will have counters added to their 
+content. Since those two elements are empty, you will only see the counters 
+themselves. Since the <CODE>pagenumber</CODE> and <CODE>pagecount</CODE> 
+elements were defined in the footer, the final page numbers will also appear in 
+the footer. Again, these page number elements will be replaced with their proper 
+CSS 3 equivalents in the future.</P>
+<P>The final rendered <I>alice.xhtml</I> is shown in Figure 3:</P>
+<P><A href="http://today.java.net/today/2007/06/26/pagination.pdf"><IMG height=404 
+alt="Screenshot of pagination.pdf" src="pagination.thumb.2.png" 
+width=256><IMG height=404 alt="Screenshot of pagination.pdf" 
+src="pagination.thumb.1.png" width=256><BR><I>Figure 3. 
+Screenshot of two pages of</I> pagination.pdf<I> (click to download full PDF 
+document)</I></A></P>
+<P>A quick note on debugging: CSS can be tricky sometimes, and it is very easy 
+to misspell a keyword or forget some punctuation. Flying Saucer R7 has a brand 
+new CSS parser with very robust error reporting. When developing your 
+application, I recommend turning on the built-in logging. The in-depth details 
+of Flying Saucer configuration are available in the FAQ. I have found the most 
+useful setting is to set the logging level to <CODE>INFO</CODE> by adding this 
+to your Java command line:</P><PRE><CODE>-Dxr.util-logging.java.util.logging.ConsoleHandler.level=INFO</CODE>
+</PRE>
+<P>This setting will print lots of debugging information, including places where 
+the CSS or markup may be broken.</P>
+<H3 id=rendering-generic-xml-instead-of-xhtml>Rendering Generic XML Instead of 
+XHTML</H3>
+<P>Every example so far has used XHTML, meaning the XHTML dialect of XML defined 
+by the W3C. Many documents rendered into PDF are in fact XHTML documents, but 
+Flying Saucer can actually handle any well-formed XML file. In fact, Flying 
+Saucer does very little that is XHTML-specific. XHTML documents are just XML 
+documents with a default stylesheet. If you define your own stylesheet, then you 
+can render any XML document you want. This could be particularly useful when 
+working with the output of databases or web services, since that output is 
+probably in XML already.</P>
+<P>Below is a very simple custom XML document, <I>weather.xml</I>, that 
+describes the weather at multiple locations. It does not use standard XHTML 
+elements at all; every element is custom. Notice the second line contains a 
+reference to the stylesheet.</P><PRE><CODE>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;?xml-stylesheet href='weather.css' type='text/css'?&gt;
+&lt;weather&gt;
+    &lt;station&gt;
+        &lt;location&gt;Springfield, NT&lt;/location&gt;
+        &lt;description&gt;Sunny&lt;/description&gt;
+        &lt;tempf&gt;85&lt;/tempf&gt;
+    &lt;/station&gt;
+    &lt;station&gt;
+        &lt;location&gt;Arlen, TX&lt;/location&gt;
+        &lt;description&gt;Super Sunny&lt;/description&gt;
+        &lt;tempf&gt;99&lt;/tempf&gt;
+    &lt;/station&gt;
+    &lt;station&gt;
+        &lt;location&gt;South Park, CO&lt;/location&gt;
+        &lt;description&gt;Snowing&lt;/description&gt;
+        &lt;tempf&gt;18&lt;/tempf&gt;
+    &lt;/station&gt;
+&lt;/weather&gt;
+</CODE>
+</PRE>
+<P>Here is the <I>DirectXML.java</I> code that renders the document. Notice that 
+the code does nothing special. As far as Flying Saucer is concerned, the only 
+difference between XHTML and XML is the file extension.</P><PRE><CODE>
+public class DirectXML {
+    public static void main(String[] args) throws IOException, DocumentException {
+        String inputFile = "samples/weather.xml";
+        String outputFile = "weather.pdf";
+        
+        OutputStream os = new FileOutputStream(outputFile);
+        ITextRenderer renderer = new ITextRenderer();
+        renderer.setDocument(new File(inputFile));
+        renderer.layout();
+        renderer.createPDF(os);
+        os.close();
+    }
+}
+</CODE>
+</PRE>
+<P>Here's the <I>weather.css</I> CSS that will style the XML.</P><PRE><CODE>
+* { display: block; margin: 0; padding: 0; border: 0;}
+
+station { 
+    clear: both; 
+    width: 3in; height: 3in;
+    padding: 0.5em; margin: 1em;
+    border: 3px solid black; background-color: green;
+    font-size: 30pt;
+    page-break-inside: avoid;
+}
+
+tempf {
+    border: 1px solid white;
+    background-color: blue; color: white;
+    width: 1.5in; height: 1.5in;
+    margin: 5pt;
+    padding: 8pt;
+    font: 300% sans-serif bold;
+}
+
+location { color: white; }
+description { color: yellow; }
+
+</CODE>
+</PRE>
+<P>The CSS stylesheet contains all of the magic in this example. Since this is 
+all XML, there are no default rules to show how any element is drawn. That's why 
+the first rule is a <CODE>*</CODE> rule to affect all elements: they should all 
+be blocks with no border, margins, or padding. Then I have defined a rule for 
+each of the four content elements. The elements take the standard CSS properties 
+that you could apply to HTML elements. Note that the <CODE>station</CODE> 
+element has a <CODE>page-break-inside: avoid</CODE> property. This is a CSS 3 
+property that tells the renderer that you don't want the station element split 
+by a page break. This is useful when you have content sections that must be 
+printed whole. For example you might be printing to label paper for stickers on 
+a map display. In that case, you definitely would <I>not</I> want any boxes to 
+be split across pages.</P>
+<P>Note that I've set the size of the station block using inches. When coding 
+for the Web you usually want to avoid absolute units like inches, pixels, or 
+centimeters. Instead, you should use relative units like points or ems, since 
+these work well when a user resizes the document or changes their font size. But 
+then again, <I>PDFs aren't for the Web</I>. They are paged media for printing. 
+That means absolute units are perfectly fine, and in fact encouraged, since 
+their use ensures the user will get a document that looks exactly like you 
+wanted.</P>
+<P>The final document looks like Figure 4.:</P>
+<P><A href="http://today.java.net/today/2007/06/26/weather.pdf"><IMG height=221 
+alt="Screenshot of weather.pdf" src="weather.thumb.png" 
+width=212><BR><I>Figure 4. Screenshot of</I> weather.pdf <I>(click to download 
+full PDF document)</I></P></A>
+<H3 id=generating-pdfs-in-a-server-side-application>Generating PDFs in a 
+Server-Side Application</H3>
+<P>All of the examples in this article have been small command-line programs 
+that write PDF files. However, you can easily use this technology to produce 
+PDFs in a web application using a servlet. The only difference is that you will 
+be writing to a <CODE>ServletOutputStream</CODE> instead of a 
+<CODE>FileOutputStream</CODE>. Below is a portion of the code for a PDF 
+generation servlet that produces a tabular report of sales for a particular 
+user:</P><PRE><CODE>
+public class PDFServlet extends HttpServlet {
+    
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/pdf");
+        
+        StringBuffer buf = new StringBuffer();
+        buf.append("&lt;html&gt;");
+        
+        String css = getServletContext().getRealPath("/PDFservlet.css");
+        // put in some style
+        buf.append("&lt;head&gt;&lt;link rel='stylesheet' type='text/css' "+
+                "href='"+css+"' media='print'/&gt;&lt;/head&gt;");
+        
+        ... //generate the rest of the HTML
+        
+        // parse our markup into an xml Document
+        try {
+            DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+            Document doc = builder.parse(new StringBufferInputStream(buf.toString()));
+            ITextRenderer renderer = new ITextRenderer();
+            renderer.setDocument(doc, null);
+            renderer.layout();
+            OutputStream os = response.getOutputStream();
+            renderer.createPDF(os);
+            os.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+</CODE>
+</PRE>
+<P>The code above looks pretty much like the previous examples. There are two 
+special things to notice, though. First, you must set the content type to 
+<CODE>application/pdf</CODE>. This will make the user's web browser pass the PDF 
+on to their PDF reader or plugin instead of showing it as garbled text. Second, 
+the CSS is stored in a separate file in the main <I>webapp</I> directory (where 
+the JSPs and HTML would go). In order for Flying Saucer to find it, you must use 
+the <CODE>getServletContext().getRealPath()</CODE> method to convert 
+<CODE>PDFservlet.css</CODE> into an absolute URL and put it in the link tag at 
+the top of the generated markup. Once you have your HTML properly generated, you 
+can just parse it into a <CODE>Document</CODE> and render the PDF to the output 
+stream returned by <CODE>response.getOutputStream()</CODE>.</P>
+<P>The final document looks like Figure 5:</P>
+<P><A href="http://today.java.net/today/2007/06/26/servlet.pdf"><IMG height=310 
+alt="Screenshot of servlet.pdf" src="servlet.thumb.png" 
+width=358><BR><I>Figure 5. Screenshot of</I> servlet.pdf<I> (click to download 
+full PDF document)</I></A></P>
+<H3 id=conclusion>Conclusion</H3>
+<P>PDFs are a great format for maps, receipts, reports, and printable labels. 
+Flying Saucer and iText let you produce PDF files programmatically without 
+having to use expensive tools or cumbersome APIs. By using plain XHTML and CSS, 
+your graphic designer can use their existing web tools like Dreamweaver to 
+produce great looking CSS templates that you or your developers plug in to your 
+applications. By splitting the work, you can save both time and money.</P>
+<P>If you use Flying Saucer to produce PDFs for your company or project, please 
+post a link in the comments of this article or email me. The Flying Saucer team 
+would love to have more examples of cool things people are doing with Flying 
+Saucer and iText.</P>
+<H3 id=resources>Resources</H3>
+<UL>
+<LI><A href="https://xhtmlrenderer.dev.java.net/">Flying Saucer project</A> 
+<LI><A href="http://www.lowagie.com/iText/" target=_blank>iText</A> 
+<LI><A href="http://www.adobe.com/devnet/pdf/pdf_reference.html" 
+target=_blank>PDF reference</A> 
+<LI><A href="http://today.java.net/today/2007/06/26/FlyingSaucerPDFSampleCode.zip">Sample code</A> 
+for this article </LI></UL><CSINCLUDE template="short_bio.view" 
+record="au/{cs.r.id_author}" /><!--EndFragment--></DIV>
+</DIV>
+</TD>
+</TR>
+</TBODY>
+</TABLE>
+</DIV>
+</BODY>
+</HTML>

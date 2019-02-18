@@ -1,0 +1,112 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>使用HBase总结</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H1 
+style='FONT-SIZE: 24px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; MARGIN: 0px 0px 5px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility; font-variant-ligatures: normal; font-variant-caps: normal'>使用HBase总结</H1>
+<DIV class=article_meta 
+style='FONT-SIZE: 14px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(211,211,211) 1px dashed; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(153,153,153); PADDING-BOTTOM: 8px; FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal'>
+<DIV style="MARGIN-BOTTOM: 5px"><SPAN class=timestamp 
+style="MARGIN-RIGHT: 5px">时间&nbsp;2017-02-09 18:34:25<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN class=from 
+style="MARGIN-RIGHT: 5px"><I class=icon-globe 
+style="TEXT-DECORATION: ; HEIGHT: auto; FONT-FAMILY: FontAwesome; WIDTH: auto; VERTICAL-ALIGN: baseline; BACKGROUND-IMAGE: none; BACKGROUND-REPEAT: repeat; BACKGROUND-POSITION: 0px 0px; FONT-WEIGHT: normal; FONT-STYLE: normal; MARGIN-TOP: 0px; DISPLAY: inline; LINE-HEIGHT: normal; MARGIN-RIGHT: 0px; -webkit-font-smoothing: antialiased"></I><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A class="cut cut28 from" 
+style="OVERFLOW: hidden; TEXT-DECORATION: none; MAX-WIDTH: 28%; WHITE-SPACE: nowrap; TEXT-OVERFLOW: ellipsis; WORD-BREAK: keep-all; COLOR: rgb(51,51,51); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; DISPLAY: inline; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://www.tuicool.com/sites/b63EV36" target=_blank>致一</A></SPAN></DIV>
+<DIV class=source><I style="FLOAT: left; FONT-STYLE: normal">原文</I>&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A class="cut cut70" 
+style="OVERFLOW: hidden; TEXT-DECORATION: none; MAX-WIDTH: 69%; WHITE-SPACE: nowrap; TEXT-OVERFLOW: ellipsis; WORD-BREAK: keep-all; COLOR: rgb(51,51,51); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; DISPLAY: inline-block; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://www.zhyea.com/2017/02/09/using-hbase-summary.html?utm_source=tuicool&amp;utm_medium=referral">http://www.zhyea.com/2017/02/09/using-hbase-summary.html</A></DIV>
+<DIV><SPAN style="MARGIN-RIGHT: 5px">主题</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; COLOR: rgb(51,51,51); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://www.tuicool.com/topics/11030035" target=_blank><SPAN 
+class=new-label 
+style="FONT-SIZE: 0.9em; TEXT-DECORATION: none; VERTICAL-ALIGN: baseline; WHITE-SPACE: nowrap; COLOR: rgb(120,120,120); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; DISPLAY: inline-block; LINE-HEIGHT: 16px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(242,242,242); MARGIN-RIGHT: 5px">HBase</SPAN></A></DIV></DIV>
+<DIV id=nei class=article_body 
+style='WORD-WRAP: break-word; MARGIN-BOTTOM: 0px; FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: hidden; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); PADDING-BOTTOM: 25px; FONT-STYLE: normal; PADDING-TOP: 20px; PADDING-LEFT: 5px; MIN-HEIGHT: 340px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 5px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal'>
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">前段时间我们在项目中使用了HBase，选择HBase是看中HBase处理海量数据的能力，以及实现流式读写及去重的可能性。在这里记一下使用经历或者说踩过的坑。</P>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility"><SPAN>RowKey设计</SPAN></H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">我们读取数据的方式主要是批量查询，因此在我们的设计中，几乎将所有的查询字段都放在了RowKey上，目的是利用RowKey作为索引的特性。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">关于RowKey的设计，通常有要求唯一性、散列性以及尽量短。我们在设计RowKey时也尽量地按照这三个原则去做。为了保证唯一性，也想过直接将一个32个字符的原始记录ID（UUID）放到RowKey里，但这样必然会导致行键特别长，所以我们选择使用“查询字段（3个）+服务器标记+机器时间（秒级）+顺序号”这样的行键。为了进一步压缩RowKey，又对“机器时间+顺序号”的数字组合做了32进制的换算。后来为了实现预分区，就在RowKey前方添加了分区提示符。最终得到的RowKey方案是“分区提示符+查询字段+服务器标记+机器时间（秒级）+顺序号”这样的组合，总长度是31位。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">这样的做法是存在一个弊端的：因为没有将原始记录ID添加到RowKey里，所以无法在写入时保证记录的唯一性，只能在查询完成后再做排重处理。如果直接使用原始记录ID作为RowKey，就无法再利用RowKey作为索引的能力。曾经考虑过再新建一个表专门用来维护生成的RowKey和原始记录ID的关系，也就是作为二级索引。不过这样增加了写入数据的复杂度，后来就放弃了。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">另一个问题就是这样设计出来的RowKey仍然是太长了，直接导致了后期的一个非常严重的问题。</P>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility"><SPAN>建表</SPAN></H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">我们的数据的特点是：量非常大，老化速度比较快，但是还有长期保存的需要。根据这个特点我们进行了按月分表。并在建表的同时做了预分区。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">关于预分区，如何选择SplitKey是一个问题。根据一开始的RowKey设计方案无法计算出SplitKey，所以又在RowKey前面添了一个字符作为分区引导符（如1-9，A-Z，a-z）。分区引导符是用原始记录ID的hashcode做求余运算后得到的。SplitKey自然就是这些分区引导符了。然而很快就发现使用一个字符做分区引导符有点不够用，在运行了一天后，开始出现了新的SplitKey，只好又为分区引导符添加了一个字符。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">如果分区数量持续增加到两个字符的分区引导符也不够用的情况，就考虑将两个字符换成一个short型的值（最大为32767），虽然不是可视字符但能省下一些空间。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">此外，因为对数据读取的要求不高，而且数据总量非常大，在建表时对所有列族设置了SNAPPY压缩。</P>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility"><SPAN>列设计</SPAN></H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">现在使用的列设计方案是：将数据的字段分成三大类对应三个列族，列族名称是：cf1111，cf222222，cf33333（名称随手写的，但长度是对的）。而后每个字段作为一个qualifier，其中一个表有22个列（qualifier）。列名就是字段的原始名称。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">看到这里有经验的朋友应该会指出问题了：列族和列的名称太长了。另外我这里的列也有些多，再加上RowKey的长度，然后想想HFile的结构——最终暴露出的问题是数据占用的空间膨胀了大约8倍（相对SequenceFile存储），如果再运行一个月就极有可能耗尽HBase的存储空间。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">遇到这个问题后，开始重新考虑HBase是否适用我们的业务需求。我们的需求就是存储日志，并按要求查询导出日志。如果仅从这个需求出发，实在没必要分出这许多列族和列。因为我们的查询条件都放到了RowKey上，存储数据的时候只需要使用单列族单列保存原始的json记录即可。如果是单列族单列，也不必再考虑太多RowKey占用空间的问题了，可以直接将原始记录ID添加到RowKey中实现去重的功能。不过这样子存储起来的数据还能做什么用呢。</P>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility"><SPAN>写数据</SPAN></H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">为了提升写数据的效率，在写数据时做了如下操作：</P>
+<UL 
+style="LIST-STYLE-TYPE: none; FONT-SIZE: 16px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 0px">
+  <LI style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">关闭了auto 
+  flush（后来发现开启了影响也不大）；</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">设置了批量写入；</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">做了预分区，避免写数据时产生split（split会造成region短暂的停止）；</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">关闭定期major 
+  compact的功能，仅在必要的时候使用Java API手动执行major compact。</LI></UL>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">使用BulkLoad导入历史数据。</P>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility"><SPAN>查询</SPAN></H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">为了提升查询效率做了如下事情：</P>
+<UL 
+style="LIST-STYLE-TYPE: none; FONT-SIZE: 16px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">将必要的查询条件放到RowKey上；</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">优化RowKey设计，在查询时尽量利用StartRow和StopRow；</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">调大查询服务的xmx；</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">设置ScanCaching，每次多拽一些数据。</LI></UL>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">另外，在查询实现上做了一件极蠢的事情，就是设计了一个自定义Filter。因为不太可能为了添加一个自定义FIlter而重启生产环境的HBase，所以设计的自定义FIlter压根就没用到。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">———</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">好了，现就这样。以后想到了再继续写。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">##########尽</P></DIV></DIV></body>
+</html>

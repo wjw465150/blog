@@ -1,0 +1,230 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>JVM中可生成的最大Thread数量</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--StartFragment-->
+<p><span>最近想测试下</span><span style="font-size: 10.5pt;" lang="EN-US">Openfire</span><span>下的最大并发数，需要开大量线程来模拟客户端。对于一个</span><span style="font-size: 10.5pt;" lang="EN-US">JVM</span><span>实例到底能开多少个线程一直心存疑惑，所以打算实际测试下，简单</span><span style="font-size: 10.5pt;" lang="EN-US">google</span><span>了把，找到影响线程数量的因素有下面几个：</span></p>
+<p>&nbsp;</p>
+<div style="text-align: center;">
+  <table class="MsoTableGrid" style="border-collapse: collapse; border: none;" border="1" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr style="height: 13.7pt;">
+        <td style="width: 187.8pt; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.7pt;" valign="top" width="250"><p class="MsoNormal"><span lang="EN-US">-Xms</span></p></td>
+        <td style="width: 187.8pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.7pt;" valign="top" width="250"><p class="MsoNormal"><span lang="EN-US">intial java heap size</span></p></td>
+      </tr>
+      <tr style="height: 13.7pt;">
+        <td style="width: 187.8pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.7pt;" valign="top" width="250"><p class="MsoNormal"><span lang="EN-US">-Xmx</span></p></td>
+        <td style="width: 187.8pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.7pt;" valign="top" width="250"><p class="MsoNormal"><span lang="EN-US">maximum java heap size</span></p></td>
+      </tr>
+      <tr style="height: 14.15pt;">
+        <td style="width: 187.8pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.15pt;" valign="top" width="250"><p class="MsoNormal"><span lang="EN-US">-Xss</span></p></td>
+        <td style="width: 187.8pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.15pt;" valign="top" width="250"><p class="MsoNormal"><span lang="EN-US">the stack size for each thread</span></p></td>
+      </tr>
+      <tr style="height: 13.7pt;">
+        <td style="width: 187.8pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.7pt;" valign="top" width="250"><p class="MsoNormal"><span>系统限制</span></p></td>
+        <td style="width: 187.8pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.7pt;" valign="top" width="250"><p class="MsoNormal"><span>系统最大可开线程数</span></p></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div style="text-align: left;"><br>
+</div>
+<div style="text-align: left;">测试程序如下：</div>
+<div style="text-align: left;">
+  <div id="" class="dp-highlighter">
+    <div class="bar">
+      <div class="tools">Java代码
+        <div role="button" tabindex="0" srcattribute="/javascripts/syntaxhighlighter/clipboard_new.swf" title="/javascripts/syntaxhighlighter/clipboard_new.swf" style="background: url(&quot;chrome://flashblock/content/flash.png&quot;) no-repeat scroll center center transparent ! important; min-width: 32px ! important; min-height: 32px ! important; width: 32px; height: 32px; border: 1px solid rgb(223, 223, 223); cursor: pointer; overflow: hidden; display: inline-block; visibility: visible ! important; -moz-box-sizing: border-box;" bgactive="url(chrome://flashblock/content/flashplay.png) no-repeat center" bginactive="url(chrome://flashblock/content/flash.png) no-repeat center"></div>
+      &nbsp;<a href="javascript:void()" title="收藏这段代码" onClick="code_favorites_do_favorite(this);return false;"><img class="star" src="icon_star.png" alt="收藏代码"></a></div>
+    </div>
+    <ol class="dp-j" start="1">
+      <li><span><span class="keyword">import</span><span>&nbsp;java.util.concurrent.atomic.AtomicInteger;&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;</span></li>
+      <li><span><span class="keyword">public</span><span>&nbsp;</span><span class="keyword">class</span><span>&nbsp;TestThread&nbsp;</span><span class="keyword">extends</span><span>&nbsp;Thread&nbsp;{&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">private</span><span>&nbsp;</span><span class="keyword">static</span><span>&nbsp;</span><span class="keyword">final</span><span>&nbsp;AtomicInteger&nbsp;count&nbsp;=&nbsp;</span><span class="keyword">new</span><span>&nbsp;AtomicInteger();&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;</span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">public</span><span>&nbsp;</span><span class="keyword">static</span><span>&nbsp;</span><span class="keyword">void</span><span>&nbsp;main(String[]&nbsp;args)&nbsp;{&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">while</span><span>&nbsp;(</span><span class="keyword">true</span><span>)&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="keyword">new</span><span>&nbsp;TestThread()).start();&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;</span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span></li>
+      <li><span>&nbsp;&nbsp;</span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="annotation">@Override</span><span>&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">public</span><span>&nbsp;</span><span class="keyword">void</span><span>&nbsp;run()&nbsp;{&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(count.incrementAndGet());&nbsp;&nbsp;</span></li>
+      <li><span>&nbsp;&nbsp;</span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">while</span><span>&nbsp;(</span><span class="keyword">true</span><span>)&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">try</span><span>&nbsp;{&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Thread.sleep(Integer.MAX_VALUE);&nbsp;&nbsp;</span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<span class="keyword">catch</span><span>&nbsp;(InterruptedException&nbsp;e)&nbsp;{&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">break</span><span>;&nbsp;&nbsp;</span></span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span></li>
+      <li><span>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span></li>
+      <li><span>}&nbsp;&nbsp;</span></li>
+    </ol>
+  </div>
+</div>
+<div style="text-align: left;"><br>
+</div>
+<div style="text-align: left;"><span><strong><span style="font-size: small;">测试环境：</span></strong></span></div>
+<div style="text-align: left;"> <span><span style="white-space: pre;"> </span>系统：</span><span lang="EN-US">Ubuntu 10.04 Linux Kernel 2.6 </span><span>（</span><span lang="EN-US">32</span><span>位）</span> </div>
+<p class="MsoNormal"><span><span style="white-space: pre;"> </span>内存：</span><span lang="EN-US">2G</span></p>
+<p class="MsoNormal"><span lang="EN-US"><span style="white-space: pre;"> </span>JDK</span><span>：</span><span lang="EN-US">1.7</span></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;</span></p>
+<p class="MsoNormal"><span><strong><span style="font-size: small;">测试结果：</span></strong></span></p>
+<p class="MsoListParagraph"><strong><span style="font-size: x-small;"><span style="font-family: Wingdings;" lang="EN-US">?<span style="font: 7.0pt ;">&nbsp; </span></span><span>不考虑系统限制</span></span></strong></p>
+<div>
+  <table class="MsoTableGrid" style="border-collapse: collapse; border: none;" border="1" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr style="height: 14.65pt;">
+        <td style="width: 96.4pt; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.65pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">-Xms</span></p></td>
+        <td style="width: 96.4pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.65pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">-Xmx</span></p></td>
+        <td style="width: 96.4pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.65pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">-Xss</span></p></td>
+        <td style="width: 96.4pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.65pt;" valign="top" width="129"><p class="MsoNormal"><span>结果</span></p></td>
+      </tr>
+      <tr style="height: 14.2pt;">
+        <td style="width: 96.4pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">1024m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">1024m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">1024k</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">1737</span></p></td>
+      </tr>
+      <tr style="height: 14.2pt;">
+        <td style="width: 96.4pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">1024m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">1024m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">64k</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">26077</span></p></td>
+      </tr>
+      <tr style="height: 14.2pt;">
+        <td style="width: 96.4pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">512m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">512m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">64k</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">31842</span></p></td>
+      </tr>
+      <tr style="height: 14.65pt;">
+        <td style="width: 96.4pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.65pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">256m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.65pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">256m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.65pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">64k</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.65pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">31842</span></p></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="MsoNormal"><span>在创建的线程数量达到</span><span lang="EN-US">31842</span><span>个时，系统中无法创建任何线程。</span></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;</span></p>
+<p class="MsoNormal"><span><span style="white-space: pre;"> </span>由上面的测试结果可以看出增大堆内存（</span><span lang="EN-US">-Xms</span><span>，</span><span lang="EN-US">-Xmx</span><span>）会减少可创建的线程数量，增大线程栈内存（</span><span lang="EN-US">-Xss</span><span>，</span><span lang="EN-US">32</span><span>位系统中此参数值最小为</span><span lang="EN-US">60K</span><span>）也会减少可创建的线程数量。</span></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;</span></p>
+<p class="MsoListParagraph"><span style="font-size: x-small;"><strong><span style="font-family: Wingdings;">?</span></strong></span><strong><span style="font-size: x-small;"><span style="font-family: Wingdings;" lang="EN-US"><span style="font: 7.0pt ;">&nbsp;&nbsp;</span></span></span></strong><span style="font-size: x-small;"><strong><span>结合系统限制</span></strong></span></p>
+<p class="MsoNormal"><span>线程数量</span><span lang="EN-US">31842</span><span>的限制是是由系统可以生成的最大线程数量决定的：</span><strong><span lang="EN-US">/proc/sys/kernel/threads-max</span></strong><strong><span>，</span></strong><span>可其默认值是</span><span lang="EN-US">32080</span><span>。修改其值为</span><span lang="EN-US">10000</span><span>：</span><strong><span lang="EN-US">echo 10000 &gt; /proc/sys/kernel/threads-max</span></strong><span>，修改后的测试结果如下：</span></p>
+<div>
+  <table class="MsoTableGrid" style="border-collapse: collapse; border: none;" border="1" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr style="height: 14.2pt;">
+        <td style="width: 96.4pt; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">-Xms</span></p></td>
+        <td style="width: 96.4pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">-Xmx</span></p></td>
+        <td style="width: 96.4pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">-Xss</span></p></td>
+        <td style="width: 96.4pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span>结果</span></p></td>
+      </tr>
+      <tr style="height: 14.2pt;">
+        <td style="width: 96.4pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">256m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">256m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">64k</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">9761</span></p></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="MsoNormal"><span>这样的话，是不是意味着可以配置尽量多的线程？再做修改：</span><strong><span lang="EN-US">echo 1000000 &gt;
+  /proc/sys/kernel/threads-max</span></strong><span>，修改后的测试结果如下：</span></p>
+<div>
+  <table class="MsoTableGrid" style="border-collapse: collapse; border: none;" border="1" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr style="height: 14.2pt;">
+        <td style="width: 96.4pt; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">-Xms</span></p></td>
+        <td style="width: 96.4pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">-Xmx</span></p></td>
+        <td style="width: 96.4pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">-Xss</span></p></td>
+        <td style="width: 96.4pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span>结果</span></p></td>
+      </tr>
+      <tr style="height: 14.2pt;">
+        <td style="width: 96.4pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">256m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">256m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">64k</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">32279</span></p></td>
+      </tr>
+      <tr style="height: 14.2pt;">
+        <td style="width: 96.4pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">128m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">128m</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">64k</span></p></td>
+        <td style="width: 96.4pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 14.2pt;" valign="top" width="129"><p class="MsoNormal"><span lang="EN-US">32279</span></p></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="MsoNormal"><span>发现线程数量在达到</span><span lang="EN-US">32279</span><span>以后，不再增长。查了一下，</span><span lang="EN-US">32</span><span>位</span><span lang="EN-US">Linux</span><span>系统可创建的最大</span><span lang="EN-US">pid</span><span>数是</span><span lang="EN-US">32678</span><span>，这个数值可以通过</span><strong><span lang="EN-US">/proc/sys/kernel/pid_max</span></strong><span>来做修改（修改方法同</span><span lang="EN-US">threads-max</span><span>），但是在</span><span lang="EN-US">32</span><span>系统下这个值只能改小，无法更大。在</span><span lang="EN-US">threads-max</span><span>一定的情况下，修改</span><span lang="EN-US">pid_max</span><span>对应的测试结果如下：</span></p>
+<div>
+  <table class="MsoTableGrid" style="border-collapse: collapse; border: none;" border="1" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr style="height: 13.05pt;">
+        <td style="width: 76.4pt; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="102"><p class="MsoNormal"><span lang="EN-US">pid_max</span></p></td>
+        <td style="width: 80.15pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="107"><p class="MsoNormal"><span lang="EN-US">-Xms</span></p></td>
+        <td style="width: 80.15pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="107"><p class="MsoNormal"><span lang="EN-US">-Xmx</span></p></td>
+        <td style="width: 78.95pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="105"><p class="MsoNormal"><span lang="EN-US">-Xss</span></p></td>
+        <td style="width: 80.45pt; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="107"><p class="MsoNormal"><span>结果</span></p></td>
+      </tr>
+      <tr style="height: 13.05pt;">
+        <td style="width: 76.4pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="102"><p class="MsoNormal"><span lang="EN-US">1000</span></p></td>
+        <td style="width: 80.15pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="107"><p class="MsoNormal"><span lang="EN-US">128m</span></p></td>
+        <td style="width: 80.15pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="107"><p class="MsoNormal"><span lang="EN-US">128m</span></p></td>
+        <td style="width: 78.95pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="105"><p class="MsoNormal"><span lang="EN-US">64k</span></p></td>
+        <td style="width: 80.45pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="107"><p class="MsoNormal"><span lang="EN-US">582</span></p></td>
+      </tr>
+      <tr style="height: 13.05pt;">
+        <td style="width: 76.4pt; border-top: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="102"><p class="MsoNormal"><span lang="EN-US">10000</span></p></td>
+        <td style="width: 80.15pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="107"><p class="MsoNormal"><span lang="EN-US">128m</span></p></td>
+        <td style="width: 80.15pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="107"><p class="MsoNormal"><span lang="EN-US">128m</span></p></td>
+        <td style="width: 78.95pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="105"><p class="MsoNormal"><span lang="EN-US">64k</span></p></td>
+        <td style="width: 80.45pt; border-top: none; border-left: none; padding: 0cm 5.4pt 0cm 5.4pt; height: 13.05pt;" valign="top" width="107"><p class="MsoNormal"><span lang="EN-US">9507</span></p></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;</span></p>
+<p class="MsoNormal"><span><span style="white-space: pre;"> </span>在</span><span lang="EN-US">Windows</span><span>上的情况应该类似，不过相比</span><span lang="EN-US">Linux</span><span>，</span><span lang="EN-US">Windows</span><span>上可创建的线程数量可能更少。基于线程模型的服务器总要受限于这个线程数量的限制。</span></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;</span></p>
+<p class="MsoNormal"><span><span style="font-size: x-small;"><strong>总结：</strong></span></span></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; JVM</span><span>中可以生成的最大数量由</span><span lang="EN-US">JVM</span><span>的堆内存大小、</span><span lang="EN-US">Thread</span><span>的</span><span lang="EN-US">Stack</span><span>内存大小、系统最大可创建的线程数量（Java线程的实现是基于底层系统的线程机制来实现的，Windows下_beginthreadex，Linux下pthread_create）三个方面影响。具体数量可以根据</span><span lang="EN-US">Java</span><span>进程可以访问的最大内存（</span><span lang="EN-US">32</span><span>位系统上一般</span><span lang="EN-US">2G</span><span>）、堆内存、</span><span lang="EN-US">Thread</span><span>的</span><span lang="EN-US">Stack</span><span>内存来估算。</span></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;</span></p>
+<p class="MsoNormal"><span><strong><span style="font-size: x-small;">序：</span></strong></span></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span>在</span><span lang="EN-US">64</span><span>位</span><span lang="EN-US">Linux</span><span>系统（</span><span lang="EN-US">CentOS 6</span><span>，</span><span lang="EN-US"> 3G</span><span>内存）下测试，发现还有一个参数是会限制线程数量：</span><span lang="EN-US">max user process</span><span>（可通过</span><span lang="EN-US">ulimit –a</span><span>查看，默认值</span><span lang="EN-US">1024</span><span>，通过</span><span lang="EN-US">ulimit –u</span><span>可以修改此值），这个值在上面的</span><span lang="EN-US">32</span><span>位</span><span lang="EN-US">Ubuntu</span><span>测试环境下并无限制。</span></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span>将</span><span lang="EN-US">threads-max</span><span>，</span><span lang="EN-US">pid_max</span><span>，</span><span lang="EN-US">max user
+  process</span><span>，这三个参数值都修改成</span><span lang="EN-US">100000</span><span>，</span><span lang="EN-US">-Xms</span><span>，</span><span lang="EN-US">-Xmx</span><span>尽量小（</span><span lang="EN-US">128m</span><span>，</span><span lang="EN-US">64m</span><span>），</span><span lang="EN-US">-Xss</span><span>尽量小（</span><span lang="EN-US">64</span><span>位下最小</span><span lang="EN-US">104k</span><span>，可取值</span><span lang="EN-US">128k</span><span>）。事先预测在这样的测试环境下，线程数量就只会受限于测试环境的内存大小（</span><span lang="EN-US">3G</span><span>），可是实际的测试结果是线程数量在达到</span><span lang="EN-US">32K</span><span>（</span><span lang="EN-US">32768</span><span>，创建的数量最多的时候大概是</span><span lang="EN-US">33000</span><span>左右）左右时</span><span lang="EN-US">JVM</span><span>是抛出警告：</span><span lang="EN-US">Attempt to allocate stack guard pages failed</span><span>，然后出现</span><span lang="EN-US">OutOfMemoryError</span><span>无法创建本地线程。查看内存后发现还有很多空闲，所以应该不是内存容量的原因。</span><span lang="EN-US">Google</span><span>此警告无果，暂时不知什么原因，有待进一步研究。</span></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;</span></p>
+<p class="MsoNormal"><strong><span style="font-size: x-small;"><span>序</span><span lang="EN-US">2</span><span>：</span></span></strong></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span>今天无意中发现文章</span><span lang="EN-US">[7]</span><span>，马上试了下，果然这个因素会影响线程创建数量，按文中描述把</span><span lang="EN-US">/proc/sys/vm/max_map_count</span><span>的数量翻倍，从</span><span lang="EN-US">65536</span><span>变为</span><span lang="EN-US">131072</span><span>，创建的线程总数量达到</span><span lang="EN-US">65000+</span><span>，电脑基本要卡死（</span><span lang="EN-US">3G</span><span>内存）</span><span lang="EN-US">… </span><span>简单查了下这个参数的作用，在</span><span lang="EN-US">[8]</span><span>中的描述如下：</span></p>
+<p class="MsoNormal" style="margin-left: 21.0pt;"><em><span style="font-size: 9.0pt;" lang="EN-US">“This file contains the
+  maximum number of memory map areas a process may have. Memory map areas are
+  used as a side-effect of calling malloc, directly by mmap and mprotect, and
+  also when loading shared libraries.</span></em></p>
+<p class="MsoNormal" style="margin-left: 21.0pt;"><em><span style="font-size: 9.0pt;" lang="EN-US">&nbsp;</span></em></p>
+<p class="MsoNormal" style="margin-left: 21.0pt;"><em><span style="font-size: 9.0pt;" lang="EN-US">While most applications need
+  less than a thousand maps, certain programs, particularly malloc debuggers, may
+  consume lots of them, e.g., up to one or two maps per allocation.</span></em></p>
+<p class="MsoNormal" style="margin-left: 21.0pt;"><em><span style="font-size: 9.0pt;" lang="EN-US">&nbsp;</span></em></p>
+<p class="MsoNormal" style="text-indent: 21.0pt;"><em><span style="font-size: 9.0pt;" lang="EN-US">The
+  default value is 65536.”</span></em></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></p>
+<p class="MsoNormal"><span lang="EN-US">OK</span><span>，这个问题总算完满解决，最后总结下影响</span><span lang="EN-US">Java</span><span>线程数量的因素：</span></p>
+<p class="MsoNormal"><span lang="EN-US"><span style="white-space: pre;"> </span><strong>Java</strong></span><strong><span>虚拟机本身：</span><span lang="EN-US">-Xms</span><span>，</span><span lang="EN-US">-Xmx</span><span>，</span><span lang="EN-US">-Xss</span><span>；</span></strong></p>
+<p class="MsoNormal"><span style="white-space: pre;"> </span><strong>系统限制：</strong></p>
+<p class="MsoNormal"><strong><span lang="EN-US"><span style="white-space: pre;"> </span>/proc/sys/kernel/pid_max</span>，</strong></p>
+<p class="MsoNormal"><strong><span lang="EN-US"><span style="white-space: pre;"> </span>/proc/sys/kernel/thread-max</span>，</strong></p>
+<p class="MsoNormal"><strong><span lang="EN-US"><span style="white-space: pre;"> </span>max_user_process</span>（<span lang="EN-US">ulimit -u</span>），</strong></p>
+<p class="MsoNormal"><strong><span lang="EN-US"><span style="white-space: pre;"> </span>/proc/sys/vm/max_map_count</span>。</strong></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;</span></p>
+<p class="MsoNormal"><span lang="EN-US">&nbsp;</span></p>
+<!--EndFragment-->
+</body>
+
+</html>

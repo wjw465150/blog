@@ -1,0 +1,27 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>linux下文件数、目录数、文件名长度的各种限制归纳</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body><!--StartFragment--><div class="tit">linux下文件数、目录数、文件名长度的各种限制归纳</div><div class="date">2011年07月29日 星期五 14:48</div><table style="WIDTH: 100%; TABLE-LAYOUT: fixed"><tbody><tr><td><div id="blog_text" class="cnt">1. 测试目的：<strong>ext3文件系统下filename最大字符长度</strong><br>&nbsp;&nbsp; 测试平台：RHEL5U3_x64<br>&nbsp;&nbsp; 测试过程：<br>LENTH=`for i in {1..255};do for x in a;do echo -n $x;done;done`<br>touch $LENTH<br>当增加到256时，touch报错，File name too long<br>linux系统下ext3文件系统内给文件/目录命名，最长只能支持127个中文字符，英文则可以支持255个字符<br><br>2. 测试目的：<strong>ext3文件系统下一级子目录的个数限制</strong><br>&nbsp;&nbsp; 测试平台：RHEL5U3_x64<br>&nbsp;&nbsp; 测试过程：<br>[root@fileserver maxdir]# for i in {1..32000};do mkdir $i;done<br>mkdir: cannot create directory `31999': Too many links<br>mkdir: cannot create directory `32000': Too many links<br>ext3文件系统一级子目录的个数为31998(个)。<br>Linux为了cpu的搜索效率而规定的,要想改变数目大概要重新编译内核. <br><br>3. 测试目的：<strong>ext3文件系统下单个目录里的最大文件数</strong><br>&nbsp;&nbsp; 测试平台: RHEL5U3_x64<br>&nbsp;&nbsp; 测试过程：<br>&nbsp;&nbsp; 单个目录下的最大文件数似乎没什么特别限制，也是受限于所在文件系统的inode数限制：<br>&nbsp;&nbsp; df -i或者使用tune2fs -l /dev/sdaX或者dumpe2fs -h /dev/sdaX查看可用inode数，后两个命令 <br>&nbsp;&nbsp; 输出结果是一样的，但是跟df所得出的可用inode数会有些误差，至今不明白什么原因。<br>&nbsp; &nbsp;<br>&nbsp;&nbsp; 网上常用两种解决办法：<br>&nbsp;&nbsp; 1） 重新mkfs，ext3默认block大小4096 Bytes，block设置小一些inode数设置大一些<br>&nbsp;&nbsp; 2） 使用loopback文件系统临时解决：<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 在/usr中（也可以在别处）创建一个大文件，然后做成loopback文件系统，将原来的文件移到这个<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 文件系统中，并将它mount到/usr下合适的位置。这样可以大大减少你/usr中的文件数目。但是系统<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 性能会有点损失。<br><br>4. 测试目的： 打开文件数限制（文件句柄、文件描述符）<br>&nbsp;&nbsp; 测试平台： RHEL5U3_x64<br>&nbsp;&nbsp; ulimit -n 65535设置，或者/etc/security/limit.conf里设置用户打开文件数、进程数、CPU等 <br><br><strong><span style="FONT-SIZE: 16px">Linux新文件系统Ext4</span></strong><br>Ext4（The fourth extended file system）<br>　　Ext4是一种针对ext3系统的扩展日志式文件系统,是专门为 Linux 开发的原始的扩展文件系统（ext 或 extfs）的第四版。Linux kernel 自 2.6.28 开始正式支持 Ext4。<br>　　<br>兼容性<br><br>
+　　Ext3升级到ext4能提供系统更高的性能，消除存储限制，和获取新的功能，并且不需要重新格式化分区，ext4会在新的数据上用新的文件结 
+构，旧的文件保留原状。以ext3 
+文件系统的方式mount到ext4上会不用新的磁盘格式，而且还能再用ext3来重新挂载，这样仅仅失去了ext4的优势。<br>　　<strong>大文件系统/文件大小</strong><br>　　现在ext3支持最大16TB的文件系统。单个文件最大2TB。Ext4增加了48位块地址，最大支持1EB文件系统，和单个16TB的文件。1EB=1024PB 1PB=1024TB 1TB=1024GB。<br>　　<br><strong>子目录可伸缩性</strong><br>　　EXT3每个目录最大包含32000个子目录。减去.和..也就是31998<br>　　ext4打破了这个限制可以无限制数量的子目录<br>　　<br><strong>Extends</strong><br>
+　　传统的Unix派生文件系统，使用间接块映射方案，以跟踪每块用于块相应的数据文件，这对大文件来说是低效率的。现代文件系统使用不同的方法称 
+为“extends” 
+。extends基本上指一串连续的物理快。通常叫做数据在下面的N个块中。一个100MB的文件可以分配到一extends中。而不需要创建一个间接映
+ 射表为256000个blocks，（每个block 
+4kb）大文件被分割为很多范围。Extends改进了性能并且减少了碎片。因为extends鼓励在磁盘上连续布局。<br>　　<br><strong>Multiblock 分配</strong><br>　　ext4使用了一个多块分配来在一次调用中分配很多块。替换掉每次分配一个块，减少系统开销。在延时分配和extends上十分有用。<br>　　<br><strong>延迟分配</strong><br>　　延迟分配是一个性能特性（它不修改磁盘格式）。现代文件系统例如XFS，ZFS，btrfs or Reiser 4 并且它尽可能多的延时块的分配。相对于传统文件系统（例如Ext3 reiser3 etc）所做的立刻分配块提供了更好的性能。<br>　　<br><strong>日志校验和</strong><br>
+　　日志是磁盘中最常用的一部分，组成日志的这部分也是最容易出现硬件故障的。并且从一个受损的日志上恢复数据会导致巨大的数据损坏。Ext4 
+校验和提供了改进，它允许将EXt3的双向提交日志格式转换为单向的，加速文件系统操作，在某些情况下达到20%---因此可靠性和性能同时被改进。<br>　　<br><strong>在线碎片整理</strong>　　<br>　　当 延迟分配，extents 和 multiblock 分配 帮助减少碎片的时候，使用中的文件系统依然会产生碎片。为了解决这个问题，Ext4 将会支持在线碎片整理，并且有一个e4defrag工具可以整理个别文件在整个文件系统中。<br>　　<br><strong>索引节点-关联</strong><br>
+　　拥有大索引节点，纳秒时间戳，快速扩展属性，索引节点保留的特点。Ext3 支持可设置的索引节点大小（通过 mkfs 
+-l参数）但是默认索引节点大小是128字节。Ext4将默认为256字节。这需要适应一些额外的字段（比如纳秒时间戳或者索引节点版本）并且剩余索引节
+ 
+点空间会被用于存放扩展属性为那些足够小的对象来适合空间。这样使访问那些属性更快，提高那些使用扩展属性的应用程序性能3-7倍。在目录创建的时候保留
+ 
+若干索引节点在里面，预期它们在未来使用。这样改进性能，因为新文件被创建在目录中他们可以使用保留索引节点。文件创建和删除因此更高效。纳秒时间戳意味
+ 着索引节点字段例如修改时间可以用纳秒分辨率替代Ext3中的秒。<br>　　<br><strong>持续预分配</strong><br>　　这个特性在ext3最新的内核版本中已经可用了，由glic仿真来实现文件系统不支持的功能，允许应用程序预分配磁盘空间：应用程序告诉文件系统来预分配空间，文件系统预分配需要的块和数据结构。<br></div></td></tr></tbody></table>
+<P><!--EndFragment--></P>
+</body>
+</htm</html>

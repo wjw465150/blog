@@ -1,0 +1,537 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+<HTML 
+xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>spring 动态数据源</title><LINK 
+href="vifir.css" type=text/css rel=stylesheet>
+<STYLE type=text/css>
+<!--
+a:visited {
+	color: #253FA7;
+}
+#line02 {
+	clear: both;
+	background-color: #AFBFC9;
+	height: 1px;
+}
+-->
+</STYLE>
+</HEAD>
+
+<BODY>
+
+<DIV id=box>
+
+<DIV id=mian03>
+
+<DIV id=left>
+
+<DIV id=peple02><!--StartFragment-->
+<DIV id=person-title><DIV id=person-title02><A href="http://www.vifir.com/news.ejf?cmd=show&amp;id=1114134#">spring 动态数据源 </A></DIV></DIV>
+<DIV id=person-title03>来源：<SPAN class=red05>blogjava</SPAN>　作者：　<SPAN 
+class=red05>Libo</SPAN>　<SPAN class=red05>2008-07-21 16:35:46.0</SPAN>网友评论：<SPAN 
+class=green>0</SPAN><SPAN class=red05>条</SPAN>　点击：<SPAN class=red05 
+id=readTimes>428</SPAN></DIV>
+<DIV id=new-title04>　　Spring 可以设置动态数据源，这样可以对程序来透明的支持切换操作不同的数据库。</DIV>
+<DIV id=new-person-cont>
+<P>
+<DIV id=content style="DISPLAY: none">
+<P><A 
+href="http://oiote.blog.sohu.com/74596942.html">http://oiote.blog.sohu.com/74596942.html</A> 
+这篇文章写得非常不错。测试通过，并准备在项目中使用这个方法。还有几个问题希望大家给点意见：</P>
+<P>首先说一下我的需求：数据库结构都是一样，但具体有多少个数据库不确定（视具体用户而定），用户操作那个数据库要根据登录的时候进行选择，或根据用户的权限而定。这个信息肯定是保存在用户的登录信息中(例如：session）</P>
+<P>问题1、当有不同的用户需要操作不同的数据库时（根据登录时的选择或指定），什么时候切换数据库？是在service层还是dao层？这个信息怎么传给层中的方法？如果每个方法都加一个参数这样不太好吧？</P>
+<P>问题2、这个频繁的更换数据库，会不会有性能影响？因为sessionFactory是一个切换数据库是不是就是重新初始一次sessionFactory?</P>
+<P>附原文如下：</P>
+<P>Spring2.0.1以后的版本已经支持配置多数据源，并且可以在运行的时候动态加载不同的数据源。通过继承 
+AbstractRoutingDataSource就可以实现多数据源的动态转换。目前做的项目就是需要访问12个数据源，每个数据源的表结构都是相同 
+的，所以要求数据源的变动对于编码人员来说是透明，也就是说同样SQL语句在不同的环境下操作的数据库是不一样的。具体的配置如下：<BR>一、首先需要写一个静态的键值对照类：</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>package</SPAN> <SPAN>cn.com.xinli.ccp.dynamicds;</SPAN></SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>class</SPAN> <SPAN>DataSourceMap {</SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>final</SPAN> <SPAN>String 
+Admin=</SPAN><SPAN>"Admin"</SPAN><SPAN>;</SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>final</SPAN> <SPAN>String Yxh 
+=</SPAN> <SPAN>"Yxh"</SPAN><SPAN>;</SPAN> 
+<LI><SPAN>}</SPAN> </LI></OL>
+<P>这个类主要在使用的时候当作获得数据源的标志使用。<BR>二、建立一个获得和设置上下文的类：</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>package</SPAN> <SPAN>cn.com.xinli.ccp.dynamicds;</SPAN></SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>class</SPAN> <SPAN>CustomerContextHolder {</SPAN> 
+<LI><SPAN>private</SPAN> <SPAN>static</SPAN> <SPAN>final</SPAN> 
+<SPAN>ThreadLocal contextHolder =</SPAN> 
+<LI><SPAN>new</SPAN> <SPAN>ThreadLocal();</SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>void</SPAN> 
+<SPAN>setCustomerType(String customerType) {</SPAN> 
+<LI><SPAN>contextHolder.set(customerType);</SPAN> 
+<LI><SPAN>}</SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>String getCustomerType() 
+{</SPAN> 
+<LI><SPAN>return</SPAN> <SPAN>(String) contextHolder.get();</SPAN> 
+<LI><SPAN>}</SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>void</SPAN> 
+<SPAN>clearCustomerType() {</SPAN> 
+<LI><SPAN>contextHolder.remove();</SPAN> 
+<LI><SPAN>}</SPAN> 
+<LI><SPAN>}</SPAN> </LI></OL><BR><BR>
+<P><BR>这个主要负责设置上下文环境和获得上下文环境。<BR>三、建立动态数据源类，这个类必须继承AbstractRoutingDataSource：</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>package</SPAN> <SPAN>cn.com.xinli.ccp.dynamicds;</SPAN></SPAN> 
+<LI><SPAN>import</SPAN> 
+<SPAN>org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;</SPAN> 
+
+<LI><SPAN>public</SPAN> <SPAN>class</SPAN> <SPAN>DynamicDataSource</SPAN> 
+<SPAN>extends</SPAN> <SPAN>AbstractRoutingDataSource {</SPAN> 
+<LI><SPAN>protected</SPAN> <SPAN>Object determineCurrentLookupKey() {</SPAN> 
+<LI><SPAN>// TODO Auto-generated method stub</SPAN> 
+<LI><SPAN>return</SPAN> <SPAN>CustomerContextHolder.getCustomerType();</SPAN> 
+<LI><SPAN>}</SPAN> 
+<LI><SPAN>}</SPAN> </LI></OL>
+<P><BR>这个类实现了 
+determineCurrentLookupKey方法，该方法返回一个Object，一般是返回字符串，也可以是枚举类型。该方法中直接使用了 
+CustomerContextHolder.getCustomerType()方法获得上下文环境并直接返回。<BR>四、编写spring的配置文件配置数据源</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"parentDataSource"</SPAN> </SPAN>
+<LI><SPAN>class</SPAN><SPAN>=</SPAN><SPAN>"org.springframework.jdbc.datasource.DriverManagerDataSource"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"driverClassName"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN><SPAN>COM.ibm.db2.jdbc.net.DB2Driver</SPAN><SPAN>&lt;/</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"url"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN><SPAN>jdbc:db2:127.0.0.1:TEST</SPAN><SPAN>&lt;/</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"adminDataSource"</SPAN> 
+<SPAN>parent</SPAN><SPAN>=</SPAN><SPAN>"parentDataSource"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"username"</SPAN> 
+<SPAN>value</SPAN><SPAN>=</SPAN><SPAN>"admin"</SPAN><SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"password"</SPAN> 
+<SPAN>value</SPAN><SPAN>=</SPAN><SPAN>"master997mb"</SPAN><SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"yxhDataSource"</SPAN> 
+<SPAN>parent</SPAN><SPAN>=</SPAN><SPAN>"parentDataSource"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"username"</SPAN> 
+<SPAN>value</SPAN><SPAN>=</SPAN><SPAN>"yxh"</SPAN><SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"password"</SPAN> 
+<SPAN>value</SPAN><SPAN>=</SPAN><SPAN>"yxh"</SPAN><SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> </LI></OL>
+<P><BR>在这个配置中可以看到首先有个parentDataSource，这个主要配置一些数据源的公用信息，项目中都是链接 
+DB2数据库；adminDataSource和yxhDataSource是根据不同需要配置的个性化信息，但都必须加parent属性，值为 
+parentDataSource。这样就配置好了2个数据源信息。当然如果链接的多数据源是不同类型的两个数据库，那么 
+parentDataSource就可以不要了，直接配置两个不同的数据源链接就可以了。<BR>五、编写spring配置文件配置多数据源映射关系</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"dataSource"</SPAN> 
+<SPAN>class</SPAN><SPAN>=</SPAN><SPAN>"cn.com.xinli.ccp.dynamicds.DynamicDataSource"</SPAN><SPAN>&gt;</SPAN> 
+</SPAN>
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"targetDataSources"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>map</SPAN> 
+<SPAN>key-type</SPAN><SPAN>=</SPAN><SPAN>"java.lang.String"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>entry</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"Yxh"</SPAN> 
+<SPAN>value-ref</SPAN><SPAN>=</SPAN><SPAN>"yxhDataSource"</SPAN><SPAN>/&gt;</SPAN> 
+
+<LI><SPAN>&lt;/</SPAN><SPAN>map</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"defaultTargetDataSource"</SPAN> 
+<SPAN>ref</SPAN><SPAN>=</SPAN><SPAN>"adminDataSource"</SPAN><SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> </LI></OL>
+<P><BR>在这个配置中第一个property属性配置目标数据源，&lt;map 
+key-type="java.lang.String"&gt;中的key-type必须要和静态键值对照类DataSourceMap中的值的类型相 
+同；&lt;entry key="Yxh" 
+value-ref="yxhDataSource"/&gt;中key的值必须要和静态键值对照类中的值相同，如果有多个值，可以配置多个&lt; 
+entry&gt;标签。第二个property属性配置默认的数据源。<BR>六、配置hibernate。<BR>Hibernate的配置和普通的hibernate、spring结合的配置一样</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"sessionFactory"</SPAN> </SPAN>
+<LI><SPAN>class</SPAN><SPAN>=</SPAN><SPAN>"org.springframework.orm.hibernate3.LocalSessionFactoryBean"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;!-- to override, use the "SpringDatasourceConfig" snippet in your 
+project --&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"dataSource"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>ref</SPAN> 
+<SPAN>local</SPAN><SPAN>=</SPAN><SPAN>"dataSource"</SPAN> <SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"mappingResources"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>list</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>cn/com/xinli/ccp/entity/User.hbm.xml</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>cn/com/xinli/ccp/entity/Test.hbm.xml</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>list</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"hibernateProperties"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>props</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.dialect"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>org.hibernate.dialect.DB2Dialect</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.show_sql"</SPAN><SPAN>&gt;</SPAN><SPAN>true</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.use_outer_join"</SPAN><SPAN>&gt;</SPAN><SPAN>true</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.jdbc.batch_size"</SPAN><SPAN>&gt;</SPAN><SPAN>50</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.jdbc.fetch_size"</SPAN><SPAN>&gt;</SPAN><SPAN>5</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.connection.pool_size"</SPAN><SPAN>&gt;</SPAN><SPAN>2</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.connection.autocommit"</SPAN><SPAN>&gt;</SPAN><SPAN>false</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.cache.use_query_cache"</SPAN><SPAN>&gt;</SPAN><SPAN>false</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.max_fetch_depth"</SPAN><SPAN>&gt;</SPAN><SPAN>1</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.bytecode.use_reflection_optimizer"</SPAN><SPAN>&gt;</SPAN><SPAN>true</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;/</SPAN><SPAN>props</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"mydao"</SPAN> 
+<SPAN>class</SPAN><SPAN>=</SPAN><SPAN>"cn.com.xinli.ccp.dao.HibernateBaseDao"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"sessionFactory"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>ref</SPAN> 
+<SPAN>local</SPAN><SPAN>=</SPAN><SPAN>"sessionFactory"</SPAN> <SPAN>/&gt;</SPAN> 
+
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> </LI></OL><BR><BR>
+<P><BR>关于dao的代码这里就省略了。<BR>七、配置结束，可以使用了。</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>public</SPAN> <SPAN>class</SPAN> <SPAN>DaoTest</SPAN> 
+<SPAN>extends</SPAN> <SPAN>TestCase {</SPAN></SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>void</SPAN> <SPAN>testSave()</SPAN> 
+<SPAN>throws</SPAN> <SPAN>Exception{</SPAN> 
+<LI><SPAN>CustomerContextHolder.setCustomerType(DataSourceMap.Admin);</SPAN><SPAN>//设置数据源</SPAN> 
+
+<LI><SPAN>//hibernate创建实体</SPAN> 
+<LI><SPAN>Test test =</SPAN> <SPAN>new</SPAN> <SPAN>Test();</SPAN> 
+<LI><SPAN>test.setTest(</SPAN><SPAN>"22222222"</SPAN><SPAN>);</SPAN> 
+<LI><SPAN>mydao.save(test);</SPAN><SPAN>//使用dao保存实体</SPAN> 
+<LI><SPAN>CustomerContextHolder.setCustomerType(DataSourceMap.Yxh);</SPAN><SPAN>//设置为另一个数据源</SPAN> 
+
+<LI><SPAN>mydao.save(test);</SPAN><SPAN>//使用dao保存实体到另一个库中</SPAN> 
+<LI><SPAN>}</SPAN> 
+<LI><SPAN>}</SPAN> </LI></OL>
+<P>在项目中对于编码人员对多数据源的切换可以做成透明的，操作同样的dao，就可以访问不同的数据库了。<BR>转载自:http://www.blogjava.net/iamlibo/archive/2008/07/20/216231.html</P></DIV>
+<SCRIPT type=text/javascript>
+var content=document.getElementById("content");
+
+var contentArray=content.innerHTML.split("page@"); 
+var total=contentArray.length;  //总条目: 可变
+
+//取得当前页序号 - idx
+idx=window.location.href;  //这里得到 ?0 字样  //动态的分页用到的
+staticidx=window.location.search;  //这里得到 ?0 字样   //静态的分页用到的
+if(staticidx=="") staticidx=
+"?0";
+ else{idx+="&pageid=0";
+  }
+ mylen=idx.length-1;
+idcontent=idx.substr(mylen,idx.length);
+
+staticidxmylen=staticidx.length-1;
+staticidxidcontent=staticidx.substr(staticidxmylen,staticidx.length);
+
+idcontentx=idx.substr(0,mylen);
+
+function echostr(pg) {  //函数: 打印各页内容
+    var mystr="";
+   if(contentArray[pg]) mystr+=contentArray[pg];
+   if(pg>=contentArray.length) mystr+=contentArray[0];
+     document.write(mystr);
+    }
+	if(staticidx.length=2)echostr(staticidxidcontent);  //显示页面内容  ,判断静态的是2的时候采用输出
+    else echostr(idcontent);
+function pg_link(all){  //函数: 打印页码链接
+    linkstr="<br>第 ";
+    for(i=0;i<all;i++) {
+        j=i+1;
+		if(staticidx.length==2){
+		 i!=staticidxidcontent ? linkstr+="<a href='http://www.vifir.com/news.ejf?" + i + "'>" + j + "</a> ":linkstr+=j + " ";
+		 }
+		else{
+			i!=idcontent ? linkstr+="<a href='"http://www.vifir.com/+idcontentx+i+"'>" + j + "</a> ":linkstr+=j + " ";
+		}
+    }
+    linkstr+="页";
+   if(all!=1)
+    document.write("<div align='right'>"+linkstr + "</div><br><br>");
+	else document.write("");
+}
+
+pg_link(total);  //显示页码链接
+
+</SCRIPT>
+
+<P><A 
+href="http://oiote.blog.sohu.com/74596942.html">http://oiote.blog.sohu.com/74596942.html</A> 
+这篇文章写得非常不错。测试通过，并准备在项目中使用这个方法。还有几个问题希望大家给点意见：</P>
+<P>首先说一下我的需求：数据库结构都是一样，但具体有多少个数据库不确定（视具体用户而定），用户操作那个数据库要根据登录的时候进行选择，或根据用户的权限而定。这个信息肯定是保存在用户的登录信息中(例如：session）</P>
+<P>问题1、当有不同的用户需要操作不同的数据库时（根据登录时的选择或指定），什么时候切换数据库？是在service层还是dao层？这个信息怎么传给层中的方法？如果每个方法都加一个参数这样不太好吧？</P>
+<P>问题2、这个频繁的更换数据库，会不会有性能影响？因为sessionFactory是一个切换数据库是不是就是重新初始一次sessionFactory?</P>
+<P>附原文如下：</P>
+<P>Spring2.0.1以后的版本已经支持配置多数据源，并且可以在运行的时候动态加载不同的数据源。通过继承 
+AbstractRoutingDataSource就可以实现多数据源的动态转换。目前做的项目就是需要访问12个数据源，每个数据源的表结构都是相同 
+的，所以要求数据源的变动对于编码人员来说是透明，也就是说同样SQL语句在不同的环境下操作的数据库是不一样的。具体的配置如下：<BR>一、首先需要写一个静态的键值对照类：</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>package</SPAN> <SPAN>cn.com.xinli.ccp.dynamicds;</SPAN></SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>class</SPAN> <SPAN>DataSourceMap {</SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>final</SPAN> <SPAN>String 
+Admin=</SPAN><SPAN>"Admin"</SPAN><SPAN>;</SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>final</SPAN> <SPAN>String Yxh 
+=</SPAN> <SPAN>"Yxh"</SPAN><SPAN>;</SPAN> 
+<LI><SPAN>}</SPAN> </LI></OL>
+<P>这个类主要在使用的时候当作获得数据源的标志使用。<BR>二、建立一个获得和设置上下文的类：</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>package</SPAN> <SPAN>cn.com.xinli.ccp.dynamicds;</SPAN></SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>class</SPAN> <SPAN>CustomerContextHolder {</SPAN> 
+<LI><SPAN>private</SPAN> <SPAN>static</SPAN> <SPAN>final</SPAN> 
+<SPAN>ThreadLocal contextHolder =</SPAN> 
+<LI><SPAN>new</SPAN> <SPAN>ThreadLocal();</SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>void</SPAN> 
+<SPAN>setCustomerType(String customerType) {</SPAN> 
+<LI><SPAN>contextHolder.set(customerType);</SPAN> 
+<LI><SPAN>}</SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>String getCustomerType() 
+{</SPAN> 
+<LI><SPAN>return</SPAN> <SPAN>(String) contextHolder.get();</SPAN> 
+<LI><SPAN>}</SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>static</SPAN> <SPAN>void</SPAN> 
+<SPAN>clearCustomerType() {</SPAN> 
+<LI><SPAN>contextHolder.remove();</SPAN> 
+<LI><SPAN>}</SPAN> 
+<LI><SPAN>}</SPAN> </LI></OL><BR><BR>
+<P><BR>这个主要负责设置上下文环境和获得上下文环境。<BR>三、建立动态数据源类，这个类必须继承AbstractRoutingDataSource：</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>package</SPAN> <SPAN>cn.com.xinli.ccp.dynamicds;</SPAN></SPAN> 
+<LI><SPAN>import</SPAN> 
+<SPAN>org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;</SPAN> 
+
+<LI><SPAN>public</SPAN> <SPAN>class</SPAN> <SPAN>DynamicDataSource</SPAN> 
+<SPAN>extends</SPAN> <SPAN>AbstractRoutingDataSource {</SPAN> 
+<LI><SPAN>protected</SPAN> <SPAN>Object determineCurrentLookupKey() {</SPAN> 
+<LI><SPAN>// TODO Auto-generated method stub</SPAN> 
+<LI><SPAN>return</SPAN> <SPAN>CustomerContextHolder.getCustomerType();</SPAN> 
+<LI><SPAN>}</SPAN> 
+<LI><SPAN>}</SPAN> </LI></OL>
+<P><BR>这个类实现了 
+determineCurrentLookupKey方法，该方法返回一个Object，一般是返回字符串，也可以是枚举类型。该方法中直接使用了 
+CustomerContextHolder.getCustomerType()方法获得上下文环境并直接返回。<BR>四、编写spring的配置文件配置数据源</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"parentDataSource"</SPAN> </SPAN>
+<LI><SPAN>class</SPAN><SPAN>=</SPAN><SPAN>"org.springframework.jdbc.datasource.DriverManagerDataSource"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"driverClassName"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN><SPAN>COM.ibm.db2.jdbc.net.DB2Driver</SPAN><SPAN>&lt;/</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"url"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN><SPAN>jdbc:db2:127.0.0.1:TEST</SPAN><SPAN>&lt;/</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"adminDataSource"</SPAN> 
+<SPAN>parent</SPAN><SPAN>=</SPAN><SPAN>"parentDataSource"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"username"</SPAN> 
+<SPAN>value</SPAN><SPAN>=</SPAN><SPAN>"admin"</SPAN><SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"password"</SPAN> 
+<SPAN>value</SPAN><SPAN>=</SPAN><SPAN>"master997mb"</SPAN><SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"yxhDataSource"</SPAN> 
+<SPAN>parent</SPAN><SPAN>=</SPAN><SPAN>"parentDataSource"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"username"</SPAN> 
+<SPAN>value</SPAN><SPAN>=</SPAN><SPAN>"yxh"</SPAN><SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"password"</SPAN> 
+<SPAN>value</SPAN><SPAN>=</SPAN><SPAN>"yxh"</SPAN><SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> </LI></OL>
+<P><BR>在这个配置中可以看到首先有个parentDataSource，这个主要配置一些数据源的公用信息，项目中都是链接 
+DB2数据库；adminDataSource和yxhDataSource是根据不同需要配置的个性化信息，但都必须加parent属性，值为 
+parentDataSource。这样就配置好了2个数据源信息。当然如果链接的多数据源是不同类型的两个数据库，那么 
+parentDataSource就可以不要了，直接配置两个不同的数据源链接就可以了。<BR>五、编写spring配置文件配置多数据源映射关系</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"dataSource"</SPAN> 
+<SPAN>class</SPAN><SPAN>=</SPAN><SPAN>"cn.com.xinli.ccp.dynamicds.DynamicDataSource"</SPAN><SPAN>&gt;</SPAN> 
+</SPAN>
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"targetDataSources"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>map</SPAN> 
+<SPAN>key-type</SPAN><SPAN>=</SPAN><SPAN>"java.lang.String"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>entry</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"Yxh"</SPAN> 
+<SPAN>value-ref</SPAN><SPAN>=</SPAN><SPAN>"yxhDataSource"</SPAN><SPAN>/&gt;</SPAN> 
+
+<LI><SPAN>&lt;/</SPAN><SPAN>map</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"defaultTargetDataSource"</SPAN> 
+<SPAN>ref</SPAN><SPAN>=</SPAN><SPAN>"adminDataSource"</SPAN><SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> </LI></OL>
+<P><BR>在这个配置中第一个property属性配置目标数据源，&lt;map 
+key-type="java.lang.String"&gt;中的key-type必须要和静态键值对照类DataSourceMap中的值的类型相 
+同；&lt;entry key="Yxh" 
+value-ref="yxhDataSource"/&gt;中key的值必须要和静态键值对照类中的值相同，如果有多个值，可以配置多个&lt; 
+entry&gt;标签。第二个property属性配置默认的数据源。<BR>六、配置hibernate。<BR>Hibernate的配置和普通的hibernate、spring结合的配置一样</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"sessionFactory"</SPAN> </SPAN>
+<LI><SPAN>class</SPAN><SPAN>=</SPAN><SPAN>"org.springframework.orm.hibernate3.LocalSessionFactoryBean"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;!-- to override, use the "SpringDatasourceConfig" snippet in your 
+project --&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"dataSource"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>ref</SPAN> 
+<SPAN>local</SPAN><SPAN>=</SPAN><SPAN>"dataSource"</SPAN> <SPAN>/&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"mappingResources"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>list</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>cn/com/xinli/ccp/entity/User.hbm.xml</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>cn/com/xinli/ccp/entity/Test.hbm.xml</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>value</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>list</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"hibernateProperties"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>props</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.dialect"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>org.hibernate.dialect.DB2Dialect</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.show_sql"</SPAN><SPAN>&gt;</SPAN><SPAN>true</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.use_outer_join"</SPAN><SPAN>&gt;</SPAN><SPAN>true</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.jdbc.batch_size"</SPAN><SPAN>&gt;</SPAN><SPAN>50</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.jdbc.fetch_size"</SPAN><SPAN>&gt;</SPAN><SPAN>5</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.connection.pool_size"</SPAN><SPAN>&gt;</SPAN><SPAN>2</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.connection.autocommit"</SPAN><SPAN>&gt;</SPAN><SPAN>false</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.cache.use_query_cache"</SPAN><SPAN>&gt;</SPAN><SPAN>false</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.max_fetch_depth"</SPAN><SPAN>&gt;</SPAN><SPAN>1</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>prop</SPAN> 
+<SPAN>key</SPAN><SPAN>=</SPAN><SPAN>"hibernate.bytecode.use_reflection_optimizer"</SPAN><SPAN>&gt;</SPAN><SPAN>true</SPAN><SPAN>&lt;/</SPAN><SPAN>prop</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;/</SPAN><SPAN>props</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>bean</SPAN> 
+<SPAN>id</SPAN><SPAN>=</SPAN><SPAN>"mydao"</SPAN> 
+<SPAN>class</SPAN><SPAN>=</SPAN><SPAN>"cn.com.xinli.ccp.dao.HibernateBaseDao"</SPAN><SPAN>&gt;</SPAN> 
+
+<LI><SPAN>&lt;</SPAN><SPAN>property</SPAN> 
+<SPAN>name</SPAN><SPAN>=</SPAN><SPAN>"sessionFactory"</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;</SPAN><SPAN>ref</SPAN> 
+<SPAN>local</SPAN><SPAN>=</SPAN><SPAN>"sessionFactory"</SPAN> <SPAN>/&gt;</SPAN> 
+
+<LI><SPAN>&lt;/</SPAN><SPAN>property</SPAN><SPAN>&gt;</SPAN> 
+<LI><SPAN>&lt;/</SPAN><SPAN>bean</SPAN><SPAN>&gt;</SPAN> </LI></OL><BR><BR>
+<P><BR>关于dao的代码这里就省略了。<BR>七、配置结束，可以使用了。</P>
+<P>代码</P>
+<OL>
+<LI><SPAN><SPAN>public</SPAN> <SPAN>class</SPAN> <SPAN>DaoTest</SPAN> 
+<SPAN>extends</SPAN> <SPAN>TestCase {</SPAN></SPAN> 
+<LI><SPAN>public</SPAN> <SPAN>void</SPAN> <SPAN>testSave()</SPAN> 
+<SPAN>throws</SPAN> <SPAN>Exception{</SPAN> 
+<LI><SPAN>CustomerContextHolder.setCustomerType(DataSourceMap.Admin);</SPAN><SPAN>//设置数据源</SPAN> 
+
+<LI><SPAN>//hibernate创建实体</SPAN> 
+<LI><SPAN>Test test =</SPAN> <SPAN>new</SPAN> <SPAN>Test();</SPAN> 
+<LI><SPAN>test.setTest(</SPAN><SPAN>"22222222"</SPAN><SPAN>);</SPAN> 
+<LI><SPAN>mydao.save(test);</SPAN><SPAN>//使用dao保存实体</SPAN> 
+<LI><SPAN>CustomerContextHolder.setCustomerType(DataSourceMap.Yxh);</SPAN><SPAN>//设置为另一个数据源</SPAN> 
+
+<LI><SPAN>mydao.save(test);</SPAN><SPAN>//使用dao保存实体到另一个库中</SPAN> 
+<LI><SPAN>}</SPAN> 
+<LI><SPAN>}</SPAN> </LI></OL>
+<P>在项目中对于编码人员对多数据源的切换可以做成透明的，操作同样的dao，就可以访问不同的数据库了。<BR>转载自:http://www.blogjava.net/iamlibo/archive/2008/07/20/216231.html</P>
+<P></P>
+<P><BR></P></DIV><!--EndFragment--></DIV>
+</DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</DIV>
+</DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

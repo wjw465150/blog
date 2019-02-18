@@ -1,0 +1,572 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"><script src="index_files/changyan.js" charset="utf-8" type="text/javascript"></script>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Hadoop参考设计的实现及性能：HBase应用性能测试方法_风信网</title>
+<meta name="keywords" content="Hadoop参考设计的实现及性能：HBase应用性能测试方法,Hadoop,参考设计,HBase,应用性能,测试方法">
+<meta name="description" content="Hadoop参考设计的实现及性能：HBase应用性能测试方法 测试工具 YCSB 的安装 YCSB介绍：YCSB（Yahoo! Cloud Serving Benchmark）是Yahoo开源的一款通用的性能测试工具。可以用于测试多种 NoSQL 产品进行测试。相关说明可以参考 https://github.com/brianfrankcooper/YCS">
+<link href="index_files/ithov.css" rel="stylesheet" type="text/css">
+<script language="javascript" type="text/javascript" src="index_files/j.js"></script>
+<script language="javascript" type="text/javascript" src="index_files/jquery.cookie.js"></script>
+<script language="javascript" type="text/javascript" src="index_files/dedeajax2.js"></script>
+<script language="javascript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+<script src="index_files/version.js" charset="UTF-8" type="text/javascript"></script><script src="index_files/share.js"></script><script src="index_files/cyr2lK6qR.js" charset="UTF-8" type="text/javascript"></script><script src="index_files/event.js" charset="UTF-8" type="text/javascript"></script><script src="index_files/messager-1.js" charset="UTF-8" type="text/javascript"></script><script src="index_files/iframe-app.js" charset="UTF-8" type="text/javascript"></script><link href="index_files/share_style1_16.css" rel="stylesheet"></head>
+<body class="articleview">
+<script src="index_files/uaredirect.js" type="text/javascript"></script><script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+
+<script type="text/javascript" src="index_files/gototop.js"></script>
+<div id="navigation">
+	<div class="logo"><a href="http://www.ithov.com/" target="_blank"><img src="index_files/ithovlogo.jpg" alt="风信网"></a></div>
+	<div class="top-nav">    
+    <div class="top-search">
+    
+
+    
+	<form action="http://www.ithov.com/plus/search.php" name="formsearch"> 
+	<div class="form"> 
+	<input name="kwtype" value="0" type="hidden"> 
+	<input name="searchtype" value="titlekeyword" type="hidden"> 
+	<input name="keyword" class="search-keyword" id="search-keyword" type="text"> 
+	<select name="typeid" class="search-option" id="typeid">
+	<option selected="selected" value="titlekeyword">全站搜索</option>
+	<option value="1303">软件资讯</option><option value="1304">站长资讯</option><option value="1305">服务器</option><option value="1306">Linux学院</option><option value="1300">软件下载</option><option value="1301">电子书籍</option><option value="1302">源码下载</option> 
+	</select>
+	<button type="submit" class="search-submit">搜 索</button> </div> 
+	</form>    
+    
+
+	</div><!-- //search -->
+
+		<div class="top-rss"><a href="http://www.ithov.com/plus/heightsearch.php" target="_blank" title="高级搜索">高级搜索</a> |  <a href="http://www.ithov.com/data/sitemap.html" target="_blank" title="网站地图">网站地图</a> | <a href="http://www.ithov.com/tags.php" target="_blank" title="TAG标签">TAG</a> | <a href="http://www.ithov.com/data/rssmap.html" target="_blank" title="RSS订阅">RSS</a> | <a href="" onclick="">设为首页</a> | <a href="javascript:void(0);">加入收藏</a>	</div>
+        
+	</div>
+	<div class="linkmenu">
+		<ul> 
+			<li class="sectionlinks"><a href="http://www.ithov.com/" target="_blank" title="首页">首页</a> </li> 
+			<li class="sectionlinks"><a href="http://www.ithov.com/book/" target="_blank" title="电子书籍">电子书籍</a> </li> 
+			<li class="sectionlinks"><a href="http://www.ithov.com/soft/" target="_blank" title="软件下载">软件下载</a> </li> 
+			<li class="sectionlinks"><a href="http://www.ithov.com/code/" target="_blank" title="源代码">源代码</a> </li> 
+			<li class="sectionlinks"><a href="http://sns.ithov.com/" target="_blank" title="风信社区">风信社区</a> </li>
+			<li class="sectionlinks"><a href="http://www.ithov.com/article/" target="_blank" title="软件资讯">软件资讯</a> </li> 
+			<li class="sectionlinks"><a href="http://www.ithov.com/master/" target="_blank" title="站长资讯">站长资讯</a> </li> 
+			<li class="sectionlinks"><a href="http://www.ithov.com/server/" target="_blank" title="服务器">服务器</a> </li> 
+			<li class="sectionlinks"><a href="http://www.ithov.com/linux/" target="_blank" title="Linux">Linux</a> </li>
+			<li class="sectionlinks"><a href="http://www.ithov.com/special/" target="_blank" title="专题">专题</a> </li> 
+			<li class="sectionlinks"><a href="http://doc.ithov.com/" target="_blank" title="在线手册">手册</a> </li>  
+			<li class="sectionlinks last"><a href="http://www.ithov.com/member/article_add.php" target="_blank" title="我要投稿">投稿</a></li>
+		</ul>
+	</div>
+</div>
+<div class="menuyellow"></div>
+<!-- /header -->
+<ul class="channel-son">
+			
+				<li><a href="http://www.ithov.com/linux/news/">业界新闻</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/jack/">新手入门</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/system/">系统管理</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/apply/">桌面应用</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/setting/">桌面环境</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/network/">网络服务</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/exp/">程序开发</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/design/">程序设计</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/corp/">企业应用</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/ubuntu/">Ubuntu</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/publish/">发行版</a></li>
+			
+				<li><a href="http://www.ithov.com/linux/product/">产品应用</a></li>
+			
+</ul>
+    
+<!-- //header -->
+
+<div class="ad980b">
+<script src="index_files/ad_js.php.js" language="javascript"></script>
+</div>
+
+<div class="ad980">
+<script src="index_files/ad_js.php-1.js" language="javascript"></script>
+</div>
+
+<div class="w960 center clear mt1">
+	<div class="pleft">
+		<div class="place">
+			<div class="left"><strong>当前位置：<a href="http://www.ithov.com/">首页</a> &gt; <a href="http://www.ithov.com/linux/">Linux学院</a> &gt; <a href="http://www.ithov.com/linux/corp/">企业应用</a> &gt; <a href="http://www.ithov.com/linux/corp/cluster/">集群</a> &gt; 正文</strong></div>
+       		<div class="userStyle">
+<!-- Baidu Button BEGIN -->
+<div data-bd-bind="1421660211177" class="bdsharebuttonbox bdshare-button-style1-16"><a href="#" class="bds_more" data-cmd="more"></a><a title="分享到QQ空间" href="#" class="bds_qzone" data-cmd="qzone"></a><a title="分享到新浪微博" href="#" class="bds_tsina" data-cmd="tsina"></a><a title="分享到腾讯微博" href="#" class="bds_tqq" data-cmd="tqq"></a><a title="分享到人人网" href="#" class="bds_renren" data-cmd="renren"></a><a title="分享到微信" href="#" class="bds_weixin" data-cmd="weixin"></a></div>
+<!-- Baidu Button END -->
+		</div>
+            
+            </div><!-- /place -->
+		<div class="viewbox">
+			<div class="title">
+				<h1>Hadoop参考设计的实现及性能：HBase应用性能测试方法</h1>
+			</div><!-- /title -->
+			<div class="info">
+				2014-07-01 18:20<small>来源:</small>风信网 <small>作者:</small>末信 <small>点击:</small><script src="index_files/count.php.js" type="text/javascript" language="javascript"></script>383次 <small><a href="#reviews">我要评论</a></small>
+                
+			
+				</div><!-- /info -->
+
+			 <div class="tag">
+			TAG标签： <a href="http://www.ithov.com/tags.php?/Hadoop/" target="_blank">Hadoop</a> <a href="http://www.ithov.com/tags.php?/%E5%8F%82%E8%80%83%E8%AE%BE%E8%AE%A1/" target="_blank">参考设计</a> <a href="http://www.ithov.com/tags.php?/%E5%BA%94%E7%94%A8%E6%80%A7%E8%83%BD/" target="_blank">应用性能</a> <a href="http://www.ithov.com/tags.php?/HBase/" target="_blank">HBase</a> <a href="http://www.ithov.com/tags.php?/%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/" target="_blank">测试方法</a>
+			</div>
+			<!-- 关闭摘要 
+            	<div class="intro">摘要：测试工具 YCSB 的安装 YCSB介绍：YCSB（Yahoo! Cloud Serving Benchmark）是Yahoo开源的一款通用的性能测试工具。可以用于测试多种 NoSQL 产品进行测试。相关说明可以参考 https://github.com/brianfrankcooper/YCS</div>
+			-->
+			<div class="content">
+				<div class="articlead">
+				<script src="index_files/ad_js.php-2.js" language="javascript"></script>
+				</div><p>
+	<strong>测试工具 YCSB 的安装</strong></p>
+<p>
+	YCSB介绍：YCSB（Yahoo! Cloud Serving Benchmark）是Yahoo开源的一款通用的性能测试工具。可以用于测试多种 NoSQL 产品进行测试。相关说明可以参考 https://github.com/brianfrankcooper/YCSB/wiki.</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P211.jpg"></p>
+<p>
+	YCSB的工作原理如上图所示，主要的模块包括workload和DB Interface：</p>
+<p>
+	Workload：通过配置文件，定义读写比例，数据的大小等DB Interface：通过接口连接并操作各种Cloud Serving Store，也就是各种NoSQL产品包括HBase在内。在运行YCSB的时候，可以配置不同的workload和DB interface，同时可以定义线程数等其他参数。</p>
+<p>
+<strong>安装方式一：直接下载已经编译过的程序包</strong></p>
+<p>
+	下载地址：https://github.com/downloads/brianfrankcooper/YCSB/ycsb-0.1.4.tar.gz</p>
+<p>
+	解压：tar xfvz ycsb-0.1.4</p>
+<p>
+	这种方式简单易用。但对于不同的HBase版本，可能会有问题。需要手工编译安装。</p>
+<p>
+<strong>安装方式二：源码编译安装</strong></p>
+<p>
+	从github下载源码：git clone https://github.com/brianfrankcooper/YCSB.git</p>
+<p>
+	配置相应的HBase的版本：修改YCSB/pom.xml，更新hbase.version这个属性。</p>
+<p>
+	编译：cd YCSB, mvn install</p>
+<p>
+	生成YCSB的程序包：distribution/target/ ycsb-0.1.4.tar.gz</p>
+<p>
+	解压：tar xfvz ycsb-0.1.4</p>
+<p>
+	1. 测试步骤</p>
+<p>
+	a) 配置HBase连接和classpath</p>
+<p>
+	最简单的办法是将HBase Server的配置文件{$HBase_home}/conf/hbase-site.xml直接拷贝到YCSB的目录{$YCSB_HOME}/hbase-binding/conf。</p>
+<p>
+	将HBase的jar文件拷贝到{$YCSB_HOME} /hbase-binding/lib，这样当执行ycsb命令时，可以保证所需的jar在classpath上。</p>
+<p>
+	b) YCSB命令简介</p>
+<p align="center">
+	<img src="index_files/1-140F11P212.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	直接执行ycsb命令，可以看到用法的介绍，主要有3类的参数：</p>
+<p>
+	Commands：执行什么命令，load-加载数据，run-运行测试，shell-交互模式；</p>
+<p>
+	Databases：使用什么DB Interface；</p>
+<p>
+	Options：包括属性参数和线程参数。</p>
+<p>
+	https://github.com/brianfrankcooper/YCSB/wiki/Core-Properties</p>
+<p>
+	参考以上的链接，可以发现workload的核心属性参数。</p>
+<p>
+	c) 加载数据</p>
+<p>
+	bin/ycsb load hbase -P workloads/workloada -p columnfamily=f1 -p recordcount=10000 -s -threads 10</p>
+<p>
+	向HBase Server下的usertable，f1插入10000条数据，并将执行的情况打印到屏幕上。对于HBase<a href="http://www.ithov.com/book/data/" target="_blank"><u>数据库</u></a>，数据是以字节码数组byte[]的方式进行读取，对于不同的数据源，无论是车牌号这种String类型的，还是电子图片这种Binary类型的，在从HBase<a href="http://www.ithov.com/book/data/" target="_blank"><u>数据库</u></a>读取的时候都是以byte[]类型，不同的是数组的长度。</p>
+<p>
+	对于一个“京K12345”的车牌，它的长度是8位，对于一个5M左右的图片，它的长度是2326122。我们可以通过workload的核心属性fieldlength来设置。</p>
+<p>
+	d) 性能测试</p>
+<p>
+	YCSB自带有6中workload配置文件，模拟不同的压力场景</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P213.jpg"></p>
+<p align="center">
+	<img src="index_files/1-140F11P214.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	以上是workloadc的内容，模拟的是100% read操作的场景。</p>
+<p>
+	bin/ycsb run hbase -P workloads/workloadc -p columnfamily=f1 -s -threads 10</p>
+<p>
+	根据workloadc来进行性能测试。</p>
+<p>
+	2. 对工具的定制开发和扩展</p>
+<p>
+	以上的介绍都是基于YCSB的自带功能。在有些情况下，我们需要扩展和定制测试的方法，YCSB是开源的纯JAVA的解决方案，可以充分满足特殊的要求。下面分析一下YCSB的相关JAVA Class。</p>
+<p>
+	a) Workload的定义： com.yahoo.ycsb.workloads.CoreWorkload</p>
+<p>
+	b) HBase DB Interface的定义：com.yahoo.ycsb.db.HBaseClient</p>
+<p>
+	c) 数据生成器Generator：com.yahoo.ycsb.generator.*</p>
+<p>
+	d) YCSB的主程序：com.yahoo.ycsb.Clien</p>
+<p>
+<strong>压力测试参数与说明</strong></p>
+<p>
+	测试分成两部分，小数据表和大数据表。所谓的大小表示单条记录的大小，测试中，小数据表的单条记录大小为8Byte，大数据表的单条记录大小为2MB。通过YCSB数据库测试工具，我们对数据库的各种操作进行了压力测试，包括read, insert, update, scan以及read-modify-write。这些测试反映了hadoop hbase的性能，同时也对实际应用的操作</p>
+<p>
+	进行了模拟。</p>
+<p>
+	操作说明：</p>
+<p>
+	Read： 读取某一条记录。速度和系统的io速率有关，系统读取速率越快，read速率越快。</p>
+<p>
+	Insert：插入一条记录。速度和系统的io速率有关，系统写入速率越快，read速率越快。</p>
+<p>
+	Update：更新一条记录，本质和insert操作相同。</p>
+<p>
+	Scan：扫描整个表，速率由读取速率和整个表的大小有关，表越大，单次scan速率越慢。</p>
+<p>
+	测试环境：</p>
+<p>
+	硬件：</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P214-50.jpg"></p>
+<p>
+	软件：</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P215.jpg"></p>
+<p>
+	*注：除非文中特别标注， 其他参数均采用 Apache Hadoop <a href="http://www.ithov.com/server/manufacturer/intel/" target="_blank"><u>英特尔</u></a>分发版 2.3 的缺省参数。</p>
+<p>
+	YCSB对Apache Hadoop*英特尔分发版测试结果</p>
+<p>
+	在以下测试中，我们通过设置不同的线程数，让YCSB客户端模拟不同的压力情况。</p>
+<p>
+<strong>小数据表</strong></p>
+<p>
+	参数：</p>
+<p>
+	单条数据大小（Byte）：8</p>
+<p>
+	测试用表总条数：1000000</p>
+<p>
+	测试结果：</p>
+<p>
+	以下几幅图分别是线程数与执行操作速率的关系图、线程数与单条指令执行时间的关系图以及指令执行时间分布图。执行的操作为50%read，50%update。</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P219.jpg"></p>
+<p>
+	压力（线程）增加对总操作数的影响</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P220.jpg"></p>
+<p>
+	压力（线程）增加对总单条指令执行时间的影响</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P220-50.jpg"></p>
+<p>
+	<strong>指令执行时间分布</strong></p>
+<p>
+	详细测试结果数据表格：</p>
+<p>
+	1. Insert操作</p>
+<p align="center">
+	<img src="index_files/1-140F11P221.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	2. 50% read, 50% update</p>
+<p align="center">
+	<img src="index_files/1-140F11P222.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	3. 95% read, 5% update</p>
+<p align="center">
+	<img src="index_files/1-140F11P223.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	4. 100% read</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P223-50.jpg"></p>
+<p>
+	5. 95% read，5% insert</p>
+<p align="center">
+	<img src="index_files/1-140F11P224.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	6. 95%scan，5% insert</p>
+<p align="center">
+	<img src="index_files/1-140F11P224-50.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	7. 50% read, 50% read-modify-write</p>
+<p align="center">
+	<img src="index_files/1-140F11P226.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+<strong>大数据表</strong></p>
+<p>
+	参数：</p>
+<p>
+	单条数据大小（Byte）：2000000</p>
+<p>
+	测试用表总条数：50000</p>
+<p>
+	测试结果：</p>
+<p>
+	同样，以下几幅图分别是线程数与执行操作速率的关系图、线程数与单条指令执行时间的关系图以及指令执行时间分布图。执行的操作为50%read，50%update。由于单条数据较大，因此和小数据表相比，单条指令执行时间和所有指令执行速率都有明显下降。但系统的总吞吐量有所上升。</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P226-50.jpg"></p>
+<p>
+	压力（线程）增加对总操作数的影响</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P227.jpg"></p>
+<p>
+	压力（线程）增加对总单条指令执行时间的影响</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P227-50.jpg"></p>
+<p>
+	<strong>指令执行时间分布</strong></p>
+<p>
+	详细测试结果数据表格：</p>
+<p>
+	1. Insert操作</p>
+<p align="center">
+	<img src="index_files/1-140F11P229.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	2. 50% read, 50% update</p>
+<p align="center">
+	<img src="index_files/1-140F11P229-50.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	3. 95% read, 5% update</p>
+<p align="center">
+	<img src="index_files/1-140F11P230.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	4. 100% read</p>
+<p align="center">
+	<img alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" src="index_files/1-140F11P230-50.jpg"></p>
+<p>
+	5. 95% read，5% insert</p>
+<p align="center">
+	<img src="index_files/1-140F11P232.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	6. 95%scan，5% insert</p>
+<p align="center">
+	<img src="index_files/1-140F11P232-50.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	7. 50% read, 50% read-modify-write</p>
+<p align="center">
+	<img src="index_files/1-140F11P233.jpg" alt="Hadoop参考设计的实现及性能：HBase应用性能测试方法" width="600"></p>
+<p>
+	在压力测试中使用的软件，硬件以及测试参数可能为Apache Hadoop*英特尔分发版进行了优化，测试使用的是专用的测试系统，软件，硬件以及平台。上述任何要素的变动都有可能导致测试结果的变化。请参考其他信息及性能测试（包括结合其他产品使用时的运行性能）以对目标产品进行全面评估。</p>
+
+                
+                 
+			</div><!-- /content -->	
+			
+            
+            <div class="dede_pages">
+				<ul class="pagelist">
+          
+				</ul>
+			</div><!-- /pages -->
+            
+            <div class="cloud">
+			<script src="index_files/ad_js.php-3.js" language="javascript"></script>	
+            </div>
+			<div class="relevant">
+				<h2>Hadoop参考设计的实现及性能：HBase应用性能测试方法的相关阅读：</h2>
+                    <ul> 
+<li><a href="http://www.ithov.com/linux/135917.shtml" target="_blank" title="Hadoop一体机参考设计的实现案例：集云“海纳”大数据处理机柜">Hadoop一体机参考设计的实现案例：集云“海纳”大数据处</a> <span>2014-07-02</span></li>
+<li><a href="http://www.ithov.com/linux/135916.shtml" target="_blank" title="Hadoop一体机参考设计的实现案例：网新易得Radoop统一计算平台">Hadoop一体机参考设计的实现案例：网新易得Radoop统一计算</a> <span>2014-07-02</span></li>
+<li><a href="http://www.ithov.com/linux/135915.shtml" target="_blank" title="Hadoop参考设计的实现及性能：第三方产品介绍">Hadoop参考设计的实现及性能：第三方产品介绍</a> <span>2014-07-02</span></li>
+<li><a href="http://www.ithov.com/linux/135914.shtml" target="_blank" title="Hadoop参考设计的实现及性能：Intel平台产品参考">Hadoop参考设计的实现及性能：Intel平台产品参考</a> <span>2014-07-02</span></li>
+<li><a href="http://www.ithov.com/linux/135911.shtml" target="_blank" title="Hadoop参考设计的实现及性能：英业达和技嘉的实现">Hadoop参考设计的实现及性能：英业达和技嘉的实现</a> <span>2014-07-02</span></li>
+<li><a href="http://www.ithov.com/linux/135878.shtml" target="_blank" title="Hadoop参考设计的实现及性能：HiBench性能测试">Hadoop参考设计的实现及性能：HiBench性能测试</a> <span>2014-07-01</span></li>
+<li><a href="http://www.ithov.com/linux/135877.shtml" target="_blank" title="Hadoop参考设计的实现及性能：Hadoop性能初步测试">Hadoop参考设计的实现及性能：Hadoop性能初步测试</a> <span>2014-07-01</span></li>
+<li><a href="http://www.ithov.com/linux/135598.shtml" target="_blank" title="Hadoop参考设计组组件及关键步骤：Apache Hadoop英特尔分发版安装(三)">Hadoop参考设计组组件及关键步骤：Apache Hadoop英特尔分发</a> <span>2014-06-23</span></li>
+<li><a href="http://www.ithov.com/linux/135597.shtml" target="_blank" title="Hadoop参考设计组组件及关键步骤：Linux系统安装(二)">Hadoop参考设计组组件及关键步骤：Linux系统安装(二)</a> <span>2014-06-23</span></li>
+<li><a href="http://www.ithov.com/linux/135596.shtml" target="_blank" title="Hadoop参考设计组组件及关键步骤(一)">Hadoop参考设计组组件及关键步骤(一)</a> <span>2014-06-23</span></li>
+<li><a href="http://www.ithov.com/linux/135559.shtml" target="_blank" title="开源Hadoop HDFS高可用性介绍、安装与配置">开源Hadoop HDFS高可用性介绍、安装与配置</a> <span>2014-06-20</span></li>
+<li><a href="http://www.ithov.com/linux/135249.shtml" target="_blank" title="Azure HDInsight将支持Hadoop 2.4效能提升100倍">Azure HDInsight将支持Hadoop 2.4效能提升100倍</a> <span>2014-06-09</span></li>
+<li><a href="http://www.ithov.com/linux/126379.shtml" target="_blank" title="Hadoop集群中利用HBase更加高效地进行查询和优化海量数据">Hadoop集群中利用HBase更加高效地进行查询和优化海量数据</a> <span>2013-06-14</span></li>
+<li><a href="http://www.ithov.com/linux/124240.shtml" target="_blank" title="使Couchbase Server能够与Hadoop连接器通信">使Couchbase Server能够与Hadoop连接器通信</a> <span>2013-03-18</span></li>
+   
+					</ul> 
+			</div>
+
+
+			
+			<!-- //顶踩 -->
+			<div class="center newdigg" id="newdigg"><div class="diggbox digg_good" onmousemove="" onmouseout="" onclick="">
+            <div class="digg_act">顶一下</div>
+            <div class="digg_num">(0)</div>
+            <div class="digg_percent">
+                <div class="digg_percent_bar"><span style="width:0.00%"></span></div>
+                <div class="digg_percent_num">0.00%</div>
+            </div>
+        </div>
+        <div class="diggbox digg_bad" onmousemove="" onmouseout="" onclick="">
+            <div class="digg_act">踩一下</div>
+            <div class="digg_num">(0)</div>
+            <div class="digg_percent">
+                <div class="digg_percent_bar"><span style="width:0.00%"></span></div>
+                <div class="digg_percent_num">0.00%</div>
+            </div>
+        </div></div>
+			<script language="javascript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+			<!-- //顶踩部份的源码结束 -->
+<div class="articlecntcp">
+本站文章《<a href="#" target="_blank" title="">Hadoop参考设计的实现及性能：HBase应用性能测试方法</a>》除注明转载外，均为本站原创或编译<br>
+转载请注明：本文由<a href="http://www.ithov.com/" target="_blank">风信网</a>(<a href="http://www.ithov.com/" target="_blank">http://www.ithov.com</a>)提供欢迎免费转载，转载时请保留该信息，谢谢合作！
+</div>
+			
+			<div class="boxoff">
+				<strong>------分隔线----------------------------</strong>
+			</div>
+			<div class="handle">
+				<div class="context">
+					<ul>
+						<li>上一篇：<a href="http://www.ithov.com/linux/135878.shtml">Hadoop参考设计的实现及性能：HiBench性能测试</a> </li>
+						<li>下一篇：<a href="http://www.ithov.com/linux/135911.shtml">Hadoop参考设计的实现及性能：英业达和技嘉的实现</a> </li>
+					</ul>
+				</div><!-- /context -->
+				<div class="actbox">
+				    <h3><span><a href="http://www.ithov.com/" target="_self" title="风信网首页">【返回风信网首页】</a><a href="http://sns.ithov.com/" title="风信社区" target="_blank">【进入风信社区】</a></span></h3>
+					<ul>
+						<li id="act-fav"><a href="http://www.ithov.com/plus/stow.php?aid=135879" target="_blank">收藏</a></li>
+						<li id="act-err"><a href="http://www.ithov.com/plus/erraddsave.php?aid=135879&amp;title=Hadoop%E5%8F%82%E8%80%83%E8%AE%BE%E8%AE%A1%E7%9A%84%E5%AE%9E%E7%8E%B0%E5%8F%8A%E6%80%A7%E8%83%BD%EF%BC%9AHBase%E5%BA%94%E7%94%A8%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95" target="_blank">挑错</a></li>
+						<li id="act-pus"><a href="http://www.ithov.com/plus/recommend.php?aid=135879" target="_blank">推荐</a></li>
+						<li id="act-pnt"><a href="#" onclick="">打印</a></li>
+					</ul>
+				</div><!-- /actbox -->
+			</div><!-- /handle -->
+		</div><!-- /viewbox -->		
+
+<!-- //AJAX评论区 -->
+
+<div class="mt1" id="reviews">
+		<dl class="tbox">
+			<dt>
+				<strong><a name="postform"></a>Hadoop参考设计的实现及性能：HBase应用性能测试方法的网友评论</strong>
+			</dt>
+			<dd>	
+<!--兼容版，可保证页面完全兼容-->
+<div id="SOHUCS"><iframe style="width: 100%; border: 0px none; height: 560px;" src="index_files/innerpage.html" frameborder="no"></iframe></div>
+<script><!--
+/* Script removed by snapshot save */
+--></script>       
+
+
+			</dd>
+		</dl>
+	</div><!-- //评论表单区结束 -->
+
+</div><!-- //左边内容结束 -->
+
+<!-- //右边内容开始 -->
+<div class="pright">
+		<div class="left ad300x250">
+		<script src="index_files/ad_js.php-4.js" language="javascript"></script>
+		</div>
+
+			<div class="jiuli10 project">
+				<h2>推荐内容</h2>
+				<div class="projectlist">
+					<ul>
+				<li><a href="http://www.ithov.com/server/55660.shtml" target="_blank" title="本机/服务器简单配置+破解版主机管理系统安装+pw论坛全程安装图解">本机/服务器简单配置+破解版主机</a></li>
+<li><a href="http://www.ithov.com/server/94382.shtml" target="_blank" title="欧盟最终批准甲骨文以74亿美元收购Sun">欧盟最终批准甲骨文以74亿美元收</a></li>
+<li><a href="http://www.ithov.com/server/76070.shtml" target="_blank" title="巧用Windows Server 2008触发器功能加强系统安全">巧用Windows Server 2008触发器功能加</a></li>
+<li><a href="http://www.ithov.com/server/66989.shtml" target="_blank" title="25块硬盘组装超级存储服务器实录">25块硬盘组装超级存储服务器实录</a></li>
+<li><a href="http://www.ithov.com/server/78772.shtml" target="_blank" title="图文安装指南ISA Server 2004">图文安装指南ISA Server 2004</a></li>
+<li><a href="http://www.ithov.com/server/65769.shtml" target="_blank" title="1U热插拔五舟3250服务器评测分析">1U热插拔五舟3250服务器评测分析</a></li>
+<li><a href="http://www.ithov.com/server/77405.shtml" target="_blank" title="六大创新带来Nehalem处理器的改变有多大呢？">六大创新带来Nehalem处理器的改变</a></li>
+<li><a href="http://www.ithov.com/server/63860.shtml" target="_blank" title="Windows Server 2003 MSCS群集安装指南">Windows Server 2003 MSCS群集安装指南</a></li>
+<li><a href="http://www.ithov.com/server/118721.shtml" target="_blank" title="IBM服务器利用ServerRAID Support CD 8.30配置阵列图文指南">IBM服务器利用ServerRAID Support CD 8</a></li>
+<li><a href="http://www.ithov.com/server/80060.shtml" target="_blank" title="英特尔升级固态硬盘改善磁盘长期读写性能问题">英特尔升级固态硬盘改善磁盘长期</a></li>
+
+					</ul>
+				</div>
+			</div>			
+
+	
+		<div class="commend mt1">
+			<dl class="light">
+				<dt class="light"><strong>图文看点</strong></dt>
+				<dd class="light">
+					<ul class="lightimages">
+<li><a href="http://www.ithov.com/server/117176.shtml"><img src="index_files/1-1206061929190-L.jpg" alt="惠普实验室架构大幅降低数据中心电力成本和能源需求" height="120" width="120" border="0"></a><a href="http://www.ithov.com/server/117176.shtml">惠普实验室架构大</a></li>
+<li><a href="http://www.ithov.com/server/136412.shtml"><img src="index_files/1-140H11032260-L.jpg" alt="在Windows Azure上建立Redis Cache服务" height="120" width="120" border="0"></a><a href="http://www.ithov.com/server/136412.shtml">在Windows Azure上建立</a></li>
+<li><a href="http://www.ithov.com/server/126728.shtml"><img src="index_files/1-130625144I10-L.jpg" alt="神州数码黄楠演讲：推进将催生IT出现三大变革" height="120" width="120" border="0"></a><a href="http://www.ithov.com/server/126728.shtml">神州数码黄楠演讲</a></li>
+<li><a href="http://www.ithov.com/server/105247.shtml"><img src="index_files/1_061G55S333J.jpg" alt="全新的价值整合者 全球CFO调研洞察摘要" height="120" width="120" border="0"></a><a href="http://www.ithov.com/server/105247.shtml">全新的价值整合者</a></li>
+
+					</ul>
+				</dd>
+			</dl>
+		</div><!-- /commend -->
+
+		
+			<div class="hot mt1">
+			<dl class="light">
+				<dt class="light"><strong>热点内容</strong></dt>
+				<dd class="light">
+					<ul class="c1 ico2">
+             <li><a href="http://www.ithov.com/linux/120885.shtml" target="_blank" title="GPFS 3.4中如何增加一个GPFS集群节点、删除一个节点等">GPFS 3.4中如何增加一个GPFS集群节点</a></li>
+<li><a href="http://www.ithov.com/linux/126379.shtml" target="_blank" title="Hadoop集群中利用HBase更加高效地进行查询和优化海量数据">Hadoop集群中利用HBase更加高效地进行</a></li>
+<li><a href="http://www.ithov.com/linux/117507.shtml" target="_blank" title="在UNIX环境下部署高效的IBM SPSS Modeler Server">在UNIX环境下部署高效的IBM SPSS Mod</a></li>
+<li><a href="http://www.ithov.com/linux/83481.shtml" target="_blank" title="linux服务器集群安装指南">linux服务器集群安装指南</a></li>
+<li><a href="http://www.ithov.com/linux/83774.shtml" target="_blank" title="Solaris 10系统中配置TSM磁带库">Solaris 10系统中配置TSM磁带库</a></li>
+<li><a href="http://www.ithov.com/linux/108030.shtml" target="_blank" title="Gluster / GlusterFS 3.3 Beta2发布 集群文件系统">Gluster / GlusterFS 3.3 Beta2发布 集群文</a></li>
+<li><a href="http://www.ithov.com/linux/86930.shtml" target="_blank" title="集群和Linux上的集群解决方案">集群和Linux上的集群解决方案</a></li>
+<li><a href="http://www.ithov.com/linux/116609.shtml" target="_blank" title="HAproxy 1.4.21发布 TCP和HTTP负载均衡器">HAproxy 1.4.21发布 TCP和HTTP负载均衡器</a></li>
+<li><a href="http://www.ithov.com/linux/124439.shtml" target="_blank" title="HTTP会话内存复制特性是WAS集群高可用性的关键">HTTP会话内存复制特性是WAS集群高可</a></li>
+<li><a href="http://www.ithov.com/linux/125435.shtml" target="_blank" title="以fourinone为例详细解析分布式协调的设计原理">以fourinone为例详细解析分布式协调</a></li>
+
+					</ul>
+				</dd>
+			</dl>
+		</div>	
+
+
+</div>
+<!-- /pright -->
+</div>
+<div class="footer">
+<div class="about">
+<ul>
+<li class="brand"><a onclick="" href="http://www.ithov.com/">设为首页</a></li>
+<li class="brand"><a href="javascript:void(0);">加入收藏</a></li>
+<li class="brand"><a href="http://www.ithov.com/company/about.html" target="_blank" title="关于我们">关于我们</a></li>
+<li class="brand"><a href="http://www.ithov.com/company/contactus.html" target="_blank" title="联系我们">联系我们</a></li>
+<li class="brand"><a href="http://www.ithov.com/company/ads.html" target="_blank" title="广告服务">广告服务</a></li> 
+<li class="brand"><a href="http://www.ithov.com/data/sitemap.html" target="_blank" title="网站地图">网站地图</a></li>
+<li class="brand"><a href="http://www.ithov.com/company/copyright.html" target="_blank" title="版权声明">版权声明</a></li>
+<li><a href="http://www.ithov.com/company/downloadhelp.html" target="_blank" title="下载帮助">下载帮助</a></li>
+</ul>
+</div>
+<div class="copyright">
+<p><a href="http://www.miibeian.gov.cn/" target="_blank">鄂ICP备12004347号</a> Copyright © 2006-2015 ITHOV.COM Inc. All Rights Reserved <script src="index_files/stat.php.js" language="JavaScript" charset="gb2312"></script><script src="index_files/core.php.js" charset="utf-8" type="text/javascript"></script><a href="http://www.cnzz.com/stat/website.php?web_id=269636" target="_blank" title="站长统计">站长统计</a> </p>
+<p>孝感风信信息技术有限公司 版权所有 工商注册编号：420900000031772</p>
+<p>网站客服QQ群： ①群15569476 ②群19439244 ③群20730522 ④群7190232 </p>
+</div>
+</div>
+<script src="index_files/source.js" type="text/javascript"></script>
+<script src="index_files/ad_js.php-5.js" language="javascript"></script>
+<!-- Baidu Button BEGIN -->
+<script><!--
+/* Script removed by snapshot save */
+--></script>
+<!-- Baidu Button END -->
+
+<!-- ads -->
+<script><!--
+/* Script removed by snapshot save */
+--></script>
+<script src="index_files/i.js"></script>
+
+
+<div title="返回顶部" style="position: fixed; bottom: 50px; right: 10px; opacity: 0; cursor: pointer;" id="topcontrol"><img src="index_files/gray.jpg" style="width:58px; height:58px"></div><div><embed id="ciba_grabword_plugin" type="application/ciba-grabword-plugin" height="0" hidden="true" width="0"></div></body></html>

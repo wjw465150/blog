@@ -1,0 +1,455 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>JAVA应用CPU占用100%|内存泄漏分析总结</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<DIV class=postTitle><A id=viewpost1_TitleUrl class=postTitle2 
+href="http://www.blogjava.net/ldwblog/archive/2016/12/22/432166.html">JAVA应用CPU占用100%|内存泄漏分析总结</A> 
+</DIV>
+<DIV></DIV>
+<DIV>
+<DIV 
+style="FONT-FAMILY: Arial, sans-serif; COLOR: #333333; MARGIN: 0px; BACKGROUND-COLOR: #ffffff">
+<BLOCKQUOTE 
+style="BORDER-LEFT-WIDTH: 1px; BORDER-LEFT-COLOR: #2e3d54; COLOR: #707070; PADDING-BOTTOM: 10px; PADDING-TOP: 10px; PADDING-LEFT: 20px; MARGIN: 0px 0px 0px 19px; PADDING-RIGHT: 20px">
+  <P 
+  style="COLOR: #333333; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+  style="COLOR: #000000"><STRONG>问题现象</STRONG></SPAN></P></BLOCKQUOTE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">vrs后台系统从某一时间点，根据已查结果，追溯到几个月前上线的PGC审核功能引起。</P><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">近期大概一周左右运营使用时会反馈系统访问越来越来慢，最终系统崩溃，无法访问。因为之前媒资每周都会有功能上线，把这个问题覆盖掉了，未能很快暴露出来。</PRE><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">实际上，通过Zabbix观察监控cpu、swap占用都是比较高的。</PRE><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">&nbsp;</PRE>
+<BLOCKQUOTE 
+style="BORDER-LEFT-WIDTH: 1px; MARGIN-BOTTOM: 0px; BORDER-LEFT-COLOR: #2e3d54; COLOR: #707070; PADDING-BOTTOM: 10px; PADDING-TOP: 10px; PADDING-LEFT: 20px; MARGIN-LEFT: 19px; PADDING-RIGHT: 20px; MARGIN-RIGHT: 0px">
+  <P 
+  style="COLOR: #333333; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><STRONG><SPAN 
+  style="COLOR: #000000">1031问题分析之CPU 100%</SPAN></STRONG></P></BLOCKQUOTE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">10-31日出现过一次问题，服务器上执行top命令按键1观察始终有一个cpu占用总100%，怀疑可能是因后台服务请求过多CPU繁忙导致访问慢。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">将后台服务切到备机，通过堆栈分析具体那段代码引起的CPU占用100%问题。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><STRONG>问题定位过程：</STRONG></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">1）jps 
+-m 非常方便直接定位所有的Java进程pid</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp; 
+&nbsp; &nbsp; [root@cdn ldw]# jps -m | grep 28081</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp; 
+&nbsp; &nbsp; 6687 WatchdogManager start -conf 
+/ldw/conf/resin/resin-mms-webapp-28081.xml --log-directory 
+/ldw/apps/resin/log</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp; 
+&nbsp; &nbsp; 6734 Resin --root-directory /ldw/apps/resin/ -conf 
+/ldw/conf/resin/resin-mms-webapp-28081.xml -server default -socketwait 15304 
+start --log-directory /ldw/apps/resin/log</P>
+<DIV style="MARGIN: 0px">2）jstack -l pid &gt; 
+jstack1031.log命令打印栈信息，如果因某些原因无法成功打印，</DIV>
+<DIV style="MARGIN: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;可以使用kill -3 
+pid，输出到jvm日志中，resin服务器默认输出到jvm-default.log日志中】</DIV>
+<DIV style="MARGIN: 0px">3）查找占用CPU资源最高的进程id，使用top -H -p pid 
+查看进程pid的所有的线程，默认是按照%CPU高~低排序。</DIV>
+<DIV style="MARGIN: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 或者直接使用top查看， 
+shift+H显示所有的线程，默认按照%CPU高~低排序。</DIV>
+<DIV style="MARGIN: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+找到占用CPU利用率最高的pid，一般CPU利用率达到90%以上，将pid转换为16进制，方法有很多种，我使用linux自带python命令：hex(pid)，很方便。</DIV>
+<DIV style="MARGIN: 0px">4）根据转换的16进制去jstack.log日志中查找基本能定位到具体哪行代码的问题。</DIV>
+<DIV style="MARGIN: 0px">&nbsp; &nbsp; &nbsp; "reportThirdException" daemon 
+prio=10 tid=0x00007f8bd450b800 nid=0x12c4 runnable [0x00007f8b906ac000]</DIV>
+<DIV style="MARGIN: 0px">&nbsp; &nbsp; &nbsp; &nbsp;java.lang.Thread.State: 
+RUNNABLE</DIV>
+<DIV style="MARGIN: 0px">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;at 
+com.xxx.interfaces.util.NoticeMonitorSysHelper$ThreadStatue$1.run(NoticeMonitorSysHelper.java:167)</DIV>
+<DIV style="MARGIN: 0px">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;at 
+java.lang.Thread.run(Thread.java:722)&nbsp;</DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">5）fix代码，重新部署上线</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp; 
+&nbsp; &nbsp; 观察cpu迅速降到正常值，swap值也降下来了，第二天观察cpu、swap并没有明显的增加。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">6）在备机切换到线上机器前，通过jmap打印出JVM堆内存信息</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp; 
+&nbsp; &nbsp; &nbsp;jmap -dump:live,format=b,file=heap1031.bin &lt;pid&gt;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp;</P>
+<BLOCKQUOTE 
+style="BORDER-LEFT-WIDTH: 1px; MARGIN-BOTTOM: 0px; BORDER-LEFT-COLOR: #2e3d54; COLOR: #707070; PADDING-BOTTOM: 10px; PADDING-TOP: 10px; PADDING-LEFT: 20px; MARGIN-LEFT: 19px; PADDING-RIGHT: 20px; MARGIN-RIGHT: 0px">
+  <P 
+  style="COLOR: #333333; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+  style="COLOR: #000000"><STRONG>1212问题分析之内存泄漏</STRONG></SPAN></P></BLOCKQUOTE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">12-11日晚VRS系统又一次服务Down掉，但是当时收到反馈后并没有及时切到备机，未能及时保留问题现场，紧急重启后暂时恢复服务，此时距离上一次上线间隔为9D。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">通过Zabbix监控来看swap内存这些天每天都在升高，最大值占用了接近4G，可服务器总内存不过才6G，初步定位肯定是Java应用内存泄漏导致。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">第二天一块讨论这块问题如何排查，内存泄漏一般通过jstack输出的栈很难定位到问题，只能对JVM堆内存信息做分析。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">这次问题也联想到上次故障处理后，实际并没有找到问题根本原因，想到了1031日存留过JVM堆信息heap1031.bin，然后下载到本地通过MAT(Eclipse插件)进行内存分析。也可以通过其他工具如jhat，但不如MAT直观。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><STRONG>问题定位过程：</STRONG></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">进入Eclipse：Memory 
+analysis</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">选择File—》Open 
+Head Dump…打开heap1031.bin</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">会弹出一个对话框，选择Leak 
+Suspects Report 【自动检测存疑的泄漏点，会报告出那些存活的对象以及这些对象没有被gc的原因】</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">MAT会自动分析出内存大致情况，直方图显示内存占用以及Problem 
+Suspect</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+style="MAX-WIDTH: none; POSITION: relative; DISPLAY: inline-block" 
+confluence-embedded-manual-size?=""><IMG 
+style="CURSOR: pointer; MAX-WIDTH: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 2px; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt="" 
+src="http://wiki.letv.cn/download/attachments/63657126/image2016-12-26%2015%3A44%3A13.png?version=1&amp;modificationDate=1482738183000&amp;api=v2" 
+width=600 data-linked-resource-container-version="14" 
+data-linked-resource-container-id="63657126" 
+data-linked-resource-content-type="image/png" 
+data-base-url="http://wiki.letv.cn" 
+data-linked-resource-default-alias="image2016-12-26 15:44:13.png" 
+data-linked-resource-type="attachment" data-linked-resource-version="1" 
+data-linked-resource-id="63660278" data-unresolved-comment-count="0" 
+data-image-src="/download/attachments/63657126/image2016-12-26%2015%3A44%3A13.png?version=1&amp;modificationDate=1482738183000&amp;api=v2"></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">通过以上会看到1635个JPEGImageReader实例没有被释放，可能这个是导致内存泄漏的根源，也说明跟系统裁图功能有关，缩小了问题定位范围。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">没有释放资源怀疑可能是IO流没有正常关闭导致，因JVM堆栈转存只看到底层代码，具体还要进一步分析程序源代码。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">下一步，点击Details</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+style="MAX-WIDTH: none; POSITION: relative; DISPLAY: inline-block" 
+confluence-embedded-manual-size?=""><IMG 
+style="CURSOR: pointer; MAX-WIDTH: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 2px; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt="" 
+src="http://wiki.letv.cn/download/attachments/63657126/image2016-12-26%2015%3A48%3A11.png?version=1&amp;modificationDate=1482738420000&amp;api=v2" 
+width=600 data-linked-resource-container-version="14" 
+data-linked-resource-container-id="63657126" 
+data-linked-resource-content-type="image/png" 
+data-base-url="http://wiki.letv.cn" 
+data-linked-resource-default-alias="image2016-12-26 15:48:11.png" 
+data-linked-resource-type="attachment" data-linked-resource-version="1" 
+data-linked-resource-id="63660296" data-unresolved-comment-count="0" 
+data-image-src="/download/attachments/63657126/image2016-12-26%2015%3A48%3A11.png?version=1&amp;modificationDate=1482738420000&amp;api=v2"></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">再点击下面的Class 
+Name，查看Inspector【显示了当前显示类或对象的详细信息】</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+style="MAX-WIDTH: none; POSITION: relative; DISPLAY: inline-block" 
+confluence-embedded-manual-size?=""><IMG 
+style="CURSOR: pointer; MAX-WIDTH: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 2px; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt="" 
+src="http://wiki.letv.cn/download/attachments/63657126/image2016-12-26%2015%3A49%3A16.png?version=1&amp;modificationDate=1482738485000&amp;api=v2" 
+width=600 data-linked-resource-container-version="14" 
+data-linked-resource-container-id="63657126" 
+data-linked-resource-content-type="image/png" 
+data-base-url="http://wiki.letv.cn" 
+data-linked-resource-default-alias="image2016-12-26 15:49:16.png" 
+data-linked-resource-type="attachment" data-linked-resource-version="1" 
+data-linked-resource-id="63660299" data-unresolved-comment-count="0" 
+data-image-src="/download/attachments/63657126/image2016-12-26%2015%3A49%3A16.png?version=1&amp;modificationDate=1482738485000&amp;api=v2"></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">通过Inspector能知道使用了javax.imageio.ImageReader接口，我们处理图片的任务都在ImageResize.java类中，然后对这块代码进行分析排查。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">最初怀疑自动截图这块的影响，单独对自动截图功能做批量测试，循环截图100，1000次dump内存看基本都没有太大变化。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><STRONG>代码排查：</STRONG></P>
+<DIV style="OVERFLOW-X: auto; MARGIN: 10px 0px 0px">
+<TABLE 
+style="BORDER-COLLAPSE: collapse; OVERFLOW-X: auto; COLOR: #333333; MARGIN: 0px">
+  
+  <TR>
+    <TH 
+    style="BORDER-TOP: #dddddd 1px solid; BORDER-RIGHT: #dddddd 1px solid; VERTICAL-ALIGN: top; MIN-WIDTH: 8px; BORDER-BOTTOM: #dddddd 1px solid; COLOR: #000000; PADDING-BOTTOM: 7px; TEXT-ALIGN: left; PADDING-TOP: 7px; PADDING-LEFT: 10px; BORDER-LEFT: #dddddd 1px solid; PADDING-RIGHT: 10px; BACKGROUND-COLOR: #f0f0f0">
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><STRONG>try{</STRONG></P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px"><STRONG>&nbsp;//ImageReader声称能够解码指定格式&nbsp;&nbsp;</STRONG><BR><STRONG>&nbsp;Iterator&lt;ImageReader&gt; 
+      it = 
+      ImageIO.getImageReadersByFormatName(ext);</STRONG><BR><STRONG>&nbsp;ImageReader 
+      reader = it.next();</STRONG><BR><STRONG>&nbsp;// 
+      输入源中的图像将只按顺序读取&nbsp;</STRONG><BR><STRONG>&nbsp;reader.setInput(iis, 
+      true);</STRONG><BR><STRONG>&nbsp;int srcWidth = reader.getWidth(0); // 
+      源图宽度</STRONG><BR><STRONG>&nbsp;int srcHeight = reader.getHeight(0); // 
+      源图高度</STRONG><BR><STRONG>&nbsp;if (srcWidth &gt;= destWidth &amp;&amp; 
+      srcHeight &gt;= destHeight) {</STRONG></P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px"><STRONG>&nbsp; 
+      &nbsp; // 处理图片...</STRONG></P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px"><STRONG>&nbsp; 
+      &nbsp;<SPAN 
+      style="COLOR: #ff0000">&nbsp;reader.dispose();</SPAN></STRONG></P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px"><STRONG>&nbsp;}</STRONG></P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px"><STRONG>}&nbsp;catch 
+      (Exception e) {</STRONG></P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px"><STRONG>&nbsp; 
+      logger.error("Cut image failed, src_image_file:{}, error:{}, ", 
+      srcImageFile, e.getMessage(), e);</STRONG><BR><STRONG>} finally 
+      {</STRONG></P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;// 
+      ...</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">}</P></TH></TR></TABLE></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><BR>从ImageReader入手查看代码，发现调用了dispose方法，但是只在try中做了调用，finally中并没有调用dispose方法。怀疑如果if条件不成立或者有异常发生，则不会调用dispose方法。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">查看下dispose方法的含义，如果不再使用这个ImageReader对象时，必须调用这个方法释放资源；否则，可能导致资源(内存)无限的被占用。</P>
+<DIV style="OVERFLOW-X: auto; MARGIN: 10px 0px 0px">
+<TABLE 
+style="BORDER-COLLAPSE: collapse; OVERFLOW-X: auto; COLOR: #333333; MARGIN: 0px">
+  
+  <TR>
+    <TH 
+    style="BORDER-TOP: #dddddd 1px solid; BORDER-RIGHT: #dddddd 1px solid; VERTICAL-ALIGN: top; MIN-WIDTH: 8px; BORDER-BOTTOM: #dddddd 1px solid; COLOR: #000000; PADDING-BOTTOM: 7px; TEXT-ALIGN: left; PADDING-TOP: 7px; PADDING-LEFT: 10px; BORDER-LEFT: #dddddd 1px solid; PADDING-RIGHT: 10px; BACKGROUND-COLOR: #f0f0f0">
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">/**</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * Allows any resources held by this object to be released.&nbsp; The</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * result of calling any other method (other than</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * &lt;code&gt;finalize&lt;/code&gt;) subsequent to a call to this 
+      method</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * is undefined.</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      *</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * &lt;p&gt;It is important for applications to call this method when 
+      they</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * know they will no longer be using this 
+      &lt;code&gt;ImageReader&lt;/code&gt;.</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * Otherwise, the reader may continue to hold on to resources</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * indefinitely.</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      *</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * &lt;p&gt;The default implementation of this method in the superclass 
+      does</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * nothing.&nbsp; Subclass implementations should ensure that all 
+      resources,</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      * especially native resources, are released.</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+      */</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">public 
+      void dispose() {</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">}</P></TH></TR></TABLE></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><BR>找到这个原因时很兴奋，所以我们将try中的reader.dispose()代码注释掉，直接做截图测试，100，1000，然后打印JVM堆栈转存用MAT分析，印证了上面的分析结果。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">然后修复这个Java类+log（不符合预期的log打印），部署上线了。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">因为已知道了JPEGImageReader实例未被释放，故可通过命令jmap 
+-histo:live &lt;pid&gt; | grep&nbsp;ImageReader 【jmap -histo:live &lt;pid&gt; 
+分析具体的对象数目和占用内存大小】</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">在线上来查看JPEGImageReader 
+instances数量变化，大概观察1个小时左右，发现JPEGImageReader 
+instances&gt;5了，而且也没有不符合条件的log输出，正常应该释放掉的，难道还是有内存泄漏？</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">然后，继续分析代码，根据ImageReader搜索了下整个代码库，发现有个PgcAuditServiceImpl.java 
+PGC审核里也有引用的代码。</P>
+<DIV style="OVERFLOW-X: auto; MARGIN: 10px 0px 0px">
+<TABLE 
+style="BORDER-COLLAPSE: collapse; OVERFLOW-X: auto; COLOR: #333333; MARGIN: 0px">
+  
+  <TR>
+    <TH 
+    style="BORDER-TOP: #dddddd 1px solid; BORDER-RIGHT: #dddddd 1px solid; VERTICAL-ALIGN: top; MIN-WIDTH: 8px; BORDER-BOTTOM: #dddddd 1px solid; COLOR: #000000; PADDING-BOTTOM: 7px; TEXT-ALIGN: left; PADDING-TOP: 7px; PADDING-LEFT: 10px; BORDER-LEFT: #dddddd 1px solid; PADDING-RIGHT: 10px; BACKGROUND-COLOR: #f0f0f0">
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">Iterator&lt;ImageReader&gt; 
+      it = ImageIO.getImageReadersByFormatName(ext);<BR>reader = 
+      it.next();<BR>…</P>
+      <P 
+      style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px">//<SPAN 
+      style="COLOR: #ff0000">这里没有调用dispose()</SPAN></P></TH></TR></TABLE></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><BR>这块仅使用了ImageReader获取width和height，之后并没有调用dispose方法，尽快修复重新上线。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">持续观察一段时间，jmap查看类及对象情况：</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">[root@cdn 
+~]# jmap -histo:live 28093 | grep ImageReader</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">1905:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;88&nbsp;&nbsp;com.sun.imageio.plugins.gif.GIFImageReaderSpi</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">1913:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;88&nbsp;&nbsp;com.sun.imageio.plugins.bmp.BMPImageReaderSpi</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">1917:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;88&nbsp;&nbsp;com.sun.imageio.plugins.wbmp.WBMPImageReaderSpi</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">1922:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;88&nbsp;&nbsp;com.sun.imageio.plugins.png.PNGImageReaderSpi</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">1924:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;88&nbsp;&nbsp;com.sun.imageio.plugins.jpeg.JPEGImageReaderSpi</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">2685:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;48&nbsp;&nbsp;com.sun.imageio.plugins.jpeg.JPEGImageReader$CallBackLock$State</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">3881:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;24&nbsp;&nbsp;[Lcom.sun.imageio.plugins.jpeg.JPEGImageReader$CallBackLock$State;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">com.sun.imageio.plugins.jpeg.JPEGImageReader$CallBackLock$State，内部静态类CallBackLock和State，所以有2个instances</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">[Lcom.sun.imageio.plugins.jpeg.JPEGImageReader$CallBackLock$State;&nbsp;1个Class对象</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">持续观察几天性能指标平稳，服务器cpu、swap、load对于内存泄漏前占用都非常少了。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">经过以上分析，实际本次故障罪魁祸首是在PGC审核截图引起。香港vrs因运营没有使用到PGC审核功能所以也不会触发内存泄漏问题。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp;</P></DIV>
+<DIV 
+style="FONT-FAMILY: Arial, sans-serif; COLOR: #333333; MARGIN: 0px; BACKGROUND-COLOR: #ffffff">
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+style="COLOR: #000000"><STRONG>服务器性能指标前后变化情况：</STRONG></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">内存泄漏时内存使用情况：</P><SPAN 
+style="MAX-WIDTH: none; POSITION: relative; DISPLAY: inline-block" 
+confluence-embedded-manual-size?=""><IMG 
+style="CURSOR: pointer; MAX-WIDTH: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 2px; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt="" 
+src="http://wiki.letv.cn/download/attachments/63657126/image2016-12-26%2019%3A5%3A52.png?version=1&amp;modificationDate=1482750280720&amp;api=v2" 
+width=650 data-linked-resource-container-version="16" 
+data-linked-resource-container-id="63657126" 
+data-linked-resource-content-type="image/png" 
+data-base-url="http://wiki.letv.cn" 
+data-linked-resource-default-alias="image2016-12-26 19:5:52.png" 
+data-linked-resource-type="attachment" data-linked-resource-version="1" 
+data-linked-resource-id="63661329" data-unresolved-comment-count="0" 
+data-image-src="/download/attachments/63657126/image2016-12-26%2019%3A5%3A52.png?version=1&amp;modificationDate=1482750280720&amp;api=v2"></SPAN><BR><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">解决后内存使用情况：</PRE><SPAN 
+style="MAX-WIDTH: none; POSITION: relative; DISPLAY: inline-block" 
+confluence-embedded-manual-size?=""><IMG 
+style="CURSOR: pointer; MAX-WIDTH: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 2px; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt="" 
+src="http://wiki.letv.cn/download/attachments/63657126/image2016-12-26%2019%3A6%3A39.png?version=1&amp;modificationDate=1482750327562&amp;api=v2" 
+width=650 data-linked-resource-container-version="16" 
+data-linked-resource-container-id="63657126" 
+data-linked-resource-content-type="image/png" 
+data-base-url="http://wiki.letv.cn" 
+data-linked-resource-default-alias="image2016-12-26 19:6:39.png" 
+data-linked-resource-type="attachment" data-linked-resource-version="1" 
+data-linked-resource-id="63661331" data-unresolved-comment-count="0" 
+data-image-src="/download/attachments/63657126/image2016-12-26%2019%3A6%3A39.png?version=1&amp;modificationDate=1482750327562&amp;api=v2"></SPAN></DIV>
+<DIV 
+style="FONT-FAMILY: Arial, sans-serif; COLOR: #333333; MARGIN: 0px; BACKGROUND-COLOR: #ffffff"><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 0px; PADDING-RIGHT: 0px">&nbsp;</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">内存泄漏时CPU使用情况：</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+style="MAX-WIDTH: none; POSITION: relative; DISPLAY: inline-block" 
+confluence-embedded-manual-size?=""><IMG 
+style="CURSOR: pointer; MAX-WIDTH: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 2px; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt="" 
+src="http://wiki.letv.cn/download/attachments/63657126/image2016-12-26%2018%3A4%3A57.png?version=1&amp;modificationDate=1482746625753&amp;api=v2" 
+width=650 data-linked-resource-container-version="16" 
+data-linked-resource-container-id="63657126" 
+data-linked-resource-content-type="image/png" 
+data-base-url="http://wiki.letv.cn" 
+data-linked-resource-default-alias="image2016-12-26 18:4:57.png" 
+data-linked-resource-type="attachment" data-linked-resource-version="1" 
+data-linked-resource-id="63661037" data-unresolved-comment-count="0" 
+data-image-src="/download/attachments/63657126/image2016-12-26%2018%3A4%3A57.png?version=1&amp;modificationDate=1482746625753&amp;api=v2"></SPAN></P><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">解决后CPU使用情况：</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+style="MAX-WIDTH: none; POSITION: relative; DISPLAY: inline-block" 
+confluence-embedded-manual-size?=""><IMG 
+style="CURSOR: pointer; MAX-WIDTH: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 2px; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt="" 
+src="http://wiki.letv.cn/download/attachments/63657126/image2016-12-26%2018%3A5%3A38.png?version=1&amp;modificationDate=1482746667244&amp;api=v2" 
+width=650 data-linked-resource-container-version="16" 
+data-linked-resource-container-id="63657126" 
+data-linked-resource-content-type="image/png" 
+data-base-url="http://wiki.letv.cn" 
+data-linked-resource-default-alias="image2016-12-26 18:5:38.png" 
+data-linked-resource-type="attachment" data-linked-resource-version="1" 
+data-linked-resource-id="63661044" data-unresolved-comment-count="0" 
+data-image-src="/download/attachments/63657126/image2016-12-26%2018%3A5%3A38.png?version=1&amp;modificationDate=1482746667244&amp;api=v2"></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">内存泄漏时Load性能：</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+style="MAX-WIDTH: none; POSITION: relative; DISPLAY: inline-block" 
+confluence-embedded-manual-size?=""><IMG 
+style="CURSOR: pointer; MAX-WIDTH: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 2px; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt="" 
+src="http://wiki.letv.cn/download/attachments/63657126/image2016-12-26%2018%3A6%3A24.png?version=1&amp;modificationDate=1482746713246&amp;api=v2" 
+width=650 data-linked-resource-container-version="16" 
+data-linked-resource-container-id="63657126" 
+data-linked-resource-content-type="image/png" 
+data-base-url="http://wiki.letv.cn" 
+data-linked-resource-default-alias="image2016-12-26 18:6:24.png" 
+data-linked-resource-type="attachment" data-linked-resource-version="1" 
+data-linked-resource-id="63661049" data-unresolved-comment-count="0" 
+data-image-src="/download/attachments/63657126/image2016-12-26%2018%3A6%3A24.png?version=1&amp;modificationDate=1482746713246&amp;api=v2"></SPAN></P><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">解决后Load性能：</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+style="MAX-WIDTH: none; POSITION: relative; DISPLAY: inline-block" 
+confluence-embedded-manual-size?=""><IMG 
+style="CURSOR: pointer; MAX-WIDTH: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 2px; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt="" 
+src="http://wiki.letv.cn/download/attachments/63657126/image2016-12-26%2018%3A8%3A41.png?version=1&amp;modificationDate=1482746849742&amp;api=v2" 
+width=650 data-linked-resource-container-version="16" 
+data-linked-resource-container-id="63657126" 
+data-linked-resource-content-type="image/png" 
+data-base-url="http://wiki.letv.cn" 
+data-linked-resource-default-alias="image2016-12-26 18:8:41.png" 
+data-linked-resource-type="attachment" data-linked-resource-version="1" 
+data-linked-resource-id="63661068" data-unresolved-comment-count="0" 
+data-image-src="/download/attachments/63657126/image2016-12-26%2018%3A8%3A41.png?version=1&amp;modificationDate=1482746849742&amp;api=v2"></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 10px 0px 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent">&nbsp;</P>
+<BLOCKQUOTE 
+style="BORDER-LEFT-WIDTH: 1px; MARGIN-BOTTOM: 0px; BORDER-LEFT-COLOR: #2e3d54; COLOR: #707070; PADDING-BOTTOM: 10px; PADDING-TOP: 10px; PADDING-LEFT: 20px; MARGIN-LEFT: 19px; PADDING-RIGHT: 20px; MARGIN-RIGHT: 0px">
+  <P 
+  style="COLOR: #333333; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent"><SPAN 
+  style="COLOR: #000000"><STRONG>总结</STRONG></SPAN></P></BLOCKQUOTE><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">1）Java应用中的CPU 100%、内存泄漏两种排错方式以及具体命令，工具使用上面都已做了说明，可做参考。</PRE><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">2）关注新的监控系统falcon将这些重要服务器性能指标加上监控，超过阈值告警。</PRE><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">3）系统功能上线后，有意识的对服务器性能指标巡逻或许能提前发现异常并提早解决。</PRE><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">4）更多详细MAT使用，网上大量文章可参阅。</PRE><PRE style="MARGIN-BOTTOM: 0px; FONT-FAMILY: ConfluenceInstalledFont, monospace; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 10px; PADDING-RIGHT: 0px">5）建议使用Apache Commons Imaging替代Java自身的裁图功能，可以避免显示调用dispose释放资源等问题。</PRE></DIV></DIV></body>
+</html>

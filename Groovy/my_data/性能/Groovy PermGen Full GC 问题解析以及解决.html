@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Groovy PermGen Full GC 问题解析以及解决</title>
+  </head>
+  <body>
+    <p><span style="color: rgb(0, 0, 0); font-family: PingFangSC, &quot;helvetica neue&quot;, &quot;hiragino sans gb&quot;, arial, &quot;microsoft yahei ui&quot;, &quot;microsoft yahei&quot;, simsun, sans-serif; font-size: 18px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 700; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial; display: inline !important; float: none;">Groovy
+        PermGen Full GC 问题解析以及解决</span></p>
+    <div class="content-detail markdown-body" style="box-sizing: border-box; user-select: text !important; margin: 0px; padding: 0px; text-size-adjust: 100%; color: rgb(36, 41, 46); font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif; font-size: 16px; line-height: 32px; overflow-wrap: break-word; overflow: hidden; word-break: break-all; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;">
+      <p data-spm-anchor-id="a2c4e.11153940.blogcont608717.i1.73927086DkwuQn" style="box-sizing: border-box; user-select: text !important; margin: 0px 0px 16px; padding: 0px;">线
+        上环境 使用Groovy脚本为业务提供自定义配置 结果 没几天就fullGC 并且持续很长时间，才降下来，<span>&nbsp;</span><br style="box-sizing: border-box; user-select: text !important;">
+        groovy 常见的三种引入方式都会有对应的问题，：<br style="box-sizing: border-box; user-select: text !important;">
+        核心的问题是Groovy会缓存掉曾经执行的代码片段成为META-class ，如果每次执行的代码都不一样。那么缓存的类会越来越多。</p>
+      <p style="box-sizing: border-box; user-select: text !important; margin: 0px 0px 16px; padding: 0px;">相应的解决办法：</p>
+      <pre style="box-sizing: border-box; user-select: text !important; overflow: auto; font-family: SFMono-Regular, Consolas, &quot;Liberation Mono&quot;, Menlo, Courier, monospace; font-size: 13.6px; display: block; padding: 16px; margin: 0px 0px 16px; line-height: 1.45; color: rgb(248, 248, 242); word-break: break-all; overflow-wrap: normal; background-color: rgb(51, 51, 51); border: 1px solid rgb(204, 204, 204); border-radius: 3px;"><code
+class="xml hljs" style="box-sizing: border-box; user-select: text !important; font-family: SFMono-Regular, Consolas, &quot;Liberation Mono&quot;, Menlo, Courier, monospace; font-size: 13.6px; color: rgb(248, 248, 242); background: transparent; border-radius: 3px; padding: 0px; margin: 0px; font-style: normal; font-weight: 500; white-space: pre; display: inline; overflow: visible; word-break: normal; border: 0px; line-height: inherit; overflow-wrap: normal;"><span
+class="hljs-tag" style="box-sizing: border-box; user-select: text !important; color: rgb(248, 248, 242);">&lt;<span class="hljs-name"
+style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">dependency</span>&gt;</span>
+    <span class="hljs-tag" style="box-sizing: border-box; user-select: text !important; color: rgb(248, 248, 242);">&lt;<span
+class="hljs-name" style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">groupId</span>&gt;</span>org.codehaus.groovy<span
+class="hljs-tag" style="box-sizing: border-box; user-select: text !important; color: rgb(248, 248, 242);">&lt;/<span class="hljs-name"
+style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">groupId</span>&gt;</span>
+    <span class="hljs-tag" style="box-sizing: border-box; user-select: text !important; color: rgb(248, 248, 242);">&lt;<span
+class="hljs-name" style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">artifactId</span>&gt;</span>groovy-all<span
+class="hljs-tag" style="box-sizing: border-box; user-select: text !important; color: rgb(248, 248, 242);">&lt;/<span class="hljs-name"
+style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">artifactId</span>&gt;</span>
+    <span class="hljs-tag" style="box-sizing: border-box; user-select: text !important; color: rgb(248, 248, 242);">&lt;<span
+class="hljs-name" style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">version</span>&gt;</span>2.4.7<span
+class="hljs-tag" style="box-sizing: border-box; user-select: text !important; color: rgb(248, 248, 242);">&lt;/<span class="hljs-name"
+style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">version</span>&gt;</span>
+<span class="hljs-tag" style="box-sizing: border-box; user-select: text !important; color: rgb(248, 248, 242);">&lt;/<span
+class="hljs-name" style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">dependency</span>&gt;</span></code></pre>
+      <pre style="box-sizing: border-box; user-select: text !important; overflow: auto; font-family: SFMono-Regular, Consolas, &quot;Liberation Mono&quot;, Menlo, Courier, monospace; font-size: 13.6px; display: block; padding: 16px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px !important; margin-left: 0px; line-height: 1.45; color: rgb(248, 248, 242); word-break: break-all; overflow-wrap: normal; background-color: rgb(51, 51, 51); border: 1px solid rgb(204, 204, 204); border-radius: 3px;"><code
+class="java hljs" data-spm-anchor-id="a2c4e.11153940.blogcont608717.i0.73927086DkwuQn" style="box-sizing: border-box; user-select: text !important; font-family: SFMono-Regular, Consolas, &quot;Liberation Mono&quot;, Menlo, Courier, monospace; font-size: 13.6px; color: rgb(248, 248, 242); background: transparent; border-radius: 3px; padding: 0px; margin: 0px; font-style: normal; font-weight: 500; white-space: pre; display: inline; overflow: visible; word-break: normal; border: 0px; line-height: inherit; overflow-wrap: normal;"><span
+class="hljs-comment" style="box-sizing: border-box; user-select: text !important; color: rgb(117, 113, 94);">//清除groovy 里面的缓存， 防止fullGC,也可以定时来做</span>
+GroovyClassLoader groovyClassLoader = engine.getClassLoader();
+Class[] classes = engine.getClassLoader().getLoadedClasses();
+<span class="hljs-keyword" style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">for</span> (Class clazz : classes) {
+    GroovySystem.getMetaClassRegistry().removeMetaClass(clazz);
+    groovyClassLoader.clearCache();
+    <span class="hljs-keyword" style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">try</span> {
+        Field globalClassValue = ClassInfo.class.getDeclaredField(<span class="hljs-string" style="box-sizing: border-box; user-select: text !important; color: rgb(230, 219, 116);">"globalClassValue"</span>);
+        globalClassValue.setAccessible(<span class="hljs-keyword" style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">true</span>);
+        GroovyClassValue classValueBean = (GroovyClassValue) globalClassValue.get(<span class="hljs-keyword" style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">null</span>);
+        classValueBean.remove(clazz);
+
+    } <span class="hljs-keyword" style="box-sizing: border-box; user-select: text !important; color: rgb(249, 38, 114);">catch</span> (Throwable e) {
+
+    }
+}
+groovyClassLoader.clearCache();
+ClassInfo.clearModifiedExpandos();
+<span class="hljs-comment" style="box-sizing: border-box; user-select: text !important; color: rgb(117, 113, 94);">/**
+ * Using java beans (e.g. Groovy does it) results in all referenced class infos being cached in ThreadGroupContext. A valid fix
+ * would be to hold BeanInfo objects on soft references, but that should be done in JDK. So let's clear this cache manually for now,
+ * in clients that are known to create bean infos.
+ */</span>
+Introspector.flushCaches();</code></pre>
+    </div>
+    <br>
+  </body>
+</html>

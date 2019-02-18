@@ -1,0 +1,519 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>使用JarJar重封装减少发布包的依赖</title>
+  </head>
+  <body>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"><span
+
+        style="BOX-SIZING: border-box; FONT-SIZE: 30px; FONT-FAMILY: inherit; FONT-WEIGHT: 400; COLOR: ; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.1; PADDING-RIGHT: 0px">使
+        用JarJar重封装减少发布包的依赖</span></p>
+    <span class="icon-arrow-up back-to-top" style="'BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"></span><span
+
+      style="'FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"      ></span>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">Spring
+      框架体积庞大、功能繁杂但是它的第三方依赖仅仅只有<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">Commons
+        Log</code>这是如何做到的呢？</p>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">其
+      实在Spring的实现中也大量了使用<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">cglib</code>，<code
+
+        class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">asm</code>等
+      工具包，但是 Spring 并没有直接引入依赖，而是采用将某个版本的 Jar 重新打包到自己的 package
+      之下的方式引入依赖。这相当于将工具包的代码拷贝到自己的项目中，使工具包里面所有类的包名都在自己的命名空间之下，从而避免了自己和其它依赖共同工具包项目之间的冲突。如果真的通过拷贝源文件实现重新发包，恐怕这个修改会非常繁琐而且容易出错。</p>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">通
+      过 Spring 的 API 文档可以清楚的看到这一点：&nbsp;<img src="http://blog.beanmr.com/static/media/2015-1-08-Export-Jar-Gracefully-1.png"
+
+        alt="img" style="BOX-SIZING: border-box; MAX-WIDTH: 100%; BORDER-TOP: 0px; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; BORDER-LEFT: 0px; OUTLINE-COLOR: invert"></p>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">Spring
+      使用了&nbsp;<A style="BOX-SIZING: border-box; TEXT-DECORATION: none; BACKGROUND: none transparent scroll repeat 0% 0%; FONT-WEIGHT: 400; COLOR: rgb(66,139,202); OUTLINE-WIDTH: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; OUTLINE-STYLE: none; PADDING-LEFT: 0px; MARGIN: 0px; OUTLINE-COLOR: invert; PADDING-RIGHT: 0px" href="https://github.com/shevek/jarjar" target=_blank >Jar
+        Jar Links</a>&nbsp;实现这个功能。</p>
+    <blockquote style="'BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 10px; FONT-STYLE: normal; PADDING-TOP: 10px; PADDING-LEFT: 20px; MARGIN: 0px 0px 20px; BORDER-LEFT: rgb(214,219,223) 5px solid; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 20px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">
+      <p style="BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 17px; WORD-BREAK: normal; FONT-WEIGHT: 300; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.25; PADDING-RIGHT: 0px" 
+ >build.gradle</p>
+    </blockquote>
+    <pre style="'BOX-SIZING: border-box; OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 13px; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; FONT-STYLE: normal; PADDING-TOP: 9px; PADDING-LEFT: 9px; MARGIN: 0px 0px 10px; BORDER-LEFT: rgb(204,204,204) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'"><code
+
+ class="language-groovy" style                                    ="'BOX-SIZING: border-box; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: pre-wrap; COLOR: ; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent; border-radius: 0px'"><span
+
+ class="n" style      ="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">task</span> <span class="nf" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">cglibRepackJar</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">(</span><span
+
+ class="nl" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">type:</span> <span
+
+ class="n" style      ="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">Jar</span><span class="o" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">)</span> <span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">{</span> <span
+
+ class="n" style      ="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">repackJar</span> <span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">-&gt;</span>
+  <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">repackJar</span><span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">.</span><span class="na"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">baseName</span> <span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">=</span> <span
+
+ class="s2" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"spring-cglib-repack"</span>
+  <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">repackJar</span><span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">.</span><span class="na"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">version</span> <span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">=</span> <span
+
+ class="n" style      ="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">cglibVersion</span>
+
+  <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">doLast</span><span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">()</span> <span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">{</span>
+    <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">project</span><span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">.</span><span class="na"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">ant</span> <span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">{</span>
+      <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">taskdef</span> <span
+
+ class="nl" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">name:</span> <span
+
+ class="s2" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"jarjar"</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">,</span> <span
+
+ class="nl" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">classname:</span> <span
+
+ class="s2" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"com.tonicsystems.jarjar.JarJarTask"</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">,</span>
+        <span class="nl" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">classpath:</span> <span
+
+ class="n" style      ="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">configurations</span><span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">.</span><span class="na"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">jarjar</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">.</span><span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">asPath</span>
+      <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">jarjar</span><span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">(</span><span class="nl"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">destfile:</span> <span
+
+ class="n" style      ="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">repackJar</span><span class="o" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">.</span><span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">archivePath</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">)</span> <span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">{</span>
+        <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">configurations</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">.</span><span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">cglib</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">.</span><span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">each</span> <span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">{</span> <span
+
+ class="n" style      ="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">originalJar</span> <span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">-&gt;</span>
+          <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">zipfileset</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">(</span><span
+
+ class="nl" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">src:</span> <span
+
+ class="n" style      ="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">originalJar</span><span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">)</span>
+        <span class="o" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">}</span>
+        <span class="c1" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(153,153,136); PADDING-BOTTOM: 0px; FONT-STYLE: italic; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">// repackage net.sf.cglib =&gt; org.springframework.cglib</span>
+        <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">rule</span><span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">(</span><span class="nl"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">pattern:</span> <span
+
+ class="s2" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"net.sf.cglib.**"</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">,</span> <span
+
+ class="nl" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">result:</span> <span
+
+ class="s2" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"org.springframework.cglib.@1"</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">)</span>
+        <span class="c1" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(153,153,136); PADDING-BOTTOM: 0px; FONT-STYLE: italic; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">// as mentioned above, transform cglib"s internal asm dependencies from</span>
+        <span class="c1" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(153,153,136); PADDING-BOTTOM: 0px; FONT-STYLE: italic; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">// org.objectweb.asm =&gt; org.springframework.asm. Doing this counts on the</span>
+        <span class="c1" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(153,153,136); PADDING-BOTTOM: 0px; FONT-STYLE: italic; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">// the fact that Spring and cglib depend on the same version of asm!</span>
+        <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">rule</span><span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">(</span><span class="nl"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">pattern:</span> <span
+
+ class="s2" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"org.objectweb.asm.**"</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">,</span> <span
+
+ class="nl" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(153,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">result:</span> <span
+
+ class="s2" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"org.springframework.asm.@1"</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">)</span>
+      <span class="o" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">}</span>
+    <span class="o" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">}</span>
+  <span class="o" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">}</span>
+<span class="o" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">}</span></code></pre>
+    <h2 id="jarjar-1" class="clickable-header top-level-header" style="BOX-SIZING: border-box; FONT-SIZE: 30px; FONT-FAMILY: inherit; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 500; COLOR: ; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 20px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.1; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"><a
+
+        name="t0" ></a>JarJar
+      介绍</h2>
+    <span class="icon-arrow-up back-to-top" style="'BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"></span><span
+
+      style="'FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"      ></span>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"><code
+
+        class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">JarJarLinks</code>可
+      以很方便的重新打包并封装到自己的发布中，这样做有两大好处：</p>
+    <ul style="'LIST-STYLE-TYPE: disc; BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">
+      <li style="LIST-STYLE-TYPE: disc; BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0px 40px; DISPLAY: list-item; PADDING-RIGHT: 0px" 
+ >便 捷的创建一个无依赖的单一文件的发布 
+      <li style="LIST-STYLE-TYPE: disc; BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0px 40px; DISPLAY: list-item; PADDING-RIGHT: 0px" 
+ >避
+        免自身对特定版本包的依赖造成的与其它程序冲突</li>
+    </ul>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"><code
+
+        class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">JarJar</code>包
+      含一个继承于内建<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">jar</code>任
+      务的<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">Ant
+        Task</code>完成代码正常的打包工作，通过<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">zipfileset</code>元
+      素指定内嵌的jar 文件，另外添加了一个新的规则配置用来描述内嵌 jar 文件的重命名规则。JarJar使用<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">ASM</code>进
+      行<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">bytecode</code>转
+      换方式来实现变更<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">reference</code>操
+      作，并且提供一个特殊的<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">handling</code>来
+      迁移资源文件和进行字符串字面量的转换工作。</p>
+    <h2 id="jarjar-2" class="clickable-header top-level-header" style="BOX-SIZING: border-box; FONT-SIZE: 30px; FONT-FAMILY: inherit; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 500; COLOR: ; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 20px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.1; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"><a
+
+        name="t1" ></a>JarJar
+      应用示例</h2>
+    <span class="icon-arrow-up back-to-top" style="'BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"></span><span
+
+      style="'FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"      ></span>
+    <h3 id="antjarjar" class="clickable-header" style="BOX-SIZING: border-box; FONT-SIZE: 24px; FONT-FAMILY: inherit; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 500; COLOR: ; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 20px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.1; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"><a
+
+        name="t2" ></a>基
+      于Ant使用JarJar</h3>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">一
+      般情况下我们在<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">Ant</code>会
+      引入如下的<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">task</code></p>
+    <pre style="'BOX-SIZING: border-box; OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 13px; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; FONT-STYLE: normal; PADDING-TOP: 9px; PADDING-LEFT: 9px; MARGIN: 0px 0px 10px; BORDER-LEFT: rgb(204,204,204) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'"><code
+
+ class="language-xml" style                                    ="'BOX-SIZING: border-box; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: pre-wrap; COLOR: ; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent; border-radius: 0px'"><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;target</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">name=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"jar"</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">depends=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"compile"</span><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&gt;</span>
+    <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;jar</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">jarfile=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"dist/example.jar"</span><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;fileset</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">dir=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"build/main"</span><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">/&gt;</span>
+    <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/jar&gt;</span>
+<span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/target&gt;</span></code></pre>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">使
+      用<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">JarJarLinks</code>我
+      们可以使用以下配置代替上面功能，因为<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">jarjar</code><code
+
+        class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">task</code>本
+      身继承于内建的<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">jar</code>任
+      务。通过fileset指定的<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">class</code>文
+      件可以被打包起来，如果仅仅将其它项目的<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">class</code>文
+      件内嵌到自己的项目中并不能解决<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">Jar
+        Hell</code>问题，因为此时类文件依旧保持着原有的名字。 我们可以通过 zipfileset 指定将其它项目的文件包含到自己的项目发布中，为了描述重命名的需求<code class="highlighter-rouge"
+
+        style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">JarJar</code>提
+      供了一个Pattern配置来实现。</p>
+    <pre style="'BOX-SIZING: border-box; OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 13px; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; FONT-STYLE: normal; PADDING-TOP: 9px; PADDING-LEFT: 9px; MARGIN: 0px 0px 10px; BORDER-LEFT: rgb(204,204,204) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'"><code
+
+ class="language-xml" style                                    ="'BOX-SIZING: border-box; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: pre-wrap; COLOR: ; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent; border-radius: 0px'"><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;target</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">name=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"jar"</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">depends=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"compile"</span><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&gt;</span>
+    <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;taskdef</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">name=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"jarjar"</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">classname=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"com.tonicsystems.jarjar.JarJarTask"</span>
+        <span class="na" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">classpath=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"lib/jarjar.jar"</span><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">/&gt;</span>
+    <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;jarjar</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">jarfile=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"dist/example.jar"</span><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;fileset</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">dir=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"build/main"</span><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">/&gt;</span>
+        <span class="c" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(153,153,136); PADDING-BOTTOM: 0px; FONT-STYLE: italic; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;!-- 包含一个第三方 jar 到项目中 --&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;zipfileset</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">src=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"lib/jaxen.jar"</span><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">/&gt;</span>
+        <span class="c" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(153,153,136); PADDING-BOTTOM: 0px; FONT-STYLE: italic; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;!-- JarJar 提供了一个Pattern配置用来描述重命名--&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;rule</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">pattern=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"org.jaxen.**"</span> <span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">result=</span><span
+
+ class="s" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"org.example.@1"</span><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">/&gt;</span>
+    <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/jarjar&gt;</span>
+<span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/target&gt;</span></code></pre>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">在
+      上述的实例中我们将jaxen.jar 打包到自己的发布中，并且将以&nbsp;<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">org.jaxen</code>为
+      开头的<span style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">包及其子包</span>的内容重命名到<code class="highlighter-rouge"
+
+        style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">org.example</code>之
+      下。Pattern 中的<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">**</code>匹
+      配<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">任
+        意有效包的子字符串</code>，如果匹配单一的子包可以使用<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">*</code>表
+      示并且通过<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">.</code>来
+      分隔。<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">@1</code>表
+      示第一个匹配，<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">@2</code>依
+      次排列，<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">@0</code>可
+      以用来表示整个匹配串。(这一块该怎么解释更明白呢？看Spring的配置吧！)</p>
+    <h3 id="gradlejarjar" class="clickable-header" style="BOX-SIZING: border-box; FONT-SIZE: 24px; FONT-FAMILY: inherit; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 500; COLOR: ; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 20px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.1; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"><a
+
+        name="t3" ></a>基
+      于Gradle使用JarJar</h3>
+    <pre style="'BOX-SIZING: border-box; OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 13px; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; FONT-STYLE: normal; PADDING-TOP: 9px; PADDING-LEFT: 9px; MARGIN: 0px 0px 10px; BORDER-LEFT: rgb(204,204,204) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'"><code
+
+ class="language-groovy" style                                    ="'BOX-SIZING: border-box; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: pre-wrap; COLOR: ; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent; border-radius: 0px'"><span
+
+ class="n" style      ="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">dependencies</span> <span class="o"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">{</span>
+    <span class="c1" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(153,153,136); PADDING-BOTTOM: 0px; FONT-STYLE: italic; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">// Use jarjar.repackage in place of a dependency notation.</span>
+    <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">compile</span> <span class="n"
+
+ style      ="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">jarjar</span><span class="o" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">.</span><span
+
+ class="na" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,128,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">repackage</span> <span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">{</span>
+        <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">from</span> <span class="s1"
+
+ style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">'com.google.guava:guava:18.0'</span>
+
+        <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">classDelete</span> <span
+
+ class="s2" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"com.google.common.base.**"</span>
+
+        <span class="n" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">classRename</span> <span
+
+ class="s2" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"com.google.**"</span> <span
+
+ class="s2" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(208,16,64); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">"org.private.google.@1"</span>
+    <span class="o" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">}</span>
+<span class="o" style="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">}</span></code></pre>
+    <h3 id="jarjar-3" class="clickable-header" style="BOX-SIZING: border-box; FONT-SIZE: 24px; FONT-FAMILY: inherit; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 500; COLOR: ; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 20px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.1; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"><a
+
+        name="t4" ></a>基
+      于命令行使用JarJar</h3>
+    <blockquote style="'BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 10px; FONT-STYLE: normal; PADDING-TOP: 10px; PADDING-LEFT: 20px; MARGIN: 0px 0px 20px; BORDER-LEFT: rgb(214,219,223) 5px solid; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 20px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">
+      <p style="BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 17px; WORD-BREAK: normal; FONT-WEIGHT: 300; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.25; PADDING-RIGHT: 0px" 
+ >command-line</p>
+    </blockquote>
+    <pre style="'BOX-SIZING: border-box; OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 13px; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; FONT-STYLE: normal; PADDING-TOP: 9px; PADDING-LEFT: 9px; MARGIN: 0px 0px 10px; BORDER-LEFT: rgb(204,204,204) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'"><code
+
+ class="language-bash" style                                    ="'BOX-SIZING: border-box; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: pre-wrap; COLOR: ; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent; border-radius: 0px'">java -jar jarjar.jar <span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">[</span><span
+
+ class="nb" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,134,179); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">help</span><span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">]</span></code></pre>
+    <blockquote style="'BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 10px; FONT-STYLE: normal; PADDING-TOP: 10px; PADDING-LEFT: 20px; MARGIN: 0px 0px 20px; BORDER-LEFT: rgb(214,219,223) 5px solid; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 20px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">
+      <p style="BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 17px; WORD-BREAK: normal; FONT-WEIGHT: 300; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.25; PADDING-RIGHT: 0px" 
+ >help</p>
+    </blockquote>
+    <pre style="'BOX-SIZING: border-box; OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 13px; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; FONT-STYLE: normal; PADDING-TOP: 9px; PADDING-LEFT: 9px; MARGIN: 0px 0px 10px; BORDER-LEFT: rgb(204,204,204) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'"><code
+
+ class="language-bash" style                                    ="'BOX-SIZING: border-box; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: pre-wrap; COLOR: ; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent; border-radius: 0px'">java -jar jarjar.jar strings &lt;cp&gt;</code></pre>
+    <blockquote style="'BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 10px; FONT-STYLE: normal; PADDING-TOP: 10px; PADDING-LEFT: 20px; MARGIN: 0px 0px 20px; BORDER-LEFT: rgb(214,219,223) 5px solid; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 20px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">
+      <p style="BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 17px; WORD-BREAK: normal; FONT-WEIGHT: 300; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.25; PADDING-RIGHT: 0px" 
+ >Dumps
+        all string literals in classpath</p>
+    </blockquote>
+    <pre style="'BOX-SIZING: border-box; OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 13px; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; FONT-STYLE: normal; PADDING-TOP: 9px; PADDING-LEFT: 9px; MARGIN: 0px 0px 10px; BORDER-LEFT: rgb(204,204,204) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'"><code
+
+ class="language-bash" style                                    ="'BOX-SIZING: border-box; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: pre-wrap; COLOR: ; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent; border-radius: 0px'">java -jar jarjar.jar find &lt;level&gt; &lt;cp1&gt; <span
+
+ class="o" style          ="BOX-SIZING: border-box; FONT-WEIGHT: bold; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">[</span>&lt;cp2&gt;]</code></pre>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">这
+      个命令可以用来构建两个classpath 之间的依赖关系，<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">level</code>可
+      以使<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">class</code>或
+      者<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">jar</code>。
+      如果不存在<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">cp2</code>，
+      则表示使用<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">cp1</code>代
+      替。 &gt;转换Jar</p>
+    <pre style="'BOX-SIZING: border-box; OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 13px; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; FONT-STYLE: normal; PADDING-TOP: 9px; PADDING-LEFT: 9px; MARGIN: 0px 0px 10px; BORDER-LEFT: rgb(204,204,204) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'"><code
+
+ class="language-bash" style                                    ="'BOX-SIZING: border-box; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: pre-wrap; COLOR: ; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent; border-radius: 0px'">java -jar jarjar.jar process &lt;rulesFile&gt; &lt;inJar&gt; &lt;outJar&gt;</code></pre>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">这
+      个命令可以讲<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">inJar</code>中
+      的内容转移到<code class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">outJar</code>中，<code
+
+        class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">outJar</code>内
+      容将全部被删除。</p>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"><code
+
+        class="highlighter-rouge" style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: nowrap; COLOR: rgb(199,37,78); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(249,242,244); border-radius: 4px'">classpath</code>属
+      性是一组冒号或者分号分隔的文件夹、jar、zip文件。rules支持<a href="http://bugs.java.com/bugdatabase/view_bug.do?bug_id=6268383" target="_blank"
+
+        style="BOX-SIZING: border-box; TEXT-DECORATION: none; BACKGROUND: none transparent scroll repeat 0% 0%; FONT-WEIGHT: 400; COLOR: rgb(66,139,202); OUTLINE-WIDTH: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; OUTLINE-STYLE: none; PADDING-LEFT: 0px; MARGIN: 0px; OUTLINE-COLOR: invert; PADDING-RIGHT: 0px">Mustang-style</a>通
+      配符描述。</p>
+    <h3 id="mavenjarjar" class="clickable-header" style="BOX-SIZING: border-box; FONT-SIZE: 24px; FONT-FAMILY: inherit; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 500; COLOR: ; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 20px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.1; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial"><a
+
+        name="t5" ></a>在
+      Maven中实现JarJar功能</h3>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 10px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'">Maven
+      提供了一个 Plugin 来实现JarJar功能</p>
+    <pre style="'BOX-SIZING: border-box; OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 13px; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; FONT-STYLE: normal; PADDING-TOP: 9px; PADDING-LEFT: 9px; MARGIN: 0px 0px 10px; BORDER-LEFT: rgb(204,204,204) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; border-radius: 4px'"><code
+
+ class="language-xml" style                                    ="'BOX-SIZING: border-box; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace, Helvetica, Tahoma, Arial, "WenQuanYi Micro Hei", 文泉驿微米黑, STXihei, 华文细黑, "Microsoft YaHei", 微软雅黑, SimSun, 宋体, Heiti, 黑体, sans-serif; WHITE-SPACE: pre-wrap; COLOR: ; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent; border-radius: 0px'"><span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;dependency&gt;</span>
+  <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;groupId&gt;</span>org.sonatype.plugins<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/groupId&gt;</span>
+  <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;artifactId&gt;</span>jarjar-maven-plugin<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/artifactId&gt;</span>
+  <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;version&gt;</span>${jarjar-version}<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/version&gt;</span>
+<span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/dependency&gt;</span>
+<span class="c" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(153,153,136); PADDING-BOTTOM: 0px; FONT-STYLE: italic; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;!-- ...... --&gt;</span>
+<span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;plugin&gt;</span>
+<span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;groupId&gt;</span>org.sonatype.plugins<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/groupId&gt;</span>
+<span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;artifactId&gt;</span>jarjar-maven-plugin<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/artifactId&gt;</span>
+<span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;executions&gt;</span>
+  <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;execution&gt;</span>
+    <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;phase&gt;</span>package<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/phase&gt;</span>
+    <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;goals&gt;</span>
+      <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;goal&gt;</span>jarjar<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/goal&gt;</span>
+    <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/goals&gt;</span>
+    <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;configuration&gt;</span>
+      <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;includes&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;include&gt;</span>asm:asm<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/include&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;include&gt;</span>org.sonatype.sisu.inject:cglib<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/include&gt;</span>
+      <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/includes&gt;</span>
+      <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;rules&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;rule&gt;</span>
+          <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;pattern&gt;</span>org.objectweb.asm.**<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/pattern&gt;</span>
+          <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;result&gt;</span>com.google.inject.internal.asm.@1<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/result&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/rule&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;rule&gt;</span>
+          <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;pattern&gt;</span>net.sf.cglib.**<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/pattern&gt;</span>
+          <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;result&gt;</span>com.google.inject.internal.cglib.@1<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/result&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/rule&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;keep&gt;</span>
+          <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;pattern&gt;</span>com.google.inject.**<span
+
+ class="nt" style          ="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/pattern&gt;</span>
+        <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/keep&gt;</span>
+      <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/rules&gt;</span>
+    <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/configuration&gt;</span>
+  <span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/execution&gt;</span>
+<span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/executions&gt;</span>
+<span class="nt" style="BOX-SIZING: border-box; FONT-WEIGHT: 400; COLOR: rgb(0,0,128); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&lt;/plugin&gt;</span></code></pre>
+    <p style="'BOX-SIZING: border-box; WORD-WRAP: break-word; FONT-SIZE: 16px; FONT-FAMILY: "PingFang SC", "Microsoft YaHei", SimHei, Arial, SimSun; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; FONT-WEIGHT: 400; COLOR: rgb(69,69,69); PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'"><span
+
+        style="'BOX-SIZING: border-box; FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; FONT-WEIGHT: 400; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 26px; PADDING-RIGHT: 0px'"><br>
+      </span></p>
+  </body>
+</html>

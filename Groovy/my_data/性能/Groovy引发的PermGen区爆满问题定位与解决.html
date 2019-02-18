@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Groovy引发的PermGen区爆满问题定位与解决</title>
+  </head>
+  <body>
+    <div class="page-header" style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; padding-bottom: 9px; margin: 40px 0px 20px; border-bottom: 1px solid rgb(238, 238, 238); color: rgb(51, 51, 51); font-size: 14px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">
+      <h1 style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 20px 0px 10px; font-size: 36px; font-weight: 500; line-height: 1.1; color: inherit;">Groovy
+        引发的PermGen区爆满问题定位与解决</h1>
+    </div>
+    <div class="row post-full" style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin-right: -15px; margin-left: -15px; color: rgb(51, 51, 51); font-size: 14px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">
+      <div class="col-xs-12" style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; position: relative; min-height: 1px; padding-right: 15px; padding-left: 15px; float: left; width: 1170px;">
+        <div class="date" style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin-bottom: 20px; font-weight: bold;"><span
+            style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif;">02
+            January 2015</span></div>
+        <div class="content" style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif;">
+          <h3 style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; font-weight: 500; line-height: 1.1; color: inherit; margin-top: 20px; margin-bottom: 10px; font-size: 24px;">现
+            象与定位</h3>
+          <h4 style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; font-weight: 500; line-height: 1.1; color: inherit; margin-top: 10px; margin-bottom: 10px; font-size: 18px;">jstack</h4>
+          <p style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 0px 0px 10px;">由
+            于集群有流量的增长，以及开放新的服务出去，所以首先看了一下线程使用情况，未发现问题。</p>
+          <pre style="box-sizing: border-box; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; font-size: 13px; white-space: pre-wrap; display: block; padding: 9.5px; margin: 0px 0px 10px; line-height: 1.42857; color: rgb(51, 51, 51); word-break: break-all; overflow-wrap: break-word; background-color: rgb(245, 245, 245); border: 1px solid rgb(204, 204, 204); border-radius: 4px;"><code
+style="box-sizing: border-box; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; font-size: inherit; padding: 0px; color: inherit; white-space: pre-wrap; background-color: transparent; border-radius: 0px;">$JAVA_HOME/bin/jstack -l PID &gt; jstack.out
+grep -A 2 -B 5 -i "com.xxxxxx.xxxx" ./jstack.out
+</code></pre>
+          <h4 style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; font-weight: 500; line-height: 1.1; color: inherit; margin-top: 10px; margin-bottom: 10px; font-size: 18px;">jstat</h4>
+          <p style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 0px 0px 10px;">使
+            用jstat查看GC情况发现PermGen将满，并且频繁触发FGC，虽然能够回收无效的类，但产生类的速度比FGC的效率还快，直接导致CPU使用率飙升。</p>
+          <pre style="box-sizing: border-box; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; font-size: 13px; white-space: pre-wrap; display: block; padding: 9.5px; margin: 0px 0px 10px; line-height: 1.42857; color: rgb(51, 51, 51); word-break: break-all; overflow-wrap: break-word; background-color: rgb(245, 245, 245); border: 1px solid rgb(204, 204, 204); border-radius: 4px;"><code
+style="box-sizing: border-box; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; font-size: inherit; padding: 0px; color: inherit; white-space: pre-wrap; background-color: transparent; border-radius: 0px;">ps -ef | grep java
+$JAVA_HOME/bin/jstat -gcutil PID 1000 100
+</code></pre>
+          <p style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 0px 0px 10px;"><br>
+          </p>
+          <p style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 0px 0px 10px;">图
+            1 PermGen区升到95%引发频繁FGC</p>
+          <h4 style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; font-weight: 500; line-height: 1.1; color: inherit; margin-top: 10px; margin-bottom: 10px; font-size: 18px;">jmap
+            &amp; MAT</h4>
+          <p style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 0px 0px 10px;">遇
+            到线上FGC问题常用的工具是用jmap &amp; eclipse MAT来分析JVM内存使用情况了。网上资料很多，这里不在赘述，需要注意的一点是jmap是会触发"stop the
+            world"的，所以最好是拉出来，然后做dump操作。如果用eclipse MAT分析切记提前把eclipse最大能使用的内存调整下，否则分析上G的dump文件会挂掉。</p>
+          <p style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 0px 0px 10px;"><br>
+          </p>
+          <p style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 0px 0px 10px;">图
+            2 Dump中的类加载器情况</p>
+          <p style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 0px 0px 10px;">由
+            于是PermGen区的泄漏，通过分析发现类加载部分有大量的GroovyClassLoader，这时想到有使用两个服务，内部实现是使用Groovy配置的方式(这里我用Groovy封装了一个服务提供的微框架)。但这两个服
+            务其实使用的并不频繁，所以导致切换后的现象不是雪崩式的集群挂掉，而是慢慢的，逐步有机器load飙高告警。</p>
+          <h3 style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; font-weight: 500; line-height: 1.1; color: inherit; margin-top: 20px; margin-bottom: 10px; font-size: 24px;">解
+            决方法</h3>
+          <p style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 0px 0px 10px;">定
+            位到问题，事情就好办了，首先看一下处理Groovy加载执行的代码；然后为生成的类加一层对象缓存；由于脚本中用到了Binding上下文对象，为了线程安全性，调整执行时的方式。最后问题得到解决。</p>
+          <h4 style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; font-weight: 500; line-height: 1.1; color: inherit; margin-top: 10px; margin-bottom: 10px; font-size: 18px;">原
+            始的调用方式</h4>
+          <pre style="box-sizing: border-box; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; font-size: 13px; white-space: pre-wrap; display: block; padding: 9.5px; margin: 0px 0px 10px; line-height: 1.42857; color: rgb(51, 51, 51); word-break: break-all; overflow-wrap: break-word; background-color: rgb(245, 245, 245); border: 1px solid rgb(204, 204, 204); border-radius: 4px;"><code
+style="box-sizing: border-box; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; font-size: inherit; padding: 0px; color: inherit; white-space: pre-wrap; background-color: transparent; border-radius: 0px;">Object scriptObject = null;
+try {
+    Binding binding = new Binding();
+    binding.setVariable("context", this.context);
+    binding.setVariable("clientInfo", clientInfo);
+    binding.setVariable("params", params);
+    binding.setVariable("data", data);
+
+    GroovyShell shell = new GroovyShell(binding);
+    scriptObject = (Object) shell.evaluate(script);
+} catch (Throwable t) {
+    log.error("groovy script eval error. script: " + script, t);
+}
+
+return scriptObject;
+</code></pre>
+          <h4 style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; font-weight: 500; line-height: 1.1; color: inherit; margin-top: 10px; margin-bottom: 10px; font-size: 18px;">为Groovy
+            Script增加缓存</h4>
+          <pre style="box-sizing: border-box; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; font-size: 13px; white-space: pre-wrap; display: block; padding: 9.5px; margin: 0px 0px 10px; line-height: 1.42857; color: rgb(51, 51, 51); word-break: break-all; overflow-wrap: break-word; background-color: rgb(245, 245, 245); border: 1px solid rgb(204, 204, 204); border-radius: 4px;"><code
+style="box-sizing: border-box; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; font-size: inherit; padding: 0px; color: inherit; white-space: pre-wrap; background-color: transparent; border-radius: 0px;">private Map&lt;String, Object&gt; scriptCache = new ConcurrentHashMap&lt;String, Object&gt;();
+...
+
+Object scriptObject = null;
+try {
+    Binding binding = new Binding();
+    binding.setVariable("context", this.context);
+    binding.setVariable("clientInfo", clientInfo);
+    binding.setVariable("params", params);
+    binding.setVariable("data", data);
+
+    Script shell = null;
+    if (isCached(cacheKey)) {
+        shell = (Script) getCaches().get(cacheKey);
+    } else {
+        shell = new GroovyShell().parse(script);
+    }
+
+    shell.setBinding(binding);
+    scriptObject = (Object) shell.run();
+
+    // clear
+    binding.getVariables().clear();
+    binding = null;
+
+    // Cache
+    if (!isCached(cacheKey)) {
+        shell.setBinding(null);
+        getCaches().put(cacheKey, shell);
+    }
+} catch (Throwable t) {
+    log.error("groovy script eval error. script: " + script, t);
+}
+
+return scriptObject;
+</code></pre>
+          <h4 style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; font-weight: 500; line-height: 1.1; color: inherit; margin-top: 10px; margin-bottom: 10px; font-size: 18px;">解
+            决Binding的线程安全问题</h4>
+          <pre style="box-sizing: border-box; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; font-size: 13px; white-space: pre-wrap; display: block; padding: 9.5px; margin: 0px 0px 10px; line-height: 1.42857; color: rgb(51, 51, 51); word-break: break-all; overflow-wrap: break-word; background-color: rgb(245, 245, 245); border: 1px solid rgb(204, 204, 204); border-radius: 4px;"><code
+style="box-sizing: border-box; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; font-size: inherit; padding: 0px; color: inherit; white-space: pre-wrap; background-color: transparent; border-radius: 0px;">private Map&lt;String, Object&gt; scriptCache = new ConcurrentHashMap&lt;String, Object&gt;();
+...
+
+Object scriptObject = null;
+try {
+    Binding binding = new Binding();
+    binding.setVariable("context", this.context);
+    binding.setVariable("clientInfo", clientInfo);
+    binding.setVariable("params", params);
+    binding.setVariable("data", data);
+
+    Script shell = null;
+    if (isCached(cacheKey)) {
+        shell = (Script) getCaches().get(cacheKey);
+    } else {
+        shell = cache(cacheKey, script);
+    }
+
+    scriptObject = (Object) InvokerHelper.createScript(shell.getClass(), binding).run();
+
+    // Cache
+    if (!isCached(cacheKey)) {
+        getCaches().put(cacheKey, shell);
+    }
+} catch (Throwable t) {
+    log.error("groovy script eval error. script: " + script, t);
+}
+
+return scriptObject;
+</code></pre>
+          <h3 style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; font-weight: 500; line-height: 1.1; color: inherit; margin-top: 20px; margin-bottom: 10px; font-size: 24px;">小
+            结</h3>
+          <p style="box-sizing: border-box; font-family: ff-tisa-web-pro-1, ff-tisa-web-pro-2, &quot;Lucida Grande&quot;, &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Hiragino Sans GB&quot;, &quot;Hiragino Sans GB W3&quot;, &quot;Microsoft YaHei UI&quot;, &quot;Microsoft YaHei&quot;, &quot;WenQuanYi Micro Hei&quot;, sans-serif; margin: 0px 0px 10px;">这
+            次碰到的问题还是很具有典型性的，其中的思路和用到的工具可以阅读这两本JVM相关的书籍获取：《深入理解Java虚拟机》和《Java性能优化权威指南》。</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

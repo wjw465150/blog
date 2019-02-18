@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>快速定位生产故障问题-JVM进程CPU占用率高于100%</title>
+  </head>
+  <body>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">这
+      几年作为技术leader处理过的线上紧急问题，掐指一算应该有不下10次吧（<strong style="box-sizing: border-box;">说
+        多了都是泪啊~~</strong>）。所以挡刀救火也是leader的必备技能！本文主要分享遇到“<strong style="box-sizing: border-box;">JVM
+        进程CPU占用率超100%</strong>”时如何快速定位原因。</p>
+    <h1 id="1-生产故障-jvm进程cpu占用率高于100" style="margin: 0.8em 0px; padding: 0px; box-sizing: border-box; font-family: &quot;microsoft yahei&quot;; font-weight: 300; line-height: 1.1; color: rgb(63, 63, 63); text-align: start; font-size: 2.6em; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;"><a
+        name="t1" target="_blank" style="text-decoration: none; box-sizing: border-box; color: rgb(12, 137, 207);"></a>1.
+      生产故障-JVM进程CPU占用率高于100%</h1>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">某
+      日，运维同学反馈生产环境有故障，某个JVM进程CPU负载一直居高不下。登入服务器用 top -c 命令查看如下：</p>
+    <pre class="prettyprint" name="code" style="white-space: nowrap; word-wrap: break-word; box-sizing: border-box; position: relative; overflow-y: hidden; overflow-x: auto; margin: 0px 0px 1.7em; line-height: 23.8px; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 5px 5px 5px 60px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 0px solid rgb(136, 136, 136); border-radius: 0px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;"><code
+class="language-shell hljs perl has-numbering" style="display: block; padding: 0px; background: transparent; color: inherit; box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; font-size: 12.6px; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;">top - <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">00</span>:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">37</span>:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">39</span> up <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">48</span> days, <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">10</span>:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">41</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">5</span> users,  load average: <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">3.34</span>, <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">3.18</span>, <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">3.10</span>
+Tasks: <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">166</span> total,   <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">1</span> running, <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">165</span> sleeping,   <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span> stopped,   <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span> zombie
+Cpu<span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>  :  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">7</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%us</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">3</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%sy</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%ni</span>, <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">99.0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%id</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%wa</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%hi</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%si</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%st</span>
+Cpu1  :<span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">100.0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%us</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%sy</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%ni</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%id</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%wa</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%hi</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%si</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%st</span>
+Cpu2  :  <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">1.3</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%us</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">3</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%sy</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%ni</span>, <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">98.3</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%id</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%wa</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%hi</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%si</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%st</span>
+Cpu3  :  <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">3</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%us</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%sy</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%ni</span>, <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">99.7</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%id</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%wa</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%hi</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%si</span>,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>.<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span><span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%st</span>
+Mem:  <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">16332280</span>k total, <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">15744336</span>k used,   <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">587944</span>k free,   <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">200632</span>k buffers
+Swap:  <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">8191992</span>k total,   <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">408724</span>k used,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">7783268</span>k free,  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">7201204</span>k cached
+
+  PID USER      PR  NI  VIRT  RES  SHR S <span class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%CPU</span> <span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%MEM</span>    TIME+  COMMAND                                                                                        
+ <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">9702</span> bb    <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">20</span>   <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span> <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">2898</span><span
+class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">m</span> <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">348</span><span
+class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">m</span>  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">14</span><span
+class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">m</span> S <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">100.6</span>  <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">2.2</span>   <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">01</span>:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">47.18</span> java -server -Xms512M -Xmx512M -Xmn192M -Xss256k -XX:PermSize=<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">64</span>M -XX:MaxPermSize=<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">128</span>M -verbose:
+ ...</code>
+      <ul class="pre-numbering" style="box-sizing: border-box; line-height: 23.8px; margin: 0px; position: absolute; width: 50px; background-color: rgb(238, 238, 238); top: 0px; left: 0px; padding: 6px 0px 40px; border-right: 1px solid rgb(221, 221, 221); list-style: none; text-align: right;">
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">1</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">2</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">3</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">4</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">5</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">6</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">7</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">8</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">9</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">10</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">11</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">12</li>
+      </ul>
+    </pre>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">从
+      输出结果看，CPU load 达到3以上，服务器是4核机器，负载已经不低了。进程ID为9720的进程CPU占用率超过100%。</p>
+    <h1 id="2-定位故障的思路" style="margin: 0.8em 0px; padding: 0px; box-sizing: border-box; font-family: &quot;microsoft yahei&quot;; font-weight: 300; line-height: 1.1; color: rgb(63, 63, 63); text-align: start; font-size: 2.6em; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;"><a
+        name="t2" target="_blank" style="text-decoration: none; box-sizing: border-box; color: rgb(12, 137, 207);"></a>2.
+      定位故障的思路</h1>
+    <ul style="box-sizing: border-box; line-height: 27.2px; margin-bottom: 1.7em; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">
+      <li style="box-sizing: border-box;">首先找出问题进程内CPU占用率高的线程</li>
+      <li style="box-sizing: border-box;">再通过线程栈信息找出该线程当时在运行的问题代码段</li>
+    </ul>
+    <h1 id="3-定位故障的步骤" style="margin: 0.8em 0px; padding: 0px; box-sizing: border-box; font-family: &quot;microsoft yahei&quot;; font-weight: 300; line-height: 1.1; color: rgb(63, 63, 63); text-align: start; font-size: 2.6em; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;"><a
+        name="t3" target="_blank" style="text-decoration: none; box-sizing: border-box; color: rgb(12, 137, 207);"></a>3.
+      定位故障的步骤</h1>
+    <h2 id="31-用top命令查找进程内导致cpu占用率高的线程" style="margin: 0.8em 0px; padding: 0px; box-sizing: border-box; font-family: &quot;microsoft yahei&quot;; font-weight: 300; line-height: 1.1; color: rgb(63, 63, 63); text-align: start; font-size: 2.15em; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;"><a
+        name="t4" target="_blank" style="text-decoration: none; box-sizing: border-box; color: rgb(12, 137, 207);"></a>3.1
+      用top命令查找进程内导致CPU占用率高的线程</h2>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">先
+      祭出第一招， top命令加上 -H -b 两个选项：-H 可以查看由某个进程启动的所有线程，-b 选项指定以批处理模式输出结果 。具体命令如下：</p>
+    <pre class="prettyprint" name="code" style="white-space: nowrap; word-wrap: break-word; box-sizing: border-box; position: relative; overflow-y: hidden; overflow-x: auto; margin: 0px 0px 1.7em; line-height: 23.8px; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 5px 5px 5px 60px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 0px solid rgb(136, 136, 136); border-radius: 0px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;"><code
+class="language-shell hljs css has-numbering" style="display: block; padding: 0px; background: transparent; color: inherit; box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; font-size: 12.6px; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;">$ <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">top</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">-Hbp</span> 9702
+<span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">top</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">-</span> 00<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:38</span><span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:54</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">up</span> 48 <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">days</span>, 10<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:43</span>,  5 <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">users</span>,  <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">load</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">average</span>: 0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.81</span>, 0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.36</span>, 0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.16</span>
+<span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">Tasks</span>:  38 <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">total</span>,   1 <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">running</span>,  37 <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">sleeping</span>,   0 <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">stopped</span>,   0 <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">zombie</span>
+<span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">Cpu</span>(<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">s</span>):  3<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.5</span>%<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">us</span>,  1<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.4</span>%<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">sy</span>,  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>%<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">ni</span>, 94<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.5</span>%<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">id</span>,  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.3</span>%<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">wa</span>,  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>%<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">hi</span>,  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>%<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">si</span>,  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>%<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">st</span>
+<span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">Mem</span>:  16332280<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">k</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">total</span>, 15744500<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">k</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">used</span>,   587780<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">k</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">free</span>,   200632<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">k</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">buffers</span>
+<span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">Swap</span>:  8191992<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">k</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">total</span>,   408724<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">k</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">used</span>,  7783268<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">k</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">free</span>,  7201392<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">k</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">cached</span>
+
+  <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">PID</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">USER</span>      <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">PR</span>  <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">NI</span>  <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">VIRT</span>  <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">RES</span>  <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">SHR</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span> %<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">CPU</span> %<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">MEM</span>    <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">TIME</span>+  <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">COMMAND</span>                                                                                         
+10007 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">R</span> 100<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.5</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   1<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:41</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.31</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9702 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.00</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9705 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:06</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.44</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9706 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.11</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9707 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.11</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9708 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.11</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9709 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.10</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9710 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.00</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9711 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.07</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9712 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.03</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9713 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.03</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9714 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.00</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9715 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:00</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.00</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span>                                                                                            
+ 9716 <span class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">bb</span>    20   0 2898<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> 348<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span>  14<span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">m</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">S</span>  0<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.0</span>  2<span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.2</span>   0<span
+class="hljs-pseudo" style="color: rgb(0, 0, 0); box-sizing: border-box;">:05</span><span
+class="hljs-class" style="box-sizing: border-box; color: rgb(155, 112, 63);">.60</span> <span
+class="hljs-tag" style="color: rgb(0, 0, 0); box-sizing: border-box;">java</span></code>
+      <ul class="pre-numbering" style="box-sizing: border-box; line-height: 23.8px; margin: 0px; position: absolute; width: 50px; background-color: rgb(238, 238, 238); top: 0px; left: 0px; padding: 6px 0px 40px; border-right: 1px solid rgb(221, 221, 221); list-style: none; text-align: right;">
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">1</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">2</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">3</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">4</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">5</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">6</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">7</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">8</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">9</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">10</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">11</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">12</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">13</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">14</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">15</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">16</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">17</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">18</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">19</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">20</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">21</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">22</li>
+      </ul>
+    </pre>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">输
+      出结果里的PID其实是线程ID，可以看到线程ID为10007的线程CPU占用率为100.5%，它就是罪魁祸首。上面的命令可以再优化下：查出CPU占用
+      率超过某个值的所有线程，例如超过50%，如下：</p>
+    <pre class="prettyprint" name="code" style="white-space: nowrap; word-wrap: break-word; box-sizing: border-box; position: relative; overflow-y: hidden; overflow-x: auto; margin: 0px 0px 1.7em; line-height: 23.8px; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 5px 5px 5px 60px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 0px solid rgb(136, 136, 136); border-radius: 0px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;"><code
+class="hljs nginx has-numbering" style="display: block; padding: 0px; background: transparent; color: inherit; box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; font-size: 12.6px; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;"><span
+class="hljs-title" style="box-sizing: border-box; color: rgb(0, 0, 136);">top</span> -Hbp <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">9702</span> | awk <span
+class="hljs-string" style="color: rgb(0, 136, 0); box-sizing: border-box;">'/java/ &amp;&amp; <span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">$9</span>&gt;50'</span></code>
+      <ul class="pre-numbering" style="box-sizing: border-box; line-height: 23.8px; margin: 0px; position: absolute; width: 50px; background-color: rgb(238, 238, 238); top: 0px; left: 0px; padding: 6px 0px 40px; border-right: 1px solid rgb(221, 221, 221); list-style: none; text-align: right;">
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">1</li>
+      </ul>
+    </pre>
+    <h2 id="32-用jvm命令-jstack-精确定位出问题的代码段" style="margin: 0.8em 0px; padding: 0px; box-sizing: border-box; font-family: &quot;microsoft yahei&quot;; font-weight: 300; line-height: 1.1; color: rgb(63, 63, 63); text-align: start; font-size: 2.15em; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;"><a
+        name="t5" target="_blank" style="text-decoration: none; box-sizing: border-box; color: rgb(12, 137, 207);"></a>3.2
+      用JVM命令 jstack 精确定位出问题的代码段</h2>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">第
+      二招，用jstack 命令dump出线程栈信息，可以直接定位到出问题的代码段。这里也分两步。第一步把上面的线程ID<span>&nbsp;</span><strong
+        style="box-sizing: border-box;">10007</strong><span>&nbsp;</span>转化为十六进
+      制：</p>
+    <pre class="prettyprint" name="code" style="white-space: nowrap; word-wrap: break-word; box-sizing: border-box; position: relative; overflow-y: hidden; overflow-x: auto; margin: 0px 0px 1.7em; line-height: 23.8px; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 5px 5px 5px 60px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 0px solid rgb(136, 136, 136); border-radius: 0px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;"><code
+class="hljs perl has-numbering" style="display: block; padding: 0px; background: transparent; color: inherit; box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; font-size: 12.6px; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;">$ <span
+class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">printf</span> <span
+class="hljs-string" style="color: rgb(0, 136, 0); box-sizing: border-box;">"<span
+class="hljs-variable" style="color: rgb(102, 0, 102); box-sizing: border-box;">%x</span>\n"</span> <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">10007</span>
+<span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">2717</span></code>
+      <ul class="pre-numbering" style="box-sizing: border-box; line-height: 23.8px; margin: 0px; position: absolute; width: 50px; background-color: rgb(238, 238, 238); top: 0px; left: 0px; padding: 6px 0px 40px; border-right: 1px solid rgb(221, 221, 221); list-style: none; text-align: right;">
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">1</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">2</li>
+      </ul>
+    </pre>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">因
+      为jstack输出的线程栈信息中，线程ID是以十六进制展示的。</p>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">第
+      二步使用命令 jstack $pid | grep “线程id” 把信息打印出来：</p>
+    <pre class="prettyprint" name="code" style="white-space: nowrap; word-wrap: break-word; box-sizing: border-box; position: relative; overflow-y: hidden; overflow-x: auto; margin: 0px 0px 1.7em; line-height: 23.8px; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 5px 5px 5px 60px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 0px solid rgb(136, 136, 136); border-radius: 0px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;"><code
+class="hljs livecodeserver has-numbering" style="display: block; padding: 0px; background: transparent; color: inherit; box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; font-size: 12.6px; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;">$ jstack <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">9702</span> | grep <span
+class="hljs-string" style="color: rgb(0, 136, 0); box-sizing: border-box;">'2717'</span> -A <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">30</span>
+<span class="hljs-string" style="color: rgb(0, 136, 0); box-sizing: border-box;">"http-nio-9092-exec-1"</span> daemon prio=<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">10</span> tid=<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0x00007f3a90014800</span> nid=<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0x2717</span> runnable [<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0x00007f3afc72a000</span>]
+   java.lang.Thread.State: RUNNABLE
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> com.bb.apigateway.<span
+class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">filter</span>.pre.SignatureTokenFilter.run(SignatureTokenFilter.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">44</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> com.netflix.zuul.ZuulFilter.runFilter(ZuulFilter.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">112</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> com.netflix.zuul.FilterProcessor.processZuulFilter(FilterProcessor.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">197</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> com.netflix.zuul.FilterProcessor.runFilters(FilterProcessor.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">161</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> com.netflix.zuul.FilterProcessor.preRoute(FilterProcessor.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">136</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> com.netflix.zuul.ZuulRunner.preRoute(ZuulRunner.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">105</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> com.netflix.zuul.<span
+class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">http</span>.ZuulServlet.preRoute(ZuulServlet.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">125</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> com.netflix.zuul.<span
+class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">http</span>.ZuulServlet.service(ZuulServlet.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">74</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.web.servlet.mvc.ServletWrappingController.handleRequestInternal(ServletWrappingController.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">158</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.cloud.netflix.zuul.web.ZuulController.handleRequestInternal(ZuulController.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">43</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.web.servlet.mvc.AbstractController.handleRequest(AbstractController.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">147</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter.handle(SimpleControllerHandlerAdapter.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">50</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">961</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">895</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">967</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">869</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> javax.servlet.<span
+class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">http</span>.HttpServlet.service(HttpServlet.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">648</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">843</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> javax.servlet.<span
+class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">http</span>.HttpServlet.service(HttpServlet.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">729</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">292</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">207</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">52</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">240</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">207</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.boot.actuate.autoconfigure.EndpointWebMvcAutoConfiguration$ApplicationContextHeaderFilter.doFilterInternal(EndpointWebMvcAutoConfiguration.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">261</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.web.<span
+class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">filter</span>.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">107</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">240</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">207</span>)
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">at</span> org.springframework.boot.actuate.trace.WebRequestTraceFilter.doFilterInternal(WebRequestTraceFilter.java:<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">115</span>)</code>
+      <ul class="pre-numbering" style="box-sizing: border-box; line-height: 23.8px; margin: 0px; position: absolute; width: 50px; background-color: rgb(238, 238, 238); top: 0px; left: 0px; padding: 6px 0px 40px; border-right: 1px solid rgb(221, 221, 221); list-style: none; text-align: right;">
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">1</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">2</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">3</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">4</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">5</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">6</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">7</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">8</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">9</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">10</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">11</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">12</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">13</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">14</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">15</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">16</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">17</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">18</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">19</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">20</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">21</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">22</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">23</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">24</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">25</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">26</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">27</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">28</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">29</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">30</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">31</li>
+        <li style="box-sizing: border-box; padding: 0px 5px; list-style: none; margin-left: 0px;">32</li>
+      </ul>
+    </pre>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">下
+      面这行就是出问题的业务代码，根据实际情况修复BUG即可</p>
+    <blockquote style="box-sizing: border-box; margin: 0px 0px 1.7em; line-height: 27.2px; padding: 15px 20px; border-left: 10px solid rgba(128, 128, 128, 0.075); background-color: rgba(128, 128, 128, 0.05); border-radius: 0px 5px 5px 0px; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;">
+      <p style="margin: 0px; padding: 0px; box-sizing: border-box; line-height: 1.5; font-size: 1em; color: rgb(111, 111, 111); word-wrap: break-word; word-break: normal;">com.bb.apigateway.filter.pre.SignatureTokenFilter.run(SignatureTokenFilter.java:44)</p>
+    </blockquote>
+    <h1 id="4-小结" style="margin: 0.8em 0px; padding: 0px; box-sizing: border-box; font-family: &quot;microsoft yahei&quot;; font-weight: 300; line-height: 1.1; color: rgb(63, 63, 63); text-align: start; font-size: 2.6em; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;"><a
+        name="t6" target="_blank" style="text-decoration: none; box-sizing: border-box; color: rgb(12, 137, 207);"></a>4.
+      小结</h1>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">思
+      路：</p>
+    <ul style="box-sizing: border-box; line-height: 27.2px; margin-bottom: 1.7em; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">
+      <li style="box-sizing: border-box;">找出CPU占用率高的进程</li>
+      <li style="box-sizing: border-box;">找出问题进程内CPU占用率高的线程</li>
+      <li style="box-sizing: border-box;">通过线程栈信息找出该线程当时在运行的问题代码段</li>
+    </ul>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">实
+      施要点：</p>
+    <ul style="box-sizing: border-box; line-height: 27.2px; margin-bottom: 1.7em; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">
+      <li style="box-sizing: border-box;">top -Hbp ‘pid’ 定位问题线程</li>
+      <li style="box-sizing: border-box;">jstack ‘pid’ | grep ‘thread_id’ 找出问题代码</li>
+    </ul>
+    <p><br>
+    </p>
+    <p></p>
+  </body>
+</html>

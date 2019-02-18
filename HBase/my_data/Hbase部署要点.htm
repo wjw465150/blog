@@ -1,0 +1,122 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Hbase部署要点</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: uppercase; COLOR: rgb(153,51,0); FONT: bold 0.8em georgia, verdana, arial, sans-serif; MARGIN-TOP: 8px; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+id=viewpost1_TitleUrl 
+style="TEXT-DECORATION: none; FONT-WEIGHT: bold; COLOR: rgb(153,51,0)" 
+href="http://www.blogjava.net/paulwong/archive/2013/02/04/395101.html">HBASE部署要点</A></H2>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">REGIONS 
+SERVER和TASK TRACKER SERVER不要在同一台机器上，最好如果有MAPREDUCE 
+JOB运行的话，应该分开两个CLUSTER，即两群不同的服务器上，这样MAPREDUCE 的线下负载不会影响到SCANER这些线上负载。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">如果主要是做MAPREDUCE 
+JOB的话，将REGIONS SERVER和TASK TRACKER SERVER放在一起是可以的。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="COLOR: red; BACKGROUND-COLOR: yellow">原始集群模式</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">10个或以下节点，无MAPREDUCE 
+JOB，主要用于低延迟的访问。每个节点上的配置为：CPU4-6CORE，内存24-32G，4个SATA硬盘。Hadoop NameNode, 
+JobTracker, HBase Master, 和ZooKeeper全都在同一个NODE上。</SPAN>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="COLOR: red; BACKGROUND-COLOR: yellow">小型集群模式（10-20台服务器）</SPAN></DIV>
+<DIV><BR></DIV>HBase Master放在单独一台机器上, 
+以便于使用较低配置的机器。ZooKeeper也放在单独一台机器上，NameNode和JobTracker放在同一台机器上。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="COLOR: red; BACKGROUND-COLOR: yellow">中型集群模式（20-50台服务器）</SPAN></DIV>
+<DIV><BR></DIV>由于无须再节省费用，可以将HBase Master和ZooKeeper放在同一台机器上,&nbsp;ZooKeeper和HBase 
+Master要三个实例。NameNode和JobTracker放在同一台机器上。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="COLOR: red; BACKGROUND-COLOR: yellow">大型集群模式（&gt;50台服务器）</SPAN></DIV>
+<DIV><BR></DIV>和中型集群模式相似，但ZooKeeper和HBase 
+Master要五个实例。NameNode和Second&nbsp;NameNode要有足够大的内存。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN style="COLOR: red; BACKGROUND-COLOR: yellow">HADOOP 
+MASTER节点</SPAN></DIV>
+<DIV><BR></DIV>NameNode和Second&nbsp;NameNode服务器配置要求：（小型）8CORE 
+CPU，16G内存，1G网卡和SATA 硬盘，中弄再增加多16G内存，大型则再增加多32G内存。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN style="COLOR: red; BACKGROUND-COLOR: yellow">HBASE 
+MASTER节点</SPAN></DIV>
+<DIV><BR></DIV>服务器配置要求：4CORE CPU，8-16G内存，1G网卡和2个SATA 硬盘，一个用于操作系统，另一个用于HBASE 
+MASTER LOGS。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN style="COLOR: red; BACKGROUND-COLOR: yellow">HADOOP DATA NODES和HBASE 
+REGION SERVER节点</SPAN></DIV>
+<DIV><BR></DIV>DATA NODE和REGION SERVER应在同一台服务器上，且不应该和TASK 
+TRACKER在一起。服务器配置要求：8-12CORE CPU，24-32G内存，1G网卡和12*1TB SATA 硬盘，一个用于操作系统，另一个用于HBASE 
+MASTER LOGS。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="COLOR: red; BACKGROUND-COLOR: yellow">ZOOPKEEPERS节点</SPAN></DIV>
+<DIV><BR></DIV>服务器配置和HBASE MASTER相似，也可以与HBASE 
+MASTER放在一起，但就要多增加一个硬盘单独给ZOOPKEEPER使用。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN style="COLOR: red; BACKGROUND-COLOR: yellow">安装各节点</SPAN></DIV>
+<DIV><BR></DIV>JVM配置：</DIV><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">-Xmx8g—设置HEAP的最大值到8G，不建议设到15 
+GB.</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">-Xms8g—设置HEAP的最小值到8GS.</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">-Xmn128m—设置新生代的值到128 
+MB，默认值太小。</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">-XX:+UseParNewGC—设置对于新生代的垃圾回收器类型，这种类型是会停止JAVA进程，然后再进行回收的，但由于新生代体积比较小，持续时间通常只有几毫秒，因此可以接受。</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">-XX:+UseConcMarkSweepGC—设置老生代的垃圾回收类型，如果用新生代的那个会不合适，即会导致JAVA进程停止的时间太长，用这种不会停止JAVA进程，而是在JAVA进程运行的同时，并行的进行回收。</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(102,102,102); FONT: medium georgia, verdana, arial, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">-XX:CMSInitiatingOccupancyFraction—设置CMS回收器运行的频率。</SPAN></body>
+</html>

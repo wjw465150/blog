@@ -1,0 +1,354 @@
+﻿<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="style.css">
+<title>利用Java实现zip压缩_解压缩</title>
+</head>
+
+<body bgcolor="#ffffcc">
+<script language="JavaScript" src="top.js"></script>
+<div align="center"><center>
+
+<table border="1" cellpadding="0" cellspacing="0" width="70%" bordercolorlight="#0000ff"
+ bordercolordark="#ffffff" height="15">
+  <tr>
+    <td width="100%" height="20"><p align="center"><strong>利用Java实现zip压缩/解压缩</strong></p></td>
+  </tr>
+  <tr>
+    <td width="100%" height="20"><br>
+    　　由于网络带宽有限,所以数据文件的压缩有利于数据在Internet上的快速传输,同时也节 
+    <br>
+    <br>
+    省服务器的外存空间。 <br>
+    <br>
+    　　Java 1.1实现了I/O数据流与网络数据流的单一接口,因此数据的压缩、网络传输和解 
+    <br>
+    <br>
+    压缩的实现比较容易,下面介绍利用ZipEntry、ZipInputStream和ZipOutputStream三个Java 
+    <br>
+    <br>
+    类实现zip数据压缩方式的编程方法。 <br>
+    <br>
+    　　zip压缩文件结构:一个zip文件由多个entry组成,每个entry有一个唯一的名称,entry的 
+    <br>
+    <br>
+    数据项存储压缩数据。 <br>
+    <br>
+    　　与zip文件有关的几个Java类 <br>
+    <br>
+    　　·类ZipEntry <br>
+    <br>
+    　　public ZipEntry(String name); <br>
+    <br>
+    　　name为指定的数据项名。 <br>
+    <br>
+    　　·类ZipOutputStream <br>
+    <br>
+    　　ZipOutputStream实现了zip压缩文件的写输出流,支持压缩和非压缩entry。下面是它的 
+    <br>
+    <br>
+    几个函数: <br>
+    <br>
+    　　public ZipOutputStream(OutputStream out); <br>
+    <br>
+    　　∥利用输出流out构造一个ZIP输出流。 <br>
+    <br>
+    　　public void setMethod(int method); <br>
+    <br>
+    　　∥设置entry压缩方法,缺省值为DEFLATED。 <br>
+    <br>
+    　　public void putNextEntry(ZipEntry newe); <br>
+    <br>
+    　　∥如果当前的entry存在且处于激活状态时,关闭它,在zip文件中写入新的entry-newe 
+    <br>
+    <br>
+    并将数据流定位于entry数据项的起始位置,压缩方法为setMethod指定的方法。 
+    <br>
+    <br>
+    　　·类ZipInputStream <br>
+    <br>
+    　　ZipInputStream实现了zip压缩文件的读输入流,支持压缩和非压缩entry。下面是它的 
+    <br>
+    <br>
+    几个函数: <br>
+    <br>
+    　　public ZipInputStream(InputStream in); <br>
+    <br>
+    　　∥利用输入流in构造一个ZIP输出流。 <br>
+    <br>
+    　　public ZipEntry getNextEntry(); <br>
+    <br>
+    　　∥返回ZIP文件中的下一个entry,并将输出流定位在此entry数据项的起始位置。 
+    <br>
+    <br>
+    　　public void closeEntry(); <br>
+    <br>
+    　　∥关闭当前的zip entry,并将数据流定位于下一个entry的起始位置。 
+    <br>
+    <br>
+    　　程序代码及其注释 <br>
+    <br>
+    　　下列的程序实现了数据文件zip方式的压缩和解压缩方法。randomData()函数随机生成 
+    <br>
+    <br>
+    50个double数据,并放在doc字符串变量中;openFile()函数读取ZIP压缩文件;saveFile()函数 
+    <br>
+    <br>
+    将随机生成的数据存到ZIP格式的压缩文件中。 <br>
+    <br>
+    　　import java.util.zip.*; <br>
+    <br>
+    　　import java.awt.event.*; <br>
+    <br>
+    　　import java.awt.*; <br>
+    <br>
+    　　import java.lang.Math; <br>
+    <br>
+    　　import java.io.*; <br>
+    <br>
+    　　public class TestZip extends Frame implements ActionListener { <br>
+    <br>
+    　　TextArea textarea; ∥显示数据文件的多行文本显示域 <br>
+    <br>
+    　　TextField infotip; 
+    ∥显示数据文件未压缩大小及压缩大小单行文本显示域 <br>
+    <br>
+    　　String doc; ∥存储随机生成的数据 <br>
+    <br>
+    　　long doczipsize = 0;∥压缩数据文件的大小 <br>
+    <br>
+    　　public TestZip(){ <br>
+    <br>
+    　　∥生成菜单 <br>
+    <br>
+    　　MenuBar menubar = new MenuBar(); <br>
+    <br>
+    　　setMenuBar(menubar); <br>
+    <br>
+    　　Menu file = new Menu("File",true); <br>
+    <br>
+    　　menubar.add(file); <br>
+    <br>
+    　　MenuItem neww= new MenuItem("New"); <br>
+    <br>
+    　　neww.addActionListener(this); <br>
+    <br>
+    　　file.add(neww); <br>
+    <br>
+    　　MenuItem open=new MenuItem("Open"); <br>
+    <br>
+    　　open.addActionListener(this); <br>
+    <br>
+    　　file.add(open); <br>
+    <br>
+    　　MenuItem save=new MenuItem("Save"); <br>
+    <br>
+    　　save.addActionListener(this); <br>
+    <br>
+    　　file.add(save); <br>
+    <br>
+    　　MenuItem exit=new MenuItem("Exit"); <br>
+    <br>
+    　　exit.addActionListener(this); <br>
+    <br>
+    　　file.add(exit); <br>
+    <br>
+    　　∥随机生成的数据文件的多行文本显示域 <br>
+    <br>
+    　　add("Center",textarea =
+      new TextArea()); <br>
+    <br>
+    　　∥提示文本原始大小、压缩大小的单行文本显示域 <br>
+    <br>
+    　　add("South",infotip = new TextField()); <br>
+    <br>
+    　　} <br>
+    <br>
+    　　public static void main(String args[]){ <br>
+    <br>
+    　　TestZip ok=new TestZip(); <br>
+    <br>
+    　　ok.setTitle("zip sample"); <br>
+    <br>
+    　　ok.setSize(600,300); <br>
+    <br>
+    　　ok.show(); <br>
+    <br>
+    　　} <br>
+    <br>
+    　　private void randomData(){ <br>
+    <br>
+    　　∥随机生成50个double数据,并放在doc字符串变量中。 <br>
+    <br>
+    　　doc=""; <br>
+    <br>
+    　　for(int i=1;i&lt;51;i++){ <br>
+    <br>
+    　　 double rdm=Math.random()*10; <br>
+    <br>
+    　　 doc=doc+new Double(rdm).toString(); <br>
+    <br>
+    　　 if(i%5 == 0) doc=doc+"\n"; <br>
+    <br>
+    　　 else doc=doc+" "; <br>
+    <br>
+    　　} <br>
+    <br>
+    　　doczipsize = 0; <br>
+    <br>
+    　　showTextandInfo(); <br>
+    <br>
+    　　} <br>
+    <br>
+    　　private void openFile(){ <br>
+    <br>
+    　　∥打开zip文件,将文件内容读入doc字符串变量中。 <br>
+    <br>
+    　　FileDialog dlg=new FileDialog(this,"Open",FileDialog.LOA D); <br>
+    <br>
+    　　dlg.show(); <br>
+    <br>
+    　　String filename=dlg.getDirectory()+dlg.getFile(); <br>
+    <br>
+    　　try{ <br>
+    <br>
+    　　∥创建一个文件实例 <br>
+    <br>
+    　　File f=new File(filename); <br>
+    <br>
+    　　if(!f.exists()) return; ∥文件不存在,则返回 <br>
+    <br>
+    　　∥用文件输入流构建ZIP压缩输入流 <br>
+    <br>
+    　　ZipInputStream zipis=new ZipInputStream(new FileInputStream(f)); <br>
+    <br>
+    　　zipis.getNextEntry(); <br>
+    <br>
+    　　∥将输入流定位在当前entry数据项位置 <br>
+    <br>
+    　　DataInputStream dis=new DataInputStream(zipis); <br>
+    <br>
+    　　∥用ZIP输入流构建DataInputStream <br>
+    <br>
+    　　doc=dis.readUTF();∥读取文件内容 <br>
+    <br>
+    　　dis.close();∥关闭文件 <br>
+    <br>
+    　　doczipsize =
+      f.length();∥获取ZIP文件长度 <br>
+    <br>
+    　　showTextandInfo();∥显示数据 <br>
+    <br>
+    　　} <br>
+    <br>
+    　　catch(IOException ioe){ <br>
+    <br>
+    　　System.out.println(ioe); <br>
+    <br>
+    　　} <br>
+    <br>
+    　　} <br>
+    <br>
+    　　private void saveFile(){ <br>
+    <br>
+    　　∥打开zip文件,将doc字符串变量写入zip文件中。 <br>
+    <br>
+    　　FileDialog dlg=new FileDialog(this,"Save",FileDialog.SAVE); <br>
+    <br>
+    　　dlg.show(); <br>
+    <br>
+    　　String filename=dlg.getDirectory()+dlg.getFile(); <br>
+    <br>
+    　　try{ <br>
+    <br>
+    　　∥创建一个文件实例 <br>
+    <br>
+    　　File f=new File(filename); <br>
+    <br>
+    　　if(!f.exists()) return; ∥文件不存在,则返回 <br>
+    <br>
+    　　∥用文件输出流构建ZIP压缩输出流 <br>
+    <br>
+    　　ZipOutputStream zipos=new ZipOutputStream(new FileOutputStream(f)); <br>
+    <br>
+    　　zipos.setMethod(ZipOutputStream.DEFLATED); ∥设置压缩方法 <br>
+    <br>
+    　　zipos.putNextEntry(new ZipEntry("zip")); <br>
+    <br>
+    　　∥生成一个ZIP entry,写入文件输出流中,并将输出流定位于entry起始处。 
+    <br>
+    <br>
+    　　DataOutputStream os=new DataOutputStream(zipos); <br>
+    <br>
+    　　∥用ZIP输出流构建DataOutputStream; <br>
+    <br>
+    　　os.writeUTF(doc);∥将随机生成的数据写入文件中 <br>
+    <br>
+    　　os.close();∥关闭数据流 <br>
+    <br>
+    　　doczipsize = f.length(); <br>
+    <br>
+    　　∥获取压缩文件的长度 <br>
+    <br>
+    　　showTextandInfo();∥显示数据 <br>
+    <br>
+    　　} <br>
+    <br>
+    　　catch(IOException ioe){ <br>
+    <br>
+    　　System.out.println(ioe); <br>
+    <br>
+    　　} <br>
+    <br>
+    　　} <br>
+    <br>
+    　　private void showTextandInfo(){ <br>
+    <br>
+    　　∥显示数据文件和压缩信息 <br>
+    <br>
+    　　textarea.replaceRange(doc,0,textarea.getText().length()); <br>
+    <br>
+    　　infotip.setText("uncompressed size: "+doc.length()+"compressed size: 
+    "+dc zipsize); <br>
+    <br>
+    　　} <br>
+    <br>
+    　　public void actionPerformed(ActionEvent e){ <br>
+    <br>
+    　　String arg = e.getActionCommand(); <br>
+    <br>
+    　　if ("New".equals(arg)) randomData(); <br>
+    <br>
+    　　else if ("Open".equals(arg)) openFile(); <br>
+    <br>
+    　　else if ("Save".equals(arg)) saveFile(); <br>
+    <br>
+    　　else if ("Exit".equals(arg)){ <br>
+    <br>
+    　　 dispose();∥关闭窗口 <br>
+    <br>
+    　　 System.exit(0);∥关闭程序 <br>
+    <br>
+    　　} <br>
+    <br>
+    　　else { <br>
+    <br>
+    　　 System.out.println("no this command!"); <br>
+    <br>
+    　　} <br>
+    <br>
+    　　} <br>
+    <br>
+    　　} <br>
+    <br>
+    </td>
+  </tr>
+</table>
+</center></div>
+
+<p align="center">&nbsp; </p>
+
+<p align="center"><script language="JavaScript" src="bottom.js"></script> </p>
+</body>
+</html>

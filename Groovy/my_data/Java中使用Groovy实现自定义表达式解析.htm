@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Java中使用Groovy实现自定义表达式解析</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">Groovy作为一种JVM-Based语言，目前普及程度正在提高。本文演示一下在Java类中，通过继承GDK的groovy.lang.Script类如何支持自定义表达式解析功能。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">输入：</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">表示一行数据的某个map结构。在实际应用中，产生这种结构的最常见场景可能是通过JDBC访问数据库、通过调用WebService服务得到的某行结果集等。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">目标设定：</P></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">假设我们希望对输入数据进行某个运算。此处示例中，我们模拟oracle中最常用的nvl函数。</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">处理过程：</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">首先，通过继承groovy.lang.Script，定义自己的表达式解析类：</P></DIV><PRE class=java style="WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=class style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">MyBasicScript</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">extends</SPAN> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Script</SPAN></SPAN></PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">在该类中实现具体的解析方法：</P><PRE class="prettyprint cs" style="WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> Object nvl(Object str,Object val){
+  <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> str==<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">null</SPAN> ||<SPAN class=string style="COLOR: rgb(221,17,68)">""</SPAN>.equals(str)?val:str;
+}</PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">其次，基于上述自定义类，实例化一个CompilerConfiguration对象。</P><PRE class="prettyprint cs" style="WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px">CompilerConfiguration cfg = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> CompilerConfiguration();
+cfg.setScriptBaseClass(MyBasicScript.<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN>.getName());</PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">以此CompilerConfiguration实例为参数，实例化一个GroovyShell对象</P><PRE class=ini style="WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px"><SPAN class=setting>shell = <SPAN class=value>new GroovyShell(cfg);</SPAN></SPAN></PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">通过shell对象，解析并运行表达式。在运行前，可以通过bingding对象绑定脚本运行时的上下文数据：</P><PRE class="prettyprint cpp" style="WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px">Binding binding = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Binding(<SPAN class=built_in style="COLOR: rgb(0,134,179)">map</SPAN>);
+Script script = shell.parse(expr);
+script.setBinding(binding);
+script.run();</PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">附完整的代码示例（共两个类，分别是自定义脚本实现类、调用及测试类）</P><PRE class="prettyprint java" style="WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">package</SPAN> jg.groovy;
+
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">import</SPAN> groovy.lang.Script;
+
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">import</SPAN> java.lang.reflect.Method;
+
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=class style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">MyBasicScript</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">extends</SPAN> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Script</SPAN>  {</SPAN>
+
+<SPAN class=indent>  </SPAN><SPAN class=annotation>@Override</SPAN>
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> Object run() {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//show usage</SPAN>
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>Method[] methods = MyBasicScript.class.getDeclaredMethods();
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>StringBuilder sb=<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> StringBuilder();
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (Method method : methods) {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>sb.append(method);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>}
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> sb.substring(<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>, sb.length()-<SPAN class=number style="COLOR: rgb(0,153,153)">1</SPAN>);
+<SPAN class=indent>  </SPAN>}
+<SPAN class=indent>  </SPAN>
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> Object nvl(Object str, Object val) {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> str == <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">null</SPAN> || <SPAN class=string style="COLOR: rgb(221,17,68)">""</SPAN>.equals(str) ? val : str;
+<SPAN class=indent>  </SPAN>}
+
+}</PRE><PRE class="prettyprint java" style="WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">package</SPAN> jg.groovy;
+
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">import</SPAN> groovy.lang.Binding;
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">import</SPAN> groovy.lang.GroovyShell;
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">import</SPAN> groovy.lang.Script;
+
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">import</SPAN> java.util.HashMap;
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">import</SPAN> java.util.Hashtable;
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">import</SPAN> java.util.Map;
+
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">import</SPAN> org.codehaus.groovy.control.CompilerConfiguration;
+
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=class style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">ExprSupport</SPAN> {</SPAN>
+
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN> Object lock = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Object();
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN> GroovyShell shell;
+
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> Hashtable&lt;String, Script&gt; cache = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Hashtable&lt;String, Script&gt;();
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>CompilerConfiguration cfg = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> CompilerConfiguration();
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>cfg.setScriptBaseClass(MyBasicScript.class.getName());
+ 
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>shell = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> GroovyShell(cfg);
+<SPAN class=indent>  </SPAN>}
+
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> Object parseExpr(String expr) {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>Script s = getScriptFromCache(expr);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> s.run();
+<SPAN class=indent>  </SPAN>}
+
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> Object parseExpr(String expr, Map&lt;?, ?&gt; map) {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>Binding binding = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Binding(map);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>Script script = getScriptFromCache(expr);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>script.setBinding(binding);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> script.run();
+<SPAN class=indent>  </SPAN>}
+
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> Script getScriptFromCache(String expr) {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (cache.contains(expr)) {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> cache.get(expr);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>}
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">synchronized</SPAN> (lock) {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (cache.contains(expr)) {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> cache.get(expr);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>}
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>Script script = shell.parse(expr);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>cache.put(expr, script);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> script;
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>}
+<SPAN class=indent>  </SPAN>}
+
+<SPAN class=indent>  </SPAN><SPAN class=javadoc style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/**
+<SPAN class=indent>  </SPAN> * <SPAN class=javadoctag>@param</SPAN> args
+<SPAN class=indent>  </SPAN> */</SPAN>
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> main(String[] args) {
+
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// eg. get one row from db</SPAN>
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>Map&lt;String, Object&gt; row = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> HashMap&lt;String, Object&gt;();
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>row.put(<SPAN class=string style="COLOR: rgb(221,17,68)">"id"</SPAN>, <SPAN class=number style="COLOR: rgb(0,153,153)">42</SPAN>);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>row.put(<SPAN class=string style="COLOR: rgb(221,17,68)">"name"</SPAN>, <SPAN class=string style="COLOR: rgb(221,17,68)">""</SPAN>);
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//带绑定数据参数的调用方式</SPAN>
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>System.out.println(ExprSupport.parseExpr(<SPAN class=string style="COLOR: rgb(221,17,68)">"nvl(id,0)"</SPAN>, row));
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>System.out.println(ExprSupport.parseExpr(<SPAN class=string style="COLOR: rgb(221,17,68)">"nvl(name,'anonymous')"</SPAN>, row));
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//不带绑定数据参数的调用方式，这个是groovy的内置能力</SPAN>
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>System.out.println(ExprSupport.parseExpr(<SPAN class=string style="COLOR: rgb(221,17,68)">"1+2"</SPAN>));
+
+<SPAN class=indent>  </SPAN>}
+
+}</PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">输出：</P><PRE class=undefined style="WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px">42
+anonymous
+3</PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">总结：结合groovy对表达式的内置支持能力与自定义脚本能力，可以实现功能强大的表达式解析能力。</P></body>
+</html>

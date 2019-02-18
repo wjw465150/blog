@@ -1,0 +1,177 @@
+﻿<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>说说MongoDB的ObjectId</title>
+<body>
+<div>前段时间有个朋友问我，分布式主键生成策略在我们这边是怎么实现的，当时我给的答案是sequence，当然这在不高并发的情况下是没有任何问题，实际上，我们的主键生成是可控的，但如果是在分布式高并发的情况下，那肯定是有问题的。<br>
+  <br>
+  突
+  然想起mongodb的objectid，记得以前看过文档，objectid是一种轻量型的，不同的机器都能用全局唯一的同种方法轻量的生成它，而不是
+  采用传统的自增的主键策略，因为在多台服务器上同步自动增加主键既费力又费时，不得不佩服，mongodb从开始设计就被定义为分布式数据库。<br>
+  下面深入一点来翻翻这个Objectid的底细，在mongodb集合中的每个document中都必须有一个"_id"建，这个键的值可以是任何类型的，在默认的情况下是个Objectid对象。<br>
+  当我们让一个collection中插入一条不带_id的记录，系统会自动地生成一个_id的key</div>
+<br>
+<div style="FONT-SIZE: 13px; BORDER-TOP: #cccccc 1px solid; BORDER-RIGHT: #cccccc 1px solid; WIDTH: 98%; BORDER-BOTTOM: #cccccc 1px solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: #cccccc 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: #eeeeee"><span style="COLOR: #000000">&gt;&nbsp;db.t_test.insert({"name":"cyz"})<br>
+  &gt;&nbsp;db.t_test.findOne({"name":"cyz"})<br>
+  {&nbsp;"_id"&nbsp;:&nbsp;ObjectId("4df2dcec2cdcd20936a8b817"),&nbsp;"name"&nbsp;:&nbsp;"cyz"&nbsp;}</span></div>
+<br>
+<div>可以发现这里多出一个Objectid类型的_id，当然了，这个_id是系统默认生成的，你也可以为其指定一个值，不过在同一collections中该值必须是唯一的<br>
+  <br>
+  把 ObjectId("4df2dcec2cdcd20936a8b817")这串值拿出来并对照官网的解析来深入分析。<br>
+  <br>
+  "4df2dcec2cdcd20936a8b817"
+  
+  以这段字符串为例来进行解析，这是一个24位的字符串，看起来很长，很难理解，实际上它是由ObjectId(string)所创建的一组十六进制的字
+  符，每个字节两位的十六进制数字，总共使用了12字节的存储空间，可能有些朋友会感到很奇怪，居然是用了12个字节，而mysql的INT类型也只有4个
+  字节，不过按照现在的存储设备，多出来的这点字节也应该不会成为什么瓶颈，实际上，mongodb在设计上无处不在的体现着用空间换时间的思想，接下看吧<br>
+  <br>
+  下面是官网指定Bson中ObjectId的详细规范<br>
+  <br>
+  <IMG alt="" src="o_111.PNG"><br>
+  <br>
+  <div><strong>TimeStamp</strong><br>
+    前
+    4位是一个unix的时间戳，是一个int类别，我们将上面的例子中的objectid的前4位进行提取“4df2dcec”，然后再将他们安装十六进制
+    专为十进制：“1307761900”，这个数字就是一个时间戳，为了让效果更佳明显，我们将这个时间戳转换成我们习惯的时间格式</div>
+  <br>
+  <div style="FONT-SIZE: 13px; BORDER-TOP: #cccccc 1px solid; BORDER-RIGHT: #cccccc 1px solid; WIDTH: 98%; BORDER-BOTTOM: #cccccc 1px solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: #cccccc 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: #eeeeee"><span style="COLOR: #000000">$&nbsp;date&nbsp;-d&nbsp;'1970-01-01&nbsp;UTC&nbsp;1307761900&nbsp;&nbsp;sec'&nbsp;&nbsp;-u<br>
+    2011年&nbsp;06月&nbsp;11日&nbsp;星期六&nbsp;03:11:40&nbsp;UTC</span></div>
+  <br>
+  <div>前
+    4个字节其实隐藏了文档创建的时间，并且时间戳处在于字符的最前面，这就意味着ObjectId大致会按照插入进行排序，这对于某些方面起到很大作用，如
+    作为索引提高搜索效率等等。使用时间戳还有一个好处是，某些客户端驱动可以通过ObjectId解析出该记录是何时插入的，这也解答了我们平时快速连续创
+    建多个Objectid时，会发现前几位数字很少发现变化的现实，因为使用的是当前时间，很多用户担心要对服务器进行时间同步，其实这个时间戳的真实值并
+    不重要，只要其总不停增加就好。</div>
+  <br>
+  <div><strong>Machine </strong><br>
+    接下来的三个字节，就是 2cdcd2 ,这三个字节是所在主机的唯一标识符，一般是机器主机名的散列值，这样就确保了不同主机生成不同的机器hash值，确保在分布式中不造成冲突，这也就是在同一台机器生成的objectid中间的字符串都是一模一样的原因。<br>
+    <br>
+    <strong>pid</strong><br>
+    上面的Machine是为了确保在不同机器产生的objectid不冲突，而pid就是为了在同一台机器不同的mongodb进程产生了objectid不冲突，接下来的0936两位就是产生objectid的进程标识符。<br>
+    <br>
+    <strong>increment</strong><br>
+    前面的九个字节是保证了一秒内不同机器不同进程生成objectid不冲突，这后面的三个字节a8b817，是一个自动增加的计数器，用来确保在同一秒内产生的objectid也不会发现冲突，允许256的3次方等于16777216条记录的唯一性。</div>
+  <br>
+  <div><strong>客户端生成</strong><br>
+    mongodb产生objectid还有一个更大的优势，就是mongodb可以通过自身的服务来产生objectid，也可以通过客户端的驱动程序来产生，如果你仔细看文档你会感叹，mongodb的设计无处不在的使<br>
+    <br>
+    用空间换时间的思想，比较objectid是轻量级，但服务端产生也必须开销时间，所以能从服务器转移到客户端驱动程序完成的就尽量的转移，必须将事务扔给客户端来完成，减低服务端的开销，另还有一点原因就是扩展应用层比扩展数据库层要变量得多。<br>
+    <br>
+    好吧，既然我们了解到我们的程序产生objectid是在客户端完成，那再继续，进一步了解，打开<strong>mongodb java driver源码</strong>，无源码可以到mongodb官网进行下载，下面摘录部分代码<br>
+    <br>
+    <div style="FONT-SIZE: 13px; BORDER-TOP: #cccccc 1px solid; BORDER-RIGHT: #cccccc 1px solid; WIDTH: 98%; BORDER-BOTTOM: #cccccc 1px solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: #cccccc 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: #eeeeee"><span style="COLOR: #0000ff">public</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">class</span><span style="COLOR: #000000">&nbsp;ObjectId&nbsp;</span><span style="COLOR: #0000ff">implements</span><span style="COLOR: #000000">&nbsp;Comparable</span><span style="COLOR: #000000">&lt;</span><span style="COLOR: #000000">ObjectId</span><span style="COLOR: #000000">&gt;</span><span style="COLOR: #000000">&nbsp;,&nbsp;java.io.Serializable&nbsp;{<br>
+      <IMG alt="" src="dot.gif"><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">final</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;_time;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">final</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;_machine;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">final</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;_inc;<br>
+      <IMG alt="" src="dot.gif"><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">public</span><span style="COLOR: #000000">&nbsp;ObjectId(&nbsp;</span><span style="COLOR: #0000ff">byte</span><span style="COLOR: #000000">[]&nbsp;b&nbsp;){<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">if</span><span style="COLOR: #000000">&nbsp;(&nbsp;b.length&nbsp;</span><span style="COLOR: #000000">!=</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #000000">12</span><span style="COLOR: #000000">&nbsp;)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">throw</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">new</span><span style="COLOR: #000000">&nbsp;IllegalArgumentException(&nbsp;</span><span style="COLOR: #000000">"</span><span style="COLOR: #000000">need&nbsp;12&nbsp;bytes</span><span style="COLOR: #000000">"</span><span style="COLOR: #000000">&nbsp;);<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ByteBuffer&nbsp;bb&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;ByteBuffer.wrap(&nbsp;b&nbsp;);<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_time&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;bb.getInt();<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_machine&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;bb.getInt();<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_inc&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;bb.getInt();<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_new&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">false</span><span style="COLOR: #000000">;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">public</span><span style="COLOR: #000000">&nbsp;ObjectId(&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;time&nbsp;,&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;machine&nbsp;,&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;inc&nbsp;){<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_time&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;time;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_machine&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;machine;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_inc&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;inc;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_new&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">false</span><span style="COLOR: #000000">;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">public</span><span style="COLOR: #000000">&nbsp;ObjectId(){<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_time&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;(</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">)&nbsp;(System.currentTimeMillis()&nbsp;</span><span style="COLOR: #000000">/</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #000000">1000</span><span style="COLOR: #000000">);<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_machine&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;_genmachine;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_inc&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;_nextInc.getAndIncrement();<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_new&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">true</span><span style="COLOR: #000000">;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+      <br>
+      <IMG alt="" src="dot.gif"><br>
+      （完整代码请查看源码）</span></div>
+    <br>
+    <div>这里可以发现ObjectId的构建可以有多种方式，可以由自己制定字节，也可以指定时间，机器码和自增值，这里重点看看驱动程序默认的构建，也就是public ObjectId()<br>
+      可以看到objectid主要由_time _machine _inc 所组成，其中 _time直接由(System.currentTimeMillis() / 1000)计算出所谓的时间戳，这里很简单，接下来是重点，主要看看<strong>机器码和进程码</strong>的构建</div>
+  </div>
+  <br>
+  <div style="FONT-SIZE: 13px; BORDER-TOP: #cccccc 1px solid; BORDER-RIGHT: #cccccc 1px solid; WIDTH: 98%; BORDER-BOTTOM: #cccccc 1px solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: #cccccc 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: #eeeeee"><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">private</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">static</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">final</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;_genmachine;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">static</span><span style="COLOR: #000000">&nbsp;{<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">try</span><span style="COLOR: #000000">&nbsp;{</span><span style="COLOR: #008000"><br>
+    </span><span style="COLOR: #000000">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">final</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;machinePiece;</span><span style="COLOR: #008000">//</span><span style="COLOR: #008000">机器码块</span><span style="COLOR: #008000"><br>
+    </span><span style="COLOR: #000000">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StringBuilder&nbsp;sb&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">new</span><span style="COLOR: #000000">&nbsp;StringBuilder();<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Enumeration</span><span style="COLOR: #000000">&lt;</span><span style="COLOR: #000000">NetworkInterface</span><span style="COLOR: #000000">&gt;</span><span style="COLOR: #000000">&nbsp;e&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;NetworkInterface.getNetworkInterfaces();</span><span style="COLOR: #008000">//</span><span style="COLOR: #008000">NetworkInterface此类表示一个由名称和分配给此接口的&nbsp;IP&nbsp;地址列表组成的网络接口，它用于标识将多播组加入的本地接口，这里通过NetworkInterface此机器上所有的接口</span><span style="COLOR: #008000"><br>
+    </span><span style="COLOR: #000000">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">while</span><span style="COLOR: #000000">&nbsp;(&nbsp;e.hasMoreElements()&nbsp;){<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NetworkInterface&nbsp;ni&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;e.nextElement();<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sb.append(&nbsp;ni.toString()&nbsp;);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;machinePiece&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;sb.toString().hashCode()&nbsp;</span><span style="COLOR: #000000">&lt;&lt;</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #000000">16</span><span style="COLOR: #000000">;&nbsp;</span><span style="COLOR: #008000">//</span><span style="COLOR: #008000">将得到所有接口的字符串进行取散列值</span><span style="COLOR: #008000"><br>
+    </span><span style="COLOR: #000000">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LOGGER.fine(&nbsp;</span><span style="COLOR: #000000">"</span><span style="COLOR: #000000">machine&nbsp;piece&nbsp;post:&nbsp;</span><span style="COLOR: #000000">"</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #000000">+</span><span style="COLOR: #000000">&nbsp;Integer.toHexString(&nbsp;machinePiece&nbsp;)&nbsp;);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</span><span style="COLOR: #008000"><br>
+    </span><span style="COLOR: #000000">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">final</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;processPiece;</span><span style="COLOR: #008000">//</span><span style="COLOR: #008000">进程块</span><span style="COLOR: #008000"><br>
+    </span><span style="COLOR: #000000">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;processId&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">new</span><span style="COLOR: #000000">&nbsp;java.util.Random().nextInt();<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">try</span><span style="COLOR: #000000">&nbsp;{<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;processId&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;java.lang.management.ManagementFactory.getRuntimeMXBean().getName().hashCode();</span><span style="COLOR: #008000">//</span><span style="COLOR: #008000">RuntimeMXBean是Java虚拟机的运行时系统的管理接口，这里是返回表示正在运行的&nbsp;Java&nbsp;虚拟机的名称，并进行取散列值。</span><span style="COLOR: #008000"><br>
+    </span><span style="COLOR: #000000">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">catch</span><span style="COLOR: #000000">&nbsp;(&nbsp;Throwable&nbsp;t&nbsp;){<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ClassLoader&nbsp;loader&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;ObjectId.</span><span style="COLOR: #0000ff">class</span><span style="COLOR: #000000">.getClassLoader();<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">int</span><span style="COLOR: #000000">&nbsp;loaderId&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;loader&nbsp;</span><span style="COLOR: #000000">!=</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">null</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #000000">?</span><span style="COLOR: #000000">&nbsp;System.identityHashCode(loader)&nbsp;:&nbsp;</span><span style="COLOR: #000000">0</span><span style="COLOR: #000000">;<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;StringBuilder&nbsp;sb&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">new</span><span style="COLOR: #000000">&nbsp;StringBuilder();<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sb.append(Integer.toHexString(processId));<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sb.append(Integer.toHexString(loaderId));<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;processPiece&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;sb.toString().hashCode()&nbsp;</span><span style="COLOR: #000000">&amp;</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #000000">0xFFFF</span><span style="COLOR: #000000">;<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LOGGER.fine(&nbsp;</span><span style="COLOR: #000000">"</span><span style="COLOR: #000000">process&nbsp;piece:&nbsp;</span><span style="COLOR: #000000">"</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #000000">+</span><span style="COLOR: #000000">&nbsp;Integer.toHexString(&nbsp;processPiece&nbsp;)&nbsp;);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_genmachine&nbsp;</span><span style="COLOR: #000000">=</span><span style="COLOR: #000000">&nbsp;machinePiece&nbsp;</span><span style="COLOR: #000000">|</span><span style="COLOR: #000000">&nbsp;processPiece;&nbsp;</span><span style="COLOR: #008000">//</span><span style="COLOR: #008000">最后将机器码块的散列值与进程块的散列值进行位或运算，得到&nbsp;_genmachine&nbsp;</span><span style="COLOR: #008000"><br>
+    </span><span style="COLOR: #000000">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LOGGER.fine(&nbsp;</span><span style="COLOR: #000000">"</span><span style="COLOR: #000000">machine&nbsp;:&nbsp;</span><span style="COLOR: #000000">"</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #000000">+</span><span style="COLOR: #000000">&nbsp;Integer.toHexString(&nbsp;_genmachine&nbsp;)&nbsp;);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">catch</span><span style="COLOR: #000000">&nbsp;(&nbsp;java.io.IOException&nbsp;ioe&nbsp;){<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff">throw</span><span style="COLOR: #000000">&nbsp;</span><span style="COLOR: #0000ff">new</span><span style="COLOR: #000000">&nbsp;RuntimeException(&nbsp;ioe&nbsp;);<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;}</span></div>
+</div>
+<br>
+<div><strong>&nbsp;Enumeration&lt;NetworkInterface&gt; e =   NetworkInterface.getNetworkInterfaces();<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; while ( e.hasMoreElements() ){<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; NetworkInterface ni = e.nextElement();<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sb.append( ni.toString() );<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+  &nbsp;machinePiece = sb.toString().hashCode() &lt;&lt; 16;</strong><br>
+  这里的NetworkInterface.getNetworkInterfaces();取得的接口通常是按名称（如 "le0"）区分的，大约是下面的类型</div>
+<br>
+<div style="FONT-SIZE: 13px; BORDER-TOP: #cccccc 1px solid; BORDER-RIGHT: #cccccc 1px solid; WIDTH: 98%; BORDER-BOTTOM: #cccccc 1px solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: #cccccc 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: #eeeeee"><span style="COLOR: #000000">name:lo&nbsp;(Software&nbsp;Loopback&nbsp;Interface&nbsp;</span><span style="COLOR: #000000">1</span><span style="COLOR: #000000">)&nbsp;index:&nbsp;</span><span style="COLOR: #000000">1</span><span style="COLOR: #000000">&nbsp;addresses:<br>
+  </span><span style="COLOR: #000000">/</span><span style="COLOR: #000000">0</span><span style="COLOR: #000000">:</span><span style="COLOR: #000000">0</span><span style="COLOR: #000000">:</span><span style="COLOR: #000000">0</span><span style="COLOR: #000000">:</span><span style="COLOR: #000000">0</span><span style="COLOR: #000000">:</span><span style="COLOR: #000000">0</span><span style="COLOR: #000000">:</span><span style="COLOR: #000000">0</span><span style="COLOR: #000000">:</span><span style="COLOR: #000000">0</span><span style="COLOR: #000000">:</span><span style="COLOR: #000000">1</span><span style="COLOR: #000000">;<br>
+  </span><span style="COLOR: #000000">/</span><span style="COLOR: #000000">127.0</span><span style="COLOR: #000000">.</span><span style="COLOR: #000000">0.1</span><span style="COLOR: #000000">;<br>
+  name:net0&nbsp;(WAN&nbsp;Miniport&nbsp;(SSTP))&nbsp;index:&nbsp;</span><span style="COLOR: #000000">2</span><span style="COLOR: #000000">&nbsp;addresses:<br>
+  name:net1&nbsp;(WAN&nbsp;Miniport&nbsp;(IKEv2))&nbsp;index:&nbsp;</span><span style="COLOR: #000000">3</span><span style="COLOR: #000000">&nbsp;addresses:<br>
+  name:net2&nbsp;(WAN&nbsp;Miniport&nbsp;(L2TP))&nbsp;index:&nbsp;</span><span style="COLOR: #000000">4</span><span style="COLOR: #000000">&nbsp;addresses:<br>
+  name:net3&nbsp;(WAN&nbsp;Miniport&nbsp;(PPTP))&nbsp;index:&nbsp;</span><span style="COLOR: #000000">5</span><span style="COLOR: #000000">&nbsp;addresses:<br>
+  name:ppp0&nbsp;(WAN&nbsp;Miniport&nbsp;(PPPOE))&nbsp;index:&nbsp;</span><span style="COLOR: #000000">6</span><span style="COLOR: #000000">&nbsp;addresses:</span></div>
+<br>
+<div>这里为什么要采取这样方面进行取散列值，感觉有些不太理解，应该网络接口本身相对而言是并不稳定的<br>
+  <br>
+  <div><strong>int processId = new java.util.Random().nextInt();<br>
+    &nbsp;try {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; processId =
+       java.lang.management.ManagementFactory.getRuntimeMXBean().getName().hashCode();<br>
+    &nbsp;}<br>
+    &nbsp;catch ( Throwable t ){<br>
+    }</strong><br>
+    RuntimeMXBean是Java虚拟机的运行时系统的管理接口，这里是返回表示正在运行的 Java 虚拟机的名称，并进行取散列值，如果在这过程中出现异常，processId 将以随机数的方式继续计算<br>
+    <br>
+    <strong>_genmachine = machinePiece | processPiece;</strong><br>
+    <div>最后将机器码块的散列值与进程块的散列值进行位或运算，当然这里是十进制，你把这里的十进制专为十六进制，就会发现这块的值就是生产objectid中间部分的值，这里的构建跟服务端的构建是有些不一样的，不过最基本的构建元素还是一致的，就是<strong>TimeStamp，Machine ，pid，increment</strong>。<br>
+      <br>
+      mongodb的ObejctId生产思想在很多方面挺值得我们借鉴的，特别是在大型分布式的开发，如何构建轻量级的生产，如何将生产的负载进行转移，如何以空间换取时间提高生产的最大优化等等。</div>
+  </div>
+  ----------------------------------------</div>
+<div>
+  &nbsp;</div>
+</body>
+</htm>

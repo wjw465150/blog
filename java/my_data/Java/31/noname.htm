@@ -1,0 +1,720 @@
+﻿<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>java中国年历算法和程式</title>
+</head>
+
+<body text="#000000" bgcolor="#f1f1f1" leftmargin="0" topmargin="2">
+
+<table cellspacing="0" cellpadding="0" width="762" border="0" height="180" align="center">
+	<tr>
+		<td width="1" bgcolor="#000000" height="180"></td>
+		<td valign="top" width="760" bgcolor="#ffffff" height="180">
+		<div align="center">
+			<table height="5" cellspacing="0" cellpadding="0" width="100%" border="0">
+				<tr>
+					<td width="95%" align="center">
+					<table cellspacing="0" cellpadding="0" width="100%" border="0">
+						<tr>
+							<td>
+							<table cellspacing="0" cellpadding="0" width="100%" bgcolor="#ffffff" border="0">
+								<tr>
+									<td class="title1" align="center" height="40" width="100%" bgcolor="#eeeeee">
+									<b>中国年历算法和程式</b></td>
+								</tr>
+							</table>
+							</td>
+						</tr>
+						<tr>
+							<td valign="top" align="center" width="100%">
+							<table width="98%" border="0">
+								<tr>
+									<td align="left" width="100%" class="text">
+									<br>
+									<b>中国年历算法和程式</b> <br>
+									<br>
+									本文摘自<a href="http://www.herongyang.com/year_gb/" target="_blank" class="l2">“和荣笔记 
+									- 中国农历二百年算法及年历”</a><br>
+									<br>
+									<b>中国公历算法</b><br>
+									<br>
+									中国公历算法不是太难，关键是星期值的确定。这里给出了简单算法： <br>
+									<pre>
+   public static int dayOfWeek(int y, int m, int d) {
+      int w = 1; // 公历一年一月一日是星期一，所以起始值为星期日
+      y = (y-1)%400 + 1; // 公历星期值分部 400 年循环一次
+      int ly = (y-1)/4; // 闰年次数
+      ly = ly - (y-1)/100;
+      ly = ly + (y-1)/400;
+      int ry = y - 1 - ly; // 常年次数
+      w = w + ry; // 常年星期值增一
+      w = w + 2*ly; // 闰年星期值增二
+      w = w + dayOfYear(y,m,d); 
+      w = (w-1)%7 + 1;
+      return w;
+   }
+</pre>
+									<br>
+									<br>
+									<b>中国农历算法</b><br>
+									<br>
+									根公历相比，中国农历的算法相当复杂。我在网上找的算法之中，eleworld.com 的算法是最好的一个。这个算法使用了大量的数据来确定农历月份和节气的分部，它仅实用于公历 
+									1901 年到 2100 年之间的 200 年。 <br>
+									<br>
+									<b>中国农历计算程式</b><br>
+									<br>
+									跟据 eleworld.com 提供的算法，我写了下面这个程式： <br>
+									[HTML]&lt;pre&gt;<br>
+									/**<br>
+&nbsp;* ChineseCalendarGB.java<br>
+&nbsp;* Copyright (c) 1997-2002 by Dr. Herong Yang. http://www.herongyang.com/<br>
+&nbsp;* 中国农历算法 - 实用于公历 1901 年至 2100 年之间的 200 年 <br>
+&nbsp;*/<br>
+									import java.text.*;<br>
+									import java.util.*;<br>
+									class ChineseCalendarGB {<br>
+&nbsp;&nbsp; private int gregorianYear;<br>
+&nbsp;&nbsp; private int gregorianMonth;<br>
+&nbsp;&nbsp; private int gregorianDate;<br>
+&nbsp;&nbsp; private boolean isGregorianLeap;<br>
+&nbsp;&nbsp; private int dayOfYear;<br>
+&nbsp;&nbsp; private int dayOfWeek; // 周日一星期的第一天<br>
+&nbsp;&nbsp; private int chineseYear;<br>
+&nbsp;&nbsp; private int chineseMonth; // 负数表示闰月<br>
+&nbsp;&nbsp; private int chineseDate;<br>
+&nbsp;&nbsp; private int sectionalTerm;<br>
+&nbsp;&nbsp; private int principleTerm;<br>
+&nbsp;&nbsp; private static char[] daysInGregorianMonth = <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {31,28,31,30,31,30,31,31,30,31,30,31};<br>
+&nbsp;&nbsp; private static String[] stemNames =<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {"甲","乙","丙","丁","戊","己","庚","辛","壬","癸"};<br>
+&nbsp;&nbsp; private static String[] branchNames =<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {"子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"};<br>
+&nbsp;&nbsp; private static String[] animalNames =<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {"鼠","牛","虎","兔","龙","蛇","马","羊","猴","鸡","狗","猪"};<br>
+&nbsp;&nbsp; public static void main(String[] arg) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ChineseCalendarGB c = new ChineseCalendarGB();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String cmd = "day";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int y = 1901;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int m = 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int d = 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (arg.length&gt;0) cmd = arg[0];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (arg.length&gt;1) y = Integer.parseInt(arg[1]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (arg.length&gt;2) m = Integer.parseInt(arg[2]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (arg.length&gt;3) d = Integer.parseInt(arg[3]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; c.setGregorian(y,m,d);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; c.computeChineseFields();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; c.computeSolarTerms();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (cmd.equalsIgnoreCase("year")) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String[] t = c.getYearTable();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=0; i&lt;t.length; i++) 
+									System.out.println(t[i]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else if (cmd.equalsIgnoreCase("month")) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String[] t = c.getMonthTable();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=0; i&lt;t.length; i++) 
+									System.out.println(t[i]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.out.println(c.toString());<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public ChineseCalendarGB() {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; setGregorian(1901,1,1);<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public void setGregorian(int y, int m, int d) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; gregorianYear = y;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; gregorianMonth = m;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; gregorianDate = d;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; isGregorianLeap = isGregorianLeapYear(y);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dayOfYear = dayOfYear(y,m,d);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dayOfWeek = dayOfWeek(y,m,d);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseYear = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseMonth = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseDate = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sectionalTerm = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; principleTerm = 0;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public static boolean isGregorianLeapYear(int year) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; boolean isLeap = false;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (year%4==0) isLeap = true;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (year%100==0) isLeap = false;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (year%400==0) isLeap = true;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return isLeap;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public static int daysInGregorianMonth(int y, int m) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int d = daysInGregorianMonth[m-1];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (m==2 &amp;&amp; isGregorianLeapYear(y)) d++; // 公历闰年二月多一天<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return d;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public static int dayOfYear(int y, int m, int d) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int c = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=1; i&lt;m; i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; c = c + daysInGregorianMonth(y,i);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; c =
+   c + d;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return c;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public static int dayOfWeek(int y, int m, int d) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int w = 1; // 公历一年一月一日是星期一，所以起始值为星期日<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; y =
+   (y-1)%400 + 1; // 公历星期值分部 400 年循环一次<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int ly = (y-1)/4; // 闰年次数<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ly =
+   ly - (y-1)/100;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ly =
+   ly + (y-1)/400;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int ry = y - 1 - ly; // 常年次数<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; w =
+   w + ry; // 常年星期值增一<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; w =
+   w + 2*ly; // 闰年星期值增二<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; w =
+   w + dayOfYear(y,m,d); <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; w =
+   (w-1)%7 + 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return w;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; private static char[] chineseMonths = { <br>
+&nbsp;&nbsp; // 农历月份大小压缩表，两个字节表示一年。两个字节共十六个二进制位数， <br>
+&nbsp;&nbsp; // 前四个位数表示闰月月份，后十二个位数表示十二个农历月份的大小。<br>
+&nbsp;&nbsp; 0x00,0x04,0xad,0x08,0x5a,0x01,0xd5,0x54,0xb4,0x09,0x64,0x05,0x59,0x45,<br>
+&nbsp;&nbsp; 0x95,0x0a,0xa6,0x04,0x55,0x24,0xad,0x08,0x5a,0x62,0xda,0x04,0xb4,0x05,<br>
+&nbsp;&nbsp; 0xb4,0x55,0x52,0x0d,0x94,0x0a,0x4a,0x2a,0x56,0x02,0x6d,0x71,0x6d,0x01,<br>
+&nbsp;&nbsp; 0xda,0x02,0xd2,0x52,0xa9,0x05,0x49,0x0d,0x2a,0x45,0x2b,0x09,0x56,0x01,<br>
+&nbsp;&nbsp; 0xb5,0x20,0x6d,0x01,0x59,0x69,0xd4,0x0a,0xa8,0x05,0xa9,0x56,0xa5,0x04,<br>
+&nbsp;&nbsp; 0x2b,0x09,0x9e,0x38,0xb6,0x08,0xec,0x74,0x6c,0x05,0xd4,0x0a,0xe4,0x6a,<br>
+&nbsp;&nbsp; 0x52,0x05,0x95,0x0a,0x5a,0x42,0x5b,0x04,0xb6,0x04,0xb4,0x22,0x6a,0x05,<br>
+&nbsp;&nbsp; 0x52,0x75,0xc9,0x0a,0x52,0x05,0x35,0x55,0x4d,0x0a,0x5a,0x02,0x5d,0x31,<br>
+&nbsp;&nbsp; 0xb5,0x02,0x6a,0x8a,0x68,0x05,0xa9,0x0a,0x8a,0x6a,0x2a,0x05,0x2d,0x09,<br>
+&nbsp;&nbsp; 0xaa,0x48,0x5a,0x01,0xb5,0x09,0xb0,0x39,0x64,0x05,0x25,0x75,0x95,0x0a,<br>
+&nbsp;&nbsp; 0x96,0x04,0x4d,0x54,0xad,0x04,0xda,0x04,0xd4,0x44,0xb4,0x05,0x54,0x85,<br>
+&nbsp;&nbsp; 0x52,0x0d,0x92,0x0a,0x56,0x6a,0x56,0x02,0x6d,0x02,0x6a,0x41,0xda,0x02,<br>
+&nbsp;&nbsp; 0xb2,0xa1,0xa9,0x05,0x49,0x0d,0x0a,0x6d,0x2a,0x09,0x56,0x01,0xad,0x50,<br>
+&nbsp;&nbsp; 0x6d,0x01,0xd9,0x02,0xd1,0x3a,0xa8,0x05,0x29,0x85,0xa5,0x0c,0x2a,0x09,<br>
+&nbsp;&nbsp; 0x96,0x54,0xb6,0x08,0x6c,0x09,0x64,0x45,0xd4,0x0a,0xa4,0x05,0x51,0x25,<br>
+&nbsp;&nbsp; 0x95,0x0a,0x2a,0x72,0x5b,0x04,0xb6,0x04,0xac,0x52,0x6a,0x05,0xd2,0x0a,<br>
+&nbsp;&nbsp; 0xa2,0x4a,0x4a,0x05,0x55,0x94,0x2d,0x0a,0x5a,0x02,0x75,0x61,0xb5,0x02,<br>
+&nbsp;&nbsp; 0x6a,0x03,0x61,0x45,0xa9,0x0a,0x4a,0x05,0x25,0x25,0x2d,0x09,0x9a,0x68,<br>
+&nbsp;&nbsp; 0xda,0x08,0xb4,0x09,0xa8,0x59,0x54,0x03,0xa5,0x0a,0x91,0x3a,0x96,0x04,<br>
+&nbsp;&nbsp; 0xad,0xb0,0xad,0x04,0xda,0x04,0xf4,0x62,0xb4,0x05,0x54,0x0b,0x44,0x5d,<br>
+&nbsp;&nbsp; 0x52,0x0a,0x95,0x04,0x55,0x22,0x6d,0x02,0x5a,0x71,0xda,0x02,0xaa,0x05,<br>
+&nbsp;&nbsp; 0xb2,0x55,0x49,0x0b,0x4a,0x0a,0x2d,0x39,0x36,0x01,0x6d,0x80,0x6d,0x01,<br>
+&nbsp;&nbsp; 0xd9,0x02,0xe9,0x6a,0xa8,0x05,0x29,0x0b,0x9a,0x4c,0xaa,0x08,0xb6,0x08,<br>
+&nbsp;&nbsp; 0xb4,0x38,0x6c,0x09,0x54,0x75,0xd4,0x0a,0xa4,0x05,0x45,0x55,0x95,0x0a,<br>
+&nbsp;&nbsp; 0x9a,0x04,0x55,0x44,0xb5,0x04,0x6a,0x82,0x6a,0x05,0xd2,0x0a,0x92,0x6a,<br>
+&nbsp;&nbsp; 0x4a,0x05,0x55,0x0a,0x2a,0x4a,0x5a,0x02,0xb5,0x02,0xb2,0x31,0x69,0x03,<br>
+&nbsp;&nbsp; 0x31,0x73,0xa9,0x0a,0x4a,0x05,0x2d,0x55,0x2d,0x09,0x5a,0x01,0xd5,0x48,<br>
+&nbsp;&nbsp; 0xb4,0x09,0x68,0x89,0x54,0x0b,0xa4,0x0a,0xa5,0x6a,0x95,0x04,0xad,0x08,<br>
+&nbsp;&nbsp; 0x6a,0x44,0xda,0x04,0x74,0x05,0xb0,0x25,0x54,0x03<br>
+&nbsp;&nbsp; };<br>
+&nbsp;&nbsp; // 初始日，公历农历对应日期：<br>
+&nbsp;&nbsp; // 公历 1901 年 1 月 1 日，对应农历 4598 年 11 月 11 日<br>
+&nbsp;&nbsp; private static int baseYear = 1901;<br>
+&nbsp;&nbsp; private static int baseMonth = 1;<br>
+&nbsp;&nbsp; private static int baseDate = 1;<br>
+&nbsp;&nbsp; private static int baseIndex = 0;<br>
+&nbsp;&nbsp; private static int baseChineseYear = 4598-1;<br>
+&nbsp;&nbsp; private static int baseChineseMonth = 11;<br>
+&nbsp;&nbsp; private static int baseChineseDate = 11;<br>
+&nbsp;&nbsp; public int computeChineseFields() {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (gregorianYear&lt;1901 || gregorianYear&gt;2100) return 
+									1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int startYear = baseYear;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int startMonth = baseMonth;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int startDate = baseDate;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+									<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseYear = baseChineseYear; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseMonth = baseChineseMonth;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseDate = baseChineseDate;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 第二个对应日，用以提高计算效率<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 公历 2000 年 1 月 1 日，对应农历 4697 年 11 月 25 日<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (gregorianYear &gt;= 2000) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; startYear = baseYear + 99;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; startMonth = 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; startDate = 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseYear = baseChineseYear + 
+									99;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseMonth = 11;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseDate = 25;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int daysDiff = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=startYear; i&lt;gregorianYear; i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; daysDiff += 365;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (isGregorianLeapYear(i)) daysDiff 
+									+= 1; // leap year<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=startMonth; i&lt;gregorianMonth; i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; daysDiff += daysInGregorianMonth(gregorianYear,i);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; daysDiff += gregorianDate - startDate;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseDate += daysDiff;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int lastDate = daysInChineseMonth(chineseYear, chineseMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int nextMonth = nextChineseMonth(chineseYear, chineseMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; while (chineseDate&gt;lastDate) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (Math.abs(nextMonth)&lt;Math.abs(chineseMonth)) 
+									chineseYear++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseMonth = nextMonth;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseDate -= lastDate;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lastDate = daysInChineseMonth(chineseYear, 
+									chineseMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; nextMonth = nextChineseMonth(chineseYear, 
+									chineseMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 0;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; private static int[] bigLeapMonthYears = {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 大闰月的闰年年份<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 6, 14, 19, 25, 33, 36, 38, 41, 44, 52,
+									<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 55, 79,117,136,147,150,155,158,185,193<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; };<br>
+&nbsp;&nbsp; public static int daysInChineseMonth(int y, int m) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 注意：闰月 m &lt; 0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int index = y - baseChineseYear + baseIndex;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int v = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int l = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int d = 30;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (1&lt;=m &amp;&amp; m&lt;=8) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; v = chineseMonths[2*index];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; l = m - 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if ( ((v&gt;&gt;l)&amp;0x01)==1 ) d = 29;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else if (9&lt;=m &amp;&amp; m&lt;=12) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; v = chineseMonths[2*index+1];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; l = m - 9;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if ( ((v&gt;&gt;l)&amp;0x01)==1 ) d = 29;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; v = chineseMonths[2*index+1];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; v = (v&gt;&gt;4)&amp;0x0F;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (v!=Math.abs(m)) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; d = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; d = 29; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=0; 
+									i&lt;bigLeapMonthYears.length; i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									if (bigLeapMonthYears[i]==index) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									d = 30;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									break;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return d;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public static int nextChineseMonth(int y, int m) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int n = Math.abs(m) + 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (m&gt;0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int index = y - baseChineseYear 
+									+ baseIndex;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int v = chineseMonths[2*index+1];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; v = (v&gt;&gt;4)&amp;0x0F;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (v==m) n = -m;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (n==13) n = 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return n;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; private static char[][] sectionalTermMap = {<br>
+&nbsp;&nbsp; {7,6,6,6,6,6,6,6,6,5,6,6,6,5,5,6,6,5,5,5,5,5,5,5,5,4,5,5},&nbsp;
+									<br>
+&nbsp;&nbsp; {5,4,5,5,5,4,4,5,5,4,4,4,4,4,4,4,4,3,4,4,4,3,3,4,4,3,3,3},&nbsp;
+									<br>
+&nbsp;&nbsp; {6,6,6,7,6,6,6,6,5,6,6,6,5,5,6,6,5,5,5,6,5,5,5,5,4,5,5,5,5},<br>
+&nbsp;&nbsp; {5,5,6,6,5,5,5,6,5,5,5,5,4,5,5,5,4,4,5,5,4,4,4,5,4,4,4,4,5},<br>
+&nbsp;&nbsp; {6,6,6,7,6,6,6,6,5,6,6,6,5,5,6,6,5,5,5,6,5,5,5,5,4,5,5,5,5},<br>
+&nbsp;&nbsp; {6,6,7,7,6,6,6,7,6,6,6,6,5,6,6,6,5,5,6,6,5,5,5,6,5,5,5,5,4,5,5,5,5},<br>
+&nbsp;&nbsp; {7,8,8,8,7,7,8,8,7,7,7,8,7,7,7,7,6,7,7,7,6,6,7,7,6,6,6,7,7},<br>
+&nbsp;&nbsp; {8,8,8,9,8,8,8,8,7,8,8,8,7,7,8,8,7,7,7,8,7,7,7,7,6,7,7,7,6,6,7,7,7},<br>
+&nbsp;&nbsp; {8,8,8,9,8,8,8,8,7,8,8,8,7,7,8,8,7,7,7,8,7,7,7,7,6,7,7,7,7},<br>
+&nbsp;&nbsp; {9,9,9,9,8,9,9,9,8,8,9,9,8,8,8,9,8,8,8,8,7,8,8,8,7,7,8,8,8},<br>
+&nbsp;&nbsp; {8,8,8,8,7,8,8,8,7,7,8,8,7,7,7,8,7,7,7,7,6,7,7,7,6,6,7,7,7},<br>
+&nbsp;&nbsp; {7,8,8,8,7,7,8,8,7,7,7,8,7,7,7,7,6,7,7,7,6,6,7,7,6,6,6,7,7} <br>
+&nbsp;&nbsp; }; <br>
+&nbsp;&nbsp; private static char[][] sectionalTermYear = {<br>
+&nbsp;&nbsp; {13,49,85,117,149,185,201,250,250},<br>
+&nbsp;&nbsp; {13,45,81,117,149,185,201,250,250},<br>
+&nbsp;&nbsp; {13,48,84,112,148,184,200,201,250},<br>
+&nbsp;&nbsp; {13,45,76,108,140,172,200,201,250},<br>
+&nbsp;&nbsp; {13,44,72,104,132,168,200,201,250},<br>
+&nbsp;&nbsp; {5 ,33,68,96 ,124,152,188,200,201},<br>
+&nbsp;&nbsp; {29,57,85,120,148,176,200,201,250},<br>
+&nbsp;&nbsp; {13,48,76,104,132,168,196,200,201},<br>
+&nbsp;&nbsp; {25,60,88,120,148,184,200,201,250},<br>
+&nbsp;&nbsp; {16,44,76,108,144,172,200,201,250},<br>
+&nbsp;&nbsp; {28,60,92,124,160,192,200,201,250},<br>
+&nbsp;&nbsp; {17,53,85,124,156,188,200,201,250} <br>
+&nbsp;&nbsp; };<br>
+&nbsp;&nbsp; private static char[][] principleTermMap = {<br>
+&nbsp;&nbsp; {21,21,21,21,21,20,21,21,21,20,20,21,21,20,20,20,20,20,20,20,20,19,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 20,20,20,19,19,20},<br>
+&nbsp;&nbsp; {20,19,19,20,20,19,19,19,19,19,19,19,19,18,19,19,19,18,18,19,19,18,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 18,18,18,18,18,18},<br>
+&nbsp;&nbsp; {21,21,21,22,21,21,21,21,20,21,21,21,20,20,21,21,20,20,20,21,20,20,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 20,20,19,20,20,20,20},<br>
+&nbsp;&nbsp; {20,21,21,21,20,20,21,21,20,20,20,21,20,20,20,20,19,20,20,20,19,19,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 20,20,19,19,19,20,20},<br>
+&nbsp;&nbsp; {21,22,22,22,21,21,22,22,21,21,21,22,21,21,21,21,20,21,21,21,20,20,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 21,21,20,20,20,21,21},<br>
+&nbsp;&nbsp; {22,22,22,22,21,22,22,22,21,21,22,22,21,21,21,22,21,21,21,21,20,21,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 21,21,20,20,21,21,21},<br>
+&nbsp;&nbsp; {23,23,24,24,23,23,23,24,23,23,23,23,22,23,23,23,22,22,23,23,22,22,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 22,23,22,22,22,22,23},<br>
+&nbsp;&nbsp; {23,24,24,24,23,23,24,24,23,23,23,24,23,23,23,23,22,23,23,23,22,22,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 23,23,22,22,22,23,23},<br>
+&nbsp;&nbsp; {23,24,24,24,23,23,24,24,23,23,23,24,23,23,23,23,22,23,23,23,22,22,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 23,23,22,22,22,23,23},<br>
+&nbsp;&nbsp; {24,24,24,24,23,24,24,24,23,23,24,24,23,23,23,24,23,23,23,23,22,23,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 23,23,22,22,23,23,23},<br>
+&nbsp;&nbsp; {23,23,23,23,22,23,23,23,22,22,23,23,22,22,22,23,22,22,22,22,21,22,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 22,22,21,21,22,22,22},<br>
+&nbsp;&nbsp; {22,22,23,23,22,22,22,23,22,22,22,22,21,22,22,22,21,21,22,22,21,21,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 21,22,21,21,21,21,22}<br>
+&nbsp;&nbsp; };<br>
+&nbsp;&nbsp; private static char[][] principleTermYear = {<br>
+&nbsp;&nbsp; {13,45,81,113,149,185,201},&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp; {21,57,93,125,161,193,201},&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp; {21,56,88,120,152,188,200,201},<br>
+&nbsp;&nbsp; {21,49,81,116,144,176,200,201},<br>
+&nbsp;&nbsp; {17,49,77,112,140,168,200,201},<br>
+&nbsp;&nbsp; {28,60,88,116,148,180,200,201},<br>
+&nbsp;&nbsp; {25,53,84,112,144,172,200,201},<br>
+&nbsp;&nbsp; {29,57,89,120,148,180,200,201},<br>
+&nbsp;&nbsp; {17,45,73,108,140,168,200,201},<br>
+&nbsp;&nbsp; {28,60,92,124,160,192,200,201},<br>
+&nbsp;&nbsp; {16,44,80,112,148,180,200,201},<br>
+&nbsp;&nbsp; {17,53,88,120,156,188,200,201} <br>
+&nbsp;&nbsp; };<br>
+&nbsp;&nbsp; public int computeSolarTerms() {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (gregorianYear&lt;1901 || gregorianYear&gt;2100) return 
+									1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sectionalTerm = sectionalTerm(gregorianYear, gregorianMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; principleTerm = principleTerm(gregorianYear, gregorianMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 0;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public static int sectionalTerm(int y, int m) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (y&lt;1901 || y&gt;2100) return 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int index = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int ry = y-baseYear+1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; while (ry&gt;=sectionalTermYear[m-1][index]) index++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int term = sectionalTermMap[m-1][4*index+ry%4];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if ((ry == 121)&amp;&amp;(m == 4)) term = 5;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if ((ry == 132)&amp;&amp;(m == 4)) term = 5;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if ((ry == 194)&amp;&amp;(m == 6)) term = 6;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return term;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public static int principleTerm(int y, int m) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (y&lt;1901 || y&gt;2100) return 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int index = 0;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int ry = y-baseYear+1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; while (ry&gt;=principleTermYear[m-1][index]) index++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int term = principleTermMap[m-1][4*index+ry%4];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if ((ry == 171)&amp;&amp;(m == 3)) term = 21;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if ((ry == 181)&amp;&amp;(m == 5)) term = 21;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return term;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public String toString() {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; StringBuffer buf = new StringBuffer();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Gregorian Year: "+gregorianYear+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Gregorian Month: "+gregorianMonth+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Gregorian Date: "+gregorianDate+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Is Leap Year: "+isGregorianLeap+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Day of Year: "+dayOfYear+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Day of Week: "+dayOfWeek+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Chinese Year: "+chineseYear+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Heavenly Stem: "+((chineseYear-1)%10)+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Earthly Branch: "+((chineseYear-1)%12)+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Chinese Month: "+chineseMonth+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Chinese Date: "+chineseDate+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Sectional Term: "+sectionalTerm+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; buf.append("Principle Term: "+principleTerm+"\n");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return buf.toString();<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public String[] getYearTable() {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; setGregorian(gregorianYear,1,1);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; computeChineseFields();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; computeSolarTerms();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String[] table = new String[58]; // 6*9 + 4<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[0] = getTextLine(27, "公历年历："+gregorianYear);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[1] = getTextLine(27, "农历年历："+(chineseYear+1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; + " ("+stemNames[(chineseYear+1-1)%10]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; + branchNames[(chineseYear+1-1)%12]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; + " - "+animalNames[(chineseYear+1-1)%12]+"年)");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int ln = 2;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                        String blank&nbsp; =
+    "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; +"&nbsp; 
+									" + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String[] mLeft = null;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String[] mRight = null;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=1; i&lt;=6; i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[ln] = blank;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ln++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; mLeft = getMonthTable();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; mRight = getMonthTable();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int j=0; j&lt;mLeft.length; j++) 
+									{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String line = 
+									mLeft[j] + "&nbsp; " + mRight[j];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[ln] = line;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ln++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[ln] = blank;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ln++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[ln] = getTextLine(0,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "##/## - 公历日期/农历日期，(*)#月 - (闰)农历月第一天");<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ln++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return table;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public static String getTextLine(int s, String t) {<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                        String str&nbsp; =
+    "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; +"&nbsp; 
+									" + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (t!=null &amp;&amp; s&lt;str.length() &amp;&amp; s+t.length()&lt;str.length())<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; str = str.substring(0,s) + t + 
+									str.substring(s+t.length());<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return str;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; private static String[] monthNames =<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {"一","二","三","四","五","六","七","八","九","十","十一","十二"};<br>
+&nbsp;&nbsp; public String[] getMonthTable() {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; setGregorian(gregorianYear,gregorianMonth,1);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; computeChineseFields();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; computeSolarTerms();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String[] table = new String[8]; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String title&nbsp; = null;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if 
+                        (gregorianMonth&lt;11) title&nbsp; =
+     "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									";<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; else 
+                        title&nbsp; =
+    "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; title = title + monthNames[gregorianMonth-1] + "月"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									+ "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String header = "&nbsp;&nbsp; 日&nbsp;&nbsp;&nbsp; 
+									一&nbsp;&nbsp;&nbsp; 二&nbsp;&nbsp;&nbsp; 三&nbsp;&nbsp;&nbsp; 
+									四&nbsp;&nbsp;&nbsp; 五&nbsp;&nbsp;&nbsp; 六 ";<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                        String blank&nbsp; =
+    "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[0] = title;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[1] = header;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int wk = 2;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String line = "";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=1; i&lt;dayOfWeek; i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; line += "&nbsp;&nbsp;&nbsp;&nbsp; 
+									" + ' ';<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int 
+                        days =
+    daysInGregorianMonth(gregorianYear,gregorianMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=gregorianDate; i&lt;=days; i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; line += getDateString() + ' ';<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; rollUpOneDay();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (dayOfWeek==1) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[wk] = line;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; line = "";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; wk++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=dayOfWeek; i&lt;=7; i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; line += "&nbsp;&nbsp;&nbsp;&nbsp; 
+									" + ' ';<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[wk] = line;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=wk+1; i&lt;table.length; i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[i] = blank;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i=0; i&lt;table.length; i++) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; table[i] = table[i].substring(0,table[i].length()-1);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return table;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; private static String[] chineseMonthNames =<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {"正","二","三","四","五","六","七","八","九","十","冬","腊"};<br>
+&nbsp;&nbsp; private static String[] principleTermNames =<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {"大寒","雨水","春分","谷雨","夏满","夏至","大暑","处暑","秋分",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "霜降","小雪","冬至"};<br>
+&nbsp;&nbsp; private static String[] sectionalTermNames =<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {"小寒","立春","惊蛰","清明","立夏","芒种","小暑","立秋","白露",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "寒露","立冬","大雪"};<br>
+&nbsp;&nbsp; public String getDateString() {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String str = "*&nbsp; /&nbsp; ";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String gm = String.valueOf(gregorianMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (gm.length()==1) gm = ' ' + gm;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String cm = String.valueOf(Math.abs(chineseMonth));<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (cm.length()==1) cm = ' ' + cm;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String gd = String.valueOf(gregorianDate);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (gd.length()==1) gd = ' ' + gd;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String cd = String.valueOf(chineseDate);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (cd.length()==1) cd = ' ' + cd;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (gregorianDate==sectionalTerm) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; str = " "+sectionalTermNames[gregorianMonth-1];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else if (gregorianDate==principleTerm) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; str = " "+principleTermNames[gregorianMonth-1];<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else if (chineseDate==1 &amp;&amp; chineseMonth&gt;0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; str = " "+chineseMonthNames[chineseMonth-1]+"月";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else if (chineseDate==1 &amp;&amp; chineseMonth&lt;0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; str = "*"+chineseMonthNames[-chineseMonth-1]+"月";<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; str = gd+'/'+cd;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return str;<br>
+&nbsp;&nbsp; }<br>
+&nbsp;&nbsp; public int rollUpOneDay() {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dayOfWeek = dayOfWeek%7 + 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dayOfYear++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; gregorianDate++;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; int 
+                        days =
+    daysInGregorianMonth(gregorianYear,gregorianMonth);
+									<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (gregorianDate&gt;days) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; gregorianDate = 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; gregorianMonth++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (gregorianMonth&gt;12) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; gregorianMonth 
+									= 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; gregorianYear++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dayOfYear = 1;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; isGregorianLeap 
+									= isGregorianLeapYear(gregorianYear);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                        sectionalTerm =
+   sectionalTerm(gregorianYear,gregorianMonth);<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                        principleTerm =
+   principleTerm(gregorianYear,gregorianMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseDate++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; days = daysInChineseMonth(chineseYear,chineseMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (chineseDate&gt;days) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chineseDate = 1;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                        chineseMonth =
+   nextChineseMonth(chineseYear,chineseMonth);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (chineseMonth==1) chineseYear++;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 0;<br>
+&nbsp;&nbsp; }<br>
+									}<br>
+									&lt;/pre&gt;[/HTML]<br>
+									<br>
+									<b>中国二百年年历 1901 年至 2100 年</b><br>
+									<br>
+									我用上面这个程式制作了二百年年历，1901 年至 2100 年，全部收录在这本书中。 
+									<br>
+									<br>
+									年历格式说明： <br>
+									<br>
+									农历日期列在公历日期后面。 <br>
+									节气用节气名称标明。 <br>
+									农历每月第一天用月份名称标明。 <br>
+									例如，2000 年一月的表达格式如下： <br>
+									[HTML]&lt;pre&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									一月&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									<br>
+&nbsp;&nbsp; 日&nbsp;&nbsp;&nbsp; 一&nbsp;&nbsp;&nbsp; 二&nbsp;&nbsp;&nbsp; 三&nbsp;&nbsp;&nbsp; 
+									四&nbsp;&nbsp;&nbsp; 五&nbsp;&nbsp;&nbsp; 六<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+									1/25<br>
+&nbsp;2/26&nbsp; 3/27&nbsp; 4/28&nbsp; 5/29&nbsp; 立春&nbsp; 腊月&nbsp; 8/ 2<br>
+&nbsp;9/ 3 10/ 4 11/ 5 12/ 6 13/ 7 14/ 8 15/ 9<br>
+									16/10 17/11 18/12 19/13 20/14&nbsp; 雨水 22/16<br>
+									23/17 24/18 25/19 26/20 27/21 28/22 29/23<br>
+									30/24 31/25&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+									<br>
+									&lt;/pre&gt;[/HTML]<br>
+									<br>
+									其中： <br>
+									<br>
+									"1/25" - 表示公历 1 号和农历 25 号。 <br>
+									"立春" - 表示节气。 <br>
+									"腊月" - 表示农历 12 月第一天。 <br>
+									<br>
+									------<br>
+									有关中国年历算法和程式的详细注解和二百年年历，请参考<br>
+									<a href="http://www.herongyang.com/year_gb/" target="_blank" class="l2">
+									“和荣笔记 - 中国农历二百年算法及年历”</a><br>
+									-
+									<a href="http://www.herongyang.com/year_gb/" target="_blank" class="l2">
+									http://www.herongyang.com/year_gb/</a><br>
+									<br>
+									和荣 <br>
+									<br>
+									<script type="text/javascript"><!--
+google_ad_client = "pub-7390275636631344";
+google_ad_width = 728;
+google_ad_height = 90;
+google_ad_format = "728x90_as";
+google_ad_type = "text_image";
+google_ad_channel ="5095444487";
+google_color_border = "336699";
+google_color_bg = "FFFFFF";
+google_color_link = "0000FF";
+google_color_url = "008000";
+google_color_text = "000000";
+//--></script>
+									<script type="text/javascript" src="show_ads.js">
+									
+									
+									
+</script>
+									</td>
+								</tr>
+							</table>
+							</td>
+						</tr>
+						<tr>
+							<td>
+							<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center">
+								<tr>
+									<td>　</td>
+								</tr>
+							</table>
+							<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center">
+								<tr>
+									<td>　</td>
+								</tr>
+							</table>
+							<br>
+							<table bgcolor="#cccccc" cellpadding="1" cellspacing="0" border="0" width="100%" align="center">
+								<tr>
+									<td>　</td>
+								</tr>
+							</table>
+							<br>
+							</td>
+						</tr>
+					</table>
+					</td>
+				</tr>
+			</table>
+		</div>
+		</td>
+		<td width="1" bgcolor="#000000" height="180"></td>
+	</tr>
+</table>
+<table cellspacing="0" cellpadding="0" width="762" border="0" align="center">
+	<tr>
+		<td width="1" bgcolor="#000000"></td>
+		<td width="760">
+		<table cellspacing="0" cellpadding="0" width="100%" border="0">
+			<tr>
+				<td bgcolor="#995f14" height="1"></td>
+			</tr>
+			<tr>
+				<td bgcolor="#995f14" height="1"></td>
+			</tr>
+		</table>
+		</td>
+		<td width="1" bgcolor="#000000"></td>
+	</tr>
+</table>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+
+</body>
+
+</html>

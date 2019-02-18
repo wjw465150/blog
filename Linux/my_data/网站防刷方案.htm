@@ -1,0 +1,448 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>网站防刷方案</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: 宋体, Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+</style>
+
+</head>
+
+<body>
+<P class=title 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: medium/19px 'Times New Roman'; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">摘要 </STRONG>这是讲述如何防止重复请求你的网</P>
+<DIV title=1.&nbsp;访问网站所涉及环节 class=section 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium/19px 'Times New Roman'; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=titlepage>
+<H2 class=title 
+style="FONT-SIZE: 1.5em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: both; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px">1.&nbsp;访问网站所涉及环节</H2></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">简单说就是重复相同的请求</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">首先看看访问流程所设计的每个环节</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">		
+User -&gt; Browse -&gt; CDN/Proxy Cache -&gt; Web Server -&gt; App Server / fastcgi pool -&gt; Cache -&gt; Database
+		
+		</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">大部分网站都是这样的结构：用户，浏览器，CDN或反向代理，Web服务器，应用服务器，缓存，数据库</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">这个访问过程中所涉及的设备</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">		
+PC -&gt; ADSL/Cable/Ethernet -&gt; Route -&gt; ... -&gt; Route -&gt; Firewall -&gt; Load Balance -&gt; Switch -&gt; Server
+		
+		</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">我们看看从那些环节可以截获用户的刷新行为</P>
+<DIV title=可控制环节 class=orderedlist>
+<P class=title 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><STRONG 
+style="FONT-WEIGHT: bold">可控制环节</STRONG></P>
+<OL class=orderedlist 
+style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1.5em; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px">
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">CDN 
+  / 反向代理，提供一些基本防护功能，过于简单。</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">3/4层设备，防火墙/路由器/交换机，主要还是靠防火墙设备，例如Cisco 
+  ASA 系列防火墙，都提供IPS/IDS服务（需要单独采购，设备默认没有）主要是针对IP地址的请求频率做出策略控制，</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">4/7 
+  层负载均衡设备， 
+  一半负载均衡设备都附带此功能。但不是他主要的功能，没有能力购买防火墙设备的中小公司可以使用该功能，7层功能非常强大，但都是通用功能，不一定满足你的个性化需求。</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">浏览器，这是主要是改变浏览器端设置，利用Cookie变化，Javascript等技术，阻止重复请求</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">WEB 
+  服务器，在web上通过扩展模块与相应的配置也能达到一定的效果</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">应用服务器， 
+  主要是通过编写程序在阻止恶意访问。</P></LI></OL></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">依次从上至下，越能提前在上一层阻止行为越好，否则就在下一层截获。</P></DIV>
+<DIV title=2.&nbsp;浏览器款控制方案 class=section 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium/19px 'Times New Roman'; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=titlepage>
+<H2 class=title 
+style="FONT-SIZE: 1.5em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: both; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px"><A></A>2.&nbsp;浏览器款控制方案</H2></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">通过 
+Javascript 防止重复点击提交按钮，通常的做法是将按钮禁用 通过 disabled 属性实现。下面是Jquery例子</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">$("form").submit(function(){
+  $(":submit",this).attr("disabled","disabled");
+});
+		</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">在上面的例子基础上可以改良，增加计时器，限制一定时间内不可重复提交。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">通过 
+Cookie技术控制重复访问动作</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">		
+访问第一个页面 login.example.com/form.ext 的时候设置一个 cookie 变量
+访问第二个页面 login.example.com/auth.ext 的时候判断上一个页面设置的 cookie 是否有效，如果无效拒绝访问。
+		
+		</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">可以进一步增加难度，例如用户注册分为很多步骤，每一个步骤都会设置一个标记，如果用户行为不是安装顺序访问，直接在最后一个页面提交，明显可以判断是非法行为。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">这里的方案是针对人工操作，更多的时采用程序实现刷新，采集，爬虫等等。</P></DIV>
+<DIV title="3.&nbsp;CDN 与 反向代理" class=section 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium/19px 'Times New Roman'; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=titlepage>
+<H2 class=title 
+style="FONT-SIZE: 1.5em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: both; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px"><A></A>3.&nbsp;CDN 
+与 反向代理</H2></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">CDN 
+都提供一些基本的防护功能，主要是针对 IP 地址， URL 做一些限制</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">如果自己做反向代理，控制权更大，可以充分使用操作系统带的包过滤防火墙与代理软件所提供的7层功能</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">由于很多web 
+server 具备代理服务器功能，配置也相差无几，所有在后面web server 会详细介绍。</P></DIV>
+<DIV title=4.&nbsp;网络设备控制方法 class=section 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium/19px 'Times New Roman'; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=titlepage>
+<H2 class=title 
+style="FONT-SIZE: 1.5em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: both; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px"><A></A>4.&nbsp;网络设备控制方法</H2></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">每一个网络设备使用方法都不同，这里无法举例，但原理都是相同的。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">3/4 
+层网络设备可以按照IP地址与端口号访问情况做具体限制，如单位时间内允许的访问次数，这种对于大量的攻击比较有效</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">7层网络设备功能非常强大，就可以根据HTTP头做规则策略，如限制URL的单位时间访问的IP数量，判断 
+Cookie 等信息，</P></DIV>
+<DIV title=5.&nbsp;服务器上做控制 class=section 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium/19px 'Times New Roman'; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=titlepage>
+<H2 class=title 
+style="FONT-SIZE: 1.5em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: both; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px"><A></A>5.&nbsp;服务器上做控制</H2></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">这部分分为，操作系统与web服务器两个部分</P>
+<DIV title=5.1.&nbsp;操作系统部分 class=section>
+<DIV class=titlepage>
+<H3 class=title 
+style="FONT-SIZE: 1.2em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px"><A></A>5.1.&nbsp;操作系统部分</H3></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">操作系统部分，主要是通过linux内核提供的包过滤功能，通常所说的iptables</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">iptables -A INPUT -p icmp -m limit --limit 3/s -j LOG --log-level INFO --log-prefix "ICMP packet IN: "
+
+iptables -N syn-flood
+iptables -A INPUT -p tcp --syn -j syn-flood
+iptables -I syn-flood -p tcp -m limit --limit 3/s --limit-burst 6 -j RETURN
+iptables -A syn-flood -j REJECT
+			</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">限制源IP的访问数量</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">-A INPUT -p tcp -m state --state NEW -m tcp --dport 80 --tcp-flags FIN,SYN,RST,ACK SYN -m connlimit --connlimit-above 50 --connlimit-mask 32 -j REJECT --reject-with icmp-port-unreachable
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 443 --tcp-flags FIN,SYN,RST,ACK SYN -m connlimit --connlimit-above 50 --connlimit-mask 32 -j REJECT --reject-with icmp-port-unreachable
+			</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">关键字，字符串过略</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">			
+iptables -A INPUT -p tcp --dport 80 -m string --algo bm --string "XXDD0S" -j DROP
+			
+			</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">以上所讲都是被动方法，需要系统管理一条一条添加规则。</P>
+<DIV title=提示 class=tip style="MARGIN-LEFT: 0.5in; MARGIN-RIGHT: 0.5in">
+<H3 class=title 
+style="FONT-SIZE: 1.2em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px">提示</H3>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">基于IP与端口的方法有明显的不足，经常会误将某些正常的IP地址封锁。</P></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">下面通过脚本实现主动防御，通过提取 
+access.log 文件定位更精准，同时实现了黑/白名单可以将安全IP放置在白名单中。</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">			
+#!/bin/bash
+########################################
+# Homepage: http://netkiller.github.io
+# Author: neo &lt;netkiller@msn.com&gt;
+########################################
+PIPE=/tmp/pipe
+pidfile=/tmp/firewall.pid
+
+ACCCESS_LOG=/tmp/access.log
+TIMEPOINT='24/May/2012'
+BLACKLIST=/var/tmp/black.lst
+WHITELIST=/var/tmp/white.lst
+########################################
+
+if [ -z "$( egrep "CentOS|Redhat" /etc/issue)" ]; then
+	echo 'Only for Redhat or CentOS'
+	exit
+fi
+
+if [ ! -f ${BLACKLIST} ]; then
+    touch ${BLACKLIST}
+fi
+
+if [ ! -f ${WHITELIST} ]; then
+    touch ${WHITELIST}
+fi
+
+for deny in $(grep ${TIMEPOINT} ${ACCCESS_LOG} | awk '{print $1}' | awk -F'.' '{print $1"."$2"."$3"."$4}' | sort | uniq -c | sort -r -n | head -n 30| awk '{print $2}')
+do
+
+    if [ $(grep -c $deny ${WHITELIST}) -ne 0 ]; then
+        echo 'Allow IP:' $deny
+	iptables -D INPUT -p tcp --dport 443 -s $deny -j DROP
+	iptables -D INPUT -p tcp --dport 80 -s $deny -j DROP
+	continue
+    fi
+
+    if [ $(grep -c $deny ${BLACKLIST}) -eq 0 ] ; then
+
+	echo 'Deny IP:' $deny
+        echo $deny &gt;&gt; ${BLACKLIST}
+        iptables -I INPUT -p tcp --dport 443 -s $deny -j DROP
+        iptables -I INPUT -p tcp --dport 80 -s $deny -j DROP
+    fi
+done
+			
+			</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">相比前面脚本，这个脚本更高级，实现关键字过滤，管道实时处理，这样不回因为日志尺寸变大，影响到脚本的处理性能。</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">			
+#!/bin/bash
+########################################
+# Homepage: http://netkiller.github.io
+# Author: neo &lt;netkiller@msn.com&gt;
+########################################
+ACCESSLOG=/www/logs/www.example.com/access.$(date +'%Y-%m-%d').log
+TIMEPOINT='24/May/2012'
+KEYWORD=send.php
+BLACKLIST=/var/tmp/black.lst
+WHITELIST=/var/tmp/white.lst
+PIPE=/var/tmp/pipe
+pidfile=/var/tmp/firewall.pid
+logfile=/var/tmp/firewall.log
+########################################
+if [ -z "$( egrep "CentOS|Redhat" /etc/issue)" ]; then
+	echo 'Only for Redhat or CentOS'
+	exit
+fi
+
+if [ -z $1 ]; then
+    echo "$0 clear|fw|collect|process|close"
+fi
+
+if [ "$1" == "clear" ]; then
+    rm -rf $BLACKLIST
+    rm -rf $PIPE
+    echo "Clear OK!!!"
+fi
+
+if [ "$1" == "close" ]; then
+	killall tail
+    kill `cat $pidfile`
+    echo &gt; $pidfile
+fi
+
+if [ ! -e $PIPE ]; then
+    mkfifo $PIPE
+fi
+
+if [ "$1" == 'fw' ]; then
+    iptables -A OUTPUT -p tcp --dport 2049 -j REJECT
+    iptables -A OUTPUT -p tcp -m multiport --dports 22,21 -j REJECT
+
+	for ipaddr in ${WHITELIST}
+	do
+		if [ $(grep -c $ipaddr ${WHITELIST}) -ne 0 ]; then
+			iptables -A INPUT -p tcp --dport 443 -s $ipaddr -j ACCEPT
+			iptables -A INPUT -p tcp --dport 80 -s $ipaddr -j ACCEPT
+			echo 'Allow IP:' $ipaddr &gt;&gt; $logfile
+		fi
+		if [ $(grep -c $ipaddr ${BLACKLIST}) -eq 0 ] ; then
+			iptables -D INPUT -p tcp --dport 443 -s $ipaddr -j DROP
+			iptables -D INPUT -p tcp --dport 80 -s $ipaddr -j DROP
+			echo 'Deny IP:' $ipaddr
+
+		fi
+	done
+
+fi
+
+if [ "$1" == "collect" ]; then
+    killall tail
+    for (( ; ; ))
+    do
+        tail -f $ACCESSLOG | grep $KEYWORD | cut -d ' ' -f1 &gt; $PIPE
+    done &amp;
+    echo $! &gt; $pidfile
+fi
+
+if [ "$1" == "process" ]; then
+
+	if [ ! -f $BLACKLIST ]; then
+		touch $BLACKLIST
+	fi
+
+	if [ ! -f ${WHITELIST} ]; then
+		touch ${WHITELIST}
+	fi
+
+	for (( ; ; ))
+	do
+		while read ipaddr
+		do
+			if [ $(grep -c $ipaddr ${WHITELIST}) -ne 0 ]; then
+				echo 'Allow IP:' $ipaddr &gt;&gt; $logfile
+				continue
+			fi
+
+			grep $ipaddr ${BLACKLIST}
+			if [ $? -eq 1 ] ; then
+				echo $ipaddr &gt;&gt; ${BLACKLIST}
+				iptables -I INPUT -p tcp --dport 80 -s $ipaddr -j DROP
+				echo "Deny IP: $ipaddr" &gt;&gt; $logfile
+			fi
+		done &lt; $PIPE
+	done &amp;
+	echo $! &gt;&gt; $pidfile
+fi
+			
+			</PRE></DIV>
+<DIV title="5.2.&nbsp;WEB 服务器部分" class=section>
+<DIV class=titlepage>
+<H3 class=title 
+style="FONT-SIZE: 1.2em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px"><A></A>5.2.&nbsp;WEB 
+服务器部分</H3></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">下面所讲技术，适用于反向代理，负载均衡，web服务器</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">Web 
+服务器也可以实现前面所说的防火墙等设备3/4层的功能，同时具备七层功能，很多负载均衡设备7层采用web服务器实现，例如 F5 7层的高级功能是由 Apache 
+httpd 来完成（apache 是经过二次开发的）， 所以7层的部门我们主要在这里深入讨论</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">如果你有防火墙设备应该首先考虑在防火墙端做控制，如果没有防火墙那麽就考虑在负载均衡设备中做控制，这些设备你都没有，最后考虑在反向代理中处理，最后考虑web服务器。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">限制IP地址在这里可以做到更细腻的控制，例如实现某个目录的，某URL的IP访问策略。请自行查找手册或参考《Netkiller 
+Web 手札》</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">HTTP 
+协议头</P>
+<DIV title=我们要做以下几种限制 class=orderedlist>
+<P class=title 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><STRONG 
+style="FONT-WEIGHT: bold">我们要做以下几种限制</STRONG></P>
+<OL class=orderedlist 
+style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1.5em; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px">
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">限制 
+  http_referer， 常说的防盗链。</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">限制 
+  http_user_agent， 主要是防爬虫</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">限制 
+  request_method， 不是所有页面都允许 POST</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">限制 
+  http_cookie， 没有携带正确的 cookie 不允许访问</P></LI></OL></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">上面7层访问控制还是比较粗糙的，主要是给应用程序减压，更细腻的控制需要通过程序手段，实现更智能判断。 
+不过同上上面的层层限制，已经足矣改善你的状况，如果还是无效继续往下看。</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">			
+valid_referers none blocked *.example.com example.com;
+if ($invalid_referer) {
+	#rewrite ^(.*)$  http://www.example.com/cn/$1;
+	return 403;
+}		
+			
+			</PRE><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">if ($http_user_agent = "") { 
+	return 403; 
+}		
+			</PRE></DIV></DIV>
+<DIV title=6.&nbsp;通过程序控制访问行为 class=section 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium/19px 'Times New Roman'; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=titlepage>
+<H2 class=title 
+style="FONT-SIZE: 1.5em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: both; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px"><A></A>6.&nbsp;通过程序控制访问行为</H2></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">设计应用防火墙，将所有资源纳入管理范围</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">IP地址，上面已经反复强调怎样封锁IP地址，但都过于粗糙，很多时候是一刀切。在程序中实现禁止IP访问，更灵活</P>
+<DIV title=我们要做以下几种限制 class=orderedlist>
+<P class=title 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><STRONG 
+style="FONT-WEIGHT: bold">我们要做以下几种限制</STRONG></P>
+<OL class=orderedlist 
+style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1.5em; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px">
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">单位时间内访问次数</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">访问时间间隔设置</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">封锁时间设置</P>
+  <LI class=listitem 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">
+  <P 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">黑白名单</P></LI></OL></DIV><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">		</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">验证码，最常用的，最有效的方法，分为图片扭曲法，问提/答案 
+法，手机验证码，语音验证码等等方法，形式多重多样</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">http_referer， 
+虽然上面已经做了 http_referer 限制，但是web 服务器只能做粗糙限制，允许 *.example.com 
+域进行访问，但我需要更精确的控制。例如：</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">		
+www.example.com (此时 http_referer 为空，或者其他，这不重要) -&gt; login.example.com (http_referer: www.example.com)-&gt; login.example.com/auth.ext (http_referer: login.example.com) -&gt; login.example.com/secussed.ext (http_referer: login.example.com/auth.ext)
+		  
+		</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">看明白了吗 
+http_referer 每次都是上一个页面，我们程序中判断，如果上一个页面不是我们所指定的，或者不再允许列表内，就拒绝访问</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">request_method</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">		
+www.example.com (GET) -&gt; login.example.com (GET)-&gt; login.example.com/auth.ext (POST) -&gt; login.example.com/secussed.ext (GET)		
+		
+		</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">同理，在不允许的页面POST操作，将立即拒绝</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">http_cookie</P><PRE class=screen style="FONT-SIZE: 1em; FONT-FAMILY: monospace">www.example.com (cookie 1) -&gt; login.example.com (cookie 2)-&gt; login.example.com/auth.ext (cookie 3) -&gt; login.example.com/secussed.ext (cookie 4)		
+		</PRE>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">没有按照指定流程访问，cookie 
+值不会变化，属于异常行为</P>cookie + redis 间隔时间
+<DIV title=提示 class=tip style="MARGIN-LEFT: 0.5in; MARGIN-RIGHT: 0.5in">
+<H3 class=title 
+style="FONT-SIZE: 1.2em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px">提示</H3>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">上面所有的操作都将计入日志，通过脚本可以将异常访问行文达到一定次数后，放入iptables 
+DROP链中。</P></DIV></DIV>
+<DIV title=7.&nbsp;总结 class=section 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: medium/19px 'Times New Roman'; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=titlepage>
+<H2 class=title 
+style="FONT-SIZE: 1.5em; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: both; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px"><A></A>7.&nbsp;总结</H2></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">上面提方法单一使用过于简单，需要组合使用，同时经常调整组合方式才能更有效阻止各种良性与恶性网站访问行为。</P></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: medium/19px 'Times New Roman'; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P></body>
+</html>

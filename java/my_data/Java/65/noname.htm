@@ -1,0 +1,460 @@
+﻿<html>
+<title>谈一个关于final的不一致编译的低级错误</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<body>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >之前有很多前辈写过我们经常犯的一些低级错误：</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    ><a href="http://www.iteye.com/topic/1114143" style="FONT-SIZE: 14px; TEXT-DECORATION: none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); TEXT-ALIGN: center; LINE-HEIGHT: 21px; BACKGROUND-COLOR: rgb(222,227,231)"     >一个隐形的java int溢出</a></p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    ><a href="http://www.iteye.com/topic/1122152" style="FONT-SIZE: 14px; TEXT-DECORATION: none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); TEXT-ALIGN: center; LINE-HEIGHT: 21px; BACKGROUND-COLOR: rgb(222,227,231)"     >竟然犯下这种低级错误，羞愧难当啊！！！</a></p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >在此我再补充一个，好时刻提醒自我保持清醒！ 这个是关于final变量的，有时候我们可能定义一些常量类 这里边存放了我们定义的一些常量，有时候我们可能修改，修改后有时候为了简单 仅仅把这个类编译后 部署到服务器，此时我们可能看到的还是老的数据。这是因为final变量的编译期优化造成的，所有使用final变量的位置会通过值副本替换 而不是引用。测试场景Hotspot1.6</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<div class="dp-highlighter" style="WORD-WRAP: break-word; WIDTH: 766px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: auto; OVERFLOW-Y: auto; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"               >
+  <div class="bar">
+    <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px"       >Java代码
+      <div style="CURSOR: pointer; HEIGHT: 15px; WIDTH: 14px; POSITION: static; TEXT-ALIGN: center; LEFT: auto; DISPLAY: block; TOP: auto" >
+        <div style="BORDER-TOP: rgb(0,0,0) 1px solid; HEIGHT: 15px; BORDER-RIGHT: rgb(0,0,0) 1px solid; WIDTH: 14px; BACKGROUND-IMAGE: url(chrome-extension://gofhjkjmkpinhpoiabjplobcaignabnl/icon_play.png); BORDER-BOTTOM: rgb(0,0,0) 1px solid; TEXT-ALIGN: left; BORDER-LEFT: rgb(0,0,0) 1px solid; border-image: initial; opacity: 0.25; -webkit-transition-property: opacity; -webkit-transition-duration: 150ms; -webkit-transition-timing-function: ease-out; -webkit-transition-delay: initial"                         ></div>
+      </div>
+      &nbsp;<A onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 style ="TEXT-DECORATION: underline; COLOR: rgb(0,102,153)" href  ="javascript:void()" ><IMG class=star style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BORDER-BOTTOM-WIDTH: 0px; BORDER-TOP-WIDTH: 0px; border-image: initial" alt      =收藏代码 src="icon_star.png" ></a></div>
+  </div>
+  <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); border-image: initial"                              >
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" ><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >class</span><span style="COLOR: black" 
+ >&nbsp;A&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="COLOR: rgb(0,130,0)"   >//网站的管理员ID</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >static</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >final</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >int</span><span style="COLOR: black" 
+ >&nbsp;ADMIN_ID&nbsp;=&nbsp;</span><span class="number" style="COLOR: rgb(192,0,0)"   >10000001</span><span style="COLOR: black" >;&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >}&nbsp;&nbsp;</span></li>
+  </ol>
+</div>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<div class="dp-highlighter" style="WORD-WRAP: break-word; WIDTH: 766px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: auto; OVERFLOW-Y: auto; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"               >
+  <div class="bar">
+    <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px"       >Java代码
+      <div style="CURSOR: pointer; HEIGHT: 15px; WIDTH: 14px; POSITION: static; TEXT-ALIGN: center; LEFT: auto; DISPLAY: block; TOP: auto" >
+        <div style="BORDER-TOP: rgb(0,0,0) 1px solid; HEIGHT: 15px; BORDER-RIGHT: rgb(0,0,0) 1px solid; WIDTH: 14px; BACKGROUND-IMAGE: url(chrome-extension://gofhjkjmkpinhpoiabjplobcaignabnl/icon_play.png); BORDER-BOTTOM: rgb(0,0,0) 1px solid; TEXT-ALIGN: left; BORDER-LEFT: rgb(0,0,0) 1px solid; border-image: initial; opacity: 0.25; -webkit-transition-property: opacity; -webkit-transition-duration: 150ms; -webkit-transition-timing-function: ease-out; -webkit-transition-delay: initial"                         ></div>
+      </div>
+      &nbsp;<A onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 style ="TEXT-DECORATION: underline; COLOR: rgb(0,102,153)" href  ="javascript:void()" ><IMG class=star style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BORDER-BOTTOM-WIDTH: 0px; BORDER-TOP-WIDTH: 0px; border-image: initial" alt      =收藏代码 src="icon_star.png" ></a></div>
+  </div>
+  <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); border-image: initial"                              >
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" ><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >class</span><span style="COLOR: black" 
+ >&nbsp;B&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >static</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >void</span><span style="COLOR: black" 
+ >&nbsp;main(String[]&nbsp;args)&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >int</span><span style="COLOR: black" 
+ >&nbsp;adminId&nbsp;=&nbsp;A.ADMIN_ID;&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(adminId);&nbsp;&nbsp;</span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >}&nbsp;&nbsp;</span></li>
+  </ol>
+</div>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >此时通过</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >javac *.java 编译所有类；</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >java B 运行结果是没有问题的。</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >接下来A的ADMIN_ID变了，我修改为10000002</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<div class="dp-highlighter" style="WORD-WRAP: break-word; WIDTH: 766px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: auto; OVERFLOW-Y: auto; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"               >
+  <div class="bar">
+    <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px"       >Java代码
+      <div style="CURSOR: pointer; HEIGHT: 15px; WIDTH: 14px; POSITION: static; TEXT-ALIGN: center; LEFT: auto; DISPLAY: block; TOP: auto" >
+        <div style="BORDER-TOP: rgb(0,0,0) 1px solid; HEIGHT: 15px; BORDER-RIGHT: rgb(0,0,0) 1px solid; WIDTH: 14px; BACKGROUND-IMAGE: url(chrome-extension://gofhjkjmkpinhpoiabjplobcaignabnl/icon_play.png); BORDER-BOTTOM: rgb(0,0,0) 1px solid; TEXT-ALIGN: left; BORDER-LEFT: rgb(0,0,0) 1px solid; border-image: initial; opacity: 0.25; -webkit-transition-property: opacity; -webkit-transition-duration: 150ms; -webkit-transition-timing-function: ease-out; -webkit-transition-delay: initial"                         ></div>
+      </div>
+      &nbsp;<A onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 style ="TEXT-DECORATION: underline; COLOR: rgb(0,102,153)" href  ="javascript:void()" ><IMG class=star style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BORDER-BOTTOM-WIDTH: 0px; BORDER-TOP-WIDTH: 0px; border-image: initial" alt      =收藏代码 src="icon_star.png" ></a></div>
+  </div>
+  <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); border-image: initial"                              >
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" ><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >static</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >final</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >int</span><span style="COLOR: black" 
+ >&nbsp;ADMIN_ID&nbsp;=&nbsp;</span><span class="number" style="COLOR: rgb(192,0,0)"   >10000002</span><span style="COLOR: black" >;&nbsp;&nbsp;</span></span></li>
+  </ol>
+</div>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >javac A.java 编译A类；</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >Java B &nbsp;运行结果还是10000001。</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >此时我们通过javap -verbose B 查看B的字节码</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<div class="dp-highlighter" style="WORD-WRAP: break-word; WIDTH: 766px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: auto; OVERFLOW-Y: auto; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"               >
+  <div class="bar">
+    <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px"       >Java代码
+      <div style="CURSOR: pointer; HEIGHT: 15px; WIDTH: 14px; POSITION: static; TEXT-ALIGN: center; LEFT: auto; DISPLAY: block; TOP: auto" >
+        <div style="BORDER-TOP: rgb(0,0,0) 1px solid; HEIGHT: 15px; BORDER-RIGHT: rgb(0,0,0) 1px solid; WIDTH: 14px; BACKGROUND-IMAGE: url(chrome-extension://gofhjkjmkpinhpoiabjplobcaignabnl/icon_play.png); BORDER-BOTTOM: rgb(0,0,0) 1px solid; TEXT-ALIGN: left; BORDER-LEFT: rgb(0,0,0) 1px solid; border-image: initial; opacity: 0.25; -webkit-transition-property: opacity; -webkit-transition-duration: 150ms; -webkit-transition-timing-function: ease-out; -webkit-transition-delay: initial"                         ></div>
+      </div>
+      &nbsp;<A onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 style ="TEXT-DECORATION: underline; COLOR: rgb(0,102,153)" href  ="javascript:void()" ><IMG class=star style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BORDER-BOTTOM-WIDTH: 0px; BORDER-TOP-WIDTH: 0px; border-image: initial" alt      =收藏代码 src="icon_star.png" ></a></div>
+  </div>
+  <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); border-image: initial"                              >
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" ><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >static</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >void</span><span style="COLOR: black" 
+ >&nbsp;main(java.lang.String[]);&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;Code:&nbsp;&nbsp;</span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;Stack=<span class="number" style="COLOR: rgb(192,0,0)"   >2</span><span style="COLOR: black" >,&nbsp;Locals=</span><span class="number" style="COLOR: rgb(192,0,0)"   >2</span><span style="COLOR: black" >,&nbsp;Args_size=</span><span class="number" style="COLOR: rgb(192,0,0)"   >1</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >0</span><span style="COLOR: black" 
+ >:&nbsp;&nbsp;&nbsp;ldc&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#</span><span class="number" style="COLOR: rgb(192,0,0)"   >2</span><span style="COLOR: black" >;&nbsp;</span><span class="comment" style="COLOR: rgb(0,130,0)" 
+   >//int&nbsp;10000001</span><span style="COLOR: black" 
+ >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >2</span><span style="COLOR: black" 
+ >:&nbsp;&nbsp;&nbsp;istore_1&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >3</span><span style="COLOR: black" 
+ >:&nbsp;&nbsp;&nbsp;getstatic&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#</span><span class="number" style="COLOR: rgb(192,0,0)"   >3</span><span style="COLOR: black" >;&nbsp;</span><span class="comment" style="COLOR: rgb(0,130,0)" 
+   >//Field&nbsp;java/lang/System.out:Ljava/io/PrintStream;</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >6</span><span style="COLOR: black" 
+ >:&nbsp;&nbsp;&nbsp;iload_1&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >7</span><span style="COLOR: black" 
+ >:&nbsp;&nbsp;&nbsp;invokevirtual&nbsp;&nbsp;&nbsp;#</span><span class="number" style="COLOR: rgb(192,0,0)"   >4</span><span style="COLOR: black" >;&nbsp;</span><span class="comment" style="COLOR: rgb(0,130,0)" 
+   >//Method&nbsp;java/io/PrintStream.println:(I)V</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >10</span><span style="COLOR: black" >:&nbsp;&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >return</span><span style="COLOR: black" 
+ >&nbsp;&nbsp;</span></span></li>
+  </ol>
+</div>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;此时我们看到ldc #2;//int 10000001 没有变，到此我们知道原因了，这是编译的优化造成的。</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >怎么解决呢？</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >1、把所有相关类编译部署；</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >2、通过如下方案解决：</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<div class="dp-highlighter" style="WORD-WRAP: break-word; WIDTH: 766px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: auto; OVERFLOW-Y: auto; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"               >
+  <div class="bar">
+    <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px"       >Java代码
+      <div style="CURSOR: pointer; HEIGHT: 15px; WIDTH: 14px; POSITION: static; TEXT-ALIGN: center; LEFT: auto; DISPLAY: block; TOP: auto" >
+        <div style="BORDER-TOP: rgb(0,0,0) 1px solid; HEIGHT: 15px; BORDER-RIGHT: rgb(0,0,0) 1px solid; WIDTH: 14px; BACKGROUND-IMAGE: url(chrome-extension://gofhjkjmkpinhpoiabjplobcaignabnl/icon_play.png); BORDER-BOTTOM: rgb(0,0,0) 1px solid; TEXT-ALIGN: left; BORDER-LEFT: rgb(0,0,0) 1px solid; border-image: initial; opacity: 0.25; -webkit-transition-property: opacity; -webkit-transition-duration: 150ms; -webkit-transition-timing-function: ease-out; -webkit-transition-delay: initial"                         ></div>
+      </div>
+      &nbsp;<A onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 style ="TEXT-DECORATION: underline; COLOR: rgb(0,102,153)" href  ="javascript:void()" ><IMG class=star style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BORDER-BOTTOM-WIDTH: 0px; BORDER-TOP-WIDTH: 0px; border-image: initial" alt      =收藏代码 src="icon_star.png" ></a></div>
+  </div>
+  <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); border-image: initial"                              >
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" ><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >class</span><span style="COLOR: black" 
+ >&nbsp;A&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="COLOR: rgb(0,130,0)"   >//网站的管理员ID</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >static</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >final</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >int</span><span style="COLOR: black" 
+ >&nbsp;ADMIN_ID;&nbsp;&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >static</span><span style="COLOR: black" 
+ >&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ADMIN_ID&nbsp;=&nbsp;<span class="number" style="COLOR: rgb(192,0,0)" 
+   >10000003</span><span style="COLOR: black" 
+ >;&nbsp;&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >}&nbsp;&nbsp;</span></li>
+  </ol>
+</div>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;此时ADMIN_ID的初始化 放在static初始化块中，编译期不会发生优化。再查看B类字节码，发现是通过getstatic获取常量的：</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<div class="dp-highlighter" style="WORD-WRAP: break-word; WIDTH: 766px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: auto; OVERFLOW-Y: auto; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"               >
+  <div class="bar">
+    <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px"       >Java代码
+      <div style="CURSOR: pointer; HEIGHT: 15px; WIDTH: 14px; POSITION: static; TEXT-ALIGN: center; LEFT: auto; DISPLAY: block; TOP: auto" >
+        <div style="BORDER-TOP: rgb(0,0,0) 1px solid; HEIGHT: 15px; BORDER-RIGHT: rgb(0,0,0) 1px solid; WIDTH: 14px; BACKGROUND-IMAGE: url(chrome-extension://gofhjkjmkpinhpoiabjplobcaignabnl/icon_play.png); BORDER-BOTTOM: rgb(0,0,0) 1px solid; TEXT-ALIGN: left; BORDER-LEFT: rgb(0,0,0) 1px solid; border-image: initial; opacity: 0.25; -webkit-transition-property: opacity; -webkit-transition-duration: 150ms; -webkit-transition-timing-function: ease-out; -webkit-transition-delay: initial"                         ></div>
+      </div>
+      &nbsp;<A onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 style ="TEXT-DECORATION: underline; COLOR: rgb(0,102,153)" href  ="javascript:void()" ><IMG class=star style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BORDER-BOTTOM-WIDTH: 0px; BORDER-TOP-WIDTH: 0px; border-image: initial" alt      =收藏代码 src="icon_star.png" ></a></div>
+  </div>
+  <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); border-image: initial"                              >
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" ><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >static</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >void</span><span style="COLOR: black" 
+ >&nbsp;main(java.lang.String[]);&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;Code:&nbsp;&nbsp;</span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;Stack=<span class="number" style="COLOR: rgb(192,0,0)"   >2</span><span style="COLOR: black" >,&nbsp;Locals=</span><span class="number" style="COLOR: rgb(192,0,0)"   >2</span><span style="COLOR: black" >,&nbsp;Args_size=</span><span class="number" style="COLOR: rgb(192,0,0)"   >1</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >0</span><span style="COLOR: black" 
+ >:&nbsp;&nbsp;&nbsp;getstatic&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#</span><span class="number" style="COLOR: rgb(192,0,0)"   >2</span><span style="COLOR: black" >;&nbsp;</span><span class="comment" style="COLOR: rgb(0,130,0)" 
+   >//Field&nbsp;A.ADMIN_ID:I</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >3</span><span style="COLOR: black" 
+ >:&nbsp;&nbsp;&nbsp;istore_1&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >4</span><span style="COLOR: black" 
+ >:&nbsp;&nbsp;&nbsp;getstatic&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#</span><span class="number" style="COLOR: rgb(192,0,0)"   >3</span><span style="COLOR: black" >;&nbsp;</span><span class="comment" style="COLOR: rgb(0,130,0)" 
+   >//Field&nbsp;java/lang/System.out:Ljava/io/PrintStream;</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >7</span><span style="COLOR: black" 
+ >:&nbsp;&nbsp;&nbsp;iload_1&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >8</span><span style="COLOR: black" 
+ >:&nbsp;&nbsp;&nbsp;invokevirtual&nbsp;&nbsp;&nbsp;#</span><span class="number" style="COLOR: rgb(192,0,0)"   >4</span><span style="COLOR: black" >;&nbsp;</span><span class="comment" style="COLOR: rgb(0,130,0)" 
+   >//Method&nbsp;java/io/PrintStream.println:(I)V</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;<span class="number" style="COLOR: rgb(192,0,0)"   >11</span><span style="COLOR: black" >:&nbsp;&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >return</span><span style="COLOR: black" 
+ >&nbsp;&nbsp;</span></span></li>
+  </ol>
+</div>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >同理 对应final实例变量/局部变量也是有这个问题的：</p>
+<div class="dp-highlighter" style="WORD-WRAP: break-word; WIDTH: 766px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: auto; OVERFLOW-Y: auto; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"               >
+  <div class="bar">
+    <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px"       >Java代码
+      <div style="CURSOR: pointer; HEIGHT: 15px; WIDTH: 14px; POSITION: static; TEXT-ALIGN: center; LEFT: auto; DISPLAY: block; TOP: auto" >
+        <div style="BORDER-TOP: rgb(0,0,0) 1px solid; HEIGHT: 15px; BORDER-RIGHT: rgb(0,0,0) 1px solid; WIDTH: 14px; BACKGROUND-IMAGE: url(chrome-extension://gofhjkjmkpinhpoiabjplobcaignabnl/icon_play.png); BORDER-BOTTOM: rgb(0,0,0) 1px solid; TEXT-ALIGN: left; BORDER-LEFT: rgb(0,0,0) 1px solid; border-image: initial; opacity: 0.25; -webkit-transition-property: opacity; -webkit-transition-duration: 150ms; -webkit-transition-timing-function: ease-out; -webkit-transition-delay: initial"                         ></div>
+      </div>
+      &nbsp;<A onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 style ="TEXT-DECORATION: underline; COLOR: rgb(0,102,153)" href  ="javascript:void()" ><IMG class=star style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BORDER-BOTTOM-WIDTH: 0px; BORDER-TOP-WIDTH: 0px; border-image: initial" alt      =收藏代码 src="icon_star.png" ></a></div>
+  </div>
+  <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); border-image: initial"                              >
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" ><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >class</span><span style="COLOR: black" 
+ >&nbsp;C&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="COLOR: rgb(0,130,0)"   >//网站的管理员ID</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >final</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >int</span><span style="COLOR: black" 
+ >&nbsp;ADMIN_ID&nbsp;=&nbsp;</span><span class="number" style="COLOR: rgb(192,0,0)"   >10000001</span><span style="COLOR: black" >;&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >}&nbsp;&nbsp;</span></li>
+  </ol>
+</div>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<div class="dp-highlighter" style="WORD-WRAP: break-word; WIDTH: 766px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: auto; OVERFLOW-Y: auto; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"               >
+  <div class="bar">
+    <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px"       >Java代码
+      <div style="CURSOR: pointer; HEIGHT: 15px; WIDTH: 14px; POSITION: static; TEXT-ALIGN: center; LEFT: auto; DISPLAY: block; TOP: auto" >
+        <div style="BORDER-TOP: rgb(0,0,0) 1px solid; HEIGHT: 15px; BORDER-RIGHT: rgb(0,0,0) 1px solid; WIDTH: 14px; BACKGROUND-IMAGE: url(chrome-extension://gofhjkjmkpinhpoiabjplobcaignabnl/icon_play.png); BORDER-BOTTOM: rgb(0,0,0) 1px solid; TEXT-ALIGN: left; BORDER-LEFT: rgb(0,0,0) 1px solid; border-image: initial; opacity: 0.25; -webkit-transition-property: opacity; -webkit-transition-duration: 150ms; -webkit-transition-timing-function: ease-out; -webkit-transition-delay: initial"                         ></div>
+      </div>
+      &nbsp;<A onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 style ="TEXT-DECORATION: underline; COLOR: rgb(0,102,153)" href  ="javascript:void()" ><IMG class=star style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BORDER-BOTTOM-WIDTH: 0px; BORDER-TOP-WIDTH: 0px; border-image: initial" alt      =收藏代码 src="icon_star.png" ></a></div>
+  </div>
+  <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); border-image: initial"                              >
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" ><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >class</span><span style="COLOR: black" 
+ >&nbsp;D&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >static</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >void</span><span style="COLOR: black" 
+ >&nbsp;main(String[]&nbsp;args)&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >int</span><span style="COLOR: black" 
+ >&nbsp;adminId&nbsp;=&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >new</span><span style="COLOR: black" 
+ >&nbsp;C().ADMIN_ID;&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(adminId);&nbsp;&nbsp;</span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >}&nbsp;&nbsp;</span></li>
+  </ol>
+</div>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >我们仅需要将C改为：</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<div class="dp-highlighter" style="WORD-WRAP: break-word; WIDTH: 766px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: auto; OVERFLOW-Y: auto; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"               >
+  <div class="bar">
+    <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px"       >Java代码
+      <div style="CURSOR: pointer; HEIGHT: 15px; WIDTH: 14px; POSITION: static; TEXT-ALIGN: center; LEFT: auto; DISPLAY: block; TOP: auto" >
+        <div style="BORDER-TOP: rgb(0,0,0) 1px solid; HEIGHT: 15px; BORDER-RIGHT: rgb(0,0,0) 1px solid; WIDTH: 14px; BACKGROUND-IMAGE: url(chrome-extension://gofhjkjmkpinhpoiabjplobcaignabnl/icon_play.png); BORDER-BOTTOM: rgb(0,0,0) 1px solid; TEXT-ALIGN: left; BORDER-LEFT: rgb(0,0,0) 1px solid; border-image: initial; opacity: 0.25; -webkit-transition-property: opacity; -webkit-transition-duration: 150ms; -webkit-transition-timing-function: ease-out; -webkit-transition-delay: initial"                         ></div>
+      </div>
+      &nbsp;<A onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 style ="TEXT-DECORATION: underline; COLOR: rgb(0,102,153)" href  ="javascript:void()" ><IMG class=star style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BORDER-BOTTOM-WIDTH: 0px; BORDER-TOP-WIDTH: 0px; border-image: initial" alt      =收藏代码 src="icon_star.png" ></a></div>
+  </div>
+  <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); border-image: initial"                              >
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" ><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >class</span><span style="COLOR: black" 
+ >&nbsp;C&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="COLOR: rgb(0,130,0)"   >//网站的管理员ID</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >final</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >int</span><span style="COLOR: black" 
+ >&nbsp;ADMIN_ID;&nbsp;&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;&nbsp;</span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ADMIN_ID&nbsp;=&nbsp;<span class="number" style="COLOR: rgb(192,0,0)" 
+   >10000001</span><span style="COLOR: black" 
+ >;&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >}&nbsp;&nbsp;</span></li>
+  </ol>
+</div>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;或<span style="WHITE-SPACE: pre" > </span></p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<div class="dp-highlighter" style="WORD-WRAP: break-word; WIDTH: 766px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: auto; OVERFLOW-Y: auto; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"               >
+  <div class="bar">
+    <div class="tools" style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px"       >Java代码
+      <div style="CURSOR: pointer; HEIGHT: 15px; WIDTH: 14px; POSITION: static; TEXT-ALIGN: center; LEFT: auto; DISPLAY: block; TOP: auto" >
+        <div style="BORDER-TOP: rgb(0,0,0) 1px solid; HEIGHT: 15px; BORDER-RIGHT: rgb(0,0,0) 1px solid; WIDTH: 14px; BACKGROUND-IMAGE: url(chrome-extension://gofhjkjmkpinhpoiabjplobcaignabnl/icon_play.png); BORDER-BOTTOM: rgb(0,0,0) 1px solid; TEXT-ALIGN: left; BORDER-LEFT: rgb(0,0,0) 1px solid; border-image: initial; opacity: 0.25; -webkit-transition-property: opacity; -webkit-transition-duration: 150ms; -webkit-transition-timing-function: ease-out; -webkit-transition-delay: initial"                         ></div>
+      </div>
+      &nbsp;<A onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 style ="TEXT-DECORATION: underline; COLOR: rgb(0,102,153)" href  ="javascript:void()" ><IMG class=star style="BORDER-LEFT-WIDTH: 0px; BORDER-RIGHT-WIDTH: 0px; BORDER-BOTTOM-WIDTH: 0px; BORDER-TOP-WIDTH: 0px; border-image: initial" alt      =收藏代码 src="icon_star.png" ></a></div>
+  </div>
+  <ol class="dp-j" style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); border-image: initial"                              >
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" ><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >class</span><span style="COLOR: black" 
+ >&nbsp;C&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment" style="COLOR: rgb(0,130,0)"   >//网站的管理员ID</span><span style="COLOR: black" >&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >final</span><span style="COLOR: black" 
+ >&nbsp;</span><span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >int</span><span style="COLOR: black" 
+ >&nbsp;ADMIN_ID;&nbsp;&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword" style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+   >public</span><span style="COLOR: black" 
+ >&nbsp;C()&nbsp;{&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ADMIN_ID&nbsp;=&nbsp;<span class="number" style="COLOR: rgb(192,0,0)" 
+   >10000001</span><span style="COLOR: black" 
+ >;&nbsp;&nbsp;</span></span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+    <li style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+          ><span style="COLOR: black" 
+ >}&nbsp;&nbsp;</span></li>
+  </ol>
+</div>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >===========================================================================================</p>
+<p style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"                    >&nbsp;</p>
+</body>
+</htm>

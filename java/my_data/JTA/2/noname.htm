@@ -1,0 +1,500 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+<HTML dir=ltr xml:lang="zh-CN" 
+xmlns="http://www.w3.org/1999/xhtml"><HEAD><title>使用Atomikos Transactions Essentials实现多数据源JTA分布式事务</title><LINK 
+rel="shortcut icon" type=image/x-icon href="favicon.ico"><LINK 
+title=JavaEye论坛 rel=alternate type=application/rss+xml 
+href="Java"><LINK title=JavaEye rel=search 
+type=application/opensearchdescription+xml href="open_search.xml"><LINK 
+rel=stylesheet type=text/css 
+href="forum.css_1282112056" media=screen>
+<LINK rel=stylesheet type=text/css 
+href="SyntaxHighlighter.css_1268040798" 
+media=screen>
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</HEAD>
+
+<BODY>
+
+<DIV id=page>
+
+<DIV id=content class=clearfix>
+
+<DIV id=main>
+
+<TABLE id=forum_main cellSpacing=1>
+
+<TBODY id=posts>
+
+<TR id=374525>
+
+<TD class=postcontent>
+
+<DIV class="postbody clearfix"><!--StartFragment-->
+<P>最近做的project中遇到要将数据库中的表分布到两台不同的服务器上的Mysql5.0中，project主要使用spring+ibatis。因此需要JTA的支持，但是tomcat不支持，所以就搜索开源的JTA实现。<BR>最开始使用的是JOTM，但是使用中不能自动rollback，无论什么情况都commit。然后看到infoq上一篇文章提到Atomikos 
+Transactions Essentials，Atomikos Transactions Essentials 3.0是Atomikos 
+开发的核心事务引擎，支持JDBC 以及JMS 的JTA/XA 事务。易于部署，轻量级，同时支持JDBC 以及JMS 。<BR>Atomikos 
+Transactions Essentials现在的版本是3.1.7,可以在<A 
+href="http://www.atomikos.com/Main/TransactionsEssentialsDownloadForm" 
+target=_blank>http://www.atomikos.com/Main/TransactionsEssentialsDownloadForm</A> 
+下载，在发布包里的examples文件夹下面有些例子，非常实用，我在使用中参考里面的例子很容易配置成功。先将发布包里面dist目录下的atomikos-util.jar，transactions.jar，transactions-api.jar，transactions-jta.jar 
+copy到项目lib里面， 
+如果使用hibernate则需要将另外两个hibernate相关的jar页copy到项目里面，spring配置文件如下:<BR></P>
+<DIV class=code_title>xml 代码</DIV>
+<DIV class=dp-highlighter>
+<DIV class=bar>&nbsp;</DIV>
+<OL class=dp-xml>
+<LI class=alt><SPAN><SPAN class=comments>&lt;!--&nbsp;第一个数据库&nbsp;--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN><SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>bean</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>id</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"dataSource"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>class</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"com.atomikos.jdbc.SimpleDataSourceBean"</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>init-method</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"init"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>destroy-method</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"close"</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"uniqueResourceName"</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>value</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>mysql/main</SPAN> <SPAN class=tag>&lt;/</SPAN> 
+<SPAN class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"xaDataSourceClassName"</SPAN> <SPAN class=tag>&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=comments>&lt;!--&nbsp;使用Mysql&nbsp;XADataSource(mysql&gt;=5.0,&nbsp;Connector/J&gt;=5.0才可以支持XADatasource)--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>value</SPAN> 
+<SPAN class=tag>&gt;</SPAN> 
+<SPAN>com.mysql.jdbc.jdbc2.optional.MysqlXADataSource</SPAN> <SPAN 
+class=tag>&lt;/</SPAN> <SPAN class=tag-name>value</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"xaDataSourceProperties"</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN 
+class=attribute>URL</SPAN> <SPAN>=${jdbc.url};</SPAN> <SPAN 
+class=attribute>user</SPAN> <SPAN>=${jdbc.username};</SPAN> <SPAN 
+class=attribute>password</SPAN> <SPAN>=${jdbc.password}</SPAN> <SPAN 
+class=tag>&lt;/</SPAN> <SPAN class=tag-name>value</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"exclusiveConnectionMode"</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>value</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>true</SPAN> <SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"connectionPoolSize"</SPAN> <SPAN class=tag>&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>3</SPAN> <SPAN 
+class=tag>&lt;/</SPAN> <SPAN class=tag-name>value</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"validatingQuery"</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>value</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>SELECT&nbsp;1</SPAN> <SPAN class=tag>&lt;/</SPAN> 
+<SPAN class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN><SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>bean</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN><SPAN class=comments>&lt;!--&nbsp;第二个数据库&nbsp;--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN><SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>bean</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>id</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"dataSourceB"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>class</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"com.atomikos.jdbc.SimpleDataSourceBean"</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>init-method</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"init"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>destroy-method</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"close"</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"uniqueResourceName"</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>value</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>mysql/news</SPAN> <SPAN class=tag>&lt;/</SPAN> 
+<SPAN class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"xaDataSourceClassName"</SPAN> <SPAN class=tag>&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=comments>&lt;!--&nbsp;使用Mysql&nbsp;XADataSource(mysql&gt;=5.0,&nbsp;Connector/J&gt;=5.0才可以支持XADatasource)--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>value</SPAN> 
+<SPAN class=tag>&gt;</SPAN> 
+<SPAN>com.mysql.jdbc.jdbc2.optional.MysqlXADataSource</SPAN> <SPAN 
+class=tag>&lt;/</SPAN> <SPAN class=tag-name>value</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"xaDataSourceProperties"</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN 
+class=attribute>URL</SPAN> <SPAN>=${jdbc.url.b};</SPAN> <SPAN 
+class=attribute>user</SPAN> <SPAN>=${jdbc.username.b};</SPAN> <SPAN 
+class=attribute>password</SPAN> <SPAN>=${jdbc.password.b}</SPAN> <SPAN 
+class=tag>&lt;/</SPAN> <SPAN class=tag-name>value</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"exclusiveConnectionMode"</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>value</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>true</SPAN> <SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"connectionPoolSize"</SPAN> <SPAN class=tag>&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>3</SPAN> <SPAN 
+class=tag>&lt;/</SPAN> <SPAN class=tag-name>value</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"validatingQuery"</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>value</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>SELECT&nbsp;1</SPAN> <SPAN class=tag>&lt;/</SPAN> 
+<SPAN class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN><SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>bean</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;</SPAN> 
+<LI><SPAN>&nbsp;&nbsp;</SPAN> 
+<LI class=alt><SPAN><SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>bean</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>id</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"lobHandler"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>class</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"org.springframework.jdbc.support.lob.DefaultLobHandler"</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN> 
+<LI class=alt><SPAN><SPAN 
+class=comments>&lt;!--&nbsp;第一个数据库的sqlMapClient&nbsp;--&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN><SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>bean</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>id</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"sqlMapClient"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>class</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"org.springframework.orm.ibatis.SqlMapClientFactoryBean"</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"configLocation"</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comments>&lt;!--&nbsp;包含第一个数据库表的map&nbsp;--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> 
+<SPAN>classpath:/sqlmap-config.xml</SPAN> <SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"dataSource"</SPAN> <SPAN>&nbsp;</SPAN> 
+<SPAN class=attribute>ref</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"dataSource"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"lobHandler"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>ref</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"lobHandler"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN><SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>bean</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN><SPAN class=comments>&lt;!--&nbsp;第二个数据库的sqlMapClient&nbsp;--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN><SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>bean</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>id</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"sqlMapClientB"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>class</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"org.springframework.orm.ibatis.SqlMapClientFactoryBean"</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"configLocation"</SPAN> <SPAN class=tag>&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=comments>&lt;!--&nbsp;包含第一个数据库表的map&nbsp;--&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>value</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>classpath:/sqlmap-configb.xml</SPAN> <SPAN 
+class=tag>&lt;/</SPAN> <SPAN class=tag-name>value</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"dataSource"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>ref</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"dataSourceB"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"lobHandler"</SPAN> <SPAN>&nbsp;</SPAN> 
+<SPAN class=attribute>ref</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"lobHandler"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN><SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>bean</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;</SPAN> 
+<LI><SPAN><SPAN 
+class=comments>&lt;!--&nbsp;Construct&nbsp;Atomikos&nbsp;UserTransactionManager,&nbsp;needed&nbsp;to&nbsp;configure&nbsp;Spring&nbsp;--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN><SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>bean</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>id</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"atomikosTransactionManager"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>class</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"com.atomikos.icatch.jta.UserTransactionManager"</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>init-method</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"init"</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=attribute>destroy-method</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"close"</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=comments>&lt;!--&nbsp;&nbsp;when&nbsp;close&nbsp;is&nbsp;called,&nbsp;should&nbsp;we&nbsp;force&nbsp;transactions&nbsp;to&nbsp;terminate&nbsp;or&nbsp;not?&nbsp;--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"forceShutdown"</SPAN> <SPAN class=tag>&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>value</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>true</SPAN> <SPAN 
+class=tag>&lt;/</SPAN> <SPAN class=tag-name>value</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN><SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>bean</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN> 
+<LI class=alt><SPAN><SPAN 
+class=comments>&lt;!--&nbsp;Also&nbsp;use&nbsp;Atomikos&nbsp;UserTransactionImp,&nbsp;needed&nbsp;to&nbsp;configure&nbsp;Spring&nbsp;&nbsp;--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN><SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>bean</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>id</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"atomikosUserTransaction"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>class</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"com.atomikos.icatch.jta.UserTransactionImp"</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"transactionTimeout"</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>value</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"240"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=tag>/&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN><SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>bean</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;</SPAN> 
+<LI><SPAN><SPAN 
+class=comments>&lt;!--&nbsp;Configure&nbsp;the&nbsp;Spring&nbsp;framework&nbsp;to&nbsp;use&nbsp;JTA&nbsp;transactions&nbsp;from&nbsp;Atomikos&nbsp;--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN><SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>bean</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>id</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"transactionManager"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>class</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"org.springframework.transaction.jta.JtaTransactionManager"</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"transactionManager"</SPAN> <SPAN class=tag>&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>ref</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>bean</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"atomikosTransactionManager"</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>property</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"userTransaction"</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>ref</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>bean</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"atomikosUserTransaction"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>property</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN><SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>bean</SPAN> <SPAN 
+class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN></LI></OL></DIV>
+<P><BR><BR>事务的配置, 使用了spring2.0的语法，所以将namesapce也帖出来了.</P>
+<DIV class=code_title>xml 代码</DIV>
+<DIV class=dp-highlighter>
+<DIV class=bar>&nbsp;</DIV>
+<OL class=dp-xml>
+<LI class=alt><SPAN><SPAN class=tag>&lt;?</SPAN> <SPAN class=tag-name>xml</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>version</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"1.0"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>encoding</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"UTF-8"</SPAN> <SPAN class=tag>?&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN><SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>beans</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>xmlns</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"http://www.springframework.org/schema/beans"</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=attribute>xmlns:xsi</SPAN> <SPAN>=</SPAN> 
+<SPAN class=attribute-value>"http://www.w3.org/2001/XMLSchema-instance"</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=attribute>xmlns:aop</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"http://www.springframework.org/schema/aop"</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=attribute>xmlns:tx</SPAN> <SPAN>=</SPAN> 
+<SPAN class=attribute-value>"http://www.springframework.org/schema/tx"</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=attribute>xsi:schemaLocation</SPAN> 
+<SPAN>="http://www.springframework.org/schema/beans&nbsp;http://www.springframework.org/schema/beans/spring-beans-2.0.xsd&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI 
+class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;http://www.springframework.org/schema/aop&nbsp;http://www.springframework.org/schema/aop/spring-aop-2.0.xsd&nbsp;&nbsp;</SPAN> 
+
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;http://www.springframework.org/schema/tx&nbsp;http://www.springframework.org/schema/tx/spring-tx-2.0.xsd"&nbsp;&nbsp;</SPAN> 
+
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=attribute>default-autowire</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"byName"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>default-lazy-init</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"true"</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comments>&lt;!--&nbsp;支持&nbsp;@AspectJ&nbsp;标记--&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>aop:aspectj-autoproxy</SPAN> <SPAN class=tag>/&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;</SPAN> 
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>aop:config</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>proxy-target-class</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"true"</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>aop:advisor</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>pointcut</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"execution(*&nbsp;*Facade.*(..))"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>advice-ref</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"txAdvice"</SPAN> <SPAN class=tag>/&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>aop:advisor</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>pointcut</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"execution(*&nbsp;*Manager.*(..))"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>advice-ref</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"txAdvice"</SPAN> <SPAN class=tag>/&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>aop:config</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;</SPAN> 
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN class=tag-name>tx:advice</SPAN> 
+<SPAN>&nbsp;</SPAN> <SPAN class=attribute>id</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"txAdvice"</SPAN> <SPAN class=tag>&gt;</SPAN> 
+<SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>tx:attributes</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>tx:method</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"get*"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>read-only</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"true"</SPAN> <SPAN class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>tx:method</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"find*"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>read-only</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"true"</SPAN> <SPAN class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>tx:method</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"has*"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>read-only</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"true"</SPAN> <SPAN class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>tx:method</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"locate*"</SPAN> <SPAN>&nbsp;</SPAN> <SPAN 
+class=attribute>read-only</SPAN> <SPAN>=</SPAN> <SPAN 
+class=attribute-value>"true"</SPAN> <SPAN class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;</SPAN> <SPAN 
+class=tag-name>tx:method</SPAN> <SPAN>&nbsp;</SPAN> <SPAN class=attribute>name</SPAN> 
+<SPAN>=</SPAN> <SPAN class=attribute-value>"*"</SPAN> <SPAN 
+class=tag>/&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>tx:attributes</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN>
+<LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=tag>&lt;/</SPAN> <SPAN class=tag-name>tx:advice</SPAN> 
+<SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> </SPAN>
+<LI class=alt><SPAN><SPAN class=tag>&lt;/</SPAN> <SPAN 
+class=tag-name>beans</SPAN> <SPAN class=tag>&gt;</SPAN> <SPAN>&nbsp;&nbsp;</SPAN> 
+</SPAN></LI></OL></DIV>
+<P><BR>这样配置以后就可以使用分布式事务，测试中出现异常时事务也自动提交。和JOTM相比Atomikos Transactions 
+Essentials更加稳定，它原来是商业项目，现在开源了。象mysql一样卖服务支持的。而且论坛页比较活跃，有问题很快可以解决。</P><!--EndFragment--></DIV>
+      <P>&nbsp;</P>
+      <P>&nbsp;</P>
+</TD>
+</TR>
+</TBODY>
+</TABLE>
+</DIV>
+</DIV>
+</DIV>
+</BODY>
+</HTML>

@@ -1,0 +1,130 @@
+﻿<!-- saved from url=http://coolyongzi.javaeye.com/blog/218559 -->
+<script>
+window.onerror = new Function("return(false);")
+</script><!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML dir=ltr xml:lang="zh-CN" 
+xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>使用 Spring 2.5 基于注解驱动的 Spring MVC 2</title><LINK 
+href="favicon.ico" type=image/x-icon rel="shortcut icon"><LINK 
+title=程序人生—路漫漫 href="rss" type=application/rss+xml rel=alternate><LINK 
+media=screen href="blog.css_1217128319" 
+type=text/css rel=stylesheet><LINK media=screen 
+href="purple.css_1200451876" 
+type=text/css rel=stylesheet>
+<SCRIPT src="application.js_1214967926" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT id=__onDOMContentLoaded src="http://:/" defer></SCRIPT>
+<LINK media=screen 
+href="SyntaxHighlighter.css_1201588027" 
+type=text/css rel=stylesheet>
+<SCRIPT 
+src="shCoreCommon.js_1203397332" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT src="se_hilite.js_1203397332" 
+type=text/javascript></SCRIPT>
+
+<STYLE>
+    div#main {background-color: transparent; border: 0; padding: 0px; width: 740px;}
+  </STYLE>
+<LINK media=screen 
+href="ui.css_1212551310" 
+type=text/css rel=stylesheet>
+<SCRIPT src="compress.js_1209370586" 
+type=text/javascript></SCRIPT>
+</HEAD>
+
+<BODY>
+
+<DIV id=page>
+
+<DIV class=clearfix id=content>
+
+<DIV id=main>
+
+<DIV class=blog_main><!--StartFragment--><DIV class=blog_title>
+<DIV class=date><SPAN class=year>2008</SPAN><SPAN class=sep_year>-</SPAN><SPAN 
+class=month>07</SPAN><SPAN class=sep_month>-</SPAN><SPAN 
+class=day>23</SPAN></DIV>
+<H3 class=type_reprint title=转载><A href="http://coolyongzi.javaeye.com/blog/218559">Spring 2.5 基于注解驱动的 Spring 
+MVC 2</A></H3></DIV>
+<DIV class=blog_content>注册自己的属性编辑器 <BR><BR>Spring MVC 
+有一套常用的属性编辑器，这包括基本数据类型及其包裹类的属性编辑器、String 属性编辑器、JavaBean 的属性编辑器等。但有时我们还需要向 Spring 
+MVC 框架注册一些自定义的属性编辑器，如特定时间格式的属性编辑器就是其中一例。 <BR><BR>Spring MVC 允许向整个 Spring 
+框架注册属性编辑器，它们对所有 Controller 都有影响。当然 Spring MVC 也允许仅向某个 Controller 注册属性编辑器，对其它的 
+Controller 没有影响。前者可以通过 AnnotationMethodHandlerAdapter 的配置做到，而后者则可以通过 @InitBinder 
+注解实现。 <BR><BR>下面先看向整个 Spring MVC 框架注册的自定义编辑器： <BR><BR><BR>清单 13. 注册框架级的自定义属性编辑器 
+<BR>&gt;bean 
+class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter"&lt; 
+&gt;property name="webBindingInitializer"&lt; &gt;bean 
+class="com.baobaotao.web.MyBindingInitializer"/&lt; 
+&gt;/property&lt;&gt;/bean&lt; <BR><BR><BR>MyBindingInitializer 实现了 
+WebBindingInitializer 接口，在接口方法中通过 binder 注册多个自定义的属性编辑器，其代码如下所示： <BR><BR><BR>清单 
+14.自定义属性编辑器 <BR>package org.springframework.samples.petclinic.web;import 
+java.text.SimpleDateFormat;import java.util.Date;import 
+org.springframework.beans.factory.annotation.Autowired;import 
+org.springframework.beans.propertyeditors.CustomDateEditor;import 
+org.springframework.beans.propertyeditors.StringTrimmerEditor;import 
+org.springframework.samples.petclinic.Clinic;import 
+org.springframework.samples.petclinic.PetType;import 
+org.springframework.web.bind.WebDataBinder;import 
+org.springframework.web.bind.support.WebBindingInitializer;import 
+org.springframework.web.context.request.WebRequest;public class 
+MyBindingInitializer implements WebBindingInitializer { public void 
+initBinder(WebDataBinder binder, WebRequest request) { SimpleDateFormat 
+dateFormat = new SimpleDateFormat("yyyy-MM-dd"); dateFormat.setLenient(false); 
+binder.registerCustomEditor(Date.class, new CustomDateEditor(dateFormat, 
+false)); binder.registerCustomEditor(String.class, new 
+StringTrimmerEditor(false)); }} <BR><BR><BR>如果希望某个属性编辑器仅作用于特定的 Controller，可以在 
+Controller 中定义一个标注 @InitBinder 注解的方法，可以在该方法中向 Controller 了注册若干个属性编辑器，来看下面的代码： 
+<BR><BR><BR>清单 15. 注册 Controller 级的自定义属性编辑器 <BR>@Controllerpublic class 
+MyFormController { @InitBinder public void initBinder(WebDataBinder binder) { 
+SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd"); 
+dateFormat.setLenient(false); binder.registerCustomEditor(Date.class, new 
+CustomDateEditor(dateFormat, false)); } …} <BR><BR><BR>注意被标注 @InitBinder 
+注解的方法必须拥有一个 WebDataBinder 类型的入参，以便 Spring MVC 框架将注册属性编辑器的 WebDataBinder 对象传递进来。 
+<BR><BR><BR>如何准备数据 <BR><BR>在 编写 Controller 
+时，常常需要在真正进入请求处理方法前准备一些数据，以便请求处理或视图渲染时使用。在传统的 SimpleFormController 里，是通过复写其 
+referenceData() 方法来准备引用数据的。在 Spring 2.5 时，可以将任何一个拥有返回值的方法标注上 
+@ModelAttribute，使其返回值将会进入到模型对象的属性列表中。来看下面的例子： <BR><BR><BR>清单 16. 定义为处理请求准备数据的方法 
+<BR>package com.baobaotao.web;import 
+com.baobaotao.service.BbtForumService;import 
+org.springframework.beans.factory.annotation.Autowired;import 
+org.springframework.stereotype.Controller;import 
+org.springframework.ui.ModelMap;import 
+org.springframework.web.bind.annotation.ModelAttribute;import 
+org.springframework.web.bind.annotation.RequestMapping;import 
+org.springframework.web.bind.annotation.RequestParam;import 
+org.springframework.web.bind.annotation.SessionAttributes;import 
+java.util.ArrayList;import java.util.List;import 
+java.util.Set;@Controller@RequestMapping("/bbtForum.do")public class 
+BbtForumController { @Autowired private BbtForumService bbtForumService; 
+@ModelAttribute("items")//&lt;——①向模型对象中添加一个名为items的属性 public List&lt;String&gt; 
+populateItems() { List&lt;String&gt; lists = new ArrayList&lt;String&gt;(); 
+lists.add("item1"); lists.add("item2"); return lists; } @RequestMapping(params = 
+"method=listAllBoard") public String 
+listAllBoard(@ModelAttribute("currUser")User user, ModelMap model) { 
+bbtForumService.getAllBoard(); //&lt;——②在此访问模型中的items属性 
+System.out.println("model.items:" + 
+((List&lt;String&gt;)model.get("items")).size()); return "listBoard"; }} 
+<BR><BR><BR>在 ① 处，通过使用 @ModelAttribute 注解，populateItem() 
+方法将在任何请求处理方法执行前调用，Spring MVC 会将该方法返回值以“items”为名放入到隐含的模型对象属性列表中。 <BR><BR>所 以在 ② 
+处，我们就可以通过 ModelMap 入参访问到 items 属性，当执行 listAllBoard() 请求处理方法时，② 
+处将在控制台打印出“model.items:2”的信息。当然我们也可以在请求的视图中访问到模型对象中的 items 属性。 <BR><BR><BR>小结 
+<BR><BR>Spring 2.5 对 Spring MVC 进行了很大增强，现在我们几乎完全可以使用基于注解的 Spring MVC 完全替换掉原来基于接口 
+Spring MVC 程序。基于注解的 Spring MVC 比之于基于接口的 Spring MVC 拥有以下几点好处： 
+<BR><BR>方便请求和控制器的映射； <BR>方便请求处理方法入参绑定URL参数； <BR>Controller 不必继承任何接口，它仅是一个简单的 
+POJO。 <BR>但 是基于注解的 Spring MVC 并不完美，还存在优化的空间，因为在某些配置上它比基于 XML 的配置更繁琐。比如对于处理多个请求的 
+Controller 来说，假设我们使用一个 URL 参数指定调用的处理方法（如 
+xxx.do?method=listBoardTopic），当使用注解时，每个请求处理方法都必须使用 @RequestMapping() 注解指定对应的 URL 
+参数（如 @RequestMapping(params = "method=listBoardTopic")），而在 XML 配置中我们仅需要配置一个 
+ParameterMethodNameResolver 就可以了。 </DIV><!--EndFragment--></DIV>
+</DIV>
+</DIV>
+</DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

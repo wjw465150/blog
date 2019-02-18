@@ -1,0 +1,154 @@
+﻿<html>
+<title>java classLoader 体系结构</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<body><!--StartFragment-->
+<h2>java classLoader 体系结构</h2>
+<div class="meta">发表于：<span class="time">2009年6月29日</span> | 分类：<a href="http://blog.chenlb.com/category/tech/java" title="View all posts in java" rel="category tag">java</a> | 标签： <a href="http://blog.chenlb.com/tag/architecture" rel="tag">architecture</a>, <a href="http://blog.chenlb.com/tag/classloader" rel="tag">classloader</a> | <span class="view">views(17,135)</span></div>
+<p><a href="http://creativecommons.org/licenses/by/3.0/deed.zh" rel="bookmark">版权信息</a>: 可以任意转载, 转载时请务必以超链接形式标明文章<b>原文出处</b>, 即下面的声明.</p>
+<p> </p>
+<p>原文出处：<a href="file:///C:/temp/maftemp-44770820/1344244749701_679/1344244735881_339/index.html#">http://blog.chenlb.com/2009/06/java-classloader-architecture.html</a></p>
+<div class="content">
+  <p><strong>jvm classLoader architecture：</strong></p>
+  <ol>
+    <li>Bootstrap ClassLoader/启动类加载器 <br>
+      主要负责jdk_home/lib目录下的核心 api 或 -Xbootclasspath 
+  选项指定的jar包装入工作。 
+    <li>Extension ClassLoader/扩展类加载器 <br>
+      主要负责jdk_home/lib/ext目录下的jar包或 -Djava.ext.dirs 
+  指定目录下的jar包装入工作。 
+    <li>System ClassLoader/系统类加载器 <br>
+      主要负责java -classpath/-Djava.class.path所指的目录下的类与jar包装入工作。 
+    <li>User Custom ClassLoader/用户自定义类加载器(java.lang.ClassLoader的子类) <br>
+      在程序运行期间, 通过java.lang.ClassLoader的子类动态加载class文件, 体现java动态实时类装入特性。</li>
+  </ol>
+  <p><strong>类加载器的特性：</strong></p>
+  <ol>
+    <li>每个ClassLoader都维护了一份自己的名称空间， 同一个名称空间里不能出现两个同名的类。 
+    <li>为了实现java安全沙箱模型顶层的类加载器安全机制, java默认采用了 " 双亲委派的加载链 " 结构。</li>
+  </ol>
+  <div id="attachment_1066" class="wp-caption alignnone" style="WIDTH: 177px"><IMG title=classloader-architecture class  ="size-full wp-image-1066 " alt=classloader-architecture src="classloader-architecture.jpg" width=167 height=281 >
+    <p class="wp-caption-text">classloader-architecture</p>
+  </div>
+  <div id="attachment_1067" class="wp-caption alignnone" style="WIDTH: 353px"><IMG title=classloader-class-diagram class  ="size-full wp-image-1067 " alt=classloader-class-diagram src="classloader-class-diagram.jpg" width=343 height=465 >
+    <p class="wp-caption-text">classloader-class-diagram</p>
+  </div>
+  <p>类图中， BootstrapClassLoader是一个单独的java类， 其实在这里， 不应该叫他是一个java类。因为，它已经完全不用java实现了。它是在jvm启动时， 就被构造起来的， 负责java平台核心库。</p>
+  <p><strong>自定义类加载器加载一个类的步骤</strong></p>
+  <div id="attachment_1068" class="wp-caption alignnone" style="WIDTH: 593px"><IMG title=classloader-load-class class  ="size-full wp-image-1068 " alt=classloader-load-class src="classloader-load-class.jpg" width=583 height=289 >
+    <p class="wp-caption-text">classloader-load-class</p>
+  </div>
+  <p><strong>ClassLoader 类加载逻辑分析， 以下逻辑是除 BootstrapClassLoader 外的类加载器加载流程：</strong></p>
+  <div class="dp-highlighter">
+    <div class="bar"></div>
+    <ol class="dp-j" >
+      <li class="alt"><span><span class="comment">//&nbsp;检查类是否已被装载过</span><span>&nbsp;&nbsp;</span></span>
+      <li ><span>Class&nbsp;c&nbsp;=&nbsp;findLoadedClass(name);&nbsp;&nbsp;</span>
+      <li class="alt"><span><span class="keyword">if</span><span>&nbsp;(c&nbsp;==&nbsp;</span><span class="keyword">null</span><span>&nbsp;)&nbsp;{&nbsp;&nbsp;</span></span>
+      <li ><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">//&nbsp;指定类未被装载过</span><span>&nbsp;&nbsp;</span></span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">try</span><span>&nbsp;{&nbsp;&nbsp;</span></span>
+      <li ><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span><span>&nbsp;(parent&nbsp;!=&nbsp;</span><span class="keyword">null</span><span>&nbsp;)&nbsp;{&nbsp;&nbsp;</span></span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">//&nbsp;如果父类加载器不为空，&nbsp;则委派给父类加载</span><span>&nbsp;&nbsp;</span></span>
+      <li ><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c&nbsp;=&nbsp;parent.loadClass(name,&nbsp;<span class="keyword">false</span><span>&nbsp;);&nbsp;&nbsp;</span></span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<span class="keyword">else</span><span>&nbsp;{&nbsp;&nbsp;</span></span>
+      <li ><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">//&nbsp;如果父类加载器为空，&nbsp;则委派给启动类加载加载</span><span>&nbsp;&nbsp;</span></span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c&nbsp;=&nbsp;findBootstrapClass0(name);&nbsp;&nbsp;</span>
+      <li ><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<span class="keyword">catch</span><span>&nbsp;(ClassNotFoundException&nbsp;e)&nbsp;{&nbsp;&nbsp;</span></span>
+      <li ><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">//&nbsp;启动类加载器或父类加载器抛出异常后，&nbsp;当前类加载器将其</span><span>&nbsp;&nbsp;</span></span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">//&nbsp;捕获，&nbsp;并通过findClass方法，&nbsp;由自身加载</span><span>&nbsp;&nbsp;</span></span>
+      <li ><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c&nbsp;=&nbsp;findClass(name);&nbsp;&nbsp;</span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</span>
+      <li ><span>}&nbsp;&nbsp;</span></li>
+    </ol>
+  </div>
+  <p><strong>线程上下文类加载器</strong><br>
+    java默认的线程上下文类加载器是 系统类加载器(AppClassLoader)。</p>
+  <div class="dp-highlighter">
+    <div class="bar"></div>
+    <ol class="dp-j" >
+      <li class="alt"><span><span class="comment">//&nbsp;Now&nbsp;create&nbsp;the&nbsp;class&nbsp;loader&nbsp;to&nbsp;use&nbsp;to&nbsp;launch&nbsp;the&nbsp;application</span><span>&nbsp;&nbsp;</span></span>
+      <li ><span><span class="keyword">try</span><span>&nbsp;{&nbsp;&nbsp;</span></span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;loader&nbsp;=&nbsp;AppClassLoader.getAppClassLoader(extcl);&nbsp;&nbsp;</span>
+      <li ><span>}&nbsp;<span class="keyword">catch</span><span>&nbsp;(IOException&nbsp;e)&nbsp;{&nbsp;&nbsp;</span></span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">throw</span><span>&nbsp;</span><span class="keyword">new</span><span>&nbsp;InternalError(&nbsp;&nbsp;</span></span>
+      <li ><span><span class="string">"Could&nbsp;not&nbsp;create&nbsp;application&nbsp;class&nbsp;loader"</span><span>&nbsp;);&nbsp;&nbsp;</span></span>
+      <li class="alt"><span>}&nbsp;&nbsp;&nbsp;</span>
+      <li ><span>&nbsp;&nbsp;</span>
+      <li class="alt"><span><span class="comment">//&nbsp;Also&nbsp;set&nbsp;the&nbsp;context&nbsp;class&nbsp;loader&nbsp;for&nbsp;the&nbsp;primordial&nbsp;thread.</span><span>&nbsp;&nbsp;</span></span>
+      <li ><span>Thread.currentThread().setContextClassLoader(loader);&nbsp;&nbsp;</span></li>
+    </ol>
+  </div>
+  <p>以上代码摘自sun.misc.Launch的无参构造函数Launch()。</p>
+  <p>使用线程上下文类加载器, 可以在执行线程中, 抛弃双亲委派加载链模式, 使用线程上下文里的类加载器加载类.<br>
+    典型的例子有, 通过线程上下文来加载第三方库jndi实现, 而不依赖于双亲委派.<br>
+    大部分java app服务器(jboss, tomcat..)也是采用contextClassLoader来处理web服务。<br>
+    还有一些采用 hotswap 特性的框架, 也使用了线程上下文类加载器, 比如 seasar (full stack framework in japenese).</p>
+  <p>线程上下文从根本解决了一般应用不能违背双亲委派模式的问题.<br>
+    使java类加载体系显得更灵活.</p>
+  <p>随着多核时代的来临, 相信多线程开发将会越来越多地进入程序员的实际编码过程中. 因此,<br>
+    在编写基础设施时， 通过使用线程上下文来加载类, 应该是一个很好的选择。</p>
+  <p>当然, 好东西都有利弊. 使用线程上下文加载类, 也要注意, 保证多根需要通信的线程间的类加载器应该是同一个,<br>
+    防止因为不同的类加载器, 导致类型转换异常(ClassCastException)。</p>
+  <p><strong>为什么要使用这种双亲委托模式呢？</strong></p>
+  <ol>
+    <li>因为这样可以避免重复加载，当父亲已经加载了该类的时候，就没有必要子ClassLoader再加载一次。 
+    <li>考虑到安全因素，我们试想一下，如果不使用这种委托模式，那我们就可以随时使用自定义的String来动态替代java核心api中定义类型，这
+      样会存在非常大的安全隐患，而双亲委托的方式，就可以避免这种情况，因为String已经在启动时被加载，所以用户自定义类是无法加载一个自定义的
+      ClassLoader。</li>
+  </ol>
+  <p><strong>java动态载入class的两种方式：</strong> </p>
+  <ol>
+    <li>implicit隐式,即利用实例化才载入的特性来动态载入class 
+    <li>explicit显式方式,又分两种方式:
+      <ol>
+        <li>java.lang.Class的forName()方法 
+        <li>java.lang.ClassLoader的loadClass()方法</li>
+      </ol>
+    </li>
+  </ol>
+  <p><strong>用Class.forName加载类</strong></p>
+  <p>Class.forName使用的是被调用者的类加载器来加载类的。<br>
+    这种特性, 证明了java类加载器中的名称空间是唯一的, 不会相互干扰。<br>
+    即在一般情况下, 保证同一个类中所关联的其他类都是由当前类的类加载器所加载的。</p>
+  <div class="dp-highlighter">
+    <div class="bar"></div>
+    <ol class="dp-j" >
+      <li class="alt"><span><span class="keyword">public</span><span>&nbsp;</span><span class="keyword">static</span><span>&nbsp;Class&nbsp;forName(String&nbsp;className)&nbsp;&nbsp;</span></span>
+      <li ><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">throws</span><span>&nbsp;ClassNotFoundException&nbsp;{&nbsp;&nbsp;</span></span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span><span>&nbsp;forName0(className,&nbsp;</span><span class="keyword">true</span><span>&nbsp;,&nbsp;ClassLoader.getCallerClassLoader());&nbsp;&nbsp;</span></span>
+      <li ><span>}&nbsp;&nbsp;&nbsp;</span>
+      <li class="alt"><span>&nbsp;&nbsp;</span>
+      <li ><span><span class="comment">/**&nbsp;Called&nbsp;after&nbsp;security&nbsp;checks&nbsp;have&nbsp;been&nbsp;made.&nbsp;*/</span><span>&nbsp;&nbsp;</span></span>
+      <li class="alt"><span><span class="keyword">private</span><span>&nbsp;</span><span class="keyword">static</span><span>&nbsp;</span><span class="keyword">native</span><span>&nbsp;Class&nbsp;forName0(String&nbsp;name,&nbsp;</span><span class="keyword">boolean</span><span>&nbsp;initialize,&nbsp;&nbsp;</span></span>
+      <li ><span>ClassLoader&nbsp;loader)&nbsp;&nbsp;</span>
+      <li class="alt"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">throws</span><span>&nbsp;ClassNotFoundException;&nbsp;&nbsp;</span></span></li>
+    </ol>
+  </div>
+  <p>上面中 ClassLoader.getCallerClassLoader 就是得到调用当前forName方法的类的类加载器</p>
+  <p><strong>static块在什么时候执行? </strong></p>
+  <ul>
+    <li>当调用forName(String)载入class时执行,如果调用ClassLoader.loadClass并不会执行.forName(String,false,ClassLoader)时也不会执行. 
+
+    <li>如果载入Class时没有执行static块则在第一次实例化时执行.比如new 
+  ,Class.newInstance()操作 
+    <li>static块仅执行一次</li>
+  </ul>
+  <p><strong>各个java类由哪些classLoader加载?</strong> </p>
+  <ul>
+    <li>java类可以通过实例.getClass.getClassLoader()得知 
+    <li>接口由AppClassLoader(System 
+  ClassLoader,可以由ClassLoader.getSystemClassLoader()获得实例)载入 
+    <li>ClassLoader类由bootstrap loader载入</li>
+  </ul>
+  <p><strong>NoClassDefFoundError和ClassNotFoundException </strong></p>
+  <ul>
+    <li>NoClassDefFoundError:当java源文件已编译成.class文件,但是ClassLoader在运行期间在其搜寻路径load某个类时,没有找到.class文件则报这个错 
+
+    <li>ClassNotFoundException:试图通过一个String变量来创建一个Class类时不成功则抛出这个异常 
+
+    <li></li>
+  </ul>
+</div><!--EndFragment-->
+</body>
+</htm>

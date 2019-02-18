@@ -1,0 +1,390 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GlusterFS+HBase安装教程</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">HBase通常安装在Hadoop 
+HDFS上，但也可以安装在其他实现了Hadoop文件接口的分布式文件系统上，如KFS。glusterfs是一个集群文件系统可扩展到几peta-bytes。它集合了各种存储在infiniband 
+rdma或互连成一个大型并行网络文件系统。存储可以由任何商品等硬件x86_64服务器和sata-ii和infiniband 
+HBA。GlusterFS比Hadoop 
+HDFS可以提供更高的性能，HBase也因此可以获得更高的性能。将HBase安装在GlusterFS上，是可行的。该方案经实际验证通过，以此文以记之。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+GlusterFS是Scale-Out存储解决方案Gluster的核心，它是一个开源的分布式文件系统，具有强大的横向扩展能力，通过扩展能够支持数PB存储容量和处理数千客户端。GlusterFS借助TCP/IP或InfiniBand 
+RDMA网络将物理分布的存储资源聚集在一起，使用单一全局命名空间来管理数据。GlusterFS基于可堆叠的用户空间设计，可为各种不同的数据负载提供优异的性能。<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">一、前提条件</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+安装环境为Virtual BOX虚拟机，操作系统为Ubuntu Server 64 14.04。安装用户为bigdata.<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">1、服务器列表</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+192.168.8.108 bigdata1</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+192.168.8.110 bigdata2<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">2、修改Hosts</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+sudo vi /etc/hosts</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+192.168.8.108 bigdata1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+192.168.8.110 bigdata2<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">3、SSH配置</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+sudo su - root</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+passwd<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+输入 admin</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+允许root使用SSH口令登录：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+sudo vi /etc/ssh/sshd_config<BR></P>
+<DIV class="line number1 index0 alt2" 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><CODE 
+class="bash plain" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: black !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"> </CODE><CODE 
+class="bash comments" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,130,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">#&nbsp;Authentication:</CODE></DIV>
+<DIV class="line number2 index1 alt1" 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><CODE 
+class="bash plain" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: black !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"> LoginGraceTime&nbsp;120 </CODE></DIV>
+<DIV class="line number3 index2 alt2" 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><CODE 
+class="bash comments" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,130,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">#PermitRootLogin&nbsp;without-password&nbsp;&nbsp;&nbsp;&nbsp;#找到这里，把它注释</CODE></DIV>
+<DIV class="line number4 index3 alt1" 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><CODE 
+class="bash plain" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: black !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"> PermitRootLogin&nbsp;</CODE><CODE 
+class="bash functions" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(255,20,147) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">yes</CODE>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<CODE 
+class="bash comments" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(0,130,0) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">#改为yes&nbsp;&nbsp;然后重启ssh</CODE><CODE 
+class="bash plain" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: black !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important"> </CODE></DIV>
+<DIV class="line number5 index4 alt2" 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><CODE 
+class="bash plain" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: black !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">StrictModes&nbsp;</CODE><CODE 
+class="bash functions" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: rgb(255,20,147) !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">yes</CODE><CODE 
+class="bash plain" 
+style="OVERFLOW: visible !important; FONT-SIZE: 13px !important; BORDER-TOP: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 0px; WIDTH: auto !important; VERTICAL-ALIGN: baseline !important; RIGHT: auto !important; BORDER-BOTTOM: 0px; POSITION: static !important; FLOAT: none !important; FONT-WEIGHT: normal !important; COLOR: black !important; OUTLINE-WIDTH: 0px !important; PADDING-BOTTOM: 0px !important; FONT-STYLE: normal !important; TEXT-ALIGN: left !important; PADDING-TOP: 0px !important; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px !important; LEFT: auto !important; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; LINE-HEIGHT: 1.1em !important; TOP: auto !important; PADDING-RIGHT: 0px !important; BOTTOM: auto !important">   </CODE></DIV><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+#service ssh restart</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+#Tips：这里注意/etc/init.d/ssh restart 用这个方式重启是不成功的。</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+SSH配置：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp; 
+&nbsp; bigdata1：<BR>&nbsp;&nbsp;&nbsp;&nbsp; #ssh-keygen -t rsa -P 
+""<BR>&nbsp;&nbsp;&nbsp;&nbsp; #cat ~/.ssh/id_rsa.pub &gt;&gt; 
+~/.ssh/authorized_keys<BR>&nbsp;&nbsp; &nbsp; #chmod 600 
+~/.ssh/authorized_keys<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp; #scp 
+~/.ssh/authorized_keys root@bigdata2:~/.ssh/<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">4、Java安装配置</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+下载最新版 jdk64-bit版 (jdk-7u45-linux-x64.tar.gz)</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+下载<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; COLOR: rgb(255,153,0)" 
+href="http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html" 
+target=_blank>http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html</A></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+tar -zxvf jdk-7u51-linux-x64.tar.gz</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+sudo mv jdk1.7.0_51 /usr/share</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+设置环境变量</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+sudo vi /etc/profile</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+在文件的最后面增加：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+export JAVA_HOME=/usr/share/jdk1.7.0_51</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+export JRE_HOME=/usr/share/jdk1.7.0_51/jre</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+export PATH=$JAVA_HOME/bin:$JAVA_HOME/jre/bin:$PATH</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+export CLASSPATH=$CLASSPATH:.:$JAVA_HOME/lib:$JAVA_HOME/jre/lib</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+保存，source /etc/profile<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">5、防火墙卸载</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+sudoapt-get remove iptables<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">二、GlusterFS安装</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">1、安装GlusterFS</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>sudo apt-get install 
+glusterfs-server</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp; 
+&nbsp;<SPAN class=Apple-converted-space>&nbsp;</SPAN><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">sudo&nbsp;</SPAN></SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>glusterfsd –version</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">2、创建目录</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">sudo&nbsp;</SPAN></SPAN>mkdir 
+-p /data/gluster</SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">3、创建卷</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>sudo gluster volume create 
+gluster_vol replica 2 transport tcp bigdata1:/data/gluster 
+bigdata2:/data/gluster</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+注：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+删除卷：sudo gluster volume delete gluster_vol</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+强制创建：加 force</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">4、停止/启动卷</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">sudo&nbsp;</SPAN></SPAN>gluster 
+volume stop gluster_vol</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">sudo<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN></SPAN>gluster volume start 
+gluster_vol</SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">5、查看卷信息</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;&nbsp;<SPAN>gluster volume info</SPAN>&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">6、挂载卷</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>sudo mount.glusterfs 
+bigdata1:/gluster_vol /mnt/hbase</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+mount.glusterfs bigdata1:/gluster_vol /mnt/hbase<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">6、测试卷</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">df 
+-h&nbsp;</SPAN></SPAN></SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; bigdata1:</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; echo test &gt; test1.txt</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; bigdata2:</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; cat test1.txt &nbsp; &nbsp; &nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+至此，GlusterFS在Ubuntu Server上安装成功。下面开始安装配置HBase。<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">三、HBase安装</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+通过测试时证明：在分布式模式下GlusterFs可以代替hadoop的HDFS，作为Hbase的底层数据存储。<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+配置过程如下：<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+首先，介绍下搭建的集群模型：<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+共2台服务器,hostname分别为：bigdata1 bigdata2（各个服务器之间可以ssh 
+无密码登陆）<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Hmaseter为：bigdata1<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Hregionserver为：bigdata1<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+zookeeper为：bigdata1(Hbase内置zookeeper)<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+在bigdata1、bigdata2 服务器的/mnt目录下创建hbase文件夹作为GlusterFs的mount点（即GlusterFs 
+的客户端），就是每台服务器都有一个/mnt/hbae/目录作为</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp; 
+GLusterFs的client，然后让Hbase把数据写到这个目录下面。<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+然后修改Hbase的配置文件：hbase-env.sh&nbsp;&nbsp;&nbsp; hbase- site.xml&nbsp;&nbsp;&nbsp; 
+regionservers，这3个配置文件都在/usr/local/hbase/conf/目录下<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">1、下载/安装</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">wget 
+http://apache.fayea.com/apache-mirror/hbase/stable/hbase-0.98.7-hadoop2-bin.tar.gz<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN></SPAN></SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><FONT color=#0ff0 size=2 face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace"><FONT color=#0ff0><FONT face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">tar 
+xvzf<SPAN class=Apple-converted-space>&nbsp;</SPAN><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">hbase-0.98.7-hadoop2-bin.tar.g</SPAN></SPAN></SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">z</SPAN></SPAN>&nbsp;</FONT></FONT></FONT></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><FONT color=#0ff0 size=2 face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace"><FONT color=#0ff0><FONT face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">sudo 
+mv<SPAN class=Apple-converted-space>&nbsp;</SPAN><FONT color=#0ff0 size=2 face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace"><FONT color=#0ff0><FONT face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace"><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">hbase-0.98.7-hadoop2 
+/usr/local</SPAN></SPAN></SPAN></FONT></FONT></FONT>&nbsp;</FONT></FONT></FONT></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><FONT color=#0ff0 size=2 face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace"><FONT color=#0ff0><FONT face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">sudo<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">ln 
+-s<SPAN class=Apple-converted-space>&nbsp;</SPAN></SPAN></SPAN><FONT color=#0ff0 size=2 face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace"><FONT color=#0ff0><FONT face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace"><FONT color=#0ff0 size=2 face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace"><FONT color=#0ff0><FONT face="'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace"><SPAN><SPAN><SPAN 
+style="FONT-FAMILY: 'Century Gothic', 'Microsoft Yahei', Monaco, Consolas, '“Andale Mono”', '“DejaVu sans Mono”', monospace">hbase-0.98.7-hadoop2</SPAN></SPAN></SPAN></FONT></FONT></FONT></FONT></FONT></FONT><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>hbase<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></FONT></FONT></FONT><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">2、配置</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+配置文件:hbase-env.sh（bigdata1、bigdata2配置文件相同）</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+export JAVA_HOME=/usr/share/jdk1.7.0_51&nbsp;&nbsp;&nbsp; //JDK路径</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+export HBASE_MANAGES_ZK=true&nbsp; 
+//zookeeper是用内置的还是自己搭建zookeeper（true为使用内置的）</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+配置文件： hbase-site.xml&nbsp; &nbsp;<BR>&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;configuration&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;property&gt;<BR>&nbsp;&nbsp;&nbsp; 
+&lt;name&gt;hbase.rootdir&lt;/name&gt;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>&nbsp; &nbsp;&nbsp; 
+&lt;value&gt;file:///mnt/hbase/&lt;/value&gt; 
+//和GlusterFs客户端的路径相对应<BR>&nbsp;&nbsp;&nbsp;&nbsp; &lt;/property&gt;<BR>&nbsp; 
+&nbsp;&nbsp; &lt;property&gt;<BR>&nbsp; &nbsp;&nbsp; 
+&lt;name&gt;hbase.cluster.distributed&lt;/name&gt;//true为分布式模式，false为单机模式<BR>&nbsp; 
+&nbsp;&nbsp; &lt;value&gt;true&lt;/value&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;/property&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;property&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;name&gt;hbase.master&lt;/name&gt;<BR>&nbsp; &nbsp; &nbsp; 
+&lt;value&gt;bigdata1:60000&lt;/value&gt;<BR>&nbsp; &nbsp; &nbsp; 
+&lt;/property&gt;<BR>&nbsp; &nbsp; &nbsp; &lt;property&gt;<BR>&nbsp; &nbsp; 
+&nbsp; &lt;name&gt;hbase.zookeeper.quorum&lt;/name&gt;//zookeeper为221<BR>&nbsp; 
+&nbsp;&nbsp; &lt;value&gt;bigdata1&lt;/value&gt;<BR>&nbsp; &nbsp;&nbsp; 
+&lt;/property&gt;<BR>&nbsp;&nbsp; &lt;/configuration&gt;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+配置文件 
+regionservers&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+//HregionServer服务器<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+bigdata1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">3、运行</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+#cd /usr/local/hbase/bin<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+#./start-hbase.sh&nbsp; //开启hbase集群<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; #./hbase 
+shell//开启Hbase指令<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; #hbase(main):001:0&gt; 
+status<BR>&nbsp;&nbsp;&nbsp;&nbsp; 2 servers, 0 dead, 0.7500 average 
+load<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 配置成功！<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">四、测试</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+#cd /usr/local/hbase/bin</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+hbase shell</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+create "test" "cf"</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+在bigdata2上读取所有表中的数据，如果能读到所有表中的数据，就说明底层的GlusterFs是否共享数据，GlusterFs可以代替HDFS。<BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">五、结论</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+至此，本方案测试成功！GlusterFS可以代替HDFS，以获得更高的性能。当然还需要在生产环境中进一步验证。</P></body>
+</html>

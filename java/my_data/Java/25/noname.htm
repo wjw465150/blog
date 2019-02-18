@@ -1,0 +1,190 @@
+﻿<html>
+<head>
+<title>文件上传JAVABEAN</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+
+<body bgcolor="#e4ebf1" text="#000000">
+标 题：俺写的一个文件上传JAVABEAN，希望大家喜欢。
+<p>发表于：2000-12-04 12:31 来自：61.140.188.94<br>
+  回复 <br>
+  package com.upload; </p>
+<p>import java.io.*; <br>
+  import javax.servlet.http.HttpServletRequest; <br>
+  import javax.servlet.ServletInputStream; <br>
+  import javax.servlet.ServletException; </p>
+<p>public class upload{ <br>
+  private static String newline = "\n"; <br>
+  private String uploadDirectory = "."; <br>
+  private String ContentType = ""; <br>
+  private String CharacterEncoding = ""; </p>
+<p>private String getFileName(String s){ <br>
+  int i = s.lastIndexOf("\\"); <br>
+  if(i &lt; 0 // i &gt;= s.length() - 1){ <br>
+  i =
+    s.lastIndexOf("/"); <br>
+  if(i &lt; 0 // i &gt;= s.length() - 1) <br>
+  return s; <br>
+  } <br>
+  return s.substring(i + 1); <br>
+  } </p>
+<p>public void setUploadDirectory(String s){ <br>
+  uploadDirectory = s; <br>
+  } </p>
+<p>public void setContentType(String s){ <br>
+  ContentType = s; <br>
+  int j; <br>
+  if((j = ContentType.indexOf("boundary=")) != -1){ <br>
+  ContentType = ContentType.substring(j + 9); <br>
+  ContentType = "--" + ContentType; <br>
+  } <br>
+  } </p>
+<p>public void setCharacterEncoding(String s){ <br>
+  CharacterEncoding = s; <br>
+  } </p>
+<p>public void uploadFile( HttpServletRequest req) throws ServletException, IOException{ 
+  <br>
+  setCharacterEncoding(req.getCharacterEncoding()); <br>
+  setContentType(req.getContentType()); <br>
+  uploadFile(req.getInputStream()); <br>
+  } </p>
+<p>public void uploadFile( ServletInputStream servletinputstream) throws ServletException, 
+  IOException{ </p>
+<p>String s5 = null; <br>
+  String filename = null; <br>
+  byte Linebyte[] = new byte[4096]; <br>
+  byte outLinebyte[] = new byte[4096]; <br>
+  int ai[] = new int[1]; <br>
+  int ai1[] =
+     new int[1]; </p>
+<p>String line; <br>
+  //得到文件名 <br>
+  while((line = readLine(Linebyte, ai, servletinputstream, CharacterEncoding)) 
+  != null){ <br>
+  int i =
+     line.indexOf("filename="); <br>
+  if(i &gt;= 0){ <br>
+  line = line.substring(i + 10); <br>
+  if((i = line.indexOf("\"")) &gt; 0) <br>
+  line = line.substring(0, i); <br>
+  break; <br>
+  } <br>
+  } </p>
+<p>filename = line; </p>
+<p>if(filename != null &amp;&amp; !filename.equals("\"")){ <br>
+  filename = getFileName(filename); </p>
+<p>String sContentType = readLine(Linebyte, ai, servletinputstream, CharacterEncoding); 
+  <br>
+  if(sContentType.indexOf("Content-Type") &gt;= 0) <br>
+  readLine(Linebyte, ai, servletinputstream, CharacterEncoding); </p>
+<p>//File(String parent, String child) <br>
+  //Creates a new File instance from a parent pathname string <br>
+  //and a child pathname string. <br>
+  File file = new File(uploadDirectory, filename); </p>
+<p>//FileOutputStream(File file) <br>
+  //Creates a file output stream to write to the file represented <br>
+  //by the specified File object. <br>
+  FileOutputStream fileoutputstream = new FileOutputStream(file); </p>
+<p>while((sContentType = readLine(Linebyte, ai, servletinputstream, CharacterEncoding)) 
+  != null){ <br>
+  if(sContentType.indexOf(ContentType) == 0 &amp;&amp; Linebyte[0] == 45) <br>
+  break; </p>
+<p>if(s5 != null){ <br>
+  //write(byte[] b, int off, int len) <br>
+  //Writes len bytes from the specified byte array starting <br>
+  //at offset off to this file output stream. <br>
+  fileoutputstream.write(outLinebyte, 0, ai1[0]); <br>
+  fileoutputstream.flush(); <br>
+  } <br>
+  s5 = readLine(outLinebyte, ai1, servletinputstream, CharacterEncoding); <br>
+  if(s5 == null // s5.indexOf(ContentType) == 0 &amp;&amp; outLinebyte[0] == 45) 
+  <br>
+  break; <br>
+  fileoutputstream.write(Linebyte, 0, ai[0]); <br>
+  fileoutputstream.flush(); <br>
+  } </p>
+<p>byte byte0; <br>
+  if(newline.length() == 1) <br>
+  byte0 = 2; <br>
+  else <br>
+  byte0 = 1; <br>
+  if(s5 != null &amp;&amp; outLinebyte[0] != 45 &amp;&amp; ai1[0] &gt; newline.length() 
+  * byte0) <br>
+  fileoutputstream.write(outLinebyte, 0, ai1[0] - newline.length() * byte0); <br>
+  if(sContentType != null &amp;&amp; Linebyte[0] != 45 &amp;&amp; ai[0] &gt; newline.length() 
+  * byte0) <br>
+  fileoutputstream.write(Linebyte, 0, ai[0] - newline.length() * byte0); </p>
+<p>fileoutputstream.close(); <br>
+  } <br>
+  } </p>
+<p>private String readLine(byte Linebyte[], int ai[], <br>
+  ServletInputStream servletinputstream, <br>
+  String CharacterEncoding){ <br>
+  try{ <br>
+  //readLine(byte[] buffer, int offset, int length) <br>
+  //Reads a line from the POST data. <br>
+  ai[0] = servletinputstream.readLine(Linebyte, 0, Linebyte.length); <br>
+  if(ai[0] == -1) <br>
+  return null; <br>
+  }catch(IOException _ex){ <br>
+  return null; <br>
+  } <br>
+  try{ <br>
+  if(CharacterEncoding ==
+    null){ <br>
+  //用缺省的编码方式把给定的byte数组转换为字符串 <br>
+  //String(byte[] bytes, int offset, int length) <br>
+  return new String(Linebyte, 0, ai[0]); <br>
+  }else{ <br>
+  //用给定的编码方式把给定的byte数组转换为字符串 <br>
+  //String(byte[] bytes, int offset, int length, String enc) <br>
+  return new String(Linebyte, 0, ai[0], CharacterEncoding); <br>
+  } <br>
+  }catch(Exception _ex){ <br>
+  return null; <br>
+  } <br>
+  } <br>
+  /* <br>
+  public int readLine(byte[] buffer, <br>
+  int offset, <br>
+  int length) throws java.io.IOException <br>
+  从POST来的数据中读一行 <br>
+  参数: <br>
+  buffer - buffer to hold the line data <br>
+  offset - offset into the buffer to start <br>
+  length - maximum number of bytes to read. <br>
+  Returns: <br>
+  number of bytes read or -1 on the end of line. <br>
+  */ <br>
+  } </p>
+<p><br>
+  upload.jsp <br>
+  &lt;%@page import="com.upload.upload"%&gt; <br>
+  &lt;% <br>
+  String Dir =
+     "/home/tonywan/upload"; </p>
+<p>upload upload = new upload(); <br>
+  upload.setUploadDirectory(Dir); <br>
+  upload.uploadFile(request); <br>
+  out.print("&lt;center&gt;&lt;font color=red&gt;成功上载文件至" + Dir + "&lt;/font&gt;&lt;/center&gt;"); 
+  <br>
+  %&gt; </p>
+<p><br>
+  upload.html <br>
+  &lt;center&gt;File upload test&lt;/center&gt; <br>
+  &lt;br&gt; <br>
+  &lt;table&gt;&lt;tr&gt; <br>
+  &lt;form method="post" enctype="multipart/form-data" action="upload.jsp"&gt; 
+  <br>
+  &lt;td&gt; &lt;input type=file size=20 name="fname"&gt; &lt;/td&gt; 
+  <br>
+  &lt;td&gt; &lt;input type=Submit value=Upload&gt; &lt;/td&gt; &lt;/form&gt; 
+  <br>
+  &lt;/tr&gt;&lt;/table&gt; </p>
+<p></p>
+<p><br>&nbsp;
+</p>
+<p>&nbsp;
+</p>
+</body>
+</html>

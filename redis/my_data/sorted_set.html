@@ -1,0 +1,798 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from redis.readthedocs.org/en/2.4/sorted_set.html by HTTrack Website Copier/3.x [XR&CO'2010], Tue, 22 Nov 2011 10:08:53 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>有序集(Sorted Set) &mdash; Redis命令参考简体中文版 v2.4 documentation</title>
+    <link rel="stylesheet" href="static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="static/jquery.js"></script>
+    <script type="text/javascript" src="static/underscore.js"></script>
+    <script type="text/javascript" src="static/doctools.js"></script>
+    <script type="text/javascript" src="static/translations.js"></script>
+    <link rel="author" title="关于这些文档" href="about.html" />
+    <link rel="top" title="Redis命令参考简体中文版 v2.4 documentation" href="index.html" />
+    <link rel="next" title="关于本文档" href="about.html" />
+    <link rel="prev" title="集合(Set)" href="set.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>导航</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="总目录"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="about.html" title="关于本文档"
+             accesskey="N">下一页</a> |</li>
+        <li class="right" >
+          <a href="set.html" title="集合(Set)"
+             accesskey="P">上一页</a> |</li>
+        <li><a href="index.html">Redis命令参考简体中文版 v2.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="sorted-set">
+<span id="sorted-set-struct"></span><h1>有序集(Sorted Set)<a class="headerlink" href="#sorted-set" title="永久链接至标题">¶</a></h1>
+<div class="section" id="zadd">
+<span id="id1"></span><h2>ZADD<a class="headerlink" href="#zadd" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZADD key score member [[score member] [score member] ...]</tt></dt>
+<dd></dd></dl>
+
+<p>将一个或多个<tt class="docutils literal"><span class="pre">member</span></tt>元素及其<tt class="docutils literal"><span class="pre">score</span></tt>值加入到有序集<tt class="docutils literal"><span class="pre">key</span></tt>当中。</p>
+<p>如果某个<tt class="docutils literal"><span class="pre">member</span></tt>已经是有序集的成员，那么更新这个<tt class="docutils literal"><span class="pre">member</span></tt>的<tt class="docutils literal"><span class="pre">score</span></tt>值，并通过重新插入这个<tt class="docutils literal"><span class="pre">member</span></tt>元素，来保证该<tt class="docutils literal"><span class="pre">member</span></tt>在正确的位置上。</p>
+<p><tt class="docutils literal"><span class="pre">score</span></tt>值可以是整数值或双精度浮点数。</p>
+<p>如果<tt class="docutils literal"><span class="pre">key</span></tt>不存在，则创建一个空的有序集并执行<a class="reference internal" href="#zadd">ZADD</a>操作。</p>
+<p>当<tt class="docutils literal"><span class="pre">key</span></tt>存在但不是有序集类型时，返回一个错误。</p>
+<p>对有序集的更多介绍请参见<a class="reference external" href="http://redis.io/topics/data-types#sorted-sets">sorted set</a>。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(M*log(N))，<tt class="docutils literal"><span class="pre">N</span></tt>是有序集的基数，<tt class="docutils literal"><span class="pre">M</span></tt>为成功添加的新成员的数量。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>被成功添加的<em>新</em>成员的数量，不包括那些被更新的、已经存在的成员。</dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">在Redis2.4版本以前，<a class="reference internal" href="#zadd">ZADD</a>每次只能添加一个元素。</p>
+</div>
+<div class="highlight-python"><pre># 添加单个元素
+
+redis&gt; ZADD page_rank 10 google.com
+(integer) 1
+
+# 添加多个元素
+
+redis&gt; ZADD page_rank 9 baidu.com 8 bing.com
+(integer) 2
+
+redis&gt; ZRANGE page_rank 0 -1 WITHSCORES
+1) "bing.com"
+2) "8"
+3) "baidu.com"
+4) "9"
+5) "google.com"
+6) "10"
+
+# 添加已存在元素，且 score 值不变
+
+redis&gt; ZADD page_rank 10 google.com
+(integer) 0
+
+redis&gt; ZRANGE page_rank 0 -1 WITHSCORES  # 没有改变
+1) "bing.com"
+2) "8"
+3) "baidu.com"
+4) "9"
+5) "google.com"
+6) "10"
+
+# 添加已存在元素，但是改变 score 值
+
+redis&gt; ZADD page_rank 6 bing.com
+(integer) 0
+
+redis&gt; ZRANGE page_rank 0 -1 WITHSCORES  # bing.com 元素的score值被改变
+1) "bing.com"
+2) "6"
+3) "baidu.com"
+4) "9"
+5) "google.com"
+6) "10"</pre>
+</div>
+</div>
+<div class="section" id="zrem">
+<span id="id3"></span><h2>ZREM<a class="headerlink" href="#zrem" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZREM key member [member ...]</tt></dt>
+<dd></dd></dl>
+
+<p>移除有序集<tt class="docutils literal"><span class="pre">key</span></tt>中的一个或多个成员，不存在的成员将被忽略。</p>
+<p>当<tt class="docutils literal"><span class="pre">key</span></tt>存在但不是有序集类型时，返回一个错误。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(M*log(N))，<tt class="docutils literal"><span class="pre">N</span></tt>为有序集的基数，<tt class="docutils literal"><span class="pre">M</span></tt>为被成功移除的成员的数量。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>被成功移除的成员的数量，不包括被忽略的成员。</dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">在Redis2.4版本以前，<a class="reference internal" href="#zrem">ZREM</a>每次只能删除一个元素。</p>
+</div>
+<div class="highlight-python"><pre># 测试数据
+
+redis&gt; ZRANGE page_rank 0 -1 WITHSCORES
+1) "bing.com"
+2) "8"
+3) "baidu.com"
+4) "9"
+5) "google.com"
+6) "10"
+
+# 移除单个元素
+
+redis&gt; ZREM page_rank google.com
+(integer) 1
+
+redis&gt; ZRANGE page_rank 0 -1 WITHSCORES
+1) "bing.com"
+2) "8"
+3) "baidu.com"
+4) "9"
+
+# 移除多个元素
+
+redis&gt; ZREM page_rank baidu.com bing.com
+(integer) 2
+
+redis&gt; ZRANGE page_rank 0 -1 WITHSCORES
+(empty list or set)
+
+# 移除不存在元素
+
+redis&gt; ZREM page_rank non-exists-element
+(integer) 0</pre>
+</div>
+</div>
+<div class="section" id="zcard">
+<span id="id4"></span><h2>ZCARD<a class="headerlink" href="#zcard" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZCARD key</tt></dt>
+<dd></dd></dl>
+
+<p>返回有序集<tt class="docutils literal"><span class="pre">key</span></tt>的基数。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值:</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">当<tt class="docutils literal"><span class="pre">key</span></tt>存在且是有序集类型时，返回有序集的基数。</div>
+<div class="line">当<tt class="docutils literal"><span class="pre">key</span></tt>不存在时，返回<tt class="docutils literal"><span class="pre">0</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis &gt; ZADD salary 2000 tom  # 添加一个成员
+(integer) 1
+redis &gt; ZCARD salary
+(integer) 1
+
+redis &gt; ZADD salary 5000 jack # 再添加一个成员
+(integer) 1
+redis &gt; ZCARD salary
+(integer) 2
+
+redis &gt; EXISTS non_exists_key # 对不存在的key进行ZCARD操作
+(integer) 0
+redis &gt; ZCARD non_exists_key
+(integer) 0</pre>
+</div>
+</div>
+<div class="section" id="zcount">
+<span id="id5"></span><h2>ZCOUNT<a class="headerlink" href="#zcount" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZCOUNT key min max</tt></dt>
+<dd></dd></dl>
+
+<p>返回有序集<tt class="docutils literal"><span class="pre">key</span></tt>中，<tt class="docutils literal"><span class="pre">score</span></tt>值在<tt class="docutils literal"><span class="pre">min</span></tt>和<tt class="docutils literal"><span class="pre">max</span></tt>之间(默认包括<tt class="docutils literal"><span class="pre">score</span></tt>值等于<tt class="docutils literal"><span class="pre">min</span></tt>或<tt class="docutils literal"><span class="pre">max</span></tt>)的成员。</p>
+<p>关于参数<tt class="docutils literal"><span class="pre">min</span></tt>和<tt class="docutils literal"><span class="pre">max</span></tt>的详细使用方法，请参考<a class="reference internal" href="#zrangebyscore">ZRANGEBYSCORE</a>命令。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(log(N)+M)，<tt class="docutils literal"><span class="pre">N</span></tt>为有序集的基数，<tt class="docutils literal"><span class="pre">M</span></tt>为值在<tt class="docutils literal"><span class="pre">min</span></tt>和<tt class="docutils literal"><span class="pre">max</span></tt>之间的元素的数量。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd><tt class="docutils literal"><span class="pre">score</span></tt>值在<tt class="docutils literal"><span class="pre">min</span></tt>和<tt class="docutils literal"><span class="pre">max</span></tt>之间的成员的数量。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; ZRANGE salary 0 -1 WITHSCORES # 显示所有成员及其score值
+1) "jack"
+2) "2000"
+3) "peter"
+4) "3500"
+5) "tom"
+6) "5000"
+
+redis&gt; ZCOUNT salary 2000 5000   # 计算薪水在2000-5000之间的人数
+(integer) 3
+
+redis&gt; ZCOUNT salary 3000 5000   # 计算薪水在3000-5000之间的人数
+(integer) 2</pre>
+</div>
+</div>
+<div class="section" id="zscore">
+<span id="id6"></span><h2>ZSCORE<a class="headerlink" href="#zscore" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZSCORE key member</tt></dt>
+<dd></dd></dl>
+
+<p>返回有序集<tt class="docutils literal"><span class="pre">key</span></tt>中，成员<tt class="docutils literal"><span class="pre">member</span></tt>的<tt class="docutils literal"><span class="pre">score</span></tt>值。</p>
+<p>如果<tt class="docutils literal"><span class="pre">member</span></tt>元素不是有序集<tt class="docutils literal"><span class="pre">key</span></tt>的成员，或<tt class="docutils literal"><span class="pre">key</span></tt>不存在，返回<tt class="docutils literal"><span class="pre">nil</span></tt>。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值:</strong></dt>
+<dd><tt class="docutils literal"><span class="pre">member</span></tt>成员的<tt class="docutils literal"><span class="pre">score</span></tt>值，以字符串形式表示。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; ZRANGE salary 0 -1 WITHSCORES # 显示所有成员及其score值
+1) "tom"
+2) "2000"
+3) "peter"
+4) "3500"
+5) "jack"
+6) "5000"
+
+redis&gt; ZSCORE salary peter   # 注意返回值是字符串
+"3500"</pre>
+</div>
+</div>
+<div class="section" id="zincrby">
+<span id="id7"></span><h2>ZINCRBY<a class="headerlink" href="#zincrby" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZINCRBY key increment member</tt></dt>
+<dd></dd></dl>
+
+<p>为有序集<tt class="docutils literal"><span class="pre">key</span></tt>的成员<tt class="docutils literal"><span class="pre">member</span></tt>的<tt class="docutils literal"><span class="pre">score</span></tt>值加上增量<tt class="docutils literal"><span class="pre">increment</span></tt>。</p>
+<p>你也可以通过传递一个负数值<tt class="docutils literal"><span class="pre">increment</span></tt>，让<tt class="docutils literal"><span class="pre">score</span></tt>减去相应的值，比如<tt class="docutils literal"><span class="pre">ZINCRBY</span> <span class="pre">key</span> <span class="pre">-5</span> <span class="pre">member</span></tt>，就是让<tt class="docutils literal"><span class="pre">member</span></tt>的<tt class="docutils literal"><span class="pre">score</span></tt>值减去<tt class="docutils literal"><span class="pre">5</span></tt>。</p>
+<p>当<tt class="docutils literal"><span class="pre">key</span></tt>不存在，或<tt class="docutils literal"><span class="pre">member</span></tt>不是<tt class="docutils literal"><span class="pre">key</span></tt>的成员时，<tt class="docutils literal"><span class="pre">ZINCRBY</span> <span class="pre">key</span> <span class="pre">increment</span> <span class="pre">member</span></tt>等同于<tt class="docutils literal"><span class="pre">ZADD</span> <span class="pre">key</span> <span class="pre">increment</span> <span class="pre">member</span></tt>。</p>
+<p>当<tt class="docutils literal"><span class="pre">key</span></tt>不是有序集类型时，返回一个错误。</p>
+<p><tt class="docutils literal"><span class="pre">score</span></tt>值可以是整数值或双精度浮点数。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(log(N))</dd>
+<dt><strong>返回值:</strong></dt>
+<dd><tt class="docutils literal"><span class="pre">member</span></tt>成员的新<tt class="docutils literal"><span class="pre">score</span></tt>值，以字符串形式表示。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; ZSCORE salary tom
+"2000"
+
+redis&gt; ZINCRBY salary 2000 tom   # tom加薪啦！
+"4000"</pre>
+</div>
+</div>
+<div class="section" id="zrange">
+<span id="id8"></span><h2>ZRANGE<a class="headerlink" href="#zrange" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZRANGE key start stop [WITHSCORES]</tt></dt>
+<dd></dd></dl>
+
+<p>返回有序集<tt class="docutils literal"><span class="pre">key</span></tt>中，指定区间内的成员。</p>
+<p>其中成员的位置按<tt class="docutils literal"><span class="pre">score</span></tt>值递增(从小到大)来排序。</p>
+<p>具有相同<tt class="docutils literal"><span class="pre">score</span></tt>值的成员按字典序(<a class="reference external" href="http://en.wikipedia.org/wiki/Lexicographical_order">lexicographical order</a>)来排列。</p>
+<p>如果你需要成员按<tt class="docutils literal"><span class="pre">score</span></tt>值递减(从大到小)来排列，请使用<a class="reference internal" href="#zrevrange">ZREVRANGE</a>命令。</p>
+<div class="line-block">
+<div class="line">下标参数<tt class="docutils literal"><span class="pre">start</span></tt>和<tt class="docutils literal"><span class="pre">stop</span></tt>都以<tt class="docutils literal"><span class="pre">0</span></tt>为底，也就是说，以<tt class="docutils literal"><span class="pre">0</span></tt>表示有序集第一个成员，以<tt class="docutils literal"><span class="pre">1</span></tt>表示有序集第二个成员，以此类推。</div>
+<div class="line">你也可以使用负数下标，以<tt class="docutils literal"><span class="pre">-1</span></tt>表示最后一个成员，<tt class="docutils literal"><span class="pre">-2</span></tt>表示倒数第二个成员，以此类推。</div>
+</div>
+<div class="line-block">
+<div class="line">超出范围的下标并不会引起错误。</div>
+<div class="line">比如说，当<tt class="docutils literal"><span class="pre">start</span></tt>的值比有序集的最大下标还要大，或是<tt class="docutils literal"><span class="pre">start</span> <span class="pre">&gt;</span> <span class="pre">stop</span></tt>时，<a class="reference internal" href="#zrange">ZRANGE</a>命令只是简单地返回一个空列表。</div>
+<div class="line">另一方面，假如<tt class="docutils literal"><span class="pre">stop</span></tt>参数的值比有序集的最大下标还要大，那么Redis将<tt class="docutils literal"><span class="pre">stop</span></tt>当作最大下标来处理。</div>
+</div>
+<div class="line-block">
+<div class="line">可以通过使用<tt class="docutils literal"><span class="pre">WITHSCORES</span></tt>选项，来让成员和它的<tt class="docutils literal"><span class="pre">score</span></tt>值一并返回，返回列表以<tt class="docutils literal"><span class="pre">value1,score1,</span> <span class="pre">...,</span> <span class="pre">valueN,scoreN</span></tt>的格式表示。</div>
+<div class="line">客户端库可能会返回一些更复杂的数据类型，比如数组、元组等。</div>
+</div>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(log(N)+M)，<tt class="docutils literal"><span class="pre">N</span></tt>为有序集的基数，而<tt class="docutils literal"><span class="pre">M</span></tt>为结果集的基数。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>指定区间内，带有<tt class="docutils literal"><span class="pre">score</span></tt>值(可选)的有序集成员的列表。</dd>
+</dl>
+<div class="highlight-python"><pre>redis &gt; ZADD salary 5000 tom
+(integer) 1
+redis &gt; ZADD salary 10086 boss
+(integer) 1
+redis &gt; ZADD salary 3500 jack
+(integer) 1
+
+redis &gt; ZRANGE salary 0 -1 WITHSCORES  # 显示整个有序集成员
+1) "jack"
+2) "3500"
+3) "tom"
+4) "5000"
+5) "boss"
+6) "10086"
+
+redis &gt; ZRANGE salary 1 2 WITHSCORES   # 显示有序集下标区间1至2的成员
+1) "tom"
+2) "5000"
+3) "boss"
+4) "10086"
+
+redis &gt; ZRANGE salary 0 200000 WITHSCORES  # 测试end下标超出最大下标时的情况
+1) "jack"
+2) "3500"
+3) "tom"
+4) "5000"
+5) "boss"
+6) "10086"
+
+redis &gt; ZRANGE salary 200000 3000000 WITHSCORES   # 测试当给定区间不存在于有序集时的情况
+(empty list or set)</pre>
+</div>
+</div>
+<div class="section" id="zrevrange">
+<span id="id9"></span><h2>ZREVRANGE<a class="headerlink" href="#zrevrange" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZREVRANGE key start stop [WITHSCORES]</tt></dt>
+<dd></dd></dl>
+
+<p>返回有序集<tt class="docutils literal"><span class="pre">key</span></tt>中，指定区间内的成员。</p>
+<div class="line-block">
+<div class="line">其中成员的位置按<tt class="docutils literal"><span class="pre">score</span></tt>值递减(从大到小)来排列。</div>
+<div class="line">具有相同<tt class="docutils literal"><span class="pre">score</span></tt>值的成员按字典序的反序(<a class="reference external" href="http://en.wikipedia.org/wiki/Lexicographical_order#Reverse_lexicographic_order">reverse lexicographical order</a>)排列。</div>
+</div>
+<p>除了成员按<tt class="docutils literal"><span class="pre">score</span></tt>值递减的次序排列这一点外，<a class="reference internal" href="#zrevrange">ZREVRANGE</a>命令的其他方面和<a class="reference internal" href="#zrange">ZRANGE</a>命令一样。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(log(N)+M)，<tt class="docutils literal"><span class="pre">N</span></tt>为有序集的基数，而<tt class="docutils literal"><span class="pre">M</span></tt>为结果集的基数。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>指定区间内，带有<tt class="docutils literal"><span class="pre">score</span></tt>值(可选)的有序集成员的列表。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; ZRANGE salary 0 -1 WITHSCORES # 递增排列
+1) "peter"
+2) "3500"
+3) "tom"
+4) "4000"
+5) "jack"
+6) "5000"
+
+redis&gt; ZREVRANGE salary 0 -1 WITHSCORES  # 递减排列
+1) "jack"
+2) "5000"
+3) "tom"
+4) "4000"
+5) "peter"
+6) "3500"</pre>
+</div>
+</div>
+<div class="section" id="zrangebyscore">
+<span id="id10"></span><h2>ZRANGEBYSCORE<a class="headerlink" href="#zrangebyscore" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZRANGEBYSCORE key min max [WITHSCORES] [LIMIT offset count]</tt></dt>
+<dd></dd></dl>
+
+<p>返回有序集<tt class="docutils literal"><span class="pre">key</span></tt>中，所有<tt class="docutils literal"><span class="pre">score</span></tt>值介于<tt class="docutils literal"><span class="pre">min</span></tt>和<tt class="docutils literal"><span class="pre">max</span></tt>之间(包括等于<tt class="docutils literal"><span class="pre">min</span></tt>或<tt class="docutils literal"><span class="pre">max</span></tt>)的成员。有序集成员按<tt class="docutils literal"><span class="pre">score</span></tt>值递增(从小到大)次序排列。</p>
+<p>具有相同<tt class="docutils literal"><span class="pre">score</span></tt>值的成员按字典序(<a class="reference external" href="http://en.wikipedia.org/wiki/Lexicographical_order">lexicographical order</a>)来排列(该属性是有序集提供的，不需要额外的计算)。</p>
+<p>可选的<tt class="docutils literal"><span class="pre">LIMIT</span></tt>参数指定返回结果的数量及区间(就像SQL中的<tt class="docutils literal"><span class="pre">SELECT</span> <span class="pre">LIMIT</span> <span class="pre">offset,</span> <span class="pre">count</span></tt>)，注意当<tt class="docutils literal"><span class="pre">offset</span></tt>很大时，定位<tt class="docutils literal"><span class="pre">offset</span></tt>的操作可能需要遍历整个有序集，此过程最坏复杂度为O(N)时间。</p>
+<div class="line-block">
+<div class="line">可选的<tt class="docutils literal"><span class="pre">WITHSCORES</span></tt>参数决定结果集是单单返回有序集的成员，还是将有序集成员及其<tt class="docutils literal"><span class="pre">score</span></tt>值一起返回。</div>
+<div class="line">该选项自Redis 2.0版本起可用。</div>
+</div>
+<p><strong>区间及无限</strong></p>
+<p><tt class="docutils literal"><span class="pre">min</span></tt>和<tt class="docutils literal"><span class="pre">max</span></tt>可以是<tt class="docutils literal"><span class="pre">-inf</span></tt>和<tt class="docutils literal"><span class="pre">+inf</span></tt>，这样一来，你就可以在不知道有序集的最低和最高<tt class="docutils literal"><span class="pre">score</span></tt>值的情况下，使用<a class="reference internal" href="#zrangebyscore">ZRANGEBYSCORE</a>这类命令。</p>
+<p>默认情况下，区间的取值使用<a class="reference external" href="http://zh.wikipedia.org/wiki/%E5%8D%80%E9%96%93">闭区间</a>(小于等于或大于等于)，你也可以通过给参数前增加<tt class="docutils literal"><span class="pre">(</span></tt>符号来使用可选的<a class="reference external" href="http://zh.wikipedia.org/wiki/%E5%8D%80%E9%96%93">开区间</a>(小于或大于)。</p>
+<p>举个例子：</p>
+<div class="highlight-python"><pre>ZRANGEBYSCORE zset (1 5</pre>
+</div>
+<p>返回所有符合条件<tt class="docutils literal"><span class="pre">1</span> <span class="pre">&lt;</span> <span class="pre">score</span> <span class="pre">&lt;=</span> <span class="pre">5</span></tt>的成员；</p>
+<div class="highlight-python"><pre>ZRANGEBYSCORE zset (5 (10</pre>
+</div>
+<p>返回所有符合条件<tt class="docutils literal"><span class="pre">5</span> <span class="pre">&lt;</span> <span class="pre">score</span> <span class="pre">&lt;</span> <span class="pre">10</span></tt>的成员。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(log(N)+M)，<tt class="docutils literal"><span class="pre">N</span></tt>为有序集的基数，<tt class="docutils literal"><span class="pre">M</span></tt>为被结果集的基数。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>指定区间内，带有<tt class="docutils literal"><span class="pre">score</span></tt>值(可选)的有序集成员的列表。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; ZADD salary 2500 jack
+(integer) 0
+redis&gt; ZADD salary 5000 tom
+(integer) 0
+redis&gt; ZADD salary 12000 peter
+(integer) 0
+
+redis&gt; ZRANGEBYSCORE salary -inf +inf    # 显示整个有序集
+1) "jack"
+2) "tom"
+3) "peter"
+
+redis&gt; ZRANGEBYSCORE salary -inf +inf WITHSCORES # 显示整个有序集及成员的score值
+1) "jack"
+2) "2500"
+3) "tom"
+4) "5000"
+5) "peter"
+6) "12000"
+
+redis&gt; ZRANGEBYSCORE salary -inf 5000 WITHSCORES # 显示工资&lt;=5000的所有成员
+1) "jack"
+2) "2500"
+3) "tom"
+4) "5000"
+
+redis&gt; ZRANGEBYSCORE salary (5000 400000 # 显示工资大于5000小于400000的成员
+1) "peter"</pre>
+</div>
+</div>
+<div class="section" id="zrevrangebyscore">
+<span id="id13"></span><h2>ZREVRANGEBYSCORE<a class="headerlink" href="#zrevrangebyscore" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZREVRANGEBYSCORE key max min [WITHSCORES] [LIMIT offset count]</tt></dt>
+<dd></dd></dl>
+
+<p>返回有序集<tt class="docutils literal"><span class="pre">key</span></tt>中，<tt class="docutils literal"><span class="pre">score</span></tt>值介于<tt class="docutils literal"><span class="pre">max</span></tt>和<tt class="docutils literal"><span class="pre">min</span></tt>之间(默认包括等于<tt class="docutils literal"><span class="pre">max</span></tt>或<tt class="docutils literal"><span class="pre">min</span></tt>)的所有的成员。有序集成员按<tt class="docutils literal"><span class="pre">score</span></tt>值递减(从大到小)的次序排列。</p>
+<p>具有相同<tt class="docutils literal"><span class="pre">score</span></tt>值的成员按字典序的反序(<a class="reference external" href="http://en.wikipedia.org/wiki/Lexicographical_order#Reverse_lexicographic_order">reverse lexicographical order</a>)排列。</p>
+<p>除了成员按<tt class="docutils literal"><span class="pre">score</span></tt>值递减的次序排列这一点外，<a class="reference internal" href="#zrevrangebyscore">ZREVRANGEBYSCORE</a>命令的其他方面和<a class="reference internal" href="#zrangebyscore">ZRANGEBYSCORE</a>命令一样。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(log(N)+M)，<tt class="docutils literal"><span class="pre">N</span></tt>为有序集的基数，<tt class="docutils literal"><span class="pre">M</span></tt>为结果集的基数。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>指定区间内，带有<tt class="docutils literal"><span class="pre">score</span></tt>值(可选)的有序集成员的列表。</dd>
+</dl>
+<div class="highlight-python"><pre>redis &gt; ZADD salary 10086 jack
+(integer) 1
+redis &gt; ZADD salary 5000 tom
+(integer) 1
+redis &gt; ZADD salary 7500 peter
+(integer) 1
+redis &gt; ZADD salary 3500 joe
+(integer) 1
+
+redis &gt; ZREVRANGEBYSCORE salary +inf -inf # 逆序排列所有成员
+1) "jack"
+2) "peter"
+3) "tom"
+4) "joe"
+
+redis &gt; ZREVRANGEBYSCORE salary 10000 2000 # 逆序排列薪水介于10000和2000之间的成员
+1) "peter"
+2) "tom"
+3) "joe"</pre>
+</div>
+</div>
+<div class="section" id="zrank">
+<span id="id14"></span><h2>ZRANK<a class="headerlink" href="#zrank" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZRANK key member</tt></dt>
+<dd></dd></dl>
+
+<p>返回有序集<tt class="docutils literal"><span class="pre">key</span></tt>中成员<tt class="docutils literal"><span class="pre">member</span></tt>的排名。其中有序集成员按<tt class="docutils literal"><span class="pre">score</span></tt>值递增(从小到大)顺序排列。</p>
+<p>排名以<tt class="docutils literal"><span class="pre">0</span></tt>为底，也就是说，<tt class="docutils literal"><span class="pre">score</span></tt>值最小的成员排名为<tt class="docutils literal"><span class="pre">0</span></tt>。</p>
+<p>使用<a class="reference internal" href="#zrevrank">ZREVRANK</a>命令可以获得成员按<tt class="docutils literal"><span class="pre">score</span></tt>值递减(从大到小)排列的排名。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(log(N))</dd>
+<dt><strong>返回值:</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">如果<tt class="docutils literal"><span class="pre">member</span></tt>是有序集<tt class="docutils literal"><span class="pre">key</span></tt>的成员，返回<tt class="docutils literal"><span class="pre">member</span></tt>的排名。</div>
+<div class="line">如果<tt class="docutils literal"><span class="pre">member</span></tt>不是有序集<tt class="docutils literal"><span class="pre">key</span></tt>的成员，返回<tt class="docutils literal"><span class="pre">nil</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; ZRANGE salary 0 -1 WITHSCORES # 显示所有成员及其score值
+1) "peter"
+2) "3500"
+3) "tom"
+4) "4000"
+5) "jack"
+6) "5000"
+
+redis&gt; ZRANK salary tom  # 显示tom的薪水排名，第二
+(integer) 1</pre>
+</div>
+</div>
+<div class="section" id="zrevrank">
+<span id="id15"></span><h2>ZREVRANK<a class="headerlink" href="#zrevrank" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZREVRANK key member</tt></dt>
+<dd></dd></dl>
+
+<p>返回有序集<tt class="docutils literal"><span class="pre">key</span></tt>中成员<tt class="docutils literal"><span class="pre">member</span></tt>的排名。其中有序集成员按<tt class="docutils literal"><span class="pre">score</span></tt>值递减(从大到小)排序。</p>
+<p>排名以<tt class="docutils literal"><span class="pre">0</span></tt>为底，也就是说，<tt class="docutils literal"><span class="pre">score</span></tt>值最大的成员排名为<tt class="docutils literal"><span class="pre">0</span></tt>。</p>
+<p>使用<a class="reference internal" href="#zrank">ZRANK</a>命令可以获得成员按<tt class="docutils literal"><span class="pre">score</span></tt>值递增(从小到大)排列的排名。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(log(N))</dd>
+<dt><strong>返回值:</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">如果<tt class="docutils literal"><span class="pre">member</span></tt>是有序集<tt class="docutils literal"><span class="pre">key</span></tt>的成员，返回<tt class="docutils literal"><span class="pre">member</span></tt>的排名。</div>
+<div class="line">如果<tt class="docutils literal"><span class="pre">member</span></tt>不是有序集<tt class="docutils literal"><span class="pre">key</span></tt>的成员，返回<tt class="docutils literal"><span class="pre">nil</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; ZADD salary 2000 jack
+(integer) 1
+redis&gt; ZADD salary 5000 tom
+(integer) 1
+redis&gt; ZADD salary 3500 peter
+(integer) 1
+
+redis&gt; ZREVRANK salary peter # peter的工资排第二
+(integer) 1
+redis&gt; ZREVRANK salary tom   # tom的工资最高
+(integer) 0</pre>
+</div>
+</div>
+<div class="section" id="zremrangebyrank">
+<span id="id16"></span><h2>ZREMRANGEBYRANK<a class="headerlink" href="#zremrangebyrank" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZREMRANGEBYRANK key start stop</tt></dt>
+<dd></dd></dl>
+
+<p>移除有序集<tt class="docutils literal"><span class="pre">key</span></tt>中，指定排名(rank)区间内的所有成员。</p>
+<p>区间分别以下标参数<tt class="docutils literal"><span class="pre">start</span></tt>和<tt class="docutils literal"><span class="pre">stop</span></tt>指出，包含<tt class="docutils literal"><span class="pre">start</span></tt>和<tt class="docutils literal"><span class="pre">stop</span></tt>在内。</p>
+<div class="line-block">
+<div class="line">下标参数<tt class="docutils literal"><span class="pre">start</span></tt>和<tt class="docutils literal"><span class="pre">stop</span></tt>都以<tt class="docutils literal"><span class="pre">0</span></tt>为底，也就是说，以<tt class="docutils literal"><span class="pre">0</span></tt>表示有序集第一个成员，以<tt class="docutils literal"><span class="pre">1</span></tt>表示有序集第二个成员，以此类推。</div>
+<div class="line">你也可以使用负数下标，以<tt class="docutils literal"><span class="pre">-1</span></tt>表示最后一个成员，<tt class="docutils literal"><span class="pre">-2</span></tt>表示倒数第二个成员，以此类推。</div>
+</div>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(log(N)+M)，<tt class="docutils literal"><span class="pre">N</span></tt>为有序集的基数，而<tt class="docutils literal"><span class="pre">M</span></tt>为被移除成员的数量。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>被移除成员的数量。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; ZADD salary 2000 jack
+(integer) 1
+redis&gt; ZADD salary 5000 tom
+(integer) 1
+redis&gt; ZADD salary 3500 peter
+(integer) 1
+
+redis&gt; ZREMRANGEBYRANK salary 0 1    # 移除下标0至1区间内的成员
+(integer) 2
+
+redis&gt; ZRANGE salary 0 -1 WITHSCORES # 有序集只剩下一个成员
+1) "tom"
+2) "5000"</pre>
+</div>
+</div>
+<div class="section" id="zremrangebyscore">
+<span id="id17"></span><h2>ZREMRANGEBYSCORE<a class="headerlink" href="#zremrangebyscore" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZREMRANGEBYSCORE key min max</tt></dt>
+<dd></dd></dl>
+
+<p>移除有序集<tt class="docutils literal"><span class="pre">key</span></tt>中，所有<tt class="docutils literal"><span class="pre">score</span></tt>值介于<tt class="docutils literal"><span class="pre">min</span></tt>和<tt class="docutils literal"><span class="pre">max</span></tt>之间(包括等于<tt class="docutils literal"><span class="pre">min</span></tt>或<tt class="docutils literal"><span class="pre">max</span></tt>)的成员。</p>
+<p>自版本2.1.6开始，<tt class="docutils literal"><span class="pre">score</span></tt>值等于<tt class="docutils literal"><span class="pre">min</span></tt>或<tt class="docutils literal"><span class="pre">max</span></tt>的成员也可以不包括在内，详情请参见<a class="reference internal" href="#zrangebyscore">ZRANGEBYSCORE</a>命令。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(log(N)+M)，<tt class="docutils literal"><span class="pre">N</span></tt>为有序集的基数，而<tt class="docutils literal"><span class="pre">M</span></tt>为被移除成员的数量。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>被移除成员的数量。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; ZRANGE salary 0 -1 WITHSCORES # 显示有序集内所有成员及其score值
+1) "tom"
+2) "2000"
+3) "peter"
+4) "3500"
+5) "jack"
+6) "5000"
+
+redis&gt; ZREMRANGEBYSCORE salary 1500 3500 # 解雇所有薪水在1500到3500内的员工
+(integer) 2
+
+redis&gt; ZRANGE salary 0 -1 WITHSCORES # 剩下的有序集成员
+1) "jack"
+2) "5000"</pre>
+</div>
+</div>
+<div class="section" id="zinterstore">
+<span id="id18"></span><h2>ZINTERSTORE<a class="headerlink" href="#zinterstore" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZINTERSTORE destination numkeys key [key ...] [WEIGHTS weight [weight ...]] [AGGREGATE SUM|MIN|MAX]</tt></dt>
+<dd></dd></dl>
+
+<p>计算给定的一个或多个有序集的交集，其中给定<tt class="docutils literal"><span class="pre">key</span></tt>的数量必须以<tt class="docutils literal"><span class="pre">numkeys</span></tt>参数指定，并将该交集(结果集)储存到<tt class="docutils literal"><span class="pre">destination</span></tt>。</p>
+<p>默认情况下，结果集中某个成员的<tt class="docutils literal"><span class="pre">score</span></tt>值是所有给定集下该成员<tt class="docutils literal"><span class="pre">score</span></tt>值之<em>和</em>。</p>
+<p>关于<tt class="docutils literal"><span class="pre">WEIGHTS</span></tt>和<tt class="docutils literal"><span class="pre">AGGREGATE</span></tt>选项的描述，参见<a class="reference internal" href="#zunionstore">ZUNIONSTORE</a>命令。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N*K)+O(M*log(M))，<tt class="docutils literal"><span class="pre">N</span></tt>为给定<tt class="docutils literal"><span class="pre">key</span></tt>中基数最小的有序集，<tt class="docutils literal"><span class="pre">K</span></tt>为给定有序集的数量，<tt class="docutils literal"><span class="pre">M</span></tt>为结果集的基数。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>保存到<tt class="docutils literal"><span class="pre">destination</span></tt>的结果集的基数。</dd>
+</dl>
+<div class="highlight-python"><pre>redis &gt; ZADD mid_test 70 "Li Lei"
+(integer) 1
+redis &gt; ZADD mid_test 70 "Han Meimei"
+(integer) 1
+redis &gt; ZADD mid_test 99.5 "Tom"
+(integer) 1
+
+redis &gt; ZADD fin_test 88 "Li Lei"
+(integer) 1
+redis &gt; ZADD fin_test 75 "Han Meimei"
+(integer) 1
+redis &gt; ZADD fin_test 99.5 "Tom"
+(integer) 1
+
+redis &gt; ZINTERSTORE sum_point 2 mid_test fin_test
+(integer) 3
+
+redis &gt; ZRANGE sum_point 0 -1 WITHSCORES  # 显式集合内所有成员及其score值
+1) "Han Meimei"
+2) "145"
+3) "Li Lei"
+4) "158"
+5) "Tom"
+6) "199"</pre>
+</div>
+</div>
+<div class="section" id="zunionstore">
+<span id="id19"></span><h2>ZUNIONSTORE<a class="headerlink" href="#zunionstore" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">ZUNIONSTORE destination numkeys key [key ...] [WEIGHTS weight [weight ...]] [AGGREGATE SUM|MIN|MAX]</tt></dt>
+<dd></dd></dl>
+
+<p>计算给定的一个或多个有序集的并集，其中给定<tt class="docutils literal"><span class="pre">key</span></tt>的数量必须以<tt class="docutils literal"><span class="pre">numkeys</span></tt>参数指定，并将该并集(结果集)储存到<tt class="docutils literal"><span class="pre">destination</span></tt>。</p>
+<p>默认情况下，结果集中某个成员的<tt class="docutils literal"><span class="pre">score</span></tt>值是所有给定集下该成员<tt class="docutils literal"><span class="pre">score</span></tt>值之<em>和</em>。</p>
+<p><strong>WEIGHTS</strong></p>
+<p>使用<tt class="docutils literal"><span class="pre">WEIGHTS</span></tt>选项，你可以为<em>每个</em>给定有序集<em>分别</em>指定一个乘法因子(multiplication factor)，每个给定有序集的所有成员的<tt class="docutils literal"><span class="pre">score</span></tt>值在传递给聚合函数(aggregation function)之前都要先乘以该有序集的因子。</p>
+<p>如果没有指定<tt class="docutils literal"><span class="pre">WEIGHTS</span></tt>选项，乘法因子默认设置为<tt class="docutils literal"><span class="pre">1</span></tt>。</p>
+<p><strong>AGGREGATE</strong></p>
+<p>使用<tt class="docutils literal"><span class="pre">AGGREGATE</span></tt>选项，你可以指定并集的结果集的聚合方式。</p>
+<p>默认使用的参数<tt class="docutils literal"><span class="pre">SUM</span></tt>，可以将所有集合中某个成员的<tt class="docutils literal"><span class="pre">score</span></tt>值之<em>和</em>作为结果集中该成员的<tt class="docutils literal"><span class="pre">score</span></tt>值；使用参数<tt class="docutils literal"><span class="pre">MIN</span></tt>，可以将所有集合中某个成员的<em>最小</em><tt class="docutils literal"><span class="pre">score</span></tt>值作为结果集中该成员的<tt class="docutils literal"><span class="pre">score</span></tt>值；而参数<tt class="docutils literal"><span class="pre">MAX</span></tt>则是将所有集合中某个成员的<em>最大</em><tt class="docutils literal"><span class="pre">score</span></tt>值作为结果集中该成员的<tt class="docutils literal"><span class="pre">score</span></tt>值。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N)+O(M log(M))，<tt class="docutils literal"><span class="pre">N</span></tt>为给定有序集基数的总和，<tt class="docutils literal"><span class="pre">M</span></tt>为结果集的基数。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>保存到<tt class="docutils literal"><span class="pre">destination</span></tt>的结果集的基数。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; ZRANGE programmer 0 -1 WITHSCORES
+1) "peter"
+2) "2000"
+3) "jack"
+4) "3500"
+5) "tom"
+6) "5000"
+
+redis&gt; ZRANGE manager 0 -1 WITHSCORES
+1) "herry"
+2) "2000"
+3) "mary"
+4) "3500"
+5) "bob"
+6) "4000"
+
+redis&gt; ZUNIONSTORE salary 2 programmer manager WEIGHTS 1 3   # 公司决定加薪。。。除了程序员。。。
+(integer) 6
+
+redis&gt; ZRANGE salary 0 -1 WITHSCORES
+1) "peter"
+2) "2000"
+3) "jack"
+4) "3500"
+5) "tom"
+6) "5000"
+7) "herry"
+8) "6000"
+9) "mary"
+10) "10500"
+11) "bob"
+12) "12000"</pre>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">內容目录</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">有序集(Sorted Set)</a><ul>
+<li><a class="reference internal" href="#zadd">ZADD</a></li>
+<li><a class="reference internal" href="#zrem">ZREM</a></li>
+<li><a class="reference internal" href="#zcard">ZCARD</a></li>
+<li><a class="reference internal" href="#zcount">ZCOUNT</a></li>
+<li><a class="reference internal" href="#zscore">ZSCORE</a></li>
+<li><a class="reference internal" href="#zincrby">ZINCRBY</a></li>
+<li><a class="reference internal" href="#zrange">ZRANGE</a></li>
+<li><a class="reference internal" href="#zrevrange">ZREVRANGE</a></li>
+<li><a class="reference internal" href="#zrangebyscore">ZRANGEBYSCORE</a></li>
+<li><a class="reference internal" href="#zrevrangebyscore">ZREVRANGEBYSCORE</a></li>
+<li><a class="reference internal" href="#zrank">ZRANK</a></li>
+<li><a class="reference internal" href="#zrevrank">ZREVRANK</a></li>
+<li><a class="reference internal" href="#zremrangebyrank">ZREMRANGEBYRANK</a></li>
+<li><a class="reference internal" href="#zremrangebyscore">ZREMRANGEBYSCORE</a></li>
+<li><a class="reference internal" href="#zinterstore">ZINTERSTORE</a></li>
+<li><a class="reference internal" href="#zunionstore">ZUNIONSTORE</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>上一个主题</h4>
+  <p class="topless"><a href="set.html"
+                        title="上一章">集合(Set)</a></p>
+  <h4>下一个主题</h4>
+  <p class="topless"><a href="about.html"
+                        title="下一章">关于本文档</a></p>
+  <h3>本页</h3>
+  <ul class="this-page-menu">
+    <li><a href="sources/sorted_set.txt"
+           rel="nofollow">显示源代码</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>快速搜索</h3>
+    <form class="search" action="http://redis.readthedocs.org/en/2.4/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="搜索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    输入相关的模块，术语，类或者函数名称进行搜索
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>导航</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="总目录"
+             >索引</a></li>
+        <li class="right" >
+          <a href="about.html" title="关于本文档"
+             >下一页</a> |</li>
+        <li class="right" >
+          <a href="set.html" title="集合(Set)"
+             >上一页</a> |</li>
+        <li><a href="index.html">Redis命令参考简体中文版 v2.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; 版权所有 2011, huangz1990.
+      使用 <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.8.
+    </div>
+  </body>
+
+<!-- Mirrored from redis.readthedocs.org/en/2.4/sorted_set.html by HTTrack Website Copier/3.x [XR&CO'2010], Tue, 22 Nov 2011 10:08:53 GMT -->
+</html>

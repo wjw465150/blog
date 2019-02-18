@@ -1,0 +1,62 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Hbase rowkey设计一</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body><SPAN 
+style="OVERFLOW: hidden; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); FONT: 14px/23px tahoma, arial, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="OVERFLOW: hidden; FONT-SIZE: 18px"><SPAN 
+style="OVERFLOW: hidden; FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px">hbase所谓的3维有序存储的3维是指：rowkey（行主键），column 
+key(columnFamily+</SPAN><SPAN 
+style="OVERFLOW: hidden; FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><SPAN 
+id=translationContent style="OVERFLOW: hidden"><SPAN 
+style="OVERFLOW: hidden; TEXT-DECORATION: underline">qualifier</SPAN></SPAN></SPAN><SPAN 
+style="OVERFLOW: hidden; FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px">)，timestamp(时间戳)3部份组成的3维有序存储。</SPAN><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><SPAN 
+style="OVERFLOW: hidden; FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px">1.rowkey，我们知道rowkey是行的主键，而且hbase只能用个rowkey，或1个rowkey范围即scan来查找数据。所以 
+rowkey的设计是相当重要的，关系到你利用层的查询效力。我们知道，rowkey是以字典顺序排序的。而存储的字节码，字典排序，我们知道，如果是字 
+母，那就是字母的顺序，比如，有两个rowkey，rowkey1:aaa222,rowkey2:bbb111,那末rowkey1是排在 
+rowkey2前面的，由于按字典，a排在b前面，如果rowkey2的第1位也是a，那末就根据第2位来比较，如果还相同，则比较第3为，后面一样。这 
+个理解了，我们在根据rowkey范围查询的时候，我们1般是知道startRowkey，如果我们通过scan只传startRowKey ： 
+d开头的，那末查询的是所有比d大的都查了，而我们只需要d开头的数据，那就要通过endRowKey来限制。我们可以通过设定endRowKey为：d 
+开头，后面的根据你的rowkey组合来设定，1般是加比startKey大1位。比如说rowkey设计为：用户ID-日期，那末查某个用户某天的数 
+据，startKEY为3231⑵0121212，endKey为:3231+201213,那末你查到的就是用户为3231在20121212这1天 
+的数据。</SPAN><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><SPAN 
+style="OVERFLOW: hidden; FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px">2.column 
+key</SPAN><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><SPAN 
+style="OVERFLOW: hidden; FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px">column 
+key是第2维，数据按rowkey字典排序后，如果rowkey相同，则是根据column key来排序的，也是按字典排序。</SPAN><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><SPAN 
+style="OVERFLOW: hidden; FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px">我们在设计table的时候要学会利用这1点。比如我们的收件箱。我们有时候需要按主题排序，那我们就能够把主题这设置为我们的column 
+key，即设计为columnFamily+主题.,这样的设计。</SPAN><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><SPAN 
+style="OVERFLOW: hidden; FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px">3.timestamp</SPAN><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><SPAN 
+style="OVERFLOW: hidden; FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px">timestamp 
+时间戳，是第3维，这是个按降序排序的，即最新的数据排在最前面。这个就没有甚么说的了。网上其他的博客也提到比较多。</SPAN><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><BR 
+style="FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px"><SPAN 
+style="OVERFLOW: hidden; FONT-FAMILY: 'Hiragino Sans GB W3', 'Hiragino Sans GB', Arial, Helvetica, simsun, u5b8bu4f53; LINE-HEIGHT: 28px">本文章主要是简单说下rowkey的字典排序即（3维有序）</SPAN></SPAN></SPAN>
+<DIV 
+style="OVERFLOW: hidden; HEIGHT: 100px; WIDTH: 600px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); FONT: 14px/23px tahoma, arial, 宋体, sans-serif; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV 
+style="OVERFLOW: hidden; FONT-SIZE: 16px; FONT-WEIGHT: bold; COLOR: rgb(0,153,255)">不是自己想要的结果？百度一下吧！</DIV></DIV></body>
+</html>

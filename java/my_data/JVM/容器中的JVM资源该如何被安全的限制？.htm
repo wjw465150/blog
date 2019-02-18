@@ -1,0 +1,443 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>容器中的JVM资源该如何被安全的限制？</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H1 
+style='FONT-SIZE: 24px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 5px; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-rendering: optimizelegibility'>容器中的JVM资源该如何被安全的限制？</H1>
+<DIV class=article_meta 
+style='FONT-SIZE: 14px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(211,211,211) 1px dashed; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(153,153,153); PADDING-BOTTOM: 8px; FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>
+<DIV style="MARGIN-BOTTOM: 5px"><SPAN class=timestamp 
+style="MARGIN-RIGHT: 5px">时间&nbsp;2019-02-09 
+11:49:21<SPAN>&nbsp;</SPAN></SPAN><SPAN class=from style="MARGIN-RIGHT: 5px"><I 
+class=icon-globe 
+style="TEXT-DECORATION: ; HEIGHT: auto; FONT-FAMILY: FontAwesome; WIDTH: auto; VERTICAL-ALIGN: baseline; BACKGROUND-IMAGE: none; MARGIN-TOP: 0px; BACKGROUND-REPEAT: repeat; BACKGROUND-POSITION: 0px 0px; FONT-WEIGHT: normal; FONT-STYLE: normal; DISPLAY: inline; LINE-HEIGHT: normal; MARGIN-RIGHT: 0px; -webkit-font-smoothing: antialiased"></I><SPAN>&nbsp;</SPAN><A 
+class="cut cut28 from" 
+style="OVERFLOW: hidden; TEXT-DECORATION: none; MAX-WIDTH: 28%; WHITE-SPACE: nowrap; TEXT-OVERFLOW: ellipsis; WORD-BREAK: keep-all; COLOR: rgb(51,51,51); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; DISPLAY: inline; OUTLINE-COLOR: invert; transition: all 0.25s ease 0s" 
+href="https://www.tuicool.com/sites/aQVvqiq" 
+target=_blank>DockOne</A></SPAN></DIV>
+<DIV class=source><I 
+style="FLOAT: left; FONT-STYLE: normal">原文</I>&nbsp;<SPAN>&nbsp;</SPAN><A 
+class="cut cut70" 
+style="OVERFLOW: hidden; TEXT-DECORATION: none; MAX-WIDTH: 69%; WHITE-SPACE: nowrap; TEXT-OVERFLOW: ellipsis; WORD-BREAK: keep-all; COLOR: rgb(51,51,51); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; DISPLAY: inline-block; OUTLINE-COLOR: invert; transition: all 0.25s ease 0s" 
+href="http://dockone.io/article/8563?utm_source=tuicool&amp;utm_medium=referral">http://dockone.io/article/8563</A></DIV>
+<DIV><SPAN style="MARGIN-RIGHT: 5px">主题</SPAN><SPAN>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; COLOR: rgb(51,51,51); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: all 0.25s ease 0s" 
+href="https://www.tuicool.com/topics/11070008" target=_blank><SPAN 
+class=new-label 
+style="FONT-SIZE: 0.9em; TEXT-DECORATION: none; VERTICAL-ALIGN: baseline; WHITE-SPACE: nowrap; COLOR: rgb(120,120,120); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; DISPLAY: inline-block; LINE-HEIGHT: 16px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(242,242,242); MARGIN-RIGHT: 5px">JVM</SPAN><SPAN>&nbsp;</SPAN></A><A 
+style="TEXT-DECORATION: none; COLOR: rgb(51,51,51); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: all 0.25s ease 0s" 
+href="https://www.tuicool.com/topics/11070123" target=_blank><SPAN 
+class=new-label 
+style="FONT-SIZE: 0.9em; TEXT-DECORATION: none; VERTICAL-ALIGN: baseline; WHITE-SPACE: nowrap; COLOR: rgb(120,120,120); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; DISPLAY: inline-block; LINE-HEIGHT: 16px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(242,242,242); MARGIN-RIGHT: 5px">OpenJDK</SPAN></A></DIV></DIV>
+<DIV id=nei class=article_body 
+style='FONT-SIZE: 16px; MARGIN-BOTTOM: 0px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: hidden; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: 400; COLOR: rgb(51,51,51); PADDING-BOTTOM: 25px; FONT-STYLE: normal; PADDING-TOP: 20px; PADDING-LEFT: 5px; MIN-HEIGHT: 340px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 5px; TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; overflow-wrap: break-word'>
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizelegibility">前言</H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">Java与Docker的结合，虽然更好的解决了application的封装问题。但也存在着不兼容，比如Java并不能自动的发现Docker设置的内存限制，CPU限制。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">这将导致JVM不能稳定服务业务！容器会杀死你JVM进程，而健康检查又将拉起你的JVM进程，进而导致你监控你的Pod一天重启次数甚至能达到几百次。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">我们希望当Java进程运行在容器中时，Java能够自动识别到容器限制，获取到正确的内存和CPU信息，而不用每次都需要在kubernetes的yaml描述文件中显示的配置完容器，还需要配置JVM参数。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">使用JVM 
+MaxRAM参数或者解锁实验特性的JVM参数，升级JDK到10+，我们可以解决这个问题（也许吧~.~）。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">首先Docker容器本质是是宿主机上的一个进程，它与宿主机共享一个/proc目录，也就是说我们在容器内看到的/proc/meminfo，/proc/cpuinfo与直接在宿主机上看到的一致，如下。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">Host：</P><PRE class="prettyprint hljs tcl" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>cat /<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">proc</SPAN>/meminfo<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)"> 
+
+MemTotal:</SPAN>      197869260<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)"> kB</SPAN>
+<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)">
+MemFree:</SPAN>         3698100<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)"> kB</SPAN>
+<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)">
+MemAvailable:</SPAN>   62230260<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)"> kB</SPAN>
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">容器：</P><PRE class="prettyprint hljs tcl" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>docker run -it --rm alpine cat /<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">proc</SPAN>/meminfo<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)">
+
+MemTotal:</SPAN>      197869260<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)"> kB</SPAN>
+<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)">
+MemFree:</SPAN>         3677800<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)"> kB</SPAN>
+<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)">
+MemAvailable:</SPAN>   62210088<SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(136,0,0)"> kB</SPAN>
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">那么Java是如何获取到Host的内存信息的呢？没错就是通过/proc/meminfo来获取到的。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">默认情况下，JVM的Max 
+Heap Size是系统内存的1/4，假如我们系统是8G，那么JVM将的默认Heap≈2G。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">Docker通过CGroups完成的是对内存的限制，而/proc目录是已只读形式挂载到容器中的，由于默认情况下Java压根就看不见CGroups的限制的内存大小，而默认使用/proc/meminfo中的信息作为内存信息进行启动，</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">这种不兼容情况会导致，如果容器分配的内存小于JVM的内存，JVM进程会被理解杀死。</P>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizelegibility">内存限制不兼容</H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">我们首先来看一组测试，这里我们采用一台内存为188G的物理机。</P><PRE class="prettyprint hljs nginx" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'><SPAN class=hljs-comment style="COLOR: rgb(136,136,136)">#free -g</SPAN>
+
+               <SPAN class=hljs-attribute style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">total</SPAN>        used        free      shared  buff/cache   available
+
+Mem:            <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">188</SPAN>         <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">122</SPAN>           <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1</SPAN>           <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>          <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">64</SPAN>          <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">64</SPAN>
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">以下的测试中，我们将包含OpenJDK的hotspot虚拟机，IBM的OpenJ9虚拟机。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">以下测试中，我们把正确识别到限制的JDK，称之为安全（即不会超出容器限制不会被kill），反之称之为危险。</P>
+<H4 
+style="FONT-SIZE: 16px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em; text-rendering: optimizelegibility">测试用例1（OpenJDK）</H4>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">这一组测试我们使用最新的OpenJDK8-12，给容器限制内存为4G，看JDK默认参数下的最大堆为多少？看看我们默认参数下多少版本的JDK是安全的</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">命令如下，如果你也想试试看，可以用一下命令。</P><PRE class="prettyprint hljs dockerfile" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>docker <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN><SPAN class=bash> -m 4GB  --rm  openjdk:8-jre-slim java  -XshowSettings:vm  -version
+</SPAN>
+docker <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN><SPAN class=bash> -m 4GB --rm  openjdk:9-jre-slim java  -XshowSettings:vm  -version
+</SPAN>
+docker <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN><SPAN class=bash> -m 4GB --rm  openjdk:10-jre-slim java -XshowSettings:vm  -version
+</SPAN>
+docker <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN><SPAN class=bash> -m 4GB --rm  openjdk:11-jre-slim java -XshowSettings:vm  -version
+</SPAN>
+docker <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN><SPAN class=bash> -m 4GB --rm  openjdk:12 java -XshowSettings:vm  -version
+</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK8（并没有识别容器限制，26.67G） 
+危险。</P><PRE class="prettyprint hljs css" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'><SPAN class=hljs-selector-attr style="COLOR: rgb(188,96,96)">[root@xiaoke-test ~]</SPAN># <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">docker</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-m</SPAN> 4<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">GB</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">--rm</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">openjdk</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:8-jre-slim</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">java</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-XshowSettings</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:vm</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-version</SPAN>
+
+
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">settings</SPAN>:
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Max</SPAN>. <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Heap</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Size</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Estimated</SPAN>): 26<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.67G</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Ergonomics</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Machine</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Class</SPAN>: <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">server</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Using</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN>: <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> 64<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Bit</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Server</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN>
+
+
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">openjdk</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">version</SPAN> "1<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.8</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0_181</SPAN>"
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Runtime</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Environment</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> 1<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.8</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0_181-8u181-b13-2</SPAN>~<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">deb9u1-b13</SPAN>)
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> 64<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Bit</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Server</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> 25<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.181-b13</SPAN>, <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mixed</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mode</SPAN>)
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK8 
+-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap 
+（正确的识别容器限制，910.50M）安全。</P><PRE class="prettyprint hljs css" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'><SPAN class=hljs-selector-attr style="COLOR: rgb(188,96,96)">[root@xiaoke-test ~]</SPAN># <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">docker</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-m</SPAN> 4<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">GB</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">--rm</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">openjdk</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:8-jre-slim</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">java</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-XX</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:+UnlockExperimentalVMOptions</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-XX</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:+UseCGroupMemoryLimitForHeap</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-XshowSettings</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:vm</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-version</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">settings</SPAN>:
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Max</SPAN>. <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Heap</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Size</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Estimated</SPAN>): 910<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.50M</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Ergonomics</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Machine</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Class</SPAN>: <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">server</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Using</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN>: <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> 64<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Bit</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Server</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN>
+
+
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">openjdk</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">version</SPAN> "1<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.8</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0_181</SPAN>"
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Runtime</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Environment</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> 1<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.8</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0_181-8u181-b13-2</SPAN>~<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">deb9u1-b13</SPAN>)
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> 64<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Bit</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Server</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> 25<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.181-b13</SPAN>, <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mixed</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mode</SPAN>)
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK 
+9（并没有识别容器限制，26.67G）危险。</P><PRE class="prettyprint hljs css" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'><SPAN class=hljs-selector-attr style="COLOR: rgb(188,96,96)">[root@xiaoke-test ~]</SPAN># <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">docker</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-m</SPAN> 4<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">GB</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">--rm</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">openjdk</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:9-jre-slim</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">java</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-XshowSettings</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:vm</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-version</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">settings</SPAN>:
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Max</SPAN>. <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Heap</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Size</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Estimated</SPAN>): 29<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.97G</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Using</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN>: <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> 64<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Bit</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Server</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN>
+
+
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">openjdk</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">version</SPAN> "9<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.4</SPAN>"
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Runtime</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Environment</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> 9<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.4</SPAN>+12<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Debian-4</SPAN>)
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> 64<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Bit</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Server</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> 9<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.4</SPAN>+12<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Debian-4</SPAN>, <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mixed</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mode</SPAN>)
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK 
+9 -XX:+UnlockExperimentalVMOptions 
+-XX:+UseCGroupMemoryLimitForHeap（正确的识别容器限制，1G）安全。</P><PRE class="prettyprint hljs css" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'><SPAN class=hljs-selector-attr style="COLOR: rgb(188,96,96)">[root@xiaoke-test ~]</SPAN># <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">docker</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-m</SPAN> 4<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">GB</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">--rm</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">openjdk</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:9-jre-slim</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">java</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-XX</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:+UnlockExperimentalVMOptions</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-XX</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:+UseCGroupMemoryLimitForHeap</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-XshowSettings</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:vm</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-version</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">settings</SPAN>:
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Max</SPAN>. <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Heap</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Size</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Estimated</SPAN>): 1<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.00G</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Using</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN>: <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> 64<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Bit</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Server</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN>
+
+
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">openjdk</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">version</SPAN> "9<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.4</SPAN>"
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Runtime</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Environment</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> 9<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.4</SPAN>+12<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Debian-4</SPAN>)
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> 64<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Bit</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Server</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> 9<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.4</SPAN>+12<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Debian-4</SPAN>, <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mixed</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mode</SPAN>)
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK 
+10（正确的识别容器限制，1G）安全。</P><PRE class="prettyprint hljs scheme" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>[<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">root@xiaoke-test</SPAN> ~]# docker run -m <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">32</SPAN>GB --rm  openjdk:10-jre-slim java -XshowSettings:vm -XX:MaxRAMFraction=1  -version
+
+VM settings:
+
+Max. Heap Size (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Estimated</SPAN>): <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1.00</SPAN>G
+
+Using VM: OpenJDK <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">64</SPAN>-Bit Server VM
+
+
+
+openjdk version <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"10.0.2"</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">2018</SPAN><SPAN class=hljs-number style="COLOR: rgb(136,0,0)">-07</SPAN><SPAN class=hljs-number style="COLOR: rgb(136,0,0)">-17</SPAN>
+
+OpenJDK Runtime Environment (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">10.0</SPAN>.2+13-Debian-2)
+
+OpenJDK <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">64</SPAN>-Bit Server VM (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">10.0</SPAN>.2+13-Debian-2, mixed mode)
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK 
+11（正确的识别容器限制，1G）安全。</P><PRE class="prettyprint hljs css" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'><SPAN class=hljs-selector-attr style="COLOR: rgb(188,96,96)">[root@xiaoke-test ~]</SPAN># <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">docker</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-m</SPAN> 4<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">GB</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">--rm</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">openjdk</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:11-jre-slim</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">java</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-XshowSettings</SPAN><SPAN class=hljs-selector-pseudo style="COLOR: rgb(188,96,96)">:vm</SPAN>  <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-version</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">settings</SPAN>:
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Max</SPAN>. <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Heap</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Size</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Estimated</SPAN>): 1<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.00G</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Using</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN>: <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> 64<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Bit</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Server</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN>
+
+
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">openjdk</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">version</SPAN> "11<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.1</SPAN>" 2018<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-10-16</SPAN>
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Runtime</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Environment</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> 11<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.1</SPAN>+13<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Debian-3</SPAN>)
+
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">OpenJDK</SPAN> 64<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Bit</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Server</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN> (<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> 11<SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.0</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.1</SPAN>+13<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">-Debian-3</SPAN>, <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mixed</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mode</SPAN>, <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">sharing</SPAN>)
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK 
+12（正确的识别容器限制，1G）安全。</P><PRE class="prettyprint hljs vim" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>[root@xiaoke-test ~]# docker run -<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">m</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">4</SPAN>GB --rm  openjdk:<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">12</SPAN> java -XshowSetting<SPAN class=hljs-variable style="COLOR: rgb(188,96,96)">s:vm</SPAN>  -<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">version</SPAN>
+
+VM setting<SPAN class=hljs-variable style="COLOR: rgb(188,96,96)">s:</SPAN>
+
+Max. Heap Size (Estimated): <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1.00</SPAN>G
+
+Using VM: OpenJDK <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">64</SPAN>-Bit Server VM
+
+
+
+openjdk <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">version</SPAN> <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"12-ea"</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">2019</SPAN>-<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">03</SPAN>-<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">19</SPAN>
+
+OpenJDK Runtime Environment (build <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">12</SPAN>-<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">ea</SPAN>+<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">23</SPAN>)
+
+OpenJDK <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">64</SPAN>-Bit Server VM (build <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">12</SPAN>-<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">ea</SPAN>+<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">23</SPAN>, mixed <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">mode</SPAN>, sharing)
+</PRE>
+<H4 
+style="FONT-SIZE: 16px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em; text-rendering: optimizelegibility">测试用例2（IBM 
+OpenJ9）</H4><PRE class="prettyprint hljs dockerfile" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>docker <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN><SPAN class=bash> -m 4GB --rm  adoptopenjdk/openjdk8-openj9:alpine-slim  java -XshowSettings:vm  -version
+</SPAN>
+docker <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN><SPAN class=bash> -m 4GB --rm  adoptopenjdk/openjdk9-openj9:alpine-slim  java -XshowSettings:vm  -version
+</SPAN>
+docker <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN><SPAN class=bash> -m 4GB --rm  adoptopenjdk/openjdk10-openj9:alpine-slim  java -XshowSettings:vm  -version
+</SPAN>
+docker <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">run</SPAN><SPAN class=bash> -m 4GB --rm  adoptopenjdk/openjdk11-openj9:alpine-slim  java -XshowSettings:vm  -version
+</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK8-OpenJ9（正确的识别容器限制，3G）安全。</P><PRE class="prettyprint hljs scheme" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>[<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">root@xiaoke-test</SPAN> ~]# docker run -m <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">4</SPAN>GB --rm  adoptopenjdk/openjdk8-openj9:alpine-slim  java -XshowSettings:vm  -version
+
+VM settings:
+
+Max. Heap Size (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Estimated</SPAN>): <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3.00</SPAN>G
+
+Ergonomics Machine Class: server
+
+Using VM: Eclipse OpenJ9 VM
+
+
+
+openjdk version <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"1.8.0_192"</SPAN>
+
+OpenJDK Runtime Environment (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1.8</SPAN>.0_192-b12_openj9)
+
+Eclipse OpenJ9 VM (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> openj9-0.11.0, JRE <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1.8</SPAN>.0 Linux amd64-64-Bit Compressed References <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">20181107</SPAN>_95 (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">JIT</SPAN> enabled, AOT enabled)
+
+OpenJ9   - <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">090</SPAN>ff9dcd
+
+OMR      - ea548a66
+
+JCL      - b5a3affe73 based on jdk8u192-b12)
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK9-OpenJ9 
+（正确的识别容器限制，3G）安全。</P><PRE class="prettyprint hljs scheme" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>[<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">root@xiaoke-test</SPAN> ~]# docker run -m <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">4</SPAN>GB --rm  adoptopenjdk/openjdk9-openj9:alpine-slim  java -XshowSettings:vm  -version
+
+VM settings:
+
+Max. Heap Size (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Estimated</SPAN>): <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3.00</SPAN>G
+
+Using VM: Eclipse OpenJ9 VM
+
+
+
+openjdk version <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"9.0.4-adoptopenjdk"</SPAN>
+
+OpenJDK Runtime Environment (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">9.0</SPAN>.4-adoptopenjdk+12)
+
+Eclipse OpenJ9 VM (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> openj9-0.9.0, JRE <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">9</SPAN> Linux amd64-64-Bit Compressed References <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">20180814</SPAN>_248 (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">JIT</SPAN> enabled, AOT enabled)
+
+OpenJ9   - <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">24</SPAN>e53631
+
+OMR      - fad6bf6e
+
+JCL      - feec4d2ae based on jdk-9.0.4+12)
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK10-OpenJ9 
+（正确的识别容器限制，3G）安全。</P><PRE class="prettyprint hljs scheme" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>[<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">root@xiaoke-test</SPAN> ~]# docker run -m <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">4</SPAN>GB --rm  adoptopenjdk/openjdk10-openj9:alpine-slim  java -XshowSettings:vm  -version
+
+VM settings:
+
+Max. Heap Size (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Estimated</SPAN>): <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3.00</SPAN>G
+
+Using VM: Eclipse OpenJ9 VM
+
+
+
+openjdk version <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"10.0.2-adoptopenjdk"</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">2018</SPAN><SPAN class=hljs-number style="COLOR: rgb(136,0,0)">-07</SPAN><SPAN class=hljs-number style="COLOR: rgb(136,0,0)">-17</SPAN>
+
+OpenJDK Runtime Environment (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">10.0</SPAN>.2-adoptopenjdk+13)
+
+Eclipse OpenJ9 VM (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> openj9-0.9.0, JRE <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">10</SPAN> Linux amd64-64-Bit Compressed References <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">20180813</SPAN>_102 (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">JIT</SPAN> enabled, AOT enabled)
+
+OpenJ9   - <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">24</SPAN>e53631
+
+OMR      - fad6bf6e
+
+JCL      - <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">7</SPAN>db90eda56 based on jdk-10.0.2+13)
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK11-OpenJ9（正确的识别容器限制，3G）安全。</P><PRE class="prettyprint hljs scheme" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>[<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">root@xiaoke-test</SPAN> ~]# docker run -m <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">4</SPAN>GB --rm  adoptopenjdk/openjdk11-openj9:alpine-slim  java -XshowSettings:vm  -version
+
+VM settings:
+
+Max. Heap Size (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Estimated</SPAN>): <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3.00</SPAN>G
+
+Using VM: Eclipse OpenJ9 VM
+
+
+
+openjdk version <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">"11.0.1"</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">2018</SPAN><SPAN class=hljs-number style="COLOR: rgb(136,0,0)">-10</SPAN><SPAN class=hljs-number style="COLOR: rgb(136,0,0)">-16</SPAN>
+
+OpenJDK Runtime Environment AdoptOpenJDK (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">11.0</SPAN>.1+13)
+
+Eclipse OpenJ9 VM AdoptOpenJDK (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">build</SPAN> openj9-0.11.0, JRE <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">11</SPAN> Linux amd64-64-Bit Compressed References <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">20181020</SPAN>_70 (<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">JIT</SPAN> enabled, AOT enabled)
+
+OpenJ9   - <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">090</SPAN>ff9dc
+
+OMR      - ea548a66
+
+JCL      - f62696f378 based on jdk-11.0.1+13)
+</PRE>
+<H4 
+style="FONT-SIZE: 16px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em; text-rendering: optimizelegibility">分析</H4>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">分析之前我们先了解这么一个情况：</P><PRE class="hljs nginx" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 0.75em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'><SPAN class=hljs-attribute style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">JavaMemory</SPAN> (MaxRAM) = 元数据+线程+代码缓存+OffHeap+Heap...
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">一般我们都只配置Heap即使用-Xmx来指定JVM可使用的最大堆。而JVM默认会使用它获取到的最大内存的1/4作为堆的原因也是如此。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">安全性（即不会超过容器限制被容器kill）</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK：</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJdk8-12，都能保证这个安全性的特点（8和9需要特殊参数，-XX:+UnlockExperimentalVMOptions 
+-XX:+UseCGroupMemoryLimitForHeap）。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJ9：</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">2.IbmOpenJ9所有的版本都能识别到容器限制。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">资源利用率</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJDK：</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">自动识别到容器限制后，OpenJDK把最大堆设置为了大概容器内存的1/4，对内存的浪费不可谓不大。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">当然可以配合另一个JVM参数来配置最大堆。-XX:MaxRAMFraction=int。下面是我整理的一个常见内存设置的表格，从中我们可以看到似乎JVM默认的最大堆的取值为MaxRAMFraction=4，随着内存的增加，堆的闲置空间越来越大，在16G容器内存时，Java堆只有不到4G。</P><PRE class="prettyprint hljs erlang" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>MaxRAMFraction取值 堆占比 容器内存=<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1</SPAN>G 容器内存=<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">2</SPAN>G 容器内存=<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">4</SPAN>G 容器内存=<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">8</SPAN>G 容器内存=<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">16</SPAN>G
+
+<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1</SPAN>   ≈<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">90</SPAN><SPAN class=hljs-comment style="COLOR: rgb(136,136,136)">%    910.50M 1.78G   3.56G   7.11G   14.22G</SPAN>
+
+<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">2</SPAN>   ≈<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">50</SPAN><SPAN class=hljs-comment style="COLOR: rgb(136,136,136)">%    455.50M 910.50M 1.78G   3.56G   7.11G</SPAN>
+
+<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3</SPAN>   ≈<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">33</SPAN><SPAN class=hljs-comment style="COLOR: rgb(136,136,136)">%    304.00M 608.00M 1.19G   2.37G   4.74G</SPAN>
+
+<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">4</SPAN>   ≈<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">25</SPAN><SPAN class=hljs-comment style="COLOR: rgb(136,136,136)">%    228.00M 455.50M 910.50M 1.78G   3.56G</SPAN>
+</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">OpenJ9：</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">关于OpenJ9的的详细介绍你可以从<SPAN>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: all 0.25s ease 0s" 
+href="https://www.eclipse.org/openj9/docs/xxusecontainersupport/" 
+rel=nofollow,noindex target=_blank>这里</A><SPAN>&nbsp;</SPAN>了解更多。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">对于内存利用率OpenJ9的策略是优于OpenJDK的。以下是OpenJ9的策略表格.</P><PRE class="prettyprint hljs xml" style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; BORDER-LEFT: medium none; MARGIN: 0px 0px 1.5em; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); overflow-wrap: break-word; border-radius: 4px'>容器内存<SPAN class=hljs-tag>&lt;<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">size</SPAN>&gt;</SPAN>    最大Java堆大小
+
+小于1 GB  50％<SPAN class=hljs-tag>&lt;<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">size</SPAN>&gt;</SPAN>
+
+1 GB - 2 GB <SPAN class=hljs-tag>&lt;<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">size</SPAN>&gt;</SPAN> - 512 MB
+
+大于2 GB  大于2 GB
+</PRE>
+<H4 
+style="FONT-SIZE: 16px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em; text-rendering: optimizelegibility">结论</H4>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">注意：这里我们说的是容器内存限制，和物理机内存不同。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">自动档</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">如果你想要的是，不显示的指定-Xmx，让Java进程自动的发现容器限制。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">如果你想要的是JVM进程在容器中安全稳定的运行，不被容器kiil，并且你的JDK版本小于10（大于等于JDK10的版本不需要设置，参考前面的测试）。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">你需要额外设置JVM参数-XX:+UnlockExperimentalVMOptions 
+-XX:+UseCGroupMemoryLimitForHeap，即可保证你的Java进程不会因为内存问题被容器Kill。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">当然这个方式使用起来简单，可靠，缺点也很明显，资源利用率过低（参考前面的表格MaxRAMFraction=4）。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">如果想在基础上我还想提高一些内存资源利用率，并且容器内存为1GB 
+- 4GB，我建议你设置-XX:MaxRAMFraction=2，在大于8G的可以尝试设置-XX:MaxRAMFraction=1（参考上表格）。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">手动挡</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">如果你想要的是手动挡的体验，更加进一步的利用内存资源，那么你可能需要回到手动配置时代-Xmx。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">手动挡部分，请可以完全忽略上面我的BB。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">上面我们说到了自动挡的配置，用起来很简单很舒服，自动发现容器限制，无需担心和思考去配置-Xmx。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">比如你有内存1G那么我建议你的-Xmx750M，2G建议配置-Xmx1700M，4G建议配置-Xmx3500-3700M，8G建议设置-Xmx7500-7600M，总之就是至少保留300M以上的内存留给JVM的其他内存。如果堆特别大，可以预留到1G甚至2G。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">手动挡用起来就没有那么舒服了，当然资源利用率相对而言就更高了。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">原文链接：<SPAN>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: all 0.25s ease 0s" 
+href="https://qingmu.io/2018/12/17/How-to-securely-limit-JVM-resources-in-a-container/" 
+rel=nofollow,noindex target=_blank>https://qingmu.io/2018/12/17/H ... 
+iner/</A></P></DIV></DIV></body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>利用java-RMI进行大文件传输</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: 宋体, Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+</style>
+
+</head>
+
+<body><PRE style="FONT-VARIANT: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px"><H1 style="FONT-SIZE: 14pt; FONT-FAMILY: 微软雅黑, Verdana, sans-serif, 宋体; FONT-VARIANT: normal; WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; LINE-HEIGHT: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px"><A style="COLOR: rgb(0,0,0); OUTLINE-WIDTH: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; OUTLINE-STYLE: none; PADDING-LEFT: 0px; TEXT-DECORATION: none; MARGIN: 0px; OUTLINE-COLOR: invert; PADDING-RIGHT: 0px" href="http://www.oschina.net/code/snippet_947482_21676">利用java-RMI进行大文件传输</A></H1><H3 style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,102,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: bold 10pt 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 0px 0px 2px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">1.FileDataService</H3></PRE><PRE style="FONT-VARIANT: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface FileDataService extends Remote {
+	
+	public static final String FILE_SERVICE = "rmi://localhost:9001/FileDataService";
+	
+	public String start(String filename) throws RemoteException;
+
+	public void upload(String uploadId,byte[] part,int offset,int len) throws RemoteException;
+	
+	
+	public void finish(String uploadId) throws RemoteException;
+
+}</PRE><PRE style="FONT-VARIANT: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px"><H3 style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,102,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: bold 10pt 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 0px 0px 2px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">2.FileDataServiceImpl</H3><PRE style="FONT-VARIANT: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class FileDataServiceImpl extends UnicastRemoteObject implements FileDataService {
+	
+	Map&lt;String, OutputStream&gt; os = new HashMap&lt;String, OutputStream&gt;();
+
+	public FileDataServiceImpl() throws RemoteException {
+		super();
+	}
+	
+	public String start(String filename) throws RemoteException{
+		File file = new File(filename);
+        try {
+            if (!file.exists())
+                file.createNewFile();
+            OutputStream upOS = new BufferedOutputStream(new FileOutputStream(file));
+            String uploadId = UUID.randomUUID().toString();
+            os.put(uploadId, upOS);
+            return uploadId;
+        }catch (Exception e) {
+			throw new RemoteException("初始化文件上传失败：",e);
+		}
+        
+	}
+
+	public void upload(String uploadId,byte[] part,int offset,int len) throws RemoteException {
+        OutputStream upOS = os.get(uploadId);
+		if(upOS == null){
+        	throw new RemoteException("上传文件的id不存在:" + uploadId);
+        }
+        try {
+        	upOS.write(part,offset,len);
+        } catch (Exception e) {
+        	throw new RemoteException("File Up[" + uploadId+"]Exception:",e);
+        }
+	}
+	
+	
+	public void finish(String uploadId) throws RemoteException{
+		try {
+			os.get(uploadId).close();
+		} catch (IOException e) {
+			throw new RemoteException("结束文件上传失败：",e);
+		}
+	}
+
+}</PRE><PRE style="FONT-VARIANT: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px"><H3 style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,102,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: bold 10pt 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 0px 0px 2px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">&nbsp;</H3><H3 style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,102,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: bold 10pt 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 0px 0px 2px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">3.FileServer&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=Apple-converted-space>&nbsp;</SPAN></H3><H3 style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,102,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: bold 10pt 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 0px 0px 2px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px"><SPAN class=Apple-converted-space><PRE style="FONT-VARIANT: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">import java.net.MalformedURLException;
+import java.rmi.Naming;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+
+public class FileServer {
+
+    FileDataService fileDataService;
+
+    public FileServer() {
+        try {
+            fileDataService = new FileDataServiceImpl();
+            LocateRegistry.createRegistry(9001);
+            Naming.rebind(FileDataService.FILE_SERVICE, fileDataService);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * @param args
+     */
+    public static void main(String[] args) {
+        new FileServer();
+    }
+
+}</PRE><PRE style="FONT-VARIANT: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px"><H3 style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,102,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: bold 10pt 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 0px 0px 2px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">&nbsp;</H3><H3 style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,102,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: bold 10pt 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 0px 0px 2px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">4.测试代码</H3><P style="WHITE-SPACE: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; COLOR: rgb(0,102,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: bold 10pt 微软雅黑, Verdana, sans-serif, 宋体; PADDING-LEFT: 0px; MARGIN: 0px 0px 2px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">&nbsp;</P><PRE style="FONT-VARIANT: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">import java.io.FileInputStream;
+import java.rmi.Naming;
+
+public class FileClient {
+
+    public FileClient() {
+    }
+
+    public static void main(String[] args) {
+        try {
+        	FileInputStream fis = new FileInputStream("d:/r1.log");
+            FileDataService fileDataService = (FileDataService) Naming.lookup(FileDataService.FILE_SERVICE);
+            String uploadId = fileDataService.start("d:/r12.log");
+            byte[] buffer = new byte[1024];
+            int len = fis.read(buffer);
+            while(len&gt; -1){
+            	fileDataService.upload(uploadId, buffer, 0, len);
+            	System.out.println("read part");
+            	len = fis.read(buffer);
+            }
+            fileDataService.finish(uploadId);
+            System.out.println("file upload finished");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}</PRE><PRE style="FONT-VARIANT: normal; TEXT-TRANSFORM: none; WORD-SPACING: 0px; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px">&nbsp;</PRE></PRE></SPAN></H3> 
+ 
+
+     
+	
+	     
+ 
+
+     
+	
+	      
+	
+	     
+
+	        
+	
+	
+	     
+
+</PRE><PRE></PRE></PRE></BODY></HTML>

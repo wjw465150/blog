@@ -1,0 +1,297 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<HTML><HEAD><TITLE>Jaas Tomcat 1</TITLE>
+<STYLE type=text/css>
+.error{color:#FF0000;font-size:12px}
+</STYLE>
+</HEAD>
+
+<BODY>
+
+<CENTER>
+
+<DIV id=main style="WIDTH: 996px" align=left>
+
+<DIV class=stage>
+
+<DIV class=stagepad>
+
+<DIV style="WIDTH: 100%">
+
+<DIV class=modbox id=m_blog style="OVERFLOW-X: hidden"><!--StartFragment--><DIV class=tit>Jaas Tomcat 示例 1</DIV>
+<DIV class=date>2008-05-14 19:36</DIV>
+<TABLE style="TABLE-LAYOUT: fixed; WIDTH: 100%">
+<TBODY>
+<TR>
+<TD>
+<DIV class=cnt id=blog_text>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+这次项目例子是采用struts+hibernate来搭建的，其目的是为了实现jaas在tomcate中的简化实现。在参考了很多资源后，发现利用现有框架和服务器来实现身份的验证和授权是最简单的途径，所以这次我采用的是在tomcate提供的jaas验证框架下实现jaas。虽然这个框架的功能很有限，但结合struts的授权机制就可以满足中等项目的需求了。</P>
+<P>首先参考tomcate下文档的jaasRealm的配置，注意文档中的两个地方：</P>
+<P align=left>Quick Start</P>
+<P></P>
+<P></P>
+<P align=left>To set up Tomcat to use JAASRealm with your own JAAS login module, 
+you will need to follow these steps:</P>
+<P></P>
+<P></P>
+<P align=left>1.&nbsp;&nbsp;&nbsp; Write your own LoginModule, User and Role classes based on 
+JAAS (see <A 
+href="http://java.sun.com/j2se/1.4.1/docs/guide/security/jaas/tutorials/GeneralAcnOnly.html">the 
+JAAS Authentication Tutorial</A> and <A 
+href="http://java.sun.com/j2se/1.4.1/docs/guide/security/jaas/JAASLMDevGuide.html">the 
+JAAS Login Module Developer's Guide</A>) to be managed by the JAAS Login Context 
+(javax.security.auth.login.LoginContext) When developing your LoginModule, note 
+that JAASRealm's built-in CallbackHandler +only recognizes the NameCallback and 
+PasswordCallback at present.</P>
+<P></P>
+<P></P>
+<P align=left>2.&nbsp;&nbsp;&nbsp; Although not specified in JAAS, you should create seperate 
+classes to distinguish between users and roles, extending 
+javax.security.Principal, so that Tomcat can tell which Principals returned from 
+your login module are users and which are roles (see 
+org.apache.catalina.realm.JAASRealm). Regardless, the first Principal returned 
+is always treated as the user Principal.</P>
+<P></P>
+<P></P>
+<P align=left>3.&nbsp;&nbsp;&nbsp; Place the compiled classes on Tomcat's classpath</P>
+<P></P>
+<P></P>
+<P align=left>4.&nbsp;&nbsp;&nbsp; Set up a login.config file for Java (see <A 
+href="http://java.sun.com/j2se/1.4.1/docs/guide/security/jaas/tutorials/LoginConfigFile.html">JAAS 
+LoginConfig file</A>) and tell Tomcat where to find it by specifying its 
+location to the JVM, for instance by setting the environment variable: 
+JAVA_OPTS=-DJAVA_OPTS=-Djava.security.auth.login.config==$CATALINA_HOME/conf/jaas.config</P>
+<P></P>
+<P></P>
+<P align=left>5.&nbsp;&nbsp;&nbsp; Configure your security-constraints in your web.xml for the 
+resources you want to protect</P>
+<P></P>
+<P></P>
+<P align=left>6.&nbsp;&nbsp;&nbsp; Configure the JAASRealm module in your server.xml</P>
+<P></P>
+<P></P>
+<P align=left>7.&nbsp;&nbsp;&nbsp; Restart Tomcat 5 if it is already running.</P>
+<P></P>
+<P></P>
+<P align=left>Additional Notes</P>
+<P></P>
+<P></P>
+<P align=left>·&nbsp;&nbsp; When a user attempts to access a protected resource for the 
+first time, Tomcat 5 will call the authenticate() method of this Realm. Thus, 
+any changes you have made in the security mechanism directly (new users, changed 
+passwords or roles, etc.) will be immediately reflected.</P>
+<P></P>
+<P></P>
+<P align=left>·&nbsp;&nbsp; Once a user has been authenticated, the user (and his or her 
+associated roles) are cached within Tomcat for the duration of the user's login. 
+For FORM-based authentication, that means until the session times out or is 
+invalidated; for BASIC authentication, that means until the user closes their 
+browser. Any changes to the security information for an already authenticated 
+user will not be reflected until the next time that user logs on again.</P>
+<P></P>
+<P></P>
+<P align=left>·&nbsp;&nbsp; As with other Realm implementations, digested passwords are 
+supported if the &lt;Realm&gt; element in server.xml contains a digest 
+attribute; JAASRealm's CallbackHandler will digest the password prior to passing 
+it back to the LoginModule</P>
+<P></P>
+<P></P>
+<P>二</P>
+<P>按照文档Quick Start的顺序先编写jaas’s code</P>
+<P>Role</P>
+<P></P>
+<P></P>
+<P>package bo;</P>
+<P></P>
+<P></P>
+<P></P>
+<P>import java.security.Principal;</P>
+<P></P>
+<P></P>
+<P></P>
+<P>public class Role</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; implements Principal</P>
+<P>{</P>
+<P>&nbsp;&nbsp; private String rolename;</P>
+<P>&nbsp;&nbsp; public Role(String rolename)</P>
+<P>&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp; this.rolename=rolename;</P>
+<P>&nbsp;&nbsp; }</P>
+<P></P>
+<P></P>
+<P></P>
+<P>&nbsp;&nbsp; /**//**</P>
+<P>&nbsp;&nbsp;&nbsp; * equals</P>
+<P>&nbsp;&nbsp;&nbsp; *</P>
+<P>&nbsp;&nbsp;&nbsp; * @param object Object</P>
+<P>&nbsp;&nbsp;&nbsp; * @return boolean</P>
+<P>&nbsp;&nbsp;&nbsp; * @todo Implement this java.security.Principal method</P>
+<P>&nbsp;&nbsp;&nbsp; */</P>
+<P>&nbsp;&nbsp; public boolean equals(Object object){</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.out.print("object="+object.getClass().toString());</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp; boolean flag=false;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp; if(object==null)</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; flag=false;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp; if(this==object)</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; flag= true;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp; if(!(object instanceof Role))</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; flag= false;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp; if(object instanceof Role)</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Role that = (Role) object;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (this.getName().equals(that.getName()))</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; flag= true;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp; }</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp; System.out.println("flag="+flag);</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp; return flag;</P>
+<P></P>
+<P></P>
+<P></P>
+<P>&nbsp;&nbsp; }</P>
+<P></P>
+<P></P>
+<P></P>
+<P>&nbsp;&nbsp; /**//**</P>
+<P>&nbsp;&nbsp;&nbsp; * toString</P>
+<P>&nbsp;&nbsp;&nbsp; *</P>
+<P>&nbsp;&nbsp;&nbsp; * @return String</P>
+<P>&nbsp;&nbsp;&nbsp; * @todo Implement this java.security.Principal method</P>
+<P>&nbsp;&nbsp;&nbsp; */</P>
+<P>&nbsp;&nbsp; public String toString()</P>
+<P>&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return this.getName();</P>
+<P>&nbsp;&nbsp; }</P>
+<P></P>
+<P></P>
+<P></P>
+<P>&nbsp;&nbsp; /**//**</P>
+<P>&nbsp;&nbsp;&nbsp; * hashCode</P>
+<P>&nbsp;&nbsp;&nbsp; *</P>
+<P>&nbsp;&nbsp;&nbsp; * @return int</P>
+<P>&nbsp;&nbsp;&nbsp; * @todo Implement this java.security.Principal method</P>
+<P>&nbsp;&nbsp;&nbsp; */</P>
+<P>&nbsp;&nbsp; public int hashCode()</P>
+<P>&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return rolename.hashCode();</P>
+<P>&nbsp;&nbsp; }</P>
+<P></P>
+<P></P>
+<P></P>
+<P>&nbsp;&nbsp; /**//**</P>
+<P>&nbsp;&nbsp;&nbsp; * getName</P>
+<P>&nbsp;&nbsp;&nbsp; *</P>
+<P>&nbsp;&nbsp;&nbsp; * @return String</P>
+<P>&nbsp;&nbsp;&nbsp; * @todo Implement this java.security.Principal method</P>
+<P>&nbsp;&nbsp;&nbsp; */</P>
+<P>&nbsp;&nbsp; public String getName()</P>
+<P>&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return this.rolename;</P>
+<P>&nbsp;&nbsp; }</P>
+<P>}</P>
+<P></P>
+<P></P>
+<P></P>
+<P>User</P>
+<P></P>
+<P></P>
+<P>package bo;</P>
+<P></P>
+<P></P>
+<P></P>
+<P>import java.security.Principal;</P>
+<P></P>
+<P></P>
+<P></P>
+<P>public class User</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; implements Principal</P>
+<P>{</P>
+<P>&nbsp;&nbsp; private String username;</P>
+<P>&nbsp;&nbsp; public User(String username)</P>
+<P>&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.username=username;</P>
+<P>&nbsp;&nbsp; }</P>
+<P></P>
+<P></P>
+<P></P>
+<P>&nbsp;&nbsp; /**//**</P>
+<P>&nbsp;&nbsp;&nbsp; * equals</P>
+<P>&nbsp;&nbsp;&nbsp; *</P>
+<P>&nbsp;&nbsp;&nbsp; * @param object Object</P>
+<P>&nbsp;&nbsp;&nbsp; * @return boolean</P>
+<P>&nbsp;&nbsp;&nbsp; * @todo Implement this java.security.Principal method</P>
+<P>&nbsp;&nbsp;&nbsp; */</P>
+<P>&nbsp;&nbsp; public boolean equals(Object object)</P>
+<P>&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.out.print("object="+object.getClass().toString());</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; boolean flag=false;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(object==null)</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; flag=false;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(this==object)</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; flag= true;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(!(object instanceof User))</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; flag= false;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(object instanceof User)</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; User that = (User) object;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (this.getName().equals(that.getName()))</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; flag= true;</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.out.println("flag="+flag);</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return flag;</P>
+<P>&nbsp;&nbsp; }</P>
+<P></P>
+<P></P>
+<P></P>
+<P>&nbsp;&nbsp; /**//**</P>
+<P>&nbsp;&nbsp;&nbsp; * toString</P>
+<P>&nbsp;&nbsp;&nbsp; *</P>
+<P>&nbsp;&nbsp;&nbsp; * @return String</P>
+<P>&nbsp;&nbsp;&nbsp; * @todo Implement this java.security.Principal method</P>
+<P>&nbsp;&nbsp;&nbsp; */</P>
+<P>&nbsp;&nbsp; public String toString()</P>
+<P>&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return this.getName();</P>
+<P>&nbsp;&nbsp; }</P>
+<P></P>
+<P></P>
+<P></P>
+<P>&nbsp;&nbsp; /**//**</P>
+<P>&nbsp;&nbsp;&nbsp; * hashCode</P>
+<P>&nbsp;&nbsp;&nbsp; *</P>
+<P>&nbsp;&nbsp;&nbsp; * @return int</P>
+<P>&nbsp;&nbsp;&nbsp; * @todo Implement this java.security.Principal method</P>
+<P>&nbsp;&nbsp;&nbsp; */</P>
+<P>&nbsp;&nbsp; public int hashCode()</P>
+<P>&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return username.hashCode();</P>
+<P>&nbsp;&nbsp; }</P>
+<P></P>
+<P></P>
+<P></P>
+<P>&nbsp;&nbsp; /**//**</P>
+<P>&nbsp;&nbsp;&nbsp; * getName</P>
+<P>&nbsp;&nbsp;&nbsp; *</P>
+<P>&nbsp;&nbsp;&nbsp; * @return String</P>
+<P>&nbsp;&nbsp;&nbsp; * @todo Implement this java.security.Principal method</P>
+<P>&nbsp;&nbsp;&nbsp; */</P>
+<P>&nbsp;&nbsp; public String getName()</P>
+<P>&nbsp;&nbsp; {</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return this.username;</P>
+<P>&nbsp;&nbsp; }</P>
+<P></P>
+<P></P>
+<P></P>
+<P>}</P>
+<P></P></DIV></TD></TR></TBODY></TABLE><!--EndFragment--></DIV>
+</DIV>
+</DIV>
+</DIV>
+</DIV>
+</CENTER>
+</BODY>
+</HTML>

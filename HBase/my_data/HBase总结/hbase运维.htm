@@ -1,0 +1,1012 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>hbase运维</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>&nbsp; &nbsp; 
+&nbsp;1、hbase的client端hostname错误导致“Thu Mar 07 13:21:11 CST 2013, 
+org.apache.hadoop.hbase.client.ScannerCallable@79ee2c2c, 
+java.net.UnknownHostException”</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;理论上说，hbase的client端会去连接hbase 
+cluster，通过集群返回查询结果，自身的hostname不会影响查询。直到遇到这个异常，通过代码发现client在做scan时会调用一个函数</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<DIV class="dp-highlighter bg_java" 
+style="OVERFLOW: auto; WIDTH: 700px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/26px Consolas, 'Courier New', Courier, mono, serif; MARGIN: 18px 0px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(231,229,220); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar style="PADDING-LEFT: 45px">
+<DIV class=tools 
+style="COLOR: silver; PADDING-BOTTOM: 10px; PADDING-TOP: 3px; FONT: 9px Verdana, Geneva, Arial, Helvetica, sans-serif; PADDING-LEFT: 10px; BORDER-LEFT: rgb(108,226,108) 3px solid; PADDING-RIGHT: 8px; BACKGROUND-COLOR: rgb(248,248,248); font-stretch: normal"><B>[java]</B><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+onclick="dp.sh.Toolbar.Command('ViewSource',this);return false;" 
+title="view plain" class=ViewSource 
+style="FONT-SIZE: 9px; TEXT-DECORATION: none; BORDER-TOP: medium none; HEIGHT: 16px; BORDER-RIGHT: medium none; WIDTH: 16px; BACKGROUND-IMAGE: url(http://static.blog.csdn.net/scripts/SyntaxHighlighter/styles/images/default/ico_plain.gif); BACKGROUND-REPEAT: no-repeat; BORDER-BOTTOM: medium none; BACKGROUND-POSITION: 0% 0%; COLOR: rgb(160,160,160); PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN: 0px 10px 0px 0px; BORDER-LEFT: medium none; DISPLAY: inline-block; PADDING-RIGHT: 1px; TEXT-INDENT: -2000px; background-size: initial; background-origin: initial; background-clip: initial" 
+href="http://blog.csdn.net/kirayuan/article/details/8646517#">view plain</A><A 
+onclick="dp.sh.Toolbar.Command('CopyToClipboard',this);return false;" title=copy 
+class=CopyToClipboard 
+style="FONT-SIZE: 9px; TEXT-DECORATION: none; BORDER-TOP: medium none; HEIGHT: 16px; BORDER-RIGHT: medium none; WIDTH: 16px; BACKGROUND-IMAGE: url(http://static.blog.csdn.net/scripts/SyntaxHighlighter/styles/images/default/ico_copy.gif); BACKGROUND-REPEAT: no-repeat; BORDER-BOTTOM: medium none; BACKGROUND-POSITION: 0% 0%; COLOR: rgb(160,160,160); PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN: 0px 10px 0px 0px; BORDER-LEFT: medium none; DISPLAY: inline-block; PADDING-RIGHT: 1px; TEXT-INDENT: -2000px; background-size: initial; background-origin: initial; background-clip: initial" 
+href="http://blog.csdn.net/kirayuan/article/details/8646517#">copy</A>
+<DIV 
+style="HEIGHT: 18px; WIDTH: 18px; POSITION: absolute; LEFT: 836px; Z-INDEX: 99; TOP: 706px"><EMBED 
+id=ZeroClipboardMovie_1 name=ZeroClipboardMovie_1 
+type=application/x-shockwave-flash align=middle 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=18 width=18 
+src=http://static.blog.csdn.net/scripts/ZeroClipboard/ZeroClipboard.swf 
+wmode="transparent" flashvars="id=1&amp;width=18&amp;height=18" 
+allowfullscreen="false" allowscriptaccess="always" bgcolor="#ffffff" 
+quality="best" menu="false" loop="false"></DIV></DIV></DIV>
+<OL class=dp-j 
+style="LIST-STYLE-TYPE: decimal; BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px 45px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px"><SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">/**</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px"><SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;*&nbsp;compare&nbsp;the&nbsp;local&nbsp;machine&nbsp;hostname&nbsp;with&nbsp;region&nbsp;server's&nbsp;hostname</SPAN>&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px"><SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;*&nbsp;to&nbsp;decide&nbsp;if&nbsp;hbase&nbsp;client&nbsp;connects&nbsp;to&nbsp;a&nbsp;remote&nbsp;region&nbsp;server</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px"><SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;*&nbsp;@throws&nbsp;UnknownHostException.</SPAN>&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px"><SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;*/</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">private</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;</SPAN><SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">void</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;checkIfRegionServerIsRemote()&nbsp;</SPAN><SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">throws</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;UnknownHostException&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;myAddress&nbsp;=&nbsp;DNS.getDefaultHost(<SPAN 
+  class=string 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: blue; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">"default"</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;</SPAN><SPAN 
+  class=string 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: blue; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">"default"</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">if</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;(</SPAN><SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">this</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">.location.getHostname().equalsIgnoreCase(myAddress))&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;isRegionServerRemote&nbsp;=&nbsp;<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">false</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">else</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;isRegionServerRemote&nbsp;=&nbsp;<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">true</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">该函数检查连接的region是否就是本地。所以client端去尝试本机的host时会报UnknownHostException异常</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; 
+&nbsp;2、hbase的coprocessor中传递自定义类报不支持错误。在coprocessor中传递的对象，需要传递，所以需要序列化和反序列化</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; 
+在ExecResult中，序列化和反序列化都依赖一个类HbaseObjectWritable，而这个类中需要声明的有以下3个参数</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; Class&lt;?&gt;declaredClass</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; Object instance</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; Configuration</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp;同时，HbaseObjectWritable还规定了能够被识别的对象code，没有注册code的也依然会报错。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<DIV class="dp-highlighter bg_java" 
+style="OVERFLOW: auto; WIDTH: 700px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/26px Consolas, 'Courier New', Courier, mono, serif; MARGIN: 18px 0px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(231,229,220); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar style="PADDING-LEFT: 45px">
+<DIV class=tools 
+style="COLOR: silver; PADDING-BOTTOM: 10px; PADDING-TOP: 3px; FONT: 9px Verdana, Geneva, Arial, Helvetica, sans-serif; PADDING-LEFT: 10px; BORDER-LEFT: rgb(108,226,108) 3px solid; PADDING-RIGHT: 8px; BACKGROUND-COLOR: rgb(248,248,248); font-stretch: normal"><B>[java]</B><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+onclick="dp.sh.Toolbar.Command('ViewSource',this);return false;" 
+title="view plain" class=ViewSource 
+style="FONT-SIZE: 9px; TEXT-DECORATION: none; BORDER-TOP: medium none; HEIGHT: 16px; BORDER-RIGHT: medium none; WIDTH: 16px; BACKGROUND-IMAGE: url(http://static.blog.csdn.net/scripts/SyntaxHighlighter/styles/images/default/ico_plain.gif); BACKGROUND-REPEAT: no-repeat; BORDER-BOTTOM: medium none; BACKGROUND-POSITION: 0% 0%; COLOR: rgb(160,160,160); PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN: 0px 10px 0px 0px; BORDER-LEFT: medium none; DISPLAY: inline-block; PADDING-RIGHT: 1px; TEXT-INDENT: -2000px; background-size: initial; background-origin: initial; background-clip: initial" 
+href="http://blog.csdn.net/kirayuan/article/details/8646517#">view plain</A><A 
+onclick="dp.sh.Toolbar.Command('CopyToClipboard',this);return false;" title=copy 
+class=CopyToClipboard 
+style="FONT-SIZE: 9px; TEXT-DECORATION: none; BORDER-TOP: medium none; HEIGHT: 16px; BORDER-RIGHT: medium none; WIDTH: 16px; BACKGROUND-IMAGE: url(http://static.blog.csdn.net/scripts/SyntaxHighlighter/styles/images/default/ico_copy.gif); BACKGROUND-REPEAT: no-repeat; BORDER-BOTTOM: medium none; BACKGROUND-POSITION: 0% 0%; COLOR: rgb(160,160,160); PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN: 0px 10px 0px 0px; BORDER-LEFT: medium none; DISPLAY: inline-block; PADDING-RIGHT: 1px; TEXT-INDENT: -2000px; background-size: initial; background-origin: initial; background-clip: initial" 
+href="http://blog.csdn.net/kirayuan/article/details/8646517#">copy</A>
+<DIV 
+style="HEIGHT: 18px; WIDTH: 18px; POSITION: absolute; LEFT: 836px; Z-INDEX: 99; TOP: 1367px"><EMBED 
+id=ZeroClipboardMovie_2 name=ZeroClipboardMovie_2 
+type=application/x-shockwave-flash align=middle 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=18 width=18 
+src=http://static.blog.csdn.net/scripts/ZeroClipboard/ZeroClipboard.swf 
+wmode="transparent" flashvars="id=2&amp;width=18&amp;height=18" 
+allowfullscreen="false" allowscriptaccess="always" bgcolor="#ffffff" 
+quality="best" menu="false" loop="false"></DIV></DIV></DIV>
+<OL class=dp-j 
+style="LIST-STYLE-TYPE: decimal; BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px 45px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px"><SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">static</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">////////////////////////////////////////////////////////////////////////////</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;WARNING:&nbsp;Please&nbsp;do&nbsp;not&nbsp;insert,&nbsp;remove&nbsp;or&nbsp;swap&nbsp;any&nbsp;line&nbsp;in&nbsp;this&nbsp;static&nbsp;&nbsp;//</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;block.&nbsp;&nbsp;Doing&nbsp;so&nbsp;would&nbsp;change&nbsp;or&nbsp;shift&nbsp;all&nbsp;the&nbsp;codes&nbsp;used&nbsp;to&nbsp;serialize&nbsp;//</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;objects,&nbsp;which&nbsp;makes&nbsp;backwards&nbsp;compatibility&nbsp;very&nbsp;hard&nbsp;for&nbsp;clients.&nbsp;&nbsp;&nbsp;&nbsp;//</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;New&nbsp;codes&nbsp;should&nbsp;always&nbsp;be&nbsp;added&nbsp;at&nbsp;the&nbsp;end.&nbsp;Code&nbsp;removal&nbsp;is&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;discouraged&nbsp;because&nbsp;code&nbsp;is&nbsp;a&nbsp;short&nbsp;now.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">////////////////////////////////////////////////////////////////////////////</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">int</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;code&nbsp;=&nbsp;NOT_ENCODED&nbsp;+&nbsp;</SPAN><SPAN 
+  class=number 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(192,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">1</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;Primitive&nbsp;types.</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Boolean.TYPE,&nbsp;code++);&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Byte.TYPE,&nbsp;code++);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Character.TYPE,&nbsp;code++);&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Short.TYPE,&nbsp;code++);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Integer.TYPE,&nbsp;code++);&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Long.TYPE,&nbsp;code++);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Float.TYPE,&nbsp;code++);&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Double.TYPE,&nbsp;code++);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Void.TYPE,&nbsp;code++);&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;Other&nbsp;java&nbsp;types</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(String.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">byte</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;[].</SPAN><SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">byte</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;[][].</SPAN><SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;Hadoop&nbsp;types</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Text.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Writable.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Writable&nbsp;[].<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HbaseMapWritable.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(NullInstance.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;Hbase&nbsp;types</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HColumnDescriptor.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HConstants.Modify.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;We&nbsp;used&nbsp;to&nbsp;have&nbsp;a&nbsp;class&nbsp;named&nbsp;HMsg&nbsp;but&nbsp;its&nbsp;been&nbsp;removed.&nbsp;&nbsp;Rather&nbsp;than</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;just&nbsp;axe&nbsp;it,&nbsp;use&nbsp;following&nbsp;random&nbsp;Integer&nbsp;class&nbsp;--&nbsp;we&nbsp;just&nbsp;chose&nbsp;any</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;class&nbsp;from&nbsp;java.lang&nbsp;--&nbsp;instead&nbsp;just&nbsp;so&nbsp;codes&nbsp;that&nbsp;follow&nbsp;stay</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;in&nbsp;same&nbsp;relative&nbsp;place.</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Integer.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Integer[].<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HRegion.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HRegion[].<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HRegionInfo.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HRegionInfo[].<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HServerAddress.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HServerInfo.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HTableDescriptor.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(MapWritable.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;HBASE-880</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(ClusterStatus.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Delete.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Get.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(KeyValue.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(KeyValue[].<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Put.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Put[].<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Result.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Result[].<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Scan.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(WhileMatchFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(PrefixFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(PageFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(InclusiveStopFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(ColumnCountGetFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(SingleColumnValueFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(SingleColumnValueExcludeFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(BinaryComparator.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(BitComparator.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(CompareFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(RowFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(ValueFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(QualifierFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(SkipFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(WritableByteArrayComparable.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(FirstKeyOnlyFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(DependentColumnFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Delete&nbsp;[].<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HLog.Entry.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HLog.Entry[].<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HLogKey.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(List.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(NavigableSet.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(ColumnPrefixFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;Multi</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Row.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Action.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(MultiAction.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(MultiResponse.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;coprocessor&nbsp;execution</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Exec.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Increment.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(KeyOnlyFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;serializable</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Serializable.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(RandomRowFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(CompareOp.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(ColumnRangeFilter.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HServerLoad.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(RegionOpeningState.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(HTableDescriptor[].<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Append.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(RowMutations.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Message.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;code++);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//java.lang.reflect.Array&nbsp;is&nbsp;a&nbsp;placeholder&nbsp;for&nbsp;arrays&nbsp;not&nbsp;defined&nbsp;above</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;GENERIC_ARRAY_CODE&nbsp;=&nbsp;code++;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;addToMap(Array.<SPAN 
+  class=keyword 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; FONT-WEIGHT: bold; COLOR: rgb(0,102,153); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">class</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">,&nbsp;GENERIC_ARRAY_CODE);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">//&nbsp;make&nbsp;sure&nbsp;that&nbsp;this&nbsp;is&nbsp;the&nbsp;last&nbsp;statement&nbsp;in&nbsp;this&nbsp;static&nbsp;block</SPAN><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: ; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;&nbsp;&nbsp;NEXT_CLASS_CODE&nbsp;=&nbsp;code;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+  style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px">&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI></OL></DIV><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">那么上面代码中涉及的类，默认就能够在coprocessor中传递了，这也是我们在使用coprocessor传递普通类型对象时无需干预的原因。但是一旦需要传递自定义的对象，就需要了解coprocessor的对象传递机制。HbaseObjectWritable对每类对象都进行了编码，code。所以如果自定义对象需要在coprocessor中传递，需要能够属于HbaseObjectWritable已编码类型的对象，或者修改HbaseObjectWritable。这里推荐采用前一种，只需要在自定义的类中implements&nbsp;Serializable接口即可。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; 3、hbase常用运维命令 &nbsp; &nbsp; &nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">一，基本命令：</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;建表：create 
+'testtable','coulmn1','coulmn2'</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;也可以建表时加coulmn的属性如：create 
+'testtable',{NAME =&gt; 'coulmn1', BLOOMFILTER =&gt; 'NONE', REPLICATION_SCOPE 
+=&gt; '0', VERSIONS =&gt; '10', COMPRESSION =&gt; 'LZO', TTL =&gt; '30000', 
+IN_MEMORY =&gt; 'false', BLOCKCACHE =&gt; 'false'}, {NAME =&gt; 'coulmn', 
+BLOOMFILTER =&gt; 'NONE', REPLICATION_SCOPE =&gt; '0', VERSIONS =&gt; '30', 
+COMPRESSION =&gt; 'LZO', TTL =&gt; '30000', IN_MEMORY =&gt; 'true'}&nbsp; 
+(其中的属性有versions：设置历史版本数，TTL：过期时间，COMPRESSION：压缩方式，当配置lzo的情况)</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;删除表：drop 
+'testtable'&nbsp;&nbsp; （删除表之前先要禁用表，命令disable 'testtable'）</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;启用和禁用表： 
+enable 'testtable'&nbsp;和disable 'testtable'</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;其它的基本命令：describe 
+'testtable'（查看表结构），alert 修改表结构，list 列出所有表。</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">二，日常维护的命令</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;1，major_compact 
+'testtable'，通常生产环境会关闭自动major_compact(配置文件中hbase.hregion.majorcompaction设 
+为0)，选择一个晚上用户少的时间窗口手工major_compact，如果hbase更新不是太频繁，可以一个星期对所有表做一次 
+major_compact，这个可以在做完一次major_compact后，观看所有的storefile数量，如果storefile数量增加到 
+major_compact后的storefile的近二倍时，可以对所有表做一次major_compact，时间比较长，操作尽量避免高锋期。</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;2，flush 
+'testtable'，将所有memstore刷新到hdfs，通常如果发现regionserver的内存使用过大，造成该机的 
+regionserver很多线程block，可以执行一下flush操作，这个操作会造成hbase的storefile数量剧增，应尽量避免这个操 
+作，还有一种情况，在hbase进行迁移的时候，如果选择拷贝文件方式，可以先停写入，然后flush所有表，拷贝文件。</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;3，balance_switch 
+true或者balance_switch 
+flase，配置master是否执行平衡各个regionserver的region数量，当我们需要维护或者重启一个regionserver时，会 
+关闭balancer，这样就使得region在regionserver上的分布不均，这个时候需要手工的开启balance。</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">三，重启一个regionserver</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;bin/graceful_stop.sh 
+--restart --reload --debug&nbsp;<SPAN 
+style="WORD-WRAP: break-word">nodename</SPAN></P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;这个操作是平滑的重启regionserver进程，对服务不会有影响，他会先将需要重启的regionserver上面的所有 
+region迁移到其它的服务器，然后重启，最后又会将之前的region迁移回来，但我们修改一个配置时，可以用这种方式重启每一台机子，这个命令会关 
+闭balancer，所以最后我们要在hbase shell里面执行一下balance_switch true，对于hbase 
+regionserver重启，不要直接kill进程，这样会造成在zookeeper.session.timeout这个时间长的中断，也不要通过 
+bin/hbase-daemon.sh stop 
+regionserver去重启，如果运气不太好，-ROOT-或者.META.表在上面的话，所有的请求会全部失败。</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">四，关闭下线一台regionserver</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;bin/graceful_stop.sh 
+&nbsp;<SPAN 
+style="WORD-WRAP: break-word; FONT-STYLE: normal">nodename</SPAN></P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;和上面一样，系统会在关闭之前迁移所有region，然后stop进程，同样最后我们要手工balance_switch 
+true，开启master的region均衡。</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">五，检查region是否正常以及修复</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;bin/hbase 
+hbck&nbsp; (检查)</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;bin/hbase 
+hbck -fix&nbsp; （修复）</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;会返回所有的region是否正常挂载，如没有正常挂载可以使用下一条命令修复，如果还是不能修复，那需要看日志为什么失败，手工处理。</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">六，hbase的迁移</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;1，copytable方式</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;bin/hbase 
+org.apache.hadoop.hbase.mapreduce.CopyTable 
+--peer.adr=zookeeper1,zookeeper2,zookeeper3:/hbase 'testtable'</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;目前0.92之前的版本的不支持多版本的复制，0.94已经支持多个版本的复制。当然这个操作需要添加hbase目录里的conf/mapred-site.xml，可以复制hadoop的过来。</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;2，Export/Import</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;bin/hbase 
+org.apache.hadoop.hbase.mapreduce.Export&nbsp;testtable /user/testtable 
+[versions] [starttime] [stoptime]</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;bin/hbase 
+org.apache.hadoop.hbase.mapreduce.Import&nbsp;testtable&nbsp; 
+/user/testtable</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;跨版本的迁移，我觉得是一个不错的选择，而且copytable不支持多版本，而export支持多版本，比copytable更实用一些。</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;3，直接拷贝hdfs对应的文件</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;首先拷贝hdfs文件，如bin/hadoop 
+distcp hdfs://srcnamenode:9000/hbase/testtable/ 
+hdfs://distnamenode:9000/hbase/testtable/</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;然后在目的hbase上执行bin/hbase 
+org.jruby.Main bin/add_table.rb /hbase/testtable</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;生成meta信息后，重启hbase</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;这个操作是简单的方式，操作之前可以关闭hbase的写入，执行flush所有表（上面有介绍）,再distcp拷贝，如果hadoop版本不一致，可以用hftp接口的方式，我推荐使用这种方式，成本低。</P>
+<P 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px 宋体, Arial; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;先总结这么多，有空我再详细写一下region坏时怎么修复。</P></body>
+</html>

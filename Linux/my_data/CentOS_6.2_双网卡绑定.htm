@@ -1,0 +1,58 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>CentOS 6.2 双网卡绑定</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: 宋体, Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">先停止NeetworkManager<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>service NetworkManager 
+stop<BR>chkconfig NetworkManager off</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR>在/etc/sysconfig/network-scripts/目录下建立ifcfg-bond0文件，文件内容如下：<BR>DEVICE=bond0<BR>USERCTL=no<BR>BOOTPROTO=none<BR>ONBOOT=yes<BR>IPADDR=192.168.100.17<BR>NETMASK=255.255.255.0<BR>GATEWAY=192.168.100.1<BR>TYPE=UnKnown<BR>BONDING_OPTS="miimon=80 
+mode=0"</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR>绑定mode为0，是rond-robin模式。<BR>然后分别修改ifcfg-eth0文件，如下：<BR>DEVICE="eth0"<BR>#HWADDR="00:0D:60:9A:7B:0A"<BR>ONBOOT="yes"<BR>BOOTPROTO=none<BR>MASTER=bond0<BR>SLAVE=yes<BR>USERCTL=no<BR>在把ifcfg-eth1文件修改如下：<BR>DEVICE="eth1"<BR>#HWADDR="00:0D:60:9A:7B:0B"<BR>ONBOOT="yes"<BR>BOOTPROTO=none<BR>MASTER=bond0<BR>SLAVE=yes<BR>USERCTL=no</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在/etc/modprobe.d/目录下建立bonding.conf文件，文件内容如下：<BR>alias 
+bond0 bonding</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 14px/22px tahoma, 宋体; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(239,239,239); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">然后重启网络service 
+network restart<BR>之后就可以用ifconfig 
+-a看到绑定好的bond0网卡，bond0与eth0，eth1的mac地址均为一样。<BR>可以同过cat /proc/net/bonding/bond0 
+此命令查看绑定情况</P>
+<P 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/26px 宋体, Arial; PADDING-LEFT: 0px; MARGIN: 5px 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><FONT color=#ff0000>mode共有七种(0~6)<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR 
+style="WORD-WRAP: break-word">mode=0：平衡负载模式，有自动备援，但需要”Switch”支援及设定。<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR 
+style="WORD-WRAP: break-word">mode=1：自动备援模式，其中一条线若断线，其他线路将会自动备援。</FONT></P>
+<P 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/26px 宋体, Arial; PADDING-LEFT: 0px; MARGIN: 5px 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><FONT color=#ff0000>mode=6：平衡负载模式，有自动备援，不必”Switch”支援及设定。</FONT></P>
+<P 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/26px 宋体, Arial; PADDING-LEFT: 0px; MARGIN: 5px 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><FONT color=#ff0000>需要说明的是如果想做成mode 0的负载均衡,仅仅设置这里options bond0 miimon=100 
+mode=0是不够的,与网卡相连的交换机必须做特殊配置（这两个端口应该采取聚合方式），因为做bonding的这两块网卡是使用同一个MAC地址.<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR 
+style="WORD-WRAP: break-word">从原理分析一下（bond运行在mode 0下）：<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR style="WORD-WRAP: break-word">mode 
+0下bond所绑定的网卡的IP都被修改成相同的mac地址，如果这些网卡都被接在同一个交换机，那么交换机的arp表里这个mac地址对应的端口就有多 
+个，那么交换机接受到发往这个mac地址的包应该往哪个端口转发呢？正常情况下mac地址是全球唯一的，一个mac地址对应多个端口肯定使交换机迷惑了。<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR style="WORD-WRAP: break-word">所以 
+mode0下的bond如果连接到交换机，交换机这几个端口应该采取聚合方式（cisco称为 
+ethernetchannel，foundry称为portgroup），因为交换机做了聚合后，聚合下的几个端口也被捆绑成一个mac地址.我们的解 
+决办法是，两个网卡接入不同的交换机即可。</FONT></P>
+<P 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/26px 宋体, Arial; PADDING-LEFT: 0px; MARGIN: 5px 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><FONT color=#ff0000>mode6模式下无需配置交换机，因为做bonding的这两块网卡是使用不同的MAC地址。</FONT></P>
+<P 
+style="WORD-WRAP: break-word; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(102,102,102); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/26px 宋体, Arial; PADDING-LEFT: 0px; MARGIN: 5px 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P></body>
+</html>

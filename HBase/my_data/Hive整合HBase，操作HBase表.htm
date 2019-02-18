@@ -1,0 +1,649 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Hive整合HBase，操作HBase表</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">HBase是被设计用来做k-v查询的，但有时候，也会遇到基于HBase表的复杂统计，写MR很不效率。Hive考虑到了这点，提供了操作HBase表的接口。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">关于Hive操作HBase表的原理，请参考我之前的博文：</P>
+<P class=MsoNormal 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 21pt; -webkit-text-stroke-width: 0px"><SPAN><A 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="http://superlxw1234.iteye.com/blog/2008274">http://superlxw1234.iteye.com/blog/2008274</A></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 30px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">值得商榷的是，使用Hive操作HBase中的表，只是提供了便捷性，对于性能上，较MapReduce并不会提升太多，请大家酌情使用。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 30px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">下面来看使用方法（基于Hive0.13和HBase0.96）：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<H2 
+style="FONT-SIZE: 1.5em; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">12.1 
+HBase中的表</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">先在HBase中创建表：</P>
+<DIV class=dp-highlighter 
+style="OVERFLOW: auto; WORD-WRAP: break-word; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Sql代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EMBED 
+type=application/x-shockwave-flash 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=15 width=14 
+src=http://superlxw1234.iteye.com/javascripts/syntaxhighlighter/clipboard_new.swf 
+allowscriptaccess="always" quality="high" 
+flashvars="clipboard=%20%20%20%20create%20'lxw1234'%2C%7BNAME%20%3D%3E%20'f1'%2CVERSIONS%20%3D%3E%201%7D%2C%7BNAME%20%3D%3E%20'f2'%2CVERSIONS%20%3D%3E%201%7D%2C%0A%20%20%20%20%7BNAME%20%3D%3E%20'f3'%2CVERSIONS%20%3D%3E%201%7D" 
+wmode="transparent">&nbsp;<A 
+onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 
+src="http://superlxw1234.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-sql 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">create</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">'lxw1234'</SPAN><SPAN style="COLOR: black">,{</SPAN><SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">NAME</SPAN><SPAN 
+  style="COLOR: black">&nbsp;=&gt;&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">'f1'</SPAN><SPAN 
+  style="COLOR: black">,VERSIONS&nbsp;=&gt;&nbsp;1},{</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">NAME</SPAN><SPAN 
+  style="COLOR: black">&nbsp;=&gt;&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">'f2'</SPAN><SPAN 
+  style="COLOR: black">,VERSIONS&nbsp;=&gt;&nbsp;1},&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">{<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">NAME</SPAN><SPAN 
+  style="COLOR: black">&nbsp;=&gt;&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">'f3'</SPAN><SPAN 
+  style="COLOR: black">,VERSIONS&nbsp;=&gt;&nbsp;1}&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">表’lxw1234’有三个列族f1,f2,f3</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">向HBase表中插入数据：</P>
+<DIV class=dp-highlighter 
+style="OVERFLOW: auto; WORD-WRAP: break-word; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Sql代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EMBED 
+type=application/x-shockwave-flash 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=15 width=14 
+src=http://superlxw1234.iteye.com/javascripts/syntaxhighlighter/clipboard_new.swf 
+allowscriptaccess="always" quality="high" 
+flashvars="clipboard=%20%20%0A%20%20%20%20put%20'lxw1234'%2C'lxw1234.com'%2C'f1%3Ac1'%2C'name1'%0A%20%20%20%20put%20'lxw1234'%2C'lxw1234.com'%2C'f1%3Ac2'%2C'name2'%0A%20%20%20%20put%20'lxw1234'%2C'lxw1234.com'%2C'f2%3Ac1'%2C'age1'%0A%20%20%20%20put%20'lxw1234'%2C'lxw1234.com'%2C'f2%3Ac2'%2C'age2'%0A%20%20%20%20put%20'lxw1234'%2C'lxw1234.com'%2C'f3%3Ac1'%2C'job1'%0A%20%20%20%20put%20'lxw1234'%2C'lxw1234.com'%2C'f3%3Ac2'%2C'job2'%0A%20%20%20%20put%20'lxw1234'%2C'lxw1234.com'%2C'f3%3Ac3'%2C'job3'" 
+wmode="transparent">&nbsp;<A 
+onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 
+src="http://superlxw1234.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-sql 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN style="COLOR: black">put&nbsp;</SPAN><SPAN 
+  class=string style="COLOR: blue">'lxw1234'</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">'lxw1234.com'</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">'f1:c1'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'name1'</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">put&nbsp;<SPAN class=string 
+  style="COLOR: blue">'lxw1234'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'lxw1234.com'</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">'f1:c2'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'name2'</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">put&nbsp;<SPAN class=string 
+  style="COLOR: blue">'lxw1234'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'lxw1234.com'</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">'f2:c1'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'age1'</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">put&nbsp;<SPAN class=string 
+  style="COLOR: blue">'lxw1234'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'lxw1234.com'</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">'f2:c2'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'age2'</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">put&nbsp;<SPAN class=string 
+  style="COLOR: blue">'lxw1234'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'lxw1234.com'</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">'f3:c1'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'job1'</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">put&nbsp;<SPAN class=string 
+  style="COLOR: blue">'lxw1234'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'lxw1234.com'</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">'f3:c2'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'job2'</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">put&nbsp;<SPAN class=string 
+  style="COLOR: blue">'lxw1234'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'lxw1234.com'</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">'f3:c3'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'job3'</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;完成后数据如下：</P>
+<DIV class=dp-highlighter 
+style="OVERFLOW: auto; WORD-WRAP: break-word; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Sql代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EMBED 
+type=application/x-shockwave-flash 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=15 width=14 
+src=http://superlxw1234.iteye.com/javascripts/syntaxhighlighter/clipboard_new.swf 
+allowscriptaccess="always" quality="high" 
+flashvars="clipboard=%20%20%20%20hbase(main)%3A025%3A0*%20scan%20'lxw1234'%0A%20%20%20%20ROW%20COLUMN%2BCELL%0A%20%20%20%20lxw1234.com%20column%3Df1%3Ac1%2C%20timestamp%3D1435624625198%2C%20value%3Dname1%0A%20%20%20%20lxw1234.com%20column%3Df1%3Ac2%2C%20timestamp%3D1435624591717%2C%20value%3Dname2%0A%20%20%20%20lxw1234.com%20column%3Df2%3Ac1%2C%20timestamp%3D1435624608759%2C%20value%3Dage1%0A%20%20%20%20lxw1234.com%20column%3Df2%3Ac2%2C%20timestamp%3D1435624635261%2C%20value%3Dage2%0A%20%20%20%20lxw1234.com%20column%3Df3%3Ac1%2C%20timestamp%3D1435624662282%2C%20value%3Djob1%0A%20%20%20%20lxw1234.com%20column%3Df3%3Ac2%2C%20timestamp%3D1435624697028%2C%20value%3Djob2%0A%20%20%20%20lxw1234.com%20column%3Df3%3Ac3%2C%20timestamp%3D1435624697065%2C%20value%3Djob3%0A%20%20%20%201%20row(s)%20in%200.0350%20seconds" 
+wmode="transparent">&nbsp;<A 
+onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 
+src="http://superlxw1234.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-sql 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN 
+  style="COLOR: black">hbase(main):025:0*&nbsp;scan&nbsp;</SPAN><SPAN 
+  class=string style="COLOR: blue">'lxw1234'</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">ROW&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">COLUMN</SPAN><SPAN 
+  style="COLOR: black">+CELL&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f1:c1,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624625198,&nbsp;value=name1&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f1:c2,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624591717,&nbsp;value=name2&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f2:c1,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624608759,&nbsp;value=age1&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f2:c2,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624635261,&nbsp;value=age2&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f3:c1,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624662282,&nbsp;value=job1&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f3:c2,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624697028,&nbsp;value=job2&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f3:c3,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624697065,&nbsp;value=job3&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">1&nbsp;row(s)&nbsp;<SPAN class=op 
+  style="COLOR: rgb(128,128,128)">in</SPAN><SPAN 
+  style="COLOR: black">&nbsp;0.0350&nbsp;seconds&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<H2 
+style="FONT-SIZE: 1.5em; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">12.2 
+Hive中创建基于HBase的表</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在Hive中使用如下语句建表：</P>
+<DIV class=dp-highlighter 
+style="OVERFLOW: auto; WORD-WRAP: break-word; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Sql代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EMBED 
+type=application/x-shockwave-flash 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=15 width=14 
+src=http://superlxw1234.iteye.com/javascripts/syntaxhighlighter/clipboard_new.swf 
+allowscriptaccess="always" quality="high" 
+flashvars="clipboard=%20%20%20%20SET%20hbase.zookeeper.quorum%3DzkNode1%2CzkNode2%2CzkNode3%3B%0A%20%20%20%20SET%20zookeeper.znode.parent%3D%2Fhbase%3B%0A%20%20%20%20ADD%20jar%20%2Fusr%2Flocal%2Fapache-hive-0.13.1-bin%2Flib%2Fhive-hbase-handler-0.13.1.jar%3B%0A%20%20%20%20%20%0A%20%20%20%20CREATE%20EXTERNAL%20TABLE%20lxw1234%20(%0A%20%20%20%20rowkey%20string%2C%0A%20%20%20%20f1%20map%3CSTRING%2CSTRING%3E%2C%0A%20%20%20%20f2%20map%3CSTRING%2CSTRING%3E%2C%0A%20%20%20%20f3%20map%3CSTRING%2CSTRING%3E%0A%20%20%20%20)%20STORED%20BY%20'org.apache.hadoop.hive.hbase.HBaseStorageHandler'%0A%20%20%20%20WITH%20SERDEPROPERTIES%20(%22hbase.columns.mapping%22%20%3D%20%22%3Akey%2Cf1%3A%2Cf2%3A%2Cf3%3A%22)%0A%20%20%20%20TBLPROPERTIES%20(%22hbase.table.name%22%20%3D%20%22lxw1234%22)%3B" 
+wmode="transparent">&nbsp;<A 
+onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 
+src="http://superlxw1234.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-sql 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">SET</SPAN><SPAN 
+  style="COLOR: black">&nbsp;hbase.zookeeper.quorum=zkNode1,zkNode2,zkNode3;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">SET</SPAN><SPAN 
+  style="COLOR: black">&nbsp;zookeeper.znode.parent=/hbase;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">ADD</SPAN><SPAN 
+  style="COLOR: black">&nbsp;jar&nbsp;/usr/</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">local</SPAN><SPAN 
+  style="COLOR: black">/apache-hive-0.13.1-bin/lib/hive-hbase-handler-0.13.1.jar;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">CREATE</SPAN><SPAN 
+  style="COLOR: black">&nbsp;EXTERNAL&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">TABLE</SPAN><SPAN 
+  style="COLOR: black">&nbsp;lxw1234&nbsp;(&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">rowkey&nbsp;string,&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">f1&nbsp;map&lt;STRING,STRING&gt;,&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">f2&nbsp;map&lt;STRING,STRING&gt;,&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">f3&nbsp;map&lt;STRING,STRING&gt;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">)&nbsp;STORED&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">BY</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">'org.apache.hadoop.hive.hbase.HBaseStorageHandler'</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">WITH</SPAN><SPAN 
+  style="COLOR: black">&nbsp;SERDEPROPERTIES&nbsp;(</SPAN><SPAN class=string 
+  style="COLOR: blue">"hbase.columns.mapping"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;=&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">":key,f1:,f2:,f3:"</SPAN><SPAN 
+  style="COLOR: black">)&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">TBLPROPERTIES&nbsp;(<SPAN class=string 
+  style="COLOR: blue">"hbase.table.name"</SPAN><SPAN 
+  style="COLOR: black">&nbsp;=&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">"lxw1234"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">这里使用外部表映射到HBase中的表，这样，在Hive中删除表，并不会删除HBase中的表，否则，就会删除。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">另外，除了rowkey，其他三个字段使用Map结构来保存HBase中的每一个列族。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">其中，参数解释如下：</P>
+<UL 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 1.5em; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">hbase.zookeeper.quorum：</LI></UL>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 90px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">指定HBase使用的zookeeper集群，默认端口是2181，可以不指定，如果指定，格式为zkNode1:2222,zkNode2:2222,zkNode3:2222</P>
+<UL 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 1.5em; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">zookeeper.znode.parent</LI></UL>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 90px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">指定HBase在zookeeper中使用的根目录</P>
+<UL 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 1.5em; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">hbase.columns.mapping</LI></UL>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 90px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">Hive表和HBase表的字段映射关系，分别为：Hive表中第一个字段映射:key(rowkey)，第二个字段映射列族f1，第三个字段映射列族f2,第四个字段映射列族f3</P>
+<UL 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 1.5em; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.25em 30px; PADDING-RIGHT: 0px">hbase.table.name</LI></UL>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 90px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">HBase中表的名字</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG 
+style="FONT-WEIGHT: bold">也可以直接在Hive</STRONG><STRONG 
+style="FONT-WEIGHT: bold">中创建表的同时，完成在HBase</STRONG><STRONG 
+style="FONT-WEIGHT: bold">中创建表</STRONG>。</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">加入之前没有在HBase中创建表lxw1234,那么使用上面的语句在Hive创建表的时候，会同时在HBase中创建。</P>
+<H2 
+style="FONT-SIZE: 1.5em; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">12.3 
+Hive中查询HBase表</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">上面在Hive中创建好表之后，直接查询：</P>
+<DIV class=dp-highlighter 
+style="OVERFLOW: auto; WORD-WRAP: break-word; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Sql代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EMBED 
+type=application/x-shockwave-flash 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=15 width=14 
+src=http://superlxw1234.iteye.com/javascripts/syntaxhighlighter/clipboard_new.swf 
+allowscriptaccess="always" quality="high" 
+flashvars="clipboard=%20%20%20%20hive%3E%20select%20*%20from%20lxw1234%3B%0A%20%20%20%20OK%0A%20%20%20%20lxw1234.com%20%7B%22c1%22%3A%22name1%22%2C%22c2%22%3A%22name2%22%7D%20%7B%22c1%22%3A%22age1%22%2C%22c2%22%3A%22age2%22%7D%20%7B%22c1%22%3A%22job1%22%2C%22c2%22%3A%22job2%22%2C%22c3%22%3A%22job3%22%7D" 
+wmode="transparent">&nbsp;<A 
+onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 
+src="http://superlxw1234.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-sql 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN style="COLOR: black">hive&gt;&nbsp;</SPAN><SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">select</SPAN><SPAN 
+  style="COLOR: black">&nbsp;*&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">from</SPAN><SPAN 
+  style="COLOR: black">&nbsp;lxw1234;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">OK&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;{<SPAN class=string 
+  style="COLOR: blue">"c1"</SPAN><SPAN style="COLOR: black">:</SPAN><SPAN 
+  class=string style="COLOR: blue">"name1"</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">"c2"</SPAN><SPAN style="COLOR: black">:</SPAN><SPAN 
+  class=string style="COLOR: blue">"name2"</SPAN><SPAN 
+  style="COLOR: black">}&nbsp;{</SPAN><SPAN class=string 
+  style="COLOR: blue">"c1"</SPAN><SPAN style="COLOR: black">:</SPAN><SPAN 
+  class=string style="COLOR: blue">"age1"</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">"c2"</SPAN><SPAN style="COLOR: black">:</SPAN><SPAN 
+  class=string style="COLOR: blue">"age2"</SPAN><SPAN 
+  style="COLOR: black">}&nbsp;{</SPAN><SPAN class=string 
+  style="COLOR: blue">"c1"</SPAN><SPAN style="COLOR: black">:</SPAN><SPAN 
+  class=string style="COLOR: blue">"job1"</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">"c2"</SPAN><SPAN style="COLOR: black">:</SPAN><SPAN 
+  class=string style="COLOR: blue">"job2"</SPAN><SPAN 
+  style="COLOR: black">,</SPAN><SPAN class=string 
+  style="COLOR: blue">"c3"</SPAN><SPAN style="COLOR: black">:</SPAN><SPAN 
+  class=string style="COLOR: blue">"job3"</SPAN><SPAN 
+  style="COLOR: black">}&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">可以看到，Hive中只有一行数据，因为只有一个rowkey，每一个列族的列和值，分别被存储到Map结构中。</P>
+<H2 
+style="FONT-SIZE: 1.5em; FONT-FAMILY: Helvetica, Tahoma, Arial, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">12.4 
+Hive中插入数据到HBase表</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">可以在Hive表中通过Insert语句，完成对HBase表数据的插入。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">比如，执行下面的语句：</P>
+<DIV class=dp-highlighter 
+style="OVERFLOW: auto; WORD-WRAP: break-word; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Sql代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EMBED 
+type=application/x-shockwave-flash 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=15 width=14 
+src=http://superlxw1234.iteye.com/javascripts/syntaxhighlighter/clipboard_new.swf 
+allowscriptaccess="always" quality="high" 
+flashvars="clipboard=%20%20%20%20INSERT%20INTO%20TABLE%20lxw1234%0A%20%20%20%20SELECT%20'row1'%20AS%20rowkey%2C%0A%20%20%20%20map('c3'%2C'name3')%20AS%20f1%2C%0A%20%20%20%20map('c3'%2C'age3')%20AS%20f2%2C%0A%20%20%20%20map('c4'%2C'job3')%20AS%20f3%0A%20%20%20%20FROM%20DUAL%0A%20%20%20%20limit%201%3B" 
+wmode="transparent">&nbsp;<A 
+onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 
+src="http://superlxw1234.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-sql 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">INSERT</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">INTO</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">TABLE</SPAN><SPAN 
+  style="COLOR: black">&nbsp;lxw1234&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">SELECT</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">'row1'</SPAN><SPAN style="COLOR: black">&nbsp;</SPAN><SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">AS</SPAN><SPAN 
+  style="COLOR: black">&nbsp;rowkey,&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">map(<SPAN class=string 
+  style="COLOR: blue">'c3'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'name3'</SPAN><SPAN 
+  style="COLOR: black">)&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">AS</SPAN><SPAN 
+  style="COLOR: black">&nbsp;f1,&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">map(<SPAN class=string 
+  style="COLOR: blue">'c3'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'age3'</SPAN><SPAN 
+  style="COLOR: black">)&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">AS</SPAN><SPAN 
+  style="COLOR: black">&nbsp;f2,&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">map(<SPAN class=string 
+  style="COLOR: blue">'c4'</SPAN><SPAN style="COLOR: black">,</SPAN><SPAN 
+  class=string style="COLOR: blue">'job3'</SPAN><SPAN 
+  style="COLOR: black">)&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">AS</SPAN><SPAN 
+  style="COLOR: black">&nbsp;f3&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">FROM</SPAN><SPAN 
+  style="COLOR: black">&nbsp;DUAL&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">limit&nbsp;1;&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在HBase中查看数据：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<DIV class=dp-highlighter 
+style="OVERFLOW: auto; WORD-WRAP: break-word; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Sql代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EMBED 
+type=application/x-shockwave-flash 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=15 width=14 
+src=http://superlxw1234.iteye.com/javascripts/syntaxhighlighter/clipboard_new.swf 
+allowscriptaccess="always" quality="high" 
+flashvars="clipboard=%20%20%20%20hbase(main)%3A028%3A0*%20scan%20'lxw1234'%0A%20%20%20%20ROW%20COLUMN%2BCELL%0A%20%20%20%20lxw1234.com%20column%3Df1%3Ac1%2C%20timestamp%3D1435624625198%2C%20value%3Dname1%0A%20%20%20%20lxw1234.com%20column%3Df1%3Ac2%2C%20timestamp%3D1435624591717%2C%20value%3Dname2%0A%20%20%20%20lxw1234.com%20column%3Df2%3Ac1%2C%20timestamp%3D1435624608759%2C%20value%3Dage1%0A%20%20%20%20lxw1234.com%20column%3Df2%3Ac2%2C%20timestamp%3D1435624635261%2C%20value%3Dage2%0A%20%20%20%20lxw1234.com%20column%3Df3%3Ac1%2C%20timestamp%3D1435624662282%2C%20value%3Djob1%0A%20%20%20%20lxw1234.com%20column%3Df3%3Ac2%2C%20timestamp%3D1435624697028%2C%20value%3Djob2%0A%20%20%20%20lxw1234.com%20column%3Df3%3Ac3%2C%20timestamp%3D1435624697065%2C%20value%3Djob3%0A%20%20%20%20row1%20column%3Df1%3Ac3%2C%20timestamp%3D1435625971410%2C%20value%3Dname3%0A%20%20%20%20row1%20column%3Df2%3Ac3%2C%20timestamp%3D1435625971410%2C%20value%3Dage3%0A%20%20%20%20row1%20column%3Df3%3Ac4%2C%20timestamp%3D1435625971410%2C%20value%3Djob3%0A%20%20%20%202%20row(s)%20in%200.0420%20seconds" 
+wmode="transparent">&nbsp;<A 
+onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 
+src="http://superlxw1234.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-sql 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN 
+  style="COLOR: black">hbase(main):028:0*&nbsp;scan&nbsp;</SPAN><SPAN 
+  class=string style="COLOR: blue">'lxw1234'</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">ROW&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">COLUMN</SPAN><SPAN 
+  style="COLOR: black">+CELL&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f1:c1,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624625198,&nbsp;value=name1&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f1:c2,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624591717,&nbsp;value=name2&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f2:c1,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624608759,&nbsp;value=age1&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f2:c2,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624635261,&nbsp;value=age2&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f3:c1,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624662282,&nbsp;value=job1&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f3:c2,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624697028,&nbsp;value=job2&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">lxw1234.com&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f3:c3,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435624697065,&nbsp;value=job3&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">row1&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f1:c3,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435625971410,&nbsp;value=name3&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">row1&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f2:c3,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435625971410,&nbsp;value=age3&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">row1&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">column</SPAN><SPAN 
+  style="COLOR: black">=f3:c4,&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">timestamp</SPAN><SPAN 
+  style="COLOR: black">=1435625971410,&nbsp;value=job3&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">2&nbsp;row(s)&nbsp;<SPAN class=op 
+  style="COLOR: rgb(128,128,128)">in</SPAN><SPAN 
+  style="COLOR: black">&nbsp;0.0420&nbsp;seconds&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">Hive中的外部表lxw1234，就和其他外部表一样，只有一份元数据，真正的数据是在HBase表中，Hive通过hive-hbase-handler来操作HBase中的表。</P></body>
+</html>

@@ -1,0 +1,66 @@
+﻿<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>自定义注解处理器</title>
+<body><!--StartFragment-->
+<p>在JDK 6中，通过<a href="http://www.jcp.org/en/jsr/detail?id=269">JSR 269</a>把自定义注解处理器这一功能进行了规范化，有了新的<a href="http://download.oracle.com/javase/6/docs/api/javax/annotation/processing/package-summary.html">javax.annotation.processing</a>这个新的API。对Mirror API也进行了更新，形成了新的<a href="http://download.oracle.com/javase/6/docs/api/javax/lang/model/package-summary.html">javax.lang.model</a>包。注解处理器的使用也进行了简化，不需要再单独运行apt这样的命令行工具，Java编译器本身就可以完成对注解的处理。对于同样的功能，如果用JSR 269的做法，只需要一个类就可以了。</p>
+<pre>@SupportedSourceVersion(SourceVersion.RELEASE_6)
+@SupportedAnnotationTypes("annotation.Assignment")
+public class AssignmentProcess extends AbstractProcessor {
+    private TypeElement assignmentElement; 
+    public synchronized void init(ProcessingEnvironment processingEnv) {
+        super.init(processingEnv);
+        Elements elementUtils = processingEnv.getElementUtils();
+        assignmentElement = elementUtils.getTypeElement("annotation.Assignment");
+    } 
+    public boolean process(Set&lt;? extends TypeElement&gt; annotations, RoundEnvironment roundEnv) {
+        Set&lt;? extends Element&gt; elements = roundEnv.getElementsAnnotatedWith(assignmentElement);
+        for (Element element : elements) {
+            processAssignment(element);
+        }
+    }
+    private void processAssignment(Element element) {
+        List&lt;? extends AnnotationMirror&gt; annotations = element.getAnnotationMirrors();
+        for (AnnotationMirror mirror : annotations) {
+            if (mirror.getAnnotationType().asElement().equals(assignmentElement)) {
+                Map&lt;? extends ExecutableElement, ? extends AnnotationValue&gt; values = mirror.getElementValues();
+                String assignee = (String) getAnnotationValue(values, "assignee"); //获取注解的值
+            }
+        }
+    } 
+}  
+</pre>
+<p>仔细比较上面两段代码，可以发现它们的基本结构是类似的。不同之处在于JDK 6中通过元注解<a href="http://download.oracle.com/javase/6/docs/api/javax/annotation/processing/SupportedAnnotationTypes.html">@SupportedAnnotationTypes</a>来
+  声明所支持的注解类型。另外描述程序静态结构的javax.lang.model包使用了不同的类型名称。使用的时候也更加简单，只需要通过javac 
+  -processor annotation.pap.AssignmentProcess Demo1.java这样的方式即可。</p>
+<p>上面介绍的这两种做法都是在编译时刻进行处理的。而有些时候则需要在运行时刻来完成对注解的处理。这个时候就需要用到Java的反射API。反射API提供了在运行时刻读取注解信息的支持。不过前提是注解的保留策略声明的是运行时。Java反射API的<a href="http://download.oracle.com/javase/6/docs/api/java/lang/reflect/AnnotatedElement.html">AnnotatedElement</a>接口提供了获取类、方法和域上的注解的实用方法。比如获取到一个Class类对象之后，通过getAnnotation方法就可以获取到该类上添加的指定注解类型的注解。</p>
+<h2>实例分析</h2>
+<p>下面通过一个具体的实例来分析说明在实践中如何来使用和处理注解。假定有一个公司的雇员信息系统，从访问控制的角度出发，对雇员的工资的更新只能由具有特定角色的用户才能完成。考虑到访问控制需求的普遍性，可以定义一个注解来让开发人员方便的在代码中声明访问控制权限。</p>
+<pre>@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface RequiredRoles {
+    String[] value();
+}
+</pre>
+<p>下一步则是如何对注解进行处理，这里使用的Java的反射API并结合<a href="http://www.ibm.com/developerworks/cn/java/j-lo-proxy1/index.html">动态代理</a>。下面是动态代理中的InvocationHandler接口的实现。</p>
+<pre>public class AccessInvocationHandler&lt;T&gt; implements InvocationHandler {
+    final T accessObj;
+    public AccessInvocationHandler(T accessObj) {
+        this.accessObj = accessObj;
+    }
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        RequiredRoles annotation = method.getAnnotation(RequiredRoles.class); //通过反射API获取注解
+        if (annotation != null) {
+            String[] roles = annotation.value();
+            String role = AccessControl.getCurrentRole();
+            if (!Arrays.asList(roles).contains(role)) {
+                throw new AccessControlException("The user is not allowed to invoke this method.");
+            }
+        }
+        return method.invoke(accessObj, args);
+    } 
+} 
+</pre>
+<p>在具体使用的时候，首先要通过Proxy.newProxyInstance方法创建一个EmployeeGateway的接口的代理类，使用该代理类来完成实际的操作。</p>
+<p>&nbsp;</p>
+</body>
+</htm>

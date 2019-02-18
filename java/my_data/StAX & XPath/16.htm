@@ -1,0 +1,110 @@
+﻿<HTML><HEAD>
+<META HTTP-EQUIV=Content-Type CONTENT=text/html; charset=UTF-8>
+<title>理解StAX</title>
+<style type="text/css">
+<!--
+.9t {font-size: 9pt; color: #000000; font-family: "宋体";}
+-->
+</style></HEAD>
+<body bgcolor="#ffffff">
+<table width="90%" border="0" align="center" ><tr><td>
+<PRE class="9t">
+理解StAX
+
+StAX代码演示
+
+下面代码演示了如何通过StAX读取xml文档和生成xml文档
+
+public class StaxTester {
+    public static void main(String[] args) throws XMLStreamException, FileNotFoundException {
+        readXMLByStAX();//用XMLEventReader解析xml文档
+        writeXMLByStAX();//用XMLStreamWriter写xml文档
+    }
+
+    private static void readXMLByStAX() throws XMLStreamException, FileNotFoundException {
+        XMLInputFactory xmlif = XMLInputFactory.newInstance();
+        XMLEventReader xmler = xmlif.createXMLEventReader(StaxTester.class.getResourceAsStream("test.xml"));
+        XMLEvent event;
+        StringBuffer parsingResult = new StringBuffer();
+        while (xmler.hasNext()) {
+            event = xmler.nextEvent();
+            if (event.isStartElement()) { //如果解析的是起始标记
+                StartElement se = event.asStartElement();
+                parsingResult.append("&lt;");
+                parsingResult.append(se.getName());
+                if(se.getName().getLocalPart().equals("catalog")) {
+                    parsingResult.append(" id=\"");
+                    parsingResult.append(se.getAttributeByName(new QName("id")).getValue());
+                    parsingResult.append("\"");
+                }
+                parsingResult.append("&gt;");
+            } else if (event.isCharacters()) { //如果解析的是文本内容
+                parsingResult.append(event.asCharacters().getData());
+            } else if(event.isEndElement()){ //如果解析的是结束标记
+                parsingResult.append("&lt;/");
+                parsingResult.append(event.asEndElement().getName());
+                parsingResult.append("&gt;");
+            }
+        }
+        System.out.println(parsingResult);
+    }
+
+    private static void writeXMLByStAX() throws XMLStreamException, FileNotFoundException {
+        XMLOutputFactory xmlof = XMLOutputFactory.newInstance();
+        XMLStreamWriter xmlw = xmlof.createXMLStreamWriter(new FileOutputStream("output.xml"));
+
+        // 写入默认的 XML 声明到xml文档
+        xmlw.writeStartDocument();
+        xmlw.writeCharacters("\n");
+        // 写入注释到xml文档
+        xmlw.writeComment("testing comment");
+        xmlw.writeCharacters("\n");
+        // 写入一个catalogs根元素
+        xmlw.writeStartElement("catalogs");
+        xmlw.writeNamespace("myNS", "http://blog.csdn.net/Chinajash");
+        xmlw.writeAttribute("owner","Chinajash");
+        xmlw.writeCharacters("\n");
+        // 写入子元素catalog
+        xmlw.writeStartElement("http://blog.csdn.net/Chinajash", "catalog");
+        xmlw.writeAttribute("id","007");
+        xmlw.writeCharacters("Apparel");
+        // 写入catalog元素的结束标签
+        xmlw.writeEndElement();
+        // 写入catalogs元素的结束标签
+        xmlw.writeEndElement();
+        // 结束 XML 文档
+        xmlw.writeEndDocument();
+        xmlw.close();
+    }
+}
+
+test.xml文件内容如下:
+
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;catalogs&gt;
+    &lt;catalog id="001"&gt;Book&lt;/catalog&gt;
+    &lt;catalog id="002"&gt;Video&lt;/catalog&gt;
+&lt;/catalogs&gt;
+
+运行上面程序后，控制台输出如下:
+
+&lt;catalogs&gt;
+    &lt;catalog id="001"&gt;Book&lt;/catalog&gt;
+    &lt;catalog id="002"&gt;Video&lt;/catalog&gt;
+&lt;/catalogs&gt;
+
+运行上面程序后，产生的output.xml文件如下:
+
+&lt;?xml version="1.0" ?&gt;
+&lt;!-- testing comment--&gt;
+&lt;catalogs xmlns:myNS="http://blog.csdn.net/Chinajash" owner="Chinajash"&gt;
+    &lt;myNS:catalog id="007"&gt;Apparel&lt;/myNS:catalog&gt;
+&lt;/catalogs&gt;
+ 
+</PRE>
+</td></tr></table>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+
+</body>
+</HTML>

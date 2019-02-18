@@ -1,0 +1,160 @@
+﻿<html>
+<title>Java动态代理实现</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<body><!--StartFragment-->
+<div id="cnblogs_post_body">
+  <p class="MsoNormal" style="TEXT-ALIGN: center; MARGIN: 0cm 0cm 0pt" align="center"><b><span style="FONT-SIZE: 14pt" lang="EN-US"><font face="Times New Roman">Java</font></span></b><b><span style="FONT-SIZE: 14pt; FONT-FAMILY: 宋体">动态代理实现</span></b><b><span style="FONT-SIZE: 14pt" lang="EN-US"> </span></b></p>
+  <p></p>
+  <p></p>
+  <p></p>
+  <p></p>
+  <p></p>
+  <p></p>
+  <p class="MsoNormal" style="TEXT-ALIGN: center; MARGIN: 0cm 0cm 0pt" align="center"><b><span style="FONT-SIZE: 12pt" lang="EN-US"><font face="Times New Roman">Kongxx </font></span></b></p>
+  <p></p>
+  <p></p>
+  <p></p>
+  <p></p>
+  <p></p>
+  <p></p>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span style="FONT-FAMILY: 宋体">在目前的</span><span lang="EN-US"><font face="Times New Roman">Java</font></span><span style="FONT-FAMILY: 宋体">开发包中包含了对动态代理的支持，但是其实现只支持对接口的的实现。</span></font></p>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span style="FONT-FAMILY: 宋体">其实现主要通过是</span><span lang="EN-US"><font face="Times New Roman">java.lang.reflect.Proxy</font></span><span style="FONT-FAMILY: 宋体">类和</span><span lang="EN-US"><font face="Times New Roman">java.lang.reflect.InvocationHandler</font></span><span style="FONT-FAMILY: 宋体">接口。</span></font></p>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span lang="EN-US"><font face="Times New Roman">Proxy</font></span><span style="FONT-FAMILY: 宋体">类主要用来获取动态代理对象，</span><span lang="EN-US"><font face="Times New Roman">InvocationHandler</font></span><span style="FONT-FAMILY: 宋体">接口用来约束调用者实现，如下，</span><span lang="EN-US"><font face="Times New Roman">HelloWorld</font></span><span style="FONT-FAMILY: 宋体">接口定义的业务方法，</span><span lang="EN-US"><font face="Times New Roman">HelloWorldImpl</font></span><span style="FONT-FAMILY: 宋体">是</span><span lang="EN-US"><font face="Times New Roman">HelloWorld</font></span><span style="FONT-FAMILY: 宋体">接口的实现，</span><span lang="EN-US"><font face="Times New Roman">HelloWorldHandler</font></span><span style="FONT-FAMILY: 宋体">是</span><span lang="EN-US"><font face="Times New Roman">InvocationHandler</font></span><span style="FONT-FAMILY: 宋体">接口实现。代码如下：</span></font></p>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span style="FONT-FAMILY: 宋体">业务接口</span><span lang="EN-US"><font face="Times New Roman">:</font></span></font></p>
+  <p></p>
+  <table class="MsoTableGrid" style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BACKGROUND: rgb(230,230,230) 0% 50%; BORDER-COLLAPSE: collapse; BORDER-BOTTOM: medium none; BORDER-LEFT: medium none; moz-background-clip: initial; moz-background-origin: initial; moz-background-inline-policy: initial" border="1" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr>
+        <td style="BORDER-TOP: windowtext 1pt solid; BORDER-RIGHT: windowtext 1pt solid; WIDTH: 426.1pt; BORDER-BOTTOM: windowtext 1pt solid; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: windowtext 1pt solid; PADDING-RIGHT: 5.4pt; BACKGROUND-COLOR: transparent" valign="top" width="568"><p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">public interface HelloWorld {</font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>void sayHelloWorld() ;</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">}</font></span></p></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span style="FONT-FAMILY: 宋体"><font size="3">业务接口实现：</font></span></p>
+  <p></p>
+  <table class="MsoTableGrid" style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BACKGROUND: rgb(230,230,230) 0% 50%; BORDER-COLLAPSE: collapse; BORDER-BOTTOM: medium none; BORDER-LEFT: medium none; moz-background-clip: initial; moz-background-origin: initial; moz-background-inline-policy: initial" border="1" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr>
+        <td style="BORDER-TOP: windowtext 1pt solid; BORDER-RIGHT: windowtext 1pt solid; WIDTH: 426.1pt; BORDER-BOTTOM: windowtext 1pt solid; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: windowtext 1pt solid; PADDING-RIGHT: 5.4pt; BACKGROUND-COLOR: transparent" valign="top" width="568"><p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">public class HelloWorldImpl implements HelloWorld {</font></span></p>
+          <p></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>public void sayHelloWorld() {</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>System.out.println("Hello World!");<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>}</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">}</font></span></p></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span lang="EN-US"><font face="Times New Roman">InvocationHandler</font></span><span style="FONT-FAMILY: 宋体">实现，需要在接口方法调用前后加入一部份处理工作，这里仅仅在方法调用前后向后台输出两句字符串，其代码如下：</span></font></p>
+  <p></p>
+  <table class="MsoTableGrid" style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BACKGROUND: rgb(230,230,230) 0% 50%; BORDER-COLLAPSE: collapse; BORDER-BOTTOM: medium none; BORDER-LEFT: medium none; moz-background-clip: initial; moz-background-origin: initial; moz-background-inline-policy: initial" border="1" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr>
+        <td style="BORDER-TOP: windowtext 1pt solid; BORDER-RIGHT: windowtext 1pt solid; WIDTH: 426.1pt; BORDER-BOTTOM: windowtext 1pt solid; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: windowtext 1pt solid; PADDING-RIGHT: 5.4pt; BACKGROUND-COLOR: transparent" valign="top" width="568"><p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">import java.lang.reflect.InvocationHandler;</font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">import java.lang.reflect.Method;</font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"> </span></p>
+          <p><span lang="EN-US"><font size="3" face="Times New Roman">public class HelloWorldHandler implements InvocationHandler {</font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span lang="EN-US"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>//</font></span><span style="FONT-FAMILY: 宋体">要代理的原始对象</span></font></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>private Object objOriginal;</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>/**</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span lang="EN-US"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span>&nbsp;</span>* </font></span><span style="FONT-FAMILY: 宋体">构造函数。</span></font></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span lang="EN-US"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span>&nbsp;</span>* @param obj </font></span><span style="FONT-FAMILY: 宋体">要代理的原始对象。</span></font></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span><span>&nbsp;</span>*/</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>public HelloWorldHandler(Object obj) {</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>this.objOriginal = obj ;</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>}</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"> </span></p>
+          <p><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>public Object invoke(Object proxy, Method method, Object[] args)</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>throws Throwable {</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><span><font size="3" face="Times New Roman">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </font></span></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>Object result ;</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><span><font size="3" face="Times New Roman">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </font></span></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span lang="EN-US"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>//</font></span><span style="FONT-FAMILY: 宋体">方法调用之前</span></font></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>doBefore();</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><span><font size="3" face="Times New Roman">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </font></span></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span lang="EN-US"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>//</font></span><span style="FONT-FAMILY: 宋体">调用原始对象的方法</span></font></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>result = method.invoke(this.objOriginal ,args);</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><span><font size="3" face="Times New Roman">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </font></span></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span lang="EN-US"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>//</font></span><span style="FONT-FAMILY: 宋体">方法调用之后</span></font></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>doAfter();</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><span><font size="3" face="Times New Roman">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </font></span></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>return result ;</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>}</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><span><font size="3" face="Times New Roman">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </font></span></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>private void doBefore() {</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>System.out.println("before method invoke!");</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>}</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><span><font size="3" face="Times New Roman">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </font></span></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>private void doAfter() {</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>System.out.println("after method invoke!");</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>}</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">}</font></span></p></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span style="FONT-FAMILY: 宋体"><font size="3">测试代码：</font></span></p>
+  <p></p>
+  <table class="MsoTableGrid" style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BACKGROUND: rgb(230,230,230) 0% 50%; BORDER-COLLAPSE: collapse; BORDER-BOTTOM: medium none; BORDER-LEFT: medium none; moz-background-clip: initial; moz-background-origin: initial; moz-background-inline-policy: initial" border="1" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr>
+        <td style="BORDER-TOP: windowtext 1pt solid; BORDER-RIGHT: windowtext 1pt solid; WIDTH: 426.1pt; BORDER-BOTTOM: windowtext 1pt solid; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: windowtext 1pt solid; PADDING-RIGHT: 5.4pt; BACKGROUND-COLOR: transparent" valign="top" width="568"><p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">import java.lang.reflect.InvocationHandler;</font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">import java.lang.reflect.Proxy;</font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"> </span></p>
+          <p><font size="3" face="Times New Roman"></font>&nbsp;</p>
+          <p></p>
+          <p><font size="3" face="Times New Roman"></font>&nbsp;</p>
+          <p></p>
+          <p><font size="3" face="Times New Roman"></font>&nbsp;</p>
+          <p></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">public class Test {</font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"> </span></p>
+          <p><font size="3" face="Times New Roman"></font>&nbsp;</p>
+          <p></p>
+          <p><font size="3" face="Times New Roman"></font>&nbsp;</p>
+          <p></p>
+          <p><font size="3" face="Times New Roman"></font>&nbsp;</p>
+          <p></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>public static void main(String[] args) {</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"> </span></p>
+          <p><font size="3" face="Times New Roman"></font>&nbsp;</p>
+          <p></p>
+          <p><font size="3" face="Times New Roman"></font>&nbsp;</p>
+          <p></p>
+          <p><font size="3" face="Times New Roman"></font>&nbsp;</p>
+          <p></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>HelloWorld hw = new HelloWorldImpl();</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><span><font size="3" face="Times New Roman">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </font></span></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>InvocationHandler handler = new HelloWorldHandler(hw);</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><span><font size="3" face="Times New Roman">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </font></span></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>HelloWorld proxy = (HelloWorld) Proxy.newProxyInstance( </font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>hw.getClass().getClassLoader(), </font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>hw.getClass().getInterfaces(), </font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>handler); </font></font></span></p>
+          <p></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3"><font face="Times New Roman"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>proxy.sayHelloWorld();</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font face="Times New Roman"><font size="3"><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span>}</font></font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">}</font></span></p></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt 21pt; TEXT-INDENT: -21pt"><span style="FONT-FAMILY: Wingdings" lang="EN-US"><span><font size="3">?</font><span style="FONT: 7pt 'Times New Roman'; font-stretch: normal; font-size-adjust: none">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><span style="FONT-FAMILY: 宋体"><font size="3">首先获取一个业务接口的实现对象；</font></span></p>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt 21pt; TEXT-INDENT: -21pt"><span style="FONT-FAMILY: Wingdings" lang="EN-US"><span><font size="3">?</font><span style="FONT: 7pt 'Times New Roman'; font-stretch: normal; font-size-adjust: none">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><font size="3"><span style="FONT-FAMILY: 宋体">获取一个</span><span lang="EN-US"><font face="Times New Roman">InvocationHandler</font></span><span style="FONT-FAMILY: 宋体">实现，此处是</span><span lang="EN-US"><font face="Times New Roman">HelloWorldHandler</font></span><span style="FONT-FAMILY: 宋体">对象；</span></font></p>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt 21pt; TEXT-INDENT: -21pt"><span style="FONT-FAMILY: Wingdings" lang="EN-US"><span><font size="3">?</font><span style="FONT: 7pt 'Times New Roman'; font-stretch: normal; font-size-adjust: none">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><span style="FONT-FAMILY: 宋体"><font size="3">创建动态代理对象；</font></span></p>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt 21pt; TEXT-INDENT: -21pt"><span style="FONT-FAMILY: Wingdings" lang="EN-US"><span><font size="3">?</font><span style="FONT: 7pt 'Times New Roman'; font-stretch: normal; font-size-adjust: none">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span><font size="3"><span style="FONT-FAMILY: 宋体">通过动态代理对象调用</span><span lang="EN-US"><font face="Times New Roman">sayHelloWorld()</font></span><span style="FONT-FAMILY: 宋体">方法，此时会在原始对象</span><span lang="EN-US"><font face="Times New Roman">HelloWorldImpl. sayHelloWorld()</font></span><span style="FONT-FAMILY: 宋体">方法前后输出两句字符串。</span></font></p>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span style="FONT-FAMILY: 宋体">运行测试类输出如下</span><span lang="EN-US"><font face="Times New Roman">:</font></span></font></p>
+  <p></p>
+  <table class="MsoTableGrid" style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BACKGROUND: rgb(230,230,230) 0% 50%; BORDER-COLLAPSE: collapse; BORDER-BOTTOM: medium none; BORDER-LEFT: medium none; moz-background-clip: initial; moz-background-origin: initial; moz-background-inline-policy: initial" border="1" cellpadding="0" cellspacing="0">
+    <tbody>
+      <tr>
+        <td style="BORDER-TOP: windowtext 1pt solid; BORDER-RIGHT: windowtext 1pt solid; WIDTH: 426.1pt; BORDER-BOTTOM: windowtext 1pt solid; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: windowtext 1pt solid; PADDING-RIGHT: 5.4pt; BACKGROUND-COLOR: transparent" valign="top" width="568"><p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">before method invoke!</font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">Hello World!</font></span></p>
+          <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><span lang="EN-US"><font size="3" face="Times New Roman">after method invoke!</font></span></p></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span style="FONT-FAMILY: 宋体">此处</span><span lang="EN-US"><font face="Times New Roman">Test</font></span><span style="FONT-FAMILY: 宋体">类中的方法调用代码比较多，在我们的实际应用中可以通过配置文件来来简化客户端的调用实现。另外也可以通过动态代理来实现简单的</span><span lang="EN-US"><font face="Times New Roman">AOP</font></span><span style="FONT-FAMILY: 宋体">。</span></font></p>
+  <p class="MsoNormal" style="MARGIN: 0cm 0cm 0pt"><font size="3"><span style="FONT-FAMILY: 宋体"></span></font>&nbsp;</p>
+</div><!--EndFragment-->
+</body>
+</htm>

@@ -1,0 +1,209 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML><head>
+<title>Use Sql under transaction</title>
+
+<META content="text/html; charset=UTF-8" http-equiv=Content-Type>
+<META name=GENERATOR content="MSHTML 11.00.9600.17690"></HEAD>
+<BODY>
+<P>例子1:</P>
+<P>
+<TABLE style="BORDER-COLLAPSE: collapse" borderColor=#000000 cellSpacing=0 
+cellPadding=2 width="100%" border=1>
+  
+  <TR>
+    <TD>
+      <P>&nbsp;def sql = GroovySqlHandler.createDriverManagerSql()</P>
+      <P>sql.withTransaction {<BR>&nbsp;&nbsp;&nbsp; sql.execute "INSERT INTO 
+      city (name, state, founded_year) VALUES ('Minneapolis', 'Minnesota', 
+      1867)"<BR>&nbsp;&nbsp;&nbsp; sql.execute "INSERT INTO city (name, state, 
+      founded_year) VALUES ('Orlando', 'Florida', 1875)"<BR>&nbsp;&nbsp;&nbsp; 
+      sql.execute "INSERT INTO city (name, state, founded_year) VALUES 
+      ('Gulfport', 'Mississippi', 1887)"<BR>}</P>
+      <P>def cities = sql.dataSet('city')</P>
+      <P>sql.withTransaction {<BR>&nbsp;&nbsp;&nbsp; cities.add name: 
+      'Minneapolis', state: 'Minnesota', founded_year: 
+      1867<BR>&nbsp;&nbsp;&nbsp; cities.add name: 'Orlando', state: 'Florida', 
+      founded_year: 1875<BR>&nbsp;&nbsp;&nbsp; cities.add name: 'Gulfport', 
+      state: 'Mississippi', founded_year: 1887<BR>}</P></TD></TR></TABLE></P>
+<P>&nbsp;</P>
+<P>例子2:</P>
+<P>
+<TABLE style="BORDER-COLLAPSE: collapse" borderColor=#000000 cellSpacing=0 
+cellPadding=2 width="100%" border=1>
+  
+  <TR>
+    <TD>&nbsp;
+      <OL class=dp-j>
+        <LI class=alt><SPAN><SPAN class=keyword>this</SPAN><SPAN>.</SPAN><SPAN 
+        class=keyword>class</SPAN><SPAN>.classLoader.rootLoader.addURL(&nbsp;&nbsp;</SPAN></SPAN>
+        <LI><SPAN>&nbsp;&nbsp;<SPAN 
+        class=keyword>new</SPAN><SPAN>&nbsp;URL(</SPAN><SPAN 
+        class=string>"file:///$jbossPath/lib/ojdbc6.jar"</SPAN><SPAN>))&nbsp;&nbsp;</SPAN></SPAN>
+        <LI class=alt><SPAN>Sql&nbsp;sql&nbsp;=&nbsp;Sql.newInstance(<SPAN 
+        class=string>"ds.url"</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+        class=string>"ds.user.name"</SPAN><SPAN>,&nbsp;&nbsp;&nbsp;</SPAN></SPAN>
+        <LI><SPAN>&nbsp;&nbsp;<SPAN 
+        class=string>"ds.user.password"</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+        class=string>"oracle.jdbc.driver.OracleDriver"</SPAN><SPAN>)&nbsp;&nbsp;</SPAN></SPAN>
+        <LI class=alt><SPAN>&nbsp;&nbsp;</SPAN>
+        <LI><SPAN>sql.withTransaction&nbsp;{&nbsp;&nbsp;</SPAN>
+        <LI class=alt><SPAN>&nbsp;&nbsp;sql.eachRow(<SPAN 
+        class=string>"SELECT&nbsp;*&nbsp;FROM&nbsp;USERS"</SPAN><SPAN>)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN>
+        <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;sql.executeUpdate(<SPAN 
+        class=string>"update&nbsp;USERS&nbsp;set&nbsp;PASSWORD&nbsp;=&nbsp;?&nbsp;where&nbsp;USER_ID&nbsp;=&nbsp;?"</SPAN><SPAN>,&nbsp;&nbsp;&nbsp;</SPAN></SPAN>
+        <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<SPAN 
+        class=string>"123456"</SPAN><SPAN>,&nbsp;it.USER_ID])&nbsp;&nbsp;</SPAN></SPAN>
+        <LI><SPAN>&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN>
+        <LI class=alt><SPAN>}&nbsp;&nbsp;</SPAN></LI></OL></TD></TR></TABLE></P>
+<P>例子3:</P>
+<P>
+<TABLE style="BORDER-COLLAPSE: collapse" borderColor=#000000 cellSpacing=0 
+cellPadding=2 width="100%" border=1>
+  
+  <TR>
+    <TD>&nbsp;<PRE style="WORD-WRAP: break-word; FONT-VARIANT: normal; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(0,0,0); FONT-STYLE: normal; WIDOWS: 1; LETTER-SPACING: normal; LINE-HEIGHT: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">import java.sql.Connection
+import java.sql.SQLException
+
+/**
+ * Test Sql transaction features using a Sql built from a connection
+ *
+ * @author Paul King
+ */
+class SqlTransactionTestCase extends GroovyTestCase {
+
+    Sql sql
+    DataSet personFood
+
+    protected Sql setUpSql() {
+        throw new UnsupportedOperationException("Please provide setUpSql in derived class")
+    }
+
+    protected tryDrop(String tableName) {
+        try {
+           sql.execute("DROP TABLE $tableName".toString())
+        } catch(Exception e){ }
+    }
+
+    void setUp() {
+        sql = setUpSql()
+        // drop them in this order due to FK constraint
+        ["PERSON_FOOD", "PERSON"].each{ tryDrop(it) }
+
+        sql.execute("CREATE TABLE person ( id INTEGER, firstname VARCHAR, lastname VARCHAR, PRIMARY KEY (id))")
+        sql.execute("CREATE TABLE person_food ( personid INTEGER, food VARCHAR, FOREIGN KEY (personid) REFERENCES person(id))")
+
+        // populate some data
+        def people = sql.dataSet("PERSON")
+        people.add(id: 1, firstname: "James", lastname: "Strachan")
+        people.add(id: 2, firstname: "Bob", lastname: "Mcwhirter")
+        people.add(id: 3, firstname: "Sam", lastname: "Pullara")
+        people.add(id: 4, firstname: "Jean", lastname: "Gabin")
+        people.add(id: 5, firstname: "Lino", lastname: "Ventura")
+        personFood = sql.dataSet("PERSON_FOOD")
+        personFood.add(personid: 1, food: "cheese")
+        personFood.add(personid: 1, food: "wine")
+        personFood.add(personid: 2, food: "chicken")
+    }
+
+    void testManualTransactionSuccess() {
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 3
+        sql.cacheConnection { Connection connection -&gt;
+            connection.autoCommit = false
+            personFood.add(personid: 3, food: "beef")
+            personFood.add(personid: 4, food: "fish")
+            sql.commit()
+            connection.autoCommit = true
+        }
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 5
+    }
+
+    void testWithTransactionSuccess() {
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 3
+        sql.withTransaction {
+            personFood.add(personid: 3, food: "beef")
+            personFood.add(personid: 4, food: "fish")
+        }
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 5
+    }
+
+    void testManualTransactionRollbackUsingSql() {
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 3
+        sql.cacheConnection { Connection connection -&gt;
+            connection.autoCommit = false
+            def numAdds = 0
+            try {
+                personFood.add(personid: 5, food: "veg")
+                numAdds++
+                personFood.add(personid: 99, food: "mash")
+                numAdds++      // should fail before here
+                sql.commit()   // should never get here
+                fail("Should have thrown an exception before now")
+            } catch (SQLException se) {
+                assert numAdds == 1
+                assert se.message.contains('Integrity constraint violation')
+                sql.rollback()
+            }
+            connection.autoCommit = true
+        }
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 3
+    }
+
+    void testManualTransactionRollbackUsingDataSet() {
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 3
+        personFood.cacheConnection { Connection connection -&gt;
+            connection.autoCommit = false
+            def numAdds = 0
+            try {
+                personFood.add(personid: 5, food: "veg")
+                numAdds++
+                personFood.add(personid: 99, food: "mash")
+                numAdds++      // should fail before here
+                personFood.commit()   // should never get here
+                fail("Should have thrown an exception before now")
+            } catch (SQLException se) {
+                assert numAdds == 1
+                assert se.message.contains('Integrity constraint violation')
+                personFood.rollback()
+            }
+            connection.autoCommit = true
+        }
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 3
+    }
+
+    void testWithTransactionRollbackUsingSql() {
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 3
+        def numAdds = 0
+        try {
+            sql.withTransaction { -&gt;
+                personFood.add(personid: 5, food: "veg")
+                numAdds++
+                personFood.add(personid: 99, food: "mash") // should fail
+                numAdds++
+            }
+            fail("Should have thrown an exception before now")
+        } catch (SQLException se) {
+            assert numAdds == 1
+            assert se.message.contains('Integrity constraint violation')
+        }
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 3
+    }
+
+    void testWithTransactionRollbackUsingDataSet() {
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 3
+        def numAdds = 0
+        try {
+            personFood.withTransaction { -&gt;
+                personFood.add(personid: 5, food: "veg")
+                numAdds++
+                personFood.add(personid: 99, food: "mash") // should fail
+                numAdds++
+            }
+            fail("Should have thrown an exception before now")
+        } catch (SQLException se) {
+            assert numAdds == 1
+            assert se.message.contains('Integrity constraint violation')
+        }
+        assert sql.rows("SELECT * FROM PERSON_FOOD").size() == 3
+    }
+}</PRE></TD></TR></TABLE></P></BODY>
+</html>

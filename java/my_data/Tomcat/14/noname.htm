@@ -1,0 +1,242 @@
+﻿<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>tomcat reload时内存泄漏的处理</title>
+</head>
+
+<body>
+  <!--StartFragment-->
+  <h2>
+			<a id="viewpost1_TitleUrl" href="http://www.blogjava.net/super/archive/2010/06/30/324916.html">tomcat reload时内存泄漏的处理</a>
+		</h2>
+  <p>我做的应用是以Spring为系统的基础框架,mysql为后台数据库.在tomcat上发布后,总是不能进行热部署(reload),多次reload后,就会出OutOfMemory PermGen,</p>
+  <p>为此烦恼了很久,总于下定决心找找根源.
+    <br> 经过3天的不懈努力,小有成果,记录下来
+  </p>
+  <p>实际上下面的分析都已经没什么用了,如果你使用tomcat6.0.26及以后的版本,我所说的这些情况都已经被处理了,并且比我处理的还要多很多.可以下载tomcat6.0.26的源代码
+    <br> 看看WebappClassLoader类的处理就成了.
+  </p>
+  <p>&nbsp;</p>
+  <p>通过分析工具的分析(用了YourKit,以及JDK1.6/bin下的jps/jmap/jhat),发现有下面几个方面会造成memory leak.</p>
+  <p>
+    1.SystemClassLoader与WebappClassLoader加载的类相互引用,tomcat reload只是卸载WebappClassloader中的class,SystemClassLoader是不会卸载的(否则其他应用也停止了).但是WebappClassloader加载的类被SystemClassLoader引用的化,WebappClassloader中的相关类就不会被 JVM进行垃圾收集
+  </p>
+  <p>目前发现2种容易产生这种leak的现象.
+    <br> a.在使用java.lang.ThreadLocal的时候很容易产生这种情况
+    <br> b.使用jdbc驱动,而且不是在tomcat中配置的公共连接池.则java.sql.DriverManager一定会产生这种现象
+  </p>
+  <p>
+    <br> ThreadLocal.set(Object),如果这个Object是WebappsClassLoader加载的,使用之后没有做ThreadLocal.set(null)或者ThreadLocal.remove(),就会产生memory leak.
+    <br> 由于ThreadLocal实际上操作的是java.lang.Thread类中的ThreadLocalMap,Thread类是由 SystemClassLoder加载的.而这个线程实例(main thread)在tomcat reload的时候不会销毁重建,必然就产生了SystemClassLoder中的类引用WebappsClassLoader的类.
+  </p>
+  <p>DriverManager也是由SystemClassLoder载入的,当初始化某个JDBC驱动的时候,会向DriverManager中注册该驱动,通常是***.driver,例如com.mysql.jdbc.Driver
+    <br> 这个Driver是通过class.forName()加载的,通常也是加载到WebappClassLoader.这就出现了两个classLoader中的类的交叉引用.导致memory leak.</p>
+  <p>&nbsp;</p>
+  <p>解决办法:
+    <br> 写一个ServletContextListener,在contextDestroyed方法中统一删除当前Thread的ThreadLocalMap中的内容.
+    <br> public class ApplicationCleanListener implements ServletContextListener {</p>
+  <p>&nbsp;public void contextInitialized(ServletContextEvent event) {
+    <br> &nbsp;}
+  </p>
+  <p>&nbsp;public void contextDestroyed(ServletContextEvent event) {
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //处理ThreadLocal
+    <br> &nbsp;&nbsp;ThreadLocalCleanUtil.clearThreadLocals();
+  </p>
+  <p>&nbsp;&nbsp;/*
+    <br> &nbsp;&nbsp; * 如果数据故驱动是通过应用服务器(tomcat etc...)中配置的&lt;公用&gt;连接池,这里不需要 否则必须卸载Driver
+    <br> &nbsp;&nbsp; *
+    <br> &nbsp;&nbsp; * 原因: DriverManager是System classloader加载的, Driver是webappclassloader加载的,
+    <br> &nbsp;&nbsp; * driver保存在DriverManager中,在reload过程中,由于system
+    <br> &nbsp;&nbsp; * classloader不会销毁,driverManager就一直保持着对driver的引用,
+    <br> &nbsp;&nbsp; * driver无法卸载,与driver关联的其他类
+    <br> &nbsp;&nbsp; * ,例如DataSource,jdbcTemplate,dao,service....都无法卸载
+    <br> &nbsp;&nbsp; */
+    <br> &nbsp;&nbsp;try {
+    <br> &nbsp;&nbsp;&nbsp;System.out.println("clean jdbc Driver......");
+    <br>&nbsp;&nbsp;&nbsp;for (Enumeration e = DriverManager.getDrivers(); e
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.hasMoreElements();) {
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;Driver driver = (Driver) e.nextElement();
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;if (driver.getClass().getClassLoader() == getClass()
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.getClassLoader()) {
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DriverManager.deregisterDriver(driver);
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;}
+    <br> &nbsp;&nbsp;&nbsp;}
+  </p>
+  <p>&nbsp;&nbsp;} catch (Exception e) {
+    <br> &nbsp;&nbsp;&nbsp;System.out
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.println("Exception cleaning up java.sql.DriverManager's driver: "
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ e.getMessage());
+    <br> &nbsp;&nbsp;}
+  </p>
+  <p>
+    <br> &nbsp;}
+  </p>
+  <p>}</p>
+  <p>
+    <br> /**
+    <br> &nbsp;* 这个类根据
+    <br> */
+    <br> public class ThreadLocalCleanUtil {</p>
+  <p>&nbsp;/**
+    <br> &nbsp; * 得到当前线程组中的所有线程 description:
+    <br> &nbsp; *
+    <br> &nbsp; * @return
+    <br> &nbsp; */
+    <br> &nbsp;private static Thread[] getThreads() {
+    <br> &nbsp;&nbsp;ThreadGroup tg = Thread.currentThread().getThreadGroup();</p>
+  <p>&nbsp;&nbsp;while (tg.getParent() != null) {
+    <br> &nbsp;&nbsp;&nbsp;tg = tg.getParent();
+    <br> &nbsp;&nbsp;}
+  </p>
+  <p>&nbsp;&nbsp;int threadCountGuess = tg.activeCount() + 50;
+    <br> &nbsp;&nbsp;Thread[] threads = new Thread[threadCountGuess];
+    <br> &nbsp;&nbsp;int threadCountActual = tg.enumerate(threads);</p>
+  <p>&nbsp;&nbsp;while (threadCountActual == threadCountGuess) {
+    <br> &nbsp;&nbsp;&nbsp;threadCountGuess *= 2;
+    <br> &nbsp;&nbsp;&nbsp;threads = new Thread[threadCountGuess];</p>
+  <p>&nbsp;&nbsp;&nbsp;threadCountActual = tg.enumerate(threads);
+    <br> &nbsp;&nbsp;}
+  </p>
+  <p>&nbsp;&nbsp;return threads;
+    <br> &nbsp;}
+  </p>
+  <p>&nbsp;public static void clearThreadLocals() {
+    <br> &nbsp;&nbsp;ClassLoader classloader = Thread
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;.currentThread()
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;.getContextClassLoader();
+  </p>
+  <p>&nbsp;&nbsp;Thread[] threads = getThreads();
+    <br> &nbsp;&nbsp;try {
+    <br> &nbsp;&nbsp;&nbsp;Field threadLocalsField = Thread.class
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.getDeclaredField("threadLocals");
+  </p>
+  <p>&nbsp;&nbsp;&nbsp;threadLocalsField.setAccessible(true);
+    <br>&nbsp;&nbsp;&nbsp;Field inheritableThreadLocalsField = Thread.class
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.getDeclaredField("inheritableThreadLocals");
+  </p>
+  <p>&nbsp;&nbsp;&nbsp;inheritableThreadLocalsField.setAccessible(true);</p>
+  <p>&nbsp;&nbsp;&nbsp;Class tlmClass = Class
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.forName("java.lang.ThreadLocal$ThreadLocalMap");
+  </p>
+  <p>&nbsp;&nbsp;&nbsp;Field tableField = tlmClass.getDeclaredField("table");
+    <br> &nbsp;&nbsp;&nbsp;tableField.setAccessible(true);
+  </p>
+  <p>&nbsp;&nbsp;&nbsp;for (int i = 0; i &lt; threads.length; ++i) {
+    <br>&nbsp;&nbsp;&nbsp;&nbsp;if (threads[i] == null)
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;continue;
+    <br>&nbsp;&nbsp;&nbsp;&nbsp;Object threadLocalMap = threadLocalsField.get(threads[i]);
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;clearThreadLocalMap(threadLocalMap, tableField, classloader);</p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;threadLocalMap = inheritableThreadLocalsField.get(threads[i]);</p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;clearThreadLocalMap(threadLocalMap, tableField, classloader);
+    <br> &nbsp;&nbsp;&nbsp;}
+    <br> &nbsp;&nbsp;} catch (Exception e) {</p>
+  <p>&nbsp;&nbsp;&nbsp;e.printStackTrace();
+    <br> &nbsp;&nbsp;}
+    <br> &nbsp;}
+  </p>
+  <p>&nbsp;private static void clearThreadLocalMap(Object map,
+    <br> &nbsp;&nbsp;&nbsp;Field internalTableField, ClassLoader classloader)
+    <br> &nbsp;&nbsp;&nbsp;throws NoSuchMethodException, IllegalAccessException,
+    <br> &nbsp;&nbsp;&nbsp;NoSuchFieldException, InvocationTargetException {
+    <br> &nbsp;&nbsp;if (map != null) {
+    <br>&nbsp;&nbsp;&nbsp;Method mapRemove = map.getClass().getDeclaredMethod("remove",
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;new Class[] { ThreadLocal.class });</p>
+  <p>&nbsp;&nbsp;&nbsp;mapRemove.setAccessible(true);
+    <br> &nbsp;&nbsp;&nbsp;Object[] table = (Object[]) internalTableField.get(map);
+    <br> &nbsp;&nbsp;&nbsp;int staleEntriesCount = 0;
+    <br>&nbsp;&nbsp;&nbsp;if (table != null) {
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;for (int j = 0; j &lt; table.length; ++j) {
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (table[j] != null) {
+    <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;boolean remove = false;
+  </p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Object key = ((Reference) table[j]).get();
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if ((key != null)
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&amp;&amp; (key.getClass().getClassLoader() == classloader)) {
+    <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;remove = true;
+  </p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println("clean threadLocal key,class="
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ key.getClass().getCanonicalName()
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ ",value=" + key.toString());
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+  </p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Field valueField = table[j]
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.getClass()
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.getDeclaredField("value");
+  </p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;valueField.setAccessible(true);
+    <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Object value = valueField.get(table[j]);
+  </p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if ((value != null)
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&amp;&amp; (value.getClass().getClassLoader() == classloader)) {
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;remove = true;
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println("clean threadLocal value,class="
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ value.getClass().getCanonicalName()
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ ",value=" + value.toString());</p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (remove) {</p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (key == null)
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;++staleEntriesCount;
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else {
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mapRemove.invoke(map, new Object[] { key });
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;}
+    <br> &nbsp;&nbsp;&nbsp;}
+    <br> &nbsp;&nbsp;&nbsp;if (staleEntriesCount &gt; 0) {
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;Method mapRemoveStale = map
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.getClass()
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.getDeclaredMethod("expungeStaleEntries", new Class[0]);</p>
+  <p>&nbsp;&nbsp;&nbsp;&nbsp;mapRemoveStale.setAccessible(true);
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;mapRemoveStale.invoke(map, new Object[0]);
+    <br> &nbsp;&nbsp;&nbsp;}
+    <br> &nbsp;&nbsp;}
+    <br> &nbsp;}
+    <br> }
+  </p>
+  <p>&nbsp;</p>
+  <p>2.对于使用mysql JDBC驱动的:mysql JDBC驱动会启动一个Timer Thread,这个线程在reload的时候也是无法自动销毁.
+    <br> &nbsp; 因此,需要强制结束这个timer
+    <br> &nbsp;
+    <br> &nbsp; 可以在 上面的ApplicationCleanListener中加入如下代码:</p>
+  <p>&nbsp; &nbsp;&nbsp;try {
+    <br> &nbsp;&nbsp;&nbsp;Class ConnectionImplClass = Thread
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.currentThread()
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.getContextClassLoader()
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.loadClass("com.mysql.jdbc.ConnectionImpl");
+    <br> &nbsp;&nbsp;&nbsp;if (ConnectionImplClass != null
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&amp;&amp; ConnectionImplClass.getClassLoader() == getClass()
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.getClassLoader()) {
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;System.out.println("clean mysql timer......");
+    <br>&nbsp;&nbsp;&nbsp;&nbsp;Field f = ConnectionImplClass.getDeclaredField("cancelTimer");
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;f.setAccessible(true);
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;Timer timer = (Timer) f.get(null);
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;timer.cancel();
+    <br> &nbsp;&nbsp;&nbsp;}
+    <br> &nbsp;&nbsp;} catch (java.lang.ClassNotFoundException e1) {
+    <br> &nbsp;&nbsp;&nbsp;// do nothing
+    <br> &nbsp;&nbsp;} catch (Exception e) {
+    <br> &nbsp;&nbsp;&nbsp;System.out
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.println("Exception cleaning up MySQL cancellation timer: "
+    <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ e.getMessage());
+    <br> &nbsp;&nbsp;}
+  </p>
+  <p>&nbsp;</p>
+  <p>
+    <br> 3.common-logging+log4j似乎也会导致leak,看网上有人说在ApplicationCleanListene6中加入这行代码就可以:
+    <br> &nbsp;LogFactory.release(Thread.currentThread().getContextClassLoader());
+  </p>
+  <p>&nbsp; 我没试成功,懒得再找原因,直接换成了slf4j+logback,没有问题.据说slf4j+logback的性能还要更好.</p>
+  <p>&nbsp;</p>
+  <p>
+    <br> 后记:
+    <br> &nbsp;tomcat-6.0.26之前的版本(我用的是tomcat-6.0.18),加入上述ApplicationCleanListener后,多次reload,不会出现outOfMemory.
+    <br> &nbsp;但要注意,第一次启动后,reload一次,内存会增加,也就是看着还是由memory Leak,但是重复reload,内存始终保持在第一次reload的大小.似乎tomcat始终保留了双WebappClassLoader.因此,配置内存要小心些,至少要保证能够load两倍的你的所有jar包的大小(当然,是指Perm的内存大小).
+    <br> &nbsp;
+    <br> &nbsp;测试过程中最好加上 JVM参数 -verbosegc,这样,在做GC的时候可以直观的看到class被卸载.</p>
+  <p>
+    &nbsp;</p>
+  <!--EndFragment-->
+</body>
+</htm</html>

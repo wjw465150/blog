@@ -1,0 +1,608 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=http://blog.csdn.net/lldwolf/archive/2008/04/17/2299622.aspx -->
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>J2SE下使用JNDI</title>
+<META content="text/html; charset=UTF-8" http-equiv=Content-Type>
+<SCRIPT>
+window.onerror = new Function("return(false);")
+</SCRIPT>
+<SCRIPT type=text/javascript src="tabber.js"></SCRIPT>
+<SCRIPT type=text/javascript src="feedBackToolTips.js"></SCRIPT>
+<SCRIPT language=javascript type=text/javascript src="JSUtils.js"></SCRIPT>
+<LINK rel=stylesheet type=text/css href="tabber.css" media=screen>
+<LINK 
+rel="Shortcut Icon" href="1.ico">
+<LINK rel=stylesheet type=text/css 
+href="style.css" media=all>
+<LINK rel=stylesheet type=text/css href="print.css" 
+media=print>
+<LINK title=RSS rel=alternate type=application/rss+xml 
+href="rss.aspx">
+<LINK rel=stylesheet type=text/css href="webimPopup.css">
+<META name=GENERATOR content="MSHTML 9.00.8112.16447">
+</HEAD>
+<BODY scroll=yes>
+<FORM id=Form1 language=javascript 
+onsubmit="javascript:return WebForm_OnSubmit();" method=post name=Form1 
+action=2299622.aspx>
+  <DIV id=main>
+    <DIV class=post><!--StartFragment-->
+      <DIV class=postTitle>
+        <IFRAME style="FLOAT: left; MARGIN-TOP: 0px" frameSpacing=0 
+noResize height=75 marginHeight=0 border=0 src="2299622.aspx" frameBorder=0 
+width=54 marginWidth=0 scrolling=no></IFRAME>
+        <A 
+href="http://blog.csdn.net/lldwolf/archive/2008/04/17/2299622.aspx"><IMG 
+border=0 src="authorship.gif" width=15 height=13>&nbsp;JNDI 笔记(三) 
+        J2SE下使用JNDI</A>&nbsp;&nbsp; 
+        <SCRIPT src="count.aspx_ID=2299622&amp;Type=Rank"></SCRIPT> 
+        <IMG title=文章指数:0 border=0 alt=文章指数:0 src="star_0.gif">&nbsp;&nbsp;<IMG 
+title="CSDN Blog推出文章指数概念，文章指数是对Blog文章综合评分后推算出的，综合评分项分别是该文章的点击量，回复次数，被网摘收录数量，文章长度和文章类型；满分100，每月更新一次。" 
+border=0 
+alt="CSDN Blog推出文章指数概念，文章指数是对Blog文章综合评分后推算出的，综合评分项分别是该文章的点击量，回复次数，被网摘收录数量，文章长度和文章类型；满分100，每月更新一次。" 
+src="ask.gif"> </DIV>
+      <DIV class=postText>
+        <P>在J2SE下使用JNDI下就显得困难一些，首先，我们没有单独的JNDI服务器可以用，JBoss提供了一个免费的JNP服务，通过配置可以作为单独的JNDI服务器启用。不过这里就不这么麻烦了，如何使用JBOSS作为JNDI服务器，以后将单独撰文讲述，这里我使用sun提供的com.sun.jndi.fscontext.RefFSContextFactory作为JNDI服务器，其实这是使用文件系统来存储JNDI对象。至于如何存储后文还将专门描述。</P>
+        <P>为了在J2SE下使用JNDI，我们首先得到sun的网站上下载3个包，jndi.jar、fscontext.jar和providerutil.jar，前者提供了JNDI服务的接口，后两者是我们要使用的文件系统作为JNDI服务器的支持包。</P>
+        <P>使用RefFSContextFactory，要求绑定的对象必须实现javax.naming.Referencable接口，否则在绑定时将报如下错误：</P>
+        <P>Can only bind References or Referenceable objects</P>
+        <P>各个JDBC驱动提供商提供的DataSource类都实现了Referencable接口，可以直接使用。不过本着学习的态度，我还是在这里演示一下如何实现Referencable接口。</P>
+        <P>这个如何实现将在后文结合代码详细介绍。本例包括4个类，说明如下：</P>
+        <UL>
+          <LI>BindedClass：自定义的实现Referenceable接口的类
+          <LI>BindedClassFactory：工厂类，能够把一个Reference对象转换为BindedClass对象
+          <LI>Bind：测试类，用于在JNDI中绑定对象
+          <LI>Loopup：测试类，用于从JNDI中获取对象 </LI>
+        </UL>
+        <H2>3.1 BindedClass和BindedClassFactory</H2>
+        <H3>3.1.1 BindedClass</H3>
+        <DIV 
+style="BORDER-TOP: windowtext 0.5pt solid; BORDER-RIGHT: windowtext 0.5pt solid; WIDTH: 95%; BACKGROUND: rgb(230,230,230) 0% 50%; BORDER-BOTTOM: windowtext 0.5pt solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 5.4pt; BORDER-LEFT: windowtext 0.5pt solid; PADDING-RIGHT: 5.4pt; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial">
+          <DIV><IMG alt="" align=top src="None.gif"><SPAN 
+style="COLOR: rgb(0,0,255)">package</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;lld.test.jndi;<BR>
+            <IMG alt="" align=top 
+src="None.gif"><BR>
+            <IMG alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.NamingException;<BR>
+            <IMG alt="" 
+align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.Reference;<BR>
+            <IMG alt="" align=top 
+src="None.gif"></SPAN><SPAN style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.Referenceable;<BR>
+            <IMG alt="" 
+align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.StringRefAddr;<BR>
+            <IMG alt="" 
+align=top src="None.gif"><BR>
+            <IMG alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">class</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;BindedClass&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">implements</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Referenceable&nbsp;<BR>
+            <IMG 
+id=_214_625_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_214_625_Open_Text').style.display='none'; document.getElementById('_214_625_Closed_Image').style.display='inline'; document.getElementById('_214_625_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_214_625_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_214_625_Closed_Text').style.display='none'; document.getElementById('_214_625_Open_Image').style.display='inline'; document.getElementById('_214_625_Open_Text').style.display='inline';" 
+alt="" align=top src="ContractedBlock.gif"></SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_214_625_Closed_Text>...</SPAN><SPAN id=_214_625_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;String&nbsp;value;&nbsp;<BR>
+            <IMG alt="" 
+align=top src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;BindedClass()<BR>
+            <IMG id=_264_267_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_264_267_Open_Text').style.display='none'; document.getElementById('_264_267_Closed_Image').style.display='inline'; document.getElementById('_264_267_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedSubBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_264_267_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_264_267_Closed_Text').style.display='none'; document.getElementById('_264_267_Open_Image').style.display='inline'; document.getElementById('_264_267_Open_Text').style.display='inline';" 
+alt="" align=top 
+src="ContractedSubBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_264_267_Closed_Text>...</SPAN><SPAN id=_264_267_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="ExpandedSubBlockEnd.gif">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></SPAN><SPAN 
+style="COLOR: rgb(0,0,0)"><BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;@Override<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Reference&nbsp;getReference()&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">throws</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;NamingException<BR>
+            <IMG id=_339_508_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_339_508_Open_Text').style.display='none'; document.getElementById('_339_508_Closed_Image').style.display='inline'; document.getElementById('_339_508_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedSubBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_339_508_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_339_508_Closed_Text').style.display='none'; document.getElementById('_339_508_Open_Image').style.display='inline'; document.getElementById('_339_508_Open_Text').style.display='inline';" 
+alt="" align=top 
+src="ContractedSubBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_339_508_Closed_Text>...</SPAN><SPAN id=_339_508_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Reference&nbsp;r&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">new</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Reference(</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">this</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">.getClass().getName(),&nbsp;BindedClassFactory.</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">class</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">.getName(),&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">null</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">);<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;r.add(</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">new</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;StringRefAddr(</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">value</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">,&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">this</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">.getValue()));<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">return</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;r;<BR>
+            <IMG alt="" align=top 
+src="ExpandedSubBlockEnd.gif">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></SPAN><SPAN 
+style="COLOR: rgb(0,0,0)"><BR>
+            <IMG alt="" align=top src="InBlock.gif"><BR>
+            <IMG 
+alt="" align=top src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;String&nbsp;getValue()<BR>
+            <IMG 
+id=_538_557_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_538_557_Open_Text').style.display='none'; document.getElementById('_538_557_Closed_Image').style.display='inline'; document.getElementById('_538_557_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedSubBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_538_557_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_538_557_Closed_Text').style.display='none'; document.getElementById('_538_557_Open_Image').style.display='inline'; document.getElementById('_538_557_Open_Text').style.display='inline';" 
+alt="" align=top 
+src="ContractedSubBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_538_557_Closed_Text>...</SPAN><SPAN id=_538_557_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">return</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;value;<BR>
+            <IMG alt="" align=top 
+src="ExpandedSubBlockEnd.gif">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></SPAN><SPAN 
+style="COLOR: rgb(0,0,0)"><BR>
+            <IMG alt="" align=top src="InBlock.gif"><BR>
+            <IMG 
+alt="" align=top src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">void</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;setValue(String&nbsp;value)<BR>
+            <IMG 
+id=_597_622_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_597_622_Open_Text').style.display='none'; document.getElementById('_597_622_Closed_Image').style.display='inline'; document.getElementById('_597_622_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedSubBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_597_622_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_597_622_Closed_Text').style.display='none'; document.getElementById('_597_622_Open_Image').style.display='inline'; document.getElementById('_597_622_Open_Text').style.display='inline';" 
+alt="" align=top 
+src="ContractedSubBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_597_622_Closed_Text>...</SPAN><SPAN id=_597_622_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">this</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">.value&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;value;<BR>
+            <IMG alt="" align=top 
+src="ExpandedSubBlockEnd.gif">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></SPAN><SPAN 
+style="COLOR: rgb(0,0,0)"><BR>
+            <IMG alt="" align=top src="InBlock.gif"><BR>
+          <IMG 
+alt="" align=top src="ExpandedBlockEnd.gif">}</SPAN></SPAN></DIV>
+        </DIV>
+        <BR>
+        <H3>3.1.2 BindedClassFactory</H3>
+        <DIV 
+style="BORDER-TOP: windowtext 0.5pt solid; BORDER-RIGHT: windowtext 0.5pt solid; WIDTH: 95%; BACKGROUND: rgb(230,230,230) 0% 50%; BORDER-BOTTOM: windowtext 0.5pt solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 5.4pt; BORDER-LEFT: windowtext 0.5pt solid; PADDING-RIGHT: 5.4pt; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial">
+          <DIV><IMG alt="" align=top src="None.gif"><SPAN 
+style="COLOR: rgb(0,0,255)">package</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;lld.test.jndi;<BR>
+            <IMG alt="" align=top 
+src="None.gif"><BR>
+            <IMG alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;java.util.Hashtable;<BR>
+            <IMG alt="" align=top 
+src="None.gif"><BR>
+            <IMG alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">*</SPAN><SPAN style="COLOR: rgb(0,0,0)">;<BR>
+            <IMG 
+alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.spi.</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">*</SPAN><SPAN style="COLOR: rgb(0,0,0)">;<BR>
+            <IMG 
+alt="" align=top src="None.gif"><BR>
+            <IMG alt="" align=top 
+src="None.gif"></SPAN><SPAN style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">class</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;BindedClassFactory&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">implements</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;ObjectFactory<BR>
+            <IMG id=_161_521_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_161_521_Open_Text').style.display='none'; document.getElementById('_161_521_Closed_Image').style.display='inline'; document.getElementById('_161_521_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_161_521_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_161_521_Closed_Text').style.display='none'; document.getElementById('_161_521_Open_Image').style.display='inline'; document.getElementById('_161_521_Open_Text').style.display='inline';" 
+alt="" align=top src="ContractedBlock.gif"></SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_161_521_Closed_Text>...</SPAN><SPAN id=_161_521_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;@Override<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Object&nbsp;getObjectInstance(Object&nbsp;obj,&nbsp;Name&nbsp;name,&nbsp;Context&nbsp;nameCtx,<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Hashtable</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&lt;?</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">,&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">?&gt;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;environment)&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">throws</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Exception<BR>
+            <IMG id=_297_519_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_297_519_Open_Text').style.display='none'; document.getElementById('_297_519_Closed_Image').style.display='inline'; document.getElementById('_297_519_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedSubBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_297_519_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_297_519_Closed_Text').style.display='none'; document.getElementById('_297_519_Open_Image').style.display='inline'; document.getElementById('_297_519_Open_Text').style.display='inline';" 
+alt="" align=top 
+src="ContractedSubBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_297_519_Closed_Text>...</SPAN><SPAN id=_297_519_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">if</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">(obj&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">instanceof</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Reference)<BR>
+            <IMG id=_332_501_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_332_501_Open_Text').style.display='none'; document.getElementById('_332_501_Closed_Image').style.display='inline'; document.getElementById('_332_501_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedSubBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_332_501_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_332_501_Closed_Text').style.display='none'; document.getElementById('_332_501_Open_Image').style.display='inline'; document.getElementById('_332_501_Open_Text').style.display='inline';" 
+alt="" align=top 
+src="ContractedSubBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_332_501_Closed_Text>...</SPAN><SPAN id=_332_501_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Reference&nbsp;ref&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;(Reference)obj;<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;val&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;(String)ref.get(</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">value</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">).getContent();<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BindedClass&nbsp;o&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">new</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;BindedClass();<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;o.setValue(val);<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">return</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;o;<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<BR>
+            <IMG 
+alt="" align=top 
+src="ExpandedSubBlockEnd.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></SPAN><SPAN 
+style="COLOR: rgb(0,0,0)"><BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">return</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">null</SPAN><SPAN style="COLOR: rgb(0,0,0)">;<BR>
+            <IMG 
+alt="" align=top 
+src="ExpandedSubBlockEnd.gif">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></SPAN><SPAN 
+style="COLOR: rgb(0,0,0)"><BR>
+          <IMG alt="" align=top 
+src="ExpandedBlockEnd.gif">}</SPAN></SPAN></DIV>
+        </DIV>
+        <BR>
+        <H3>3.1.3 代码解释</H3>
+        <P>Referenable接口只有一个方法，就是getReference()，返回一个Reference对象，BindedClass只设了一个示例成员变量Value，存储一个字符串值，在创建Refernce对象时，要指定它引用的类名以及创建该类的工厂对象，JNDI 
+          Context在绑定该对象时就会将这些信息都存到文件中，将来从JNDI中取对象时可就全靠工厂对象根据文件中的内容重建BindedClass对象了。我这里提前把绑定后生成的文件内容说一下，大家会更有一个直观的印象，其内容如下所示：</P>
+        <PRE>bind1/RefAddr/0/Type=value<BR>bind1/ClassName=lld.test.jndi.BindedClass<BR>bind1/RefAddr/0/Encoding=String<BR>bind1/FactoryName=lld.test.jndi.BindedClassFactory<BR>bind1/RefAddr/0/Content=abcdefg</PRE>
+        <P>大家看到了，前面在BindedClass.getReference()方法中使用了如下语句：</P>
+        <P>r.add(new StringRefAddr("value", this.getValue()));</P>
+        <P>就是定义要将这些信息存储到JNDI中呢，至于最后的“bind1/RefAddr/0/Content=abcdefg”，那是因为我在后面的示例Bind.java中将其值设成了“abcdefg”而已，呵呵。而BindedClassFactory.getObjectInstance()方法中</P>
+        <P>String val = (String)ref.get("value").getContent();</P>
+        <P>就是用来取到存储的值呢。</P>
+        <H2>3.2 Bind.java</H2>
+        本例用来绑定一个BindedClass对象
+        <DIV 
+style="BORDER-TOP: windowtext 0.5pt solid; BORDER-RIGHT: windowtext 0.5pt solid; WIDTH: 95%; BACKGROUND: rgb(230,230,230) 0% 50%; BORDER-BOTTOM: windowtext 0.5pt solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 5.4pt; BORDER-LEFT: windowtext 0.5pt solid; PADDING-RIGHT: 5.4pt; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial">
+          <DIV><IMG alt="" align=top src="None.gif"><SPAN 
+style="COLOR: rgb(0,0,255)">package</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;lld.test.jndi;<BR>
+            <IMG alt="" align=top 
+src="None.gif"><BR>
+            <IMG alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;java.util.Properties;<BR>
+            <IMG alt="" align=top 
+src="None.gif"><BR>
+            <IMG alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.Context;<BR>
+            <IMG alt="" align=top 
+src="None.gif"></SPAN><SPAN style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.directory.DirContext;<BR>
+            <IMG 
+alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.directory.InitialDirContext;<BR>
+            <IMG 
+alt="" align=top src="None.gif"><BR>
+            <IMG alt="" align=top 
+src="None.gif"></SPAN><SPAN style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">class</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Bind<BR>
+            <IMG id=_193_665_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_193_665_Open_Text').style.display='none'; document.getElementById('_193_665_Closed_Image').style.display='inline'; document.getElementById('_193_665_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_193_665_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_193_665_Closed_Text').style.display='none'; document.getElementById('_193_665_Open_Image').style.display='inline'; document.getElementById('_193_665_Open_Text').style.display='inline';" 
+alt="" align=top src="ContractedBlock.gif"></SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_193_665_Closed_Text>...</SPAN><SPAN id=_193_665_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">static</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">void</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;main(String[]&nbsp;args)&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">throws</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Exception<BR>
+            <IMG id=_253_663_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_253_663_Open_Text').style.display='none'; document.getElementById('_253_663_Closed_Image').style.display='inline'; document.getElementById('_253_663_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedSubBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_253_663_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_253_663_Closed_Text').style.display='none'; document.getElementById('_253_663_Open_Image').style.display='inline'; document.getElementById('_253_663_Open_Text').style.display='inline';" 
+alt="" align=top 
+src="ContractedSubBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_253_663_Closed_Text>...</SPAN><SPAN id=_253_663_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Properties&nbsp;ps&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">new</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Properties();<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ps.setProperty(Context.INITIAL_CONTEXT_FACTORY,&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">com.sun.jndi.fscontext.RefFSContextFactory</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN style="COLOR: rgb(0,0,0)">);<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ps.setProperty(Context.PROVIDER_URL,&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">file:JNDI_REF</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN style="COLOR: rgb(0,0,0)">);<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DirContext&nbsp;ctx&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">new</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;InitialDirContext(ps);<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;key&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">bind1</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN style="COLOR: rgb(0,0,0)">;<BR>
+            <IMG 
+alt="" align=top src="InBlock.gif"><BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BindedClass&nbsp;b&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">new</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;BindedClass();<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b.setValue(</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">abcdefg</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN style="COLOR: rgb(0,0,0)">);<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ctx.rebind(key,&nbsp;b);<BR>
+            <IMG 
+alt="" align=top src="InBlock.gif"><BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">Binded&nbsp;successfully!</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN style="COLOR: rgb(0,0,0)">);<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ctx.close();<BR>
+            <IMG 
+alt="" align=top 
+src="ExpandedSubBlockEnd.gif">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></SPAN><SPAN 
+style="COLOR: rgb(0,0,0)"><BR>
+          <IMG alt="" align=top 
+src="ExpandedBlockEnd.gif">}</SPAN></SPAN></DIV>
+        </DIV>
+        <BR>
+        <H2>3.3 Lookup.java</H2>
+        本例用来从JNDI中获取绑定的BindedClass对象<BR>
+        <BR>
+        <DIV 
+style="BORDER-TOP: windowtext 0.5pt solid; BORDER-RIGHT: windowtext 0.5pt solid; WIDTH: 95%; BACKGROUND: rgb(230,230,230) 0% 50%; BORDER-BOTTOM: windowtext 0.5pt solid; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 5.4pt; BORDER-LEFT: windowtext 0.5pt solid; PADDING-RIGHT: 5.4pt; moz-background-clip: -moz-initial; moz-background-origin: -moz-initial; moz-background-inline-policy: -moz-initial">
+          <DIV><IMG alt="" align=top src="None.gif"><SPAN 
+style="COLOR: rgb(0,0,255)">package</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;lld.test.jndi;<BR>
+            <IMG alt="" align=top 
+src="None.gif"><BR>
+            <IMG alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;java.util.Properties;<BR>
+            <IMG alt="" align=top 
+src="None.gif"><BR>
+            <IMG alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.Context;<BR>
+            <IMG alt="" align=top 
+src="None.gif"></SPAN><SPAN style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.directory.DirContext;<BR>
+            <IMG 
+alt="" align=top src="None.gif"></SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">import</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;javax.naming.directory.InitialDirContext;<BR>
+            <IMG 
+alt="" align=top src="None.gif"><BR>
+            <IMG alt="" align=top 
+src="None.gif"></SPAN><SPAN style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">class</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Lookup<BR>
+            <IMG id=_195_624_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_195_624_Open_Text').style.display='none'; document.getElementById('_195_624_Closed_Image').style.display='inline'; document.getElementById('_195_624_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_195_624_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_195_624_Closed_Text').style.display='none'; document.getElementById('_195_624_Open_Image').style.display='inline'; document.getElementById('_195_624_Open_Text').style.display='inline';" 
+alt="" align=top src="ContractedBlock.gif"></SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_195_624_Closed_Text>...</SPAN><SPAN id=_195_624_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">public</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">static</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">void</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;main(String[]&nbsp;args)&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">throws</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Exception<BR>
+            <IMG id=_255_621_Open_Image 
+onclick="this.style.display='none'; document.getElementById('_255_621_Open_Text').style.display='none'; document.getElementById('_255_621_Closed_Image').style.display='inline'; document.getElementById('_255_621_Closed_Text').style.display='inline';" 
+alt="" align=top src="ExpandedSubBlockStart.gif"><IMG style="DISPLAY: none" 
+id=_255_621_Closed_Image 
+onclick="this.style.display='none'; document.getElementById('_255_621_Closed_Text').style.display='none'; document.getElementById('_255_621_Open_Image').style.display='inline'; document.getElementById('_255_621_Open_Text').style.display='inline';" 
+alt="" align=top 
+src="ContractedSubBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+style="BORDER-TOP: rgb(128,128,128) 1px solid; BORDER-RIGHT: rgb(128,128,128) 1px solid; BORDER-BOTTOM: rgb(128,128,128) 1px solid; BORDER-LEFT: rgb(128,128,128) 1px solid; DISPLAY: none; BACKGROUND-COLOR: rgb(255,255,255)" 
+id=_255_621_Closed_Text>...</SPAN><SPAN id=_255_621_Open_Text><SPAN 
+style="COLOR: rgb(0,0,0)">{<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Properties&nbsp;ps&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">new</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;Properties();<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ps.setProperty(Context.INITIAL_CONTEXT_FACTORY,&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">com.sun.jndi.fscontext.RefFSContextFactory</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN style="COLOR: rgb(0,0,0)">);<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ps.setProperty(Context.PROVIDER_URL,&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">file:JNDI_REF</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN style="COLOR: rgb(0,0,0)">);<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DirContext&nbsp;ctx&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,255)">new</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;InitialDirContext(ps);<BR>
+            <IMG alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;key&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">bind1</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">"</SPAN><SPAN style="COLOR: rgb(0,0,0)">;<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BindedClass&nbsp;o&nbsp;</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">=</SPAN><SPAN 
+style="COLOR: rgb(0,0,0)">&nbsp;(BindedClass)ctx.lookup(key);<BR>
+            <IMG alt="" 
+align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(o.getValue());&nbsp;&nbsp;&nbsp;&nbsp;<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<BR>
+            <IMG 
+alt="" align=top 
+src="InBlock.gif">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ctx.close();<BR>
+            <IMG 
+alt="" align=top 
+src="ExpandedSubBlockEnd.gif">&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></SPAN><SPAN 
+style="COLOR: rgb(0,0,0)"><BR>
+            <IMG alt="" align=top src="InBlock.gif"><BR>
+          <IMG 
+alt="" align=top src="ExpandedBlockEnd.gif">}</SPAN></SPAN></DIV>
+        </DIV>
+      </DIV><!--EndFragment--></DIV>
+  </DIV>
+</FORM>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

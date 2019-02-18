@@ -1,0 +1,374 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh-cn"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>为Gradle添加tomcat插件，调试WEB应用 - 丁丁·中国电信 - 博客园</title>
+<link type="text/css" rel="stylesheet" href="index_files/blog-common.css">
+<link id="MainCss" type="text/css" rel="stylesheet" href="index_files/bundle-AnotherEon001.css">
+<link type="text/css" rel="stylesheet" href="index_files/249687.css">
+<link title="RSS" type="application/rss+xml" rel="alternate" href="http://www.cnblogs.com/newflydd/rss">
+<link title="RSD" type="application/rsd+xml" rel="EditURI" href="http://www.cnblogs.com/newflydd/rsd.xml">
+<link type="application/wlwmanifest+xml" rel="wlwmanifest" href="http://www.cnblogs.com/newflydd/wlwmanifest.xml">
+<script src="index_files/encoder.js" type="text/javascript"></script><script src="index_files/jquery.js" type="text/javascript"></script>  
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+<script src="index_files/blog-common.js" type="text/javascript"></script>
+</head>
+<body>
+<a name="top"></a>
+
+<div id="wrapper">
+<div id="header">
+
+<div id="top">
+<h1><a id="Header1_HeaderTitle" class="headermaintitle" href="http://www.cnblogs.com/newflydd/">丁丁·全栈工程师</a></h1>
+<div id="subtitle"></div>
+</div>
+<div id="sub">
+<div class="BlogStats">随笔 - 26, 文章 - 2, 评论 - 13, 引用 - 0</div>
+</div>
+
+
+
+</div>
+<div id="main_container">
+<div id="main_content">
+<div id="content">
+	
+<div id="post_detail">
+	<div class="post">
+		<h2>
+			<a id="cb_post_title_url" href="http://www.cnblogs.com/newflydd/p/4980524.html">为Gradle添加tomcat插件，调试WEB应用</a>
+		</h2>
+		<div class="postbody">
+		<div id="cnblogs_post_body"><p>Gradle提供了不输于maven的依赖管理</p>
+<p>提供了强大的test功能，输出优美的测试报告</p>
+<p>并且提供war插件，使用内置的jetty调试WEB应用</p>
+<p>因为博主偏偏钟情于tomcat，所以希望使用tomcat来调试WEB应用</p>
+<p>下面我们来通过些许的代码，将tomcat插件配置到项目中</p>
+<p>实现一键调试部署WEB应用</p>
+<p> </p>
+<p>build.gradle文件：</p>
+<div class="cnblogs_code"><div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="" title="复制代码"><img src="index_files/copycode.gif" alt="复制代码"></a></span></div>
+<pre><strong><span style="color: #0000ff;">buildscript {
+  repositories {
+    jcenter()
+  }
+  dependencies {
+    classpath "com.bmuschko:gradle-tomcat-plugin:2.2.3"</span></strong><span style="color: #000000;"><strong><span style="color: #0000ff;">
+  }
+}
+</span></strong>
+apply plugin: </span>"java"<span style="color: #000000;">
+apply plugin: </span>"war"<span style="color: #000000;">
+apply plugin: </span>"eclipse"<strong><span style="color: #0000ff;">
+apply plugin: "com.bmuschko.tomcat"</span></strong><span style="color: #000000;">
+
+sourceCompatibility </span>= 1.8<span style="color: #000000;">
+version </span>= "0.0.1-SNAPSHOT"<span style="color: #000000;">
+war.baseName </span>= "jblog"<span style="color: #000000;">
+project.webAppDirName </span>= "src/main/webapp"
+
+
+<span style="color: #008000;">//</span><span style="color: #008000;">扩展属性放在ext的内部类中</span>
+<span style="color: #000000;">ext{
+    hibernate_version</span>="4.3.9.Final"<span style="color: #000000;">
+    spring_version</span>="4.2.3.RELEASE"<span style="color: #000000;">
+}
+
+configurations {
+    provided
+}
+
+sourceSets {
+    main{
+        resources.srcDirs </span>= ["src/main/java"]    <span style="color: #008000;">//</span><span style="color: #008000;">引入资源文件，打包时才会将配置文件植入war文件</span>
+<span style="color: #000000;">    }
+    main.compileClasspath </span>+=<span style="color: #000000;"> configurations.provided
+    test.compileClasspath </span>+=<span style="color: #000000;"> configurations.provided
+    test.runtimeClasspath </span>+=<span style="color: #000000;"> configurations.provided
+}
+
+repositories {
+    mavenLocal()
+    maven {url </span>"http://maven.oschina.net/content/groups/public/"<span style="color: #000000;">}    
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    compile(
+        </span>"org.hibernate:hibernate-core:${hibernate_version}"<span style="color: #000000;">,
+        </span>"org.hibernate:hibernate-ehcache:${hibernate_version}"<span style="color: #000000;">,
+        </span>"org.springframework:spring-core:${spring_version}"<span style="color: #000000;">,
+        </span>"org.springframework:spring-beans:${spring_version}"<span style="color: #000000;">,
+        </span>"org.springframework:spring-context:${spring_version}"<span style="color: #000000;">,
+        </span>"org.springframework:spring-tx:${spring_version}"<span style="color: #000000;">,
+        </span>"org.springframework:spring-web:${spring_version}"<span style="color: #000000;">,
+        </span>"net.sf.ehcache:ehcache:2.9.0"<span style="color: #000000;">,
+        </span>"mysql:mysql-connector-java:5.1.37"<span style="color: #000000;">,
+        </span>"log4j:log4j:1.2.17"<span style="color: #000000;">
+    )
+        
+    testCompile </span>"junit:junit:4.7"<span style="color: #000000;">
+    provided </span>"javax.servlet:javax.servlet-api:4.+"<strong><span style="color: #0000ff;">
+    
+    def tomcatVersion = '8.0.27'
+    tomcat    "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}",
+            "org.apache.tomcat.embed:tomcat-embed-logging-juli:${tomcatVersion}",
+            "org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}"</span></strong><span style="color: #000000;">
+}
+
+</span><span style="color: #008000;">//</span><span style="color: #008000;">注意下面这个配置，新版本gradle如果不使用数组添加的话会导致eclipse频繁报错</span>
+eclipse.classpath.plusConfigurations +=<span style="color: #000000;"> [configurations.provided]
+tasks.withType(JavaCompile) {  
+    options.encoding </span>= "UTF-8"<span style="color: #000000;">  
+}
+
+<strong><span style="color: #0000ff;">tomcatRun.contextPath </span></strong></span><strong><span style="color: #0000ff;">= '/jblog'
+tomcatRunWar.contextPath = '/jblog'</span></strong></pre>
+<div class="cnblogs_code_toolbar"><span class="cnblogs_code_copy"><a href="javascript:void(0);" onclick="" title="复制代码"><img src="index_files/copycode.gif" alt="复制代码"></a></span></div></div>
+<p>上面所有蓝色字体就是所有需要配置的代码</p>
+<p>默认端口8080，执行tomcatRun命令后会提示：</p>
+<p>The Server is running at http://localhost:8080/jblog</p>
+<p>这时候访问http://localhost:8080/jblog就可以访问你的应用进行调试了</p>
+<p>因为tomcat的gradle插件是超轻量级的，不带有任何附加的功能，所以访问http://localhost:8080是看不到任何tomcat欢迎界面的</p>
+<p>这样看来也就是仅仅调试WEB应用了，与使用内置jetty调试貌似也没多大区别，呵呵</p>
+<p>相关截图发一下，我很讨厌那种只发文字不发图片的blog，往往搞得人一头雾水，忙中添乱</p>
+<p><img src="index_files/824434-20151120134702749-414600186.png" alt=""></p>
+<p>项目结构</p>
+<p> </p>
+<p><img src="index_files/824434-20151120134936686-650471339.png" alt=""></p>
+<p>执行gradle命令</p>
+<p> </p>
+<p><img src="index_files/824434-20151120135041124-720496012.png" alt=""></p>
+<p>输入build tomcatRun命令（注意大小写），点击Run执行</p>
+<p><img src="index_files/824434-20151120135232608-1194250222.png" alt=""></p>
+<p>终端输出如上图所示，这时候就可以访问URL测试我们的应用了。</p></div><div style="display: block;" id="MySignature"><div style="border-style:solid; border-width:1px; border-color:#000;width:470px">保持着对万物的好奇心。即使是玩游戏，也要停下来想想这是怎么实现的。</div></div>
+<div class="clear"></div>
+<div id="blog_post_info_block">
+<div id="BlogPostCategory">分类: <a href="http://www.cnblogs.com/newflydd/category/745802.html">JAVA</a></div>
+<div id="EntryTag">标签: <a href="http://www.cnblogs.com/newflydd/tag/java/">java</a>, <a href="http://www.cnblogs.com/newflydd/tag/gradle/">gradle</a>, <a href="http://www.cnblogs.com/newflydd/tag/tomcat/">tomcat</a></div>
+<div id="blog_post_info"><div id="green_channel">
+<a href="javascript:void(0);" id="green_channel_digg" onclick="">好文要顶</a>
+<a id="green_channel_follow" onclick="" href="javascript:void(0);">关注我</a>
+<a id="green_channel_favorite" onclick="" href="javascript:void(0);">收藏该文</a><a id="green_channel_contact" href="http://msg.cnblogs.com/send/%E4%B8%81%E4%B8%81%26%23183%3B%E4%B8%AD%E5%9B%BD%E7%94%B5%E4%BF%A1" target="_blank">联系我</a>
+<a id="green_channel_weibo" href="javascript:void(0);" title="分享至新浪微博" onclick=""><img src="index_files/icon_weibo_24.png" alt=""></a>
+<a id="green_channel_wechat" href="javascript:void(0);" title="分享至微信" onclick=""><img src="index_files/wechat.png" alt=""></a>
+</div>
+<div id="author_profile">
+<div id="author_profile_info" class="author_profile_info">
+<a href="http://home.cnblogs.com/u/newflydd/" target="_blank"><img src="index_files/20151019142303.png" class="author_avatar" alt=""></a>
+<div id="author_profile_detail" class="author_profile_info">
+<a href="http://home.cnblogs.com/u/newflydd/">丁丁·中国电信</a><br>
+<a href="http://home.cnblogs.com/u/newflydd/followees">关注 - 1</a><br>
+<a href="http://home.cnblogs.com/u/newflydd/followers">粉丝 - 4</a>
+</div>
+</div>
+<div class="clear"></div>
+<div id="author_profile_honor"></div>
+<div id="author_profile_follow">
+    <a href="javascript:void(0);" onclick="">+加关注</a>
+</div>
+</div>
+<div id="div_digg">										
+    <div class="diggit" onclick="">
+        <span class="diggnum" id="digg_count">1</span>
+    </div>
+	<div class="buryit" onclick=""> 
+		<span class="burynum" id="bury_count">0</span>
+	</div>
+	<div class="clear"></div>	
+	<div class="diggword" id="digg_tips">
+    (请您对文章做出评价)
+    </div>	
+</div>
+</div>
+<div class="clear"></div>
+<div id="post_next_prev"><a href="http://www.cnblogs.com/newflydd/p/4975818.html" class="p_n_p_prefix">« </a> 上一篇：<a href="http://www.cnblogs.com/newflydd/p/4975818.html" title="发布于2015-11-18 20:34">为Gradle添加UTF-8支持</a><br><a href="http://www.cnblogs.com/newflydd/p/5091646.html" class="p_n_p_prefix">» </a> 下一篇：<a href="http://www.cnblogs.com/newflydd/p/5091646.html" title="发布于2015-12-31 14:32">8皇后以及N皇后算法探究，回溯算法的JAVA实现，递归方案</a><br></div>
+</div>
+
+
+		</div>
+		<p class="postfoot">
+			posted on <span id="post-date">2015-11-20 13:54</span> <a href="http://www.cnblogs.com/newflydd/">丁丁·中国电信</a> 阅读(<span id="post_view_count">346</span>) 评论(<span id="post_comment_count">0</span>)  <a href="http://i.cnblogs.com/EditPosts.aspx?postid=4980524" rel="nofollow">编辑</a> <a href="#" onclick="">收藏</a>
+		</p>
+	</div>
+	<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+	
+	</div><a name="!comments"></a><div id="blog-comments-placeholder"></div><script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+<div id="comment_form" class="commentform">
+<a name="commentform"></a>
+<div id="divCommentShow"></div>
+<div id="comment_nav"><span id="span_refresh_tips"></span><a href="javascript:void(0);" onclick="" id="lnk_RefreshComments" runat="server" clientidmode="Static">刷新评论</a><a href="#" onclick="">刷新页面</a><a href="#top">返回顶部</a></div>
+<div id="comment_form_container"><div class="login_tips">注册用户登录后才能发表评论，请 <a rel="nofollow" href="javascript:void(0);" class="underline" onclick="">登录</a> 或 <a rel="nofollow" href="javascript:void(0);" class="underline" onclick="">注册</a>，<a href="http://www.cnblogs.com/">访问</a>网站首页。</div></div>
+<div class="ad_text_commentbox" id="ad_text_under_commentbox"></div>
+<div id="ad_t2"></div>
+<div id="opt_under_post"></div>
+<div id="ad_c1" class="c_ad_block"></div>
+<div id="under_post_news"><div class="itnews c_ad_block"><b>最新IT新闻</b>:<br> ·  <a href="http://news.cnblogs.com/n/544043/" target="_blank">微软内核团队披露Windows Subsystem for Linux细节</a><br> ·  <a href="http://news.cnblogs.com/n/544044/" target="_blank">首款互联网汽车！荣威RX5正式发布：搭载自主YunOS</a><br> ·  <a href="http://news.cnblogs.com/n/544042/" target="_blank">Lumia库存积压 开发者称微软将宣布买一送一计划</a><br> ·  <a href="http://news.cnblogs.com/n/544041/" target="_blank">百度机器人商业首秀 人工智能在肯德基点鸡块薯条</a><br> ·  <a href="http://news.cnblogs.com/n/544040/" target="_blank">谷歌首次设立Google Play奖项，集中展示最佳安卓应用</a><br>» <a href="http://news.cnblogs.com/" title="IT新闻" target="_blank">更多新闻...</a></div></div>
+<div id="ad_c2" class="c_ad_block"></div>
+<div id="under_post_kb"><div class="itnews c_ad_block" id="kb_block"><b>最新知识库文章</b>:<br><div id="kb_recent"> ·  <a href="http://kb.cnblogs.com/page/543110/" target="_blank">架构漫谈（九）：理清技术、业务和架构的关系</a><br> ·  <a href="http://kb.cnblogs.com/page/542725/" target="_blank">架构漫谈（八）：从架构的角度看如何写好代码</a><br> ·  <a href="http://kb.cnblogs.com/page/542257/" target="_blank">架构漫谈（七）：不要空设架构师这个职位，给他实权</a><br> ·  <a href="http://kb.cnblogs.com/page/541740/" target="_blank">架构漫谈（六）：软件架构到底是要解决什么问题？</a><br> ·  <a href="http://kb.cnblogs.com/page/541188/" target="_blank">架构漫谈（五）：什么是软件</a><br></div>» <a href="http://kb.cnblogs.com/" target="_blank">更多知识库文章...</a></div></div>
+<div id="HistoryToday" class="c_ad_block"></div>
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+</div>
+
+
+</div>
+</div>
+<div id="leftmenu">
+
+
+<h3>导航</h3>
+<ul>
+<li>
+<a id="MyLinks1_HomeLink" href="http://www.cnblogs.com/">博客园</a></li>
+<li>
+<a id="MyLinks1_MyHomeLink" class="two_words" href="http://www.cnblogs.com/newflydd/">首页</a></li>
+<li>
+<a id="MyLinks1_NewPostLink" rel="nofollow" href="http://i.cnblogs.com/EditPosts.aspx?opt=1">新随笔</a></li>
+<li>
+<a id="MyLinks1_ContactLink" accesskey="9" class="two_words" rel="nofollow" href="http://msg.cnblogs.com/send/%E4%B8%81%E4%B8%81%26%23183%3B%E4%B8%AD%E5%9B%BD%E7%94%B5%E4%BF%A1">联系</a></li>
+<li>
+<a id="MyLinks1_Syndication" class="two_words" href="http://www.cnblogs.com/newflydd/rss">订阅</a>
+<a id="MyLinks1_XMLLink" href="http://www.cnblogs.com/newflydd/rss"><img src="index_files/xml.gif" alt="订阅"></a>
+</li>
+<li>
+<a id="MyLinks1_Admin" class="two_words" rel="nofollow" href="http://i.cnblogs.com/">管理</a></li>
+</ul>
+
+<div id="blog-calendar" style=""><table id="blogCalendar" class="Cal" title="Calendar" cellpadding="0" cellspacing="0">
+	<tbody><tr><td colspan="7"><table class="CalTitle" cellspacing="0">
+		<tbody><tr><td class="CalNextPrev"><a href="javascript:void(0);" onclick="">&lt;</a></td><td align="center">2016年4月</td><td class="CalNextPrev" align="right"><a href="javascript:void(0);" onclick="">&gt;</a></td></tr>
+	</tbody></table></td></tr><tr><th class="CalDayHeader" abbr="日" scope="col" align="center">日</th><th class="CalDayHeader" abbr="一" scope="col" align="center">一</th><th class="CalDayHeader" abbr="二" scope="col" align="center">二</th><th class="CalDayHeader" abbr="三" scope="col" align="center">三</th><th class="CalDayHeader" abbr="四" scope="col" align="center">四</th><th class="CalDayHeader" abbr="五" scope="col" align="center">五</th><th class="CalDayHeader" abbr="六" scope="col" align="center">六</th></tr><tr><td class="CalOtherMonthDay" align="center">27</td><td class="CalOtherMonthDay" align="center">28</td><td class="CalOtherMonthDay" align="center">29</td><td class="CalOtherMonthDay" align="center">30</td><td class="CalOtherMonthDay" align="center">31</td><td align="center">1</td><td class="CalWeekendDay" align="center">2</td></tr><tr><td class="CalWeekendDay" align="center">3</td><td align="center">4</td><td align="center">5</td><td align="center">6</td><td align="center">7</td><td align="center">8</td><td class="CalWeekendDay" align="center">9</td></tr><tr><td class="CalWeekendDay" align="center">10</td><td align="center">11</td><td align="center">12</td><td align="center">13</td><td align="center">14</td><td align="center">15</td><td class="CalWeekendDay" align="center">16</td></tr><tr><td class="CalWeekendDay" align="center">17</td><td align="center">18</td><td align="center">19</td><td align="center">20</td><td align="center">21</td><td align="center">22</td><td class="CalWeekendDay" align="center"><a href="http://www.cnblogs.com/newflydd/archive/2016/04/23.html"><u>23</u></a></td></tr><tr><td class="CalWeekendDay" align="center">24</td><td class="CalTodayDay" align="center">25</td><td align="center">26</td><td align="center">27</td><td align="center">28</td><td align="center">29</td><td class="CalWeekendDay" align="center">30</td></tr><tr><td class="CalOtherMonthDay" align="center">1</td><td class="CalOtherMonthDay" align="center">2</td><td class="CalOtherMonthDay" align="center">3</td><td class="CalOtherMonthDay" align="center">4</td><td class="CalOtherMonthDay" align="center">5</td><td class="CalOtherMonthDay" align="center">6</td><td class="CalOtherMonthDay" align="center">7</td></tr>
+</tbody></table></div><script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+<meta name="vs_showGrid" content="False">
+
+<h3>公告</h3>
+<div id="blog-news"><div id="profile_block">昵称：<a href="http://home.cnblogs.com/u/newflydd/">丁丁·中国电信</a><br>园龄：<a href="http://home.cnblogs.com/u/newflydd/" title="入园时间：2015-10-19">6个月</a><br>粉丝：<a href="http://home.cnblogs.com/u/newflydd/followers/">4</a><br>关注：<a href="http://home.cnblogs.com/u/newflydd/followees/">1</a><div id="p_b_follow"><a href="javascript:void(0);" onclick="">+加关注</a></div></div></div><script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+
+<div id="blog-sidecolumn"><div id="sidebar_search" class="sidebar-block">
+<div id="sidebar_search" class="mySearch">
+<h3 class="catListTitle">搜索</h3>
+<div id="sidebar_search_box">
+<div id="widget_my_zzk" class="div_my_zzk"><input id="q" onkeydown="" class="input_my_zzk" type="text"> <input onclick="" value="找找看" id="btnZzk" class="btn_my_zzk" type="button"></div>
+<div id="widget_my_google" class="div_my_zzk"><input name="google_q" id="google_q" onkeydown="" class="input_my_zzk" type="text"> <input onclick="" value="谷歌搜索" class="btn_my_zzk" type="button"></div>
+</div>
+</div>
+
+</div><div id="sidebar_shortcut" class="sidebar-block">
+<h3 class="catListTitle">常用链接</h3>
+<ul>
+<li><a href="http://www.cnblogs.com/newflydd/p/" title="我的博客的随笔列表">我的随笔</a></li><li><a href="http://www.cnblogs.com/newflydd/MyComments.html" title="我发表过的评论列表">我的评论</a></li><li><a href="http://www.cnblogs.com/newflydd/OtherPosts.html" title="我评论过的随笔列表">我的参与</a></li><li><a href="http://www.cnblogs.com/newflydd/RecentComments.html" title="我的博客的评论列表">最新评论</a></li><li><a href="http://www.cnblogs.com/newflydd/tag/" title="我的博客的标签列表">我的标签</a></li>
+</ul>
+<div id="itemListLin_con" style="display:none;">
+
+</div></div><div id="sidebar_toptags" class="sidebar-block">
+<h3 class="catListTitle">我的标签</h3>
+<div id="MyTag">
+<ul>
+<li><a href="http://www.cnblogs.com/newflydd/tag/java/">java</a>(23)</li><li><a href="http://www.cnblogs.com/newflydd/tag/%E7%AE%97%E6%B3%95/">算法</a>(6)</li><li><a href="http://www.cnblogs.com/newflydd/tag/N%E7%9A%87%E5%90%8E/">N皇后</a>(5)</li><li><a href="http://www.cnblogs.com/newflydd/tag/8%E7%9A%87%E5%90%8E/">8皇后</a>(5)</li><li><a href="http://www.cnblogs.com/newflydd/tag/gradle/">gradle</a>(3)</li><li><a href="http://www.cnblogs.com/newflydd/tag/jblog/">jblog</a>(3)</li><li><a href="http://www.cnblogs.com/newflydd/tag/poi/">poi</a>(2)</li><li><a href="http://www.cnblogs.com/newflydd/tag/post/">post</a>(2)</li><li><a href="http://www.cnblogs.com/newflydd/tag/%E5%B7%A5%E4%BD%9C/">工作</a>(2)</li><li><a href="http://www.cnblogs.com/newflydd/tag/%E5%85%AC%E5%BC%8F/">公式</a>(1)</li><li><a href="http://www.cnblogs.com/newflydd/tag/">更多</a></li>
+</ul>
+</div></div><div id="sidebar_categories">
+		<h3>随笔分类</h3>
+		
+				<ul>
+			
+				<li><a id="CatList_LinkList_0_Link_0" href="http://www.cnblogs.com/newflydd/category/745802.html">JAVA(20)</a></li>
+			
+				<li><a id="CatList_LinkList_0_Link_1" href="http://www.cnblogs.com/newflydd/category/756369.html">jblog(3)</a></li>
+			
+				<li><a id="CatList_LinkList_0_Link_2" href="http://www.cnblogs.com/newflydd/category/745801.html">杂谈(2)</a></li>
+			
+				</ul>
+			
+	
+		<h3>随笔档案</h3>
+		
+				<ul>
+			
+				<li><a id="CatList_LinkList_1_Link_0" href="http://www.cnblogs.com/newflydd/archive/2016/04.html">2016年4月 (2)</a></li>
+			
+				<li><a id="CatList_LinkList_1_Link_1" href="http://www.cnblogs.com/newflydd/archive/2016/01.html">2016年1月 (4)</a></li>
+			
+				<li><a id="CatList_LinkList_1_Link_2" href="http://www.cnblogs.com/newflydd/archive/2015/12.html">2015年12月 (1)</a></li>
+			
+				<li><a id="CatList_LinkList_1_Link_3" href="http://www.cnblogs.com/newflydd/archive/2015/11.html">2015年11月 (7)</a></li>
+			
+				<li><a id="CatList_LinkList_1_Link_4" href="http://www.cnblogs.com/newflydd/archive/2015/10.html">2015年10月 (12)</a></li>
+			
+				</ul>
+			
+	</div><div id="sidebar_recentcomments" class="sidebar-block"><div id="recent_comments_wrap">
+<h3 class="catListTitle">最新评论</h3>
+<div class="RecentComment" id="RecentComments">
+	<div id="RecentCommentsBlock"><ul>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/newflydd/p/5091646.html#3338943">1. Re:8皇后以及N皇后算法探究，回溯算法的JAVA实现，递归方案</a></li>
+        <li class="recent_comment_body">@Jason张是的，不过算法跟语言无关个人方便而已，平时开发WEB系统，喜欢算法研究，根本没装C/C++的环境呐。...</li>
+        <li class="recent_comment_author">--丁丁·中国电信</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/newflydd/p/5091646.html#3338926">2. Re:8皇后以及N皇后算法探究，回溯算法的JAVA实现，递归方案</a></li>
+        <li class="recent_comment_body">改成c语言来实现，估计会快点。</li>
+        <li class="recent_comment_author">--Jason张</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/newflydd/p/4972922.html#3309487">3. Re:从零开始，跟我一起做jblog项目（三）从Maven到Gradle</a></li>
+        <li class="recent_comment_body">@Alenn还在写呢，写完了必须开源...</li>
+        <li class="recent_comment_author">--丁丁·中国电信</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/newflydd/p/4972922.html#3309480">4. Re:从零开始，跟我一起做jblog项目（三）从Maven到Gradle</a></li>
+        <li class="recent_comment_body">能不能把项目在Github上面开源啊。。。想看看源代码的说</li>
+        <li class="recent_comment_author">--Alenn</li>
+        <li class="recent_comment_title"><a href="http://www.cnblogs.com/newflydd/p/4972922.html#3309039">5. Re:从零开始，跟我一起做jblog项目（三）从Maven到Gradle</a></li>
+        <li class="recent_comment_body">@redockingI've corrected it.3ks...</li>
+        <li class="recent_comment_author">--丁丁·中国电信</li>
+</ul>
+</div>
+</div>
+</div></div><div id="sidebar_topviewedposts" class="sidebar-block"><div id="topview_posts_wrap">
+<h3 class="catListTitle">阅读排行榜</h3>
+<div class="RecentComment" id="TopViewPosts"> 
+	<div id="TopViewPostsBlock"><ul><li><a href="http://www.cnblogs.com/newflydd/p/4972922.html">1. 从零开始，跟我一起做jblog项目（三）从Maven到Gradle(423)</a></li><li><a href="http://www.cnblogs.com/newflydd/p/4980524.html">2. 为Gradle添加tomcat插件，调试WEB应用(346)</a></li><li><a href="http://www.cnblogs.com/newflydd/p/5091646.html">3. 8皇后以及N皇后算法探究，回溯算法的JAVA实现，递归方案(316)</a></li><li><a href="http://www.cnblogs.com/newflydd/p/5424212.html">4. JAVA使用JNI调用C++动态链接库(243)</a></li><li><a href="http://www.cnblogs.com/newflydd/p/4975818.html">5. 为Gradle添加UTF-8支持(177)</a></li></ul></div>
+</div>
+</div></div><div id="sidebar_topcommentedposts" class="sidebar-block"><div id="topfeedback_posts_wrap">
+<h3 class="catListTitle">评论排行榜</h3>
+<div class="RecentComment" id="TopCommentsPosts">
+	<div id="TopFeedbackPostsBlock"><ul><li><a href="http://www.cnblogs.com/newflydd/p/4899610.html">1. JAVA将Excel中的报表导出为图片格式（二）实现思路(6)</a></li><li><a href="http://www.cnblogs.com/newflydd/p/4972922.html">2. 从零开始，跟我一起做jblog项目（三）从Maven到Gradle(5)</a></li><li><a href="http://www.cnblogs.com/newflydd/p/5091646.html">3. 8皇后以及N皇后算法探究，回溯算法的JAVA实现，递归方案(2)</a></li></ul></div>
+</div></div></div><div id="sidebar_topdiggedposts" class="sidebar-block"><div id="topdigg_posts_wrap">
+<h3 class="catListTitle">推荐排行榜</h3>
+<div class="RecentComment">
+	<div id="TopDiggPostsBlock"><ul><li><a href="http://www.cnblogs.com/newflydd/p/5091646.html">1. 8皇后以及N皇后算法探究，回溯算法的JAVA实现，递归方案(4)</a></li><li><a href="http://www.cnblogs.com/newflydd/p/4891600.html">2. 重新开始写博客(1)</a></li><li><a href="http://www.cnblogs.com/newflydd/p/4980524.html">3. 为Gradle添加tomcat插件，调试WEB应用(1)</a></li><li><a href="http://www.cnblogs.com/newflydd/p/5424212.html">4. JAVA使用JNI调用C++动态链接库(1)</a></li></ul></div>
+</div></div></div></div><script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+
+</div>
+</div>
+<div class="clear"></div>
+<div id="footer">
+
+<p id="footer">
+	Powered by: 
+	<br>
+	
+	<a id="Footer1_Hyperlink3" name="Hyperlink1" href="http://www.cnblogs.com/" style="font-family:Verdana;font-size:12px;">博客园</a>
+	<br>
+	Copyright © 丁丁·中国电信
+</p>
+</div>
+</div>
+
+<!--PageEndHtml Block Begin-->
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script><span id="cnzz_stat_icon_1256612020"></span><script src="index_files/stat.php.js" type="text/javascript"></script>
+<!--PageEndHtml Block End-->
+
+
+</body></html>

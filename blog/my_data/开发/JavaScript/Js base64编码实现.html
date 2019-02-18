@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Js base64编码实现</title>
+  </head>
+  <body>
+    <h1 id="js-base64编码实现" style="margin: 0.8em 0px; padding: 0px; box-sizing: border-box; font-family: &quot;microsoft yahei&quot;; font-weight: 300; line-height: 1.1; color: rgb(63, 63, 63); text-align: start; font-size: 2.6em; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">Js
+      base64编码实现</h1>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">base64
+      在前端领域中是相当有用，比如前端里的dataURL就是base64编码实现的，使用它的好处就很多了，假如需要从服务器拿到一些logo，但是这些logo可能只有几十byte甚至更小，那这样这个logo单独占用一条http传输是很不
+      划算的，我们可以把这个logo进行base64编码，也就是dataURL，直接嵌入页面中，在浏览器获取页面的时候，直接由浏览器渲染出来，但是要知道base64编码出来的体积要比原来大，如果要把一个比较大的突破编码成
+      dataURL，那是相当庞大的，显然不适合直接嵌入页面中，这样会使页面加载过于缓慢。最后要说到base64的浏览器支持问题，除了ie8以下的版本不能很好的支持之外，其他的浏览器大都支持（未测试）。</p>
+    <h3 id="纸上得来终觉浅绝知此事要躬行" style="margin: 0.8em 0px; padding: 0px; box-sizing: border-box; font-family: &quot;microsoft yahei&quot;; font-weight: 300; line-height: 1.1; color: rgb(63, 63, 63); text-align: start; font-size: 1.7em; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;"><a
+        name="t1" style="text-decoration: none; box-sizing: border-box; color: rgb(12, 137, 207);"></a>纸上得来终觉浅，绝知此事要躬行</h3>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">既
+      然base64编码这么有用，不妨来了解一下base64的原理。<span>&nbsp;</span><br style="box-sizing: border-box;">
+      · base64的编码都是按字符串长度，以每3个8bit的字符为一组<span>&nbsp;</span><br style="box-sizing: border-box;">
+      · 首先把每组的字符都转换为ascii码<span>&nbsp;</span><br style="box-sizing: border-box;">
+      · 然后把ascii码转换为8位二进制数<span>&nbsp;</span><br style="box-sizing: border-box;">
+      · 现在得到了24位二进制数，把它分为4个6位二进制数，并在最高位补两个0<span>&nbsp;</span><br style="box-sizing: border-box;">
+      · 再分后的四个二进制数转换为十进制<span>&nbsp;</span><br style="box-sizing: border-box;">
+      · 然后对比base64编码表，来进行转换</p>
+    <table style="box-sizing: border-box; width: 934px; background-color: rgb(255, 255, 255); border-collapse: collapse; border-spacing: 0px; border: 1px solid rgb(238, 238, 238); color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;">
+      <thead style="box-sizing: border-box;">
+        <tr style="box-sizing: border-box;">
+          <th style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);"><strong
+              style="box-sizing: border-box;">Base64 编码表</strong></th>
+          <th style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);"><br>
+          </th>
+          <th style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);"><br>
+          </th>
+          <th style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);"><br>
+          </th>
+          <th style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);"><br>
+          </th>
+          <th style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);"><br>
+          </th>
+          <th style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);"><br>
+          </th>
+          <th style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);"><br>
+          </th>
+        </tr>
+      </thead>
+      <tbody style="box-sizing: border-box;">
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">Value</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">Char</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);"><br>
+          </td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">Value</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">Char</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);"><br>
+          </td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">Value</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">Char</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">0</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">A</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">16</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">Q</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">32</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">g</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">48</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">w</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">1</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">B</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">17</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">R</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">33</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">h</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">49</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">x</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">2</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">C</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">18</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">S</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">34</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">i</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">50</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">y</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">3</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">D</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">19</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">T</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">35</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">j</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">51</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">z</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">4</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">E</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">20</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">U</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">36</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">k</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">52</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">0</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">5</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">F</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">21</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">V</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">37</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">l</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">53</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">1</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">6</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">G</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">22</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">W</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">38</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">m</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">54</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">2</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">7</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">H</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">23</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">X</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">39</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">n</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">55</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">3</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">8</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">I</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">24</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">Y</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">40</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">o</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">56</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">4</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">9</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">J</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">25</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">Z</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">41</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">p</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">57</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">5</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">10</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">K</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">26</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">a</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">42</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">q</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">58</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">6</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">11</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">L</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">27</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">b</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">43</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">r</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">59</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">7</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">12</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">M</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">28</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">c</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">44</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">s</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">60</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">8</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">13</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">N</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">29</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">d</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">45</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">t</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">61</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">9</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">14</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">O</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">30</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">e</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">46</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">u</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">62</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">+</td>
+        </tr>
+        <tr style="box-sizing: border-box;">
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">15</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">P</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">31</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">f</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">47</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">v</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">63</td>
+          <td style="box-sizing: border-box; padding: 8px; line-height: 20px; vertical-align: top; border: 1px solid rgb(238, 238, 238);">/</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">比
+      如我们举个例子，我们现在要将“haa”转换为base64编码<span>&nbsp;</span><br style="box-sizing: border-box;">
+      首先转换为ascii码为 104， 97， 97<span>&nbsp;</span><br style="box-sizing: border-box;">
+      再转换为8位二进制为 0110 1000, 0110 0001, 0110 0001<span>&nbsp;</span><br style="box-sizing: border-box;">
+      分为4组为，0001 1010, 0000 0110, 0000 0101,0010 0001<span>&nbsp;</span><br style="box-sizing: border-box;">
+      现在把它们都转换为10进制为：26，6，5，33<span>&nbsp;</span><br style="box-sizing: border-box;">
+      对照base64编码表为：aGFh</p>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">这
+      是刚好可以分为三个一组的字符串，但是如果不是3的倍数呢<span>&nbsp;</span><br style="box-sizing: border-box;">
+      比如现在有个例子，我们需要将”hello”转换为base64编码<span>&nbsp;</span><br style="box-sizing: border-box;">
+      现在三个分为一组，就是”hel”,”lo”<span>&nbsp;</span><br style="box-sizing: border-box;">
+      还是先转换为ascii码 ： 104, 101,108,108,111<span>&nbsp;</span><br style="box-sizing: border-box;">
+      再转换为二进制的时候需要用0补齐：0110 1000, 0110 0101, 0110 1100, 0110 1100, 0110 1111,0000 0000<span>&nbsp;</span><br style="box-sizing: border-box;">
+      把他们分为八组为：0001 1010，0000 0110，0001 0101，0010 1100，0001 1011，0000 0110，0011 1100，00 0000<span>&nbsp;</span><br style="box-sizing: border-box;">
+      现在将它们转为10进制，这里需要注意的是由于后面的0是我们补全的，因此这里转换为base64编码的时候就不能对照base64编码，而是变为“=”：26,6,21,44,27,6,60,异常<span>&nbsp;</span><br
+        style="box-sizing: border-box;">
+      对照base64编码表为：aGVsbG8=</p>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">现
+      在原理大家都大概高清楚了，那我们自己用js实现一个base64的编码器吧！</p>
+    <pre class="prettyprint" name="code" style="white-space: nowrap; word-wrap: break-word; box-sizing: border-box; position: relative; overflow-y: hidden; overflow-x: auto; margin: 0px 0px 1.7em; line-height: 23.8px; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 5px 5px 5px 60px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 0px solid rgb(136, 136, 136); border-radius: 0px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;"><code
+class="hljs livecodeserver has-numbering" style="display: block; padding: 0px; background: transparent; color: inherit; box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; font-size: 12.6px; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;"><span
+class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;">/**
+ * @description base64编码方法
+ * @param val 需要编码的字符串
+ * @return 返回编码好的base64字符串
+ */</span>
+<span class="hljs-function" style="box-sizing: border-box;"><span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">function</span> <span
+class="hljs-title" style="box-sizing: border-box;">encodingBase64</span>(<span class="hljs-title" style="box-sizing: border-box;">val</span>){</span>
+    let base64hash = <span class="hljs-string" style="color: rgb(0, 136, 0); box-sizing: border-box;">'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'</span>
+
+   <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //把字符串转换为字符数组</span>
+    let strArr = val.<span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">split</span>(<span
+class="hljs-string" style="color: rgb(0, 136, 0); box-sizing: border-box;">''</span>)
+
+   <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //装入结果的数组</span>
+    let <span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span> = []
+   <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //每个字符的ascii码</span>
+    let asciiCode
+   <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //上一个字符的ascii码</span>
+    let prevAsciiCode
+
+    let <span class="hljs-operator" style="box-sizing: border-box;">mod</span>
+   <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //未填充之前的数组与3的模</span>
+    let preMod = strArr.<span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">length</span> % <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">3</span>
+
+   <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //使字符数组组成三个一组</span>
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">if</span>(preMod == <span class="hljs-number"
+style="color: rgb(0, 102, 102); box-sizing: border-box;">1</span>){
+        strArr.push(<span class="hljs-constant" style="box-sizing: border-box;">null</span>)
+        strArr.push(<span class="hljs-constant" style="box-sizing: border-box;">null</span>)
+    }
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">if</span>(preMod == <span class="hljs-number"
+style="color: rgb(0, 102, 102); box-sizing: border-box;">2</span>) strArr.push(<span class="hljs-constant" style="box-sizing: border-box;">null</span>)
+   <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //遍历整个数组，寻找每个字符的ascii码</span>
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">for</span>(let index <span class="hljs-operator"
+style="box-sizing: border-box;">in</span> strArr){
+        <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">if</span>(!strArr[index]){
+            asciiCode = <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>
+        }
+        <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">else</span>{
+            asciiCode = strArr[index].charCodeAt()
+        }
+       <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //位于一组当中的第几个字符</span>
+        <span class="hljs-operator" style="box-sizing: border-box;">mod</span> = index % <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">3</span>
+        <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">switch</span>(<span class="hljs-operator"
+style="box-sizing: border-box;">mod</span>){
+            <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">case</span> <span class="hljs-number"
+style="color: rgb(0, 102, 102); box-sizing: border-box;">0</span>:
+               <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //往右移2位</span>
+                <span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span>.push(base64hash[asciiCode &gt;&gt; <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">2</span>])
+                break
+            <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">case</span> <span class="hljs-number"
+style="color: rgb(0, 102, 102); box-sizing: border-box;">1</span>:
+               <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //上一个ascii码往左移4位与现在的ascii码往右移四位做或操作</span>
+                <span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span>.push(base64hash[(prevAsciiCode &amp; <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">3</span>) &lt;&lt; <span class="hljs-number"
+style="color: rgb(0, 102, 102); box-sizing: border-box;">4</span> | asciiCode &gt;&gt; <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">4</span>])
+                break
+            <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">case</span> <span class="hljs-number"
+style="color: rgb(0, 102, 102); box-sizing: border-box;">2</span>:
+                <span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span>.push(base64hash[(prevAsciiCode &amp; <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">15</span>) &lt;&lt; <span class="hljs-number"
+style="color: rgb(0, 102, 102); box-sizing: border-box;">2</span> | asciiCode &gt;&gt; <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">6</span>])
+                <span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span>.push(base64hash[asciiCode &amp; <span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">63</span>])
+                break
+        }
+
+        prevAsciiCode = asciiCode
+    }
+
+   <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;"> //处理异常</span>
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">if</span>(preMod == <span class="hljs-number"
+style="color: rgb(0, 102, 102); box-sizing: border-box;">1</span>) {
+        <span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span>.splice(<span
+class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span>.<span class="hljs-built_in"
+style="color: rgb(102, 0, 102); box-sizing: border-box;">length</span> - <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">2</span>,<span
+class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">2</span>)
+        <span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span>.push(<span class="hljs-string"
+style="color: rgb(0, 136, 0); box-sizing: border-box;">'=='</span>)
+    }
+    <span class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">else</span> <span class="hljs-keyword"
+style="color: rgb(0, 0, 136); box-sizing: border-box;">if</span>(preMod == <span class="hljs-number" style="color: rgb(0, 102, 102); box-sizing: border-box;">2</span>) {
+        <span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span>.pop()
+        <span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span>.push(<span class="hljs-string"
+style="color: rgb(0, 136, 0); box-sizing: border-box;">'='</span>)
+    }
+
+    <span class="hljs-constant" style="box-sizing: border-box;">return</span> <span class="hljs-built_in" style="color: rgb(102, 0, 102); box-sizing: border-box;">result</span>.join(<span
+class="hljs-string" style="color: rgb(0, 136, 0); box-sizing: border-box;">''</span>)
+}</code>
+      <ul class="pre-numbering" style="list-style: none; margin: 0px; padding: 6px 0px 40px; box-sizing: border-box; line-height: 23.8px; position: absolute; width: 50px; background-color: rgb(238, 238, 238); top: 0px; left: 0px; border-right: 1px solid rgb(221, 221, 221); text-align: right;">
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">1</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">2</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">3</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">4</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">5</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">6</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">7</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">8</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">9</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">10</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">11</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">12</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">13</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">14</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">15</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">16</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">17</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">18</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">19</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">20</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">21</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">22</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">23</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">24</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">25</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">26</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">27</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">28</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">29</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">30</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">31</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">32</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">33</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">34</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">35</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">36</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">37</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">38</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">39</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">40</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">41</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">42</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">43</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">44</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">45</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">46</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">47</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">48</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">49</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">50</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">51</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">52</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">53</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">54</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">55</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">56</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">57</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">58</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">59</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">60</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">61</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">62</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">63</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">64</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">65</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">66</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">67</li>
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">68</li>
+      </ul>
+    </pre>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">下
+      面我们试一下这个函数</p>
+    <pre class="prettyprint" name="code" style="white-space: nowrap; word-wrap: break-word; box-sizing: border-box; position: relative; overflow-y: hidden; overflow-x: auto; margin: 0px 0px 1.7em; line-height: 23.8px; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 5px 5px 5px 60px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 0px solid rgb(136, 136, 136); border-radius: 0px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;"><code
+class="hljs rust has-numbering" style="display: block; padding: 0px; background: transparent; color: inherit; box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; font-size: 12.6px; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;">console.<span
+class="hljs-keyword" style="color: rgb(0, 0, 136); box-sizing: border-box;">log</span>(encodingBase64(<span class="hljs-string"
+style="color: rgb(0, 136, 0); box-sizing: border-box;">"hello"</span>)) <span class="hljs-comment" style="color: rgb(136, 0, 0); box-sizing: border-box;">//aGVsbG8=</span></code>
+      <ul class="pre-numbering" style="list-style: none; margin: 0px; padding: 6px 0px 40px; box-sizing: border-box; line-height: 23.8px; position: absolute; width: 50px; background-color: rgb(238, 238, 238); top: 0px; left: 0px; border-right: 1px solid rgb(221, 221, 221); text-align: right;">
+        <li style="list-style: none; margin: 0px; padding: 0px 5px; box-sizing: border-box;">1</li>
+      </ul>
+    </pre>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;">可
+      以看到已经成功的进行base64编码了！！</p>
+    <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal; color: rgb(63, 63, 63); font-family: &quot;microsoft yahei&quot;; font-size: 16px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); text-decoration-style: initial; text-decoration-color: initial;"><br>
+    </p>
+  </body>
+</html>

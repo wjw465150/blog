@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<HEAD>
+<META http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>在windows上不定时会报‘Address already in use: connect’</title>
+<style type="text/css">
+<!--
+.9t {
+	font-size: 9pt;
+	color: #000000;
+	font-family: "宋体";
+}
+-->
+</style>
+</HEAD>
+<body bgcolor="#FFFFFF">
+<table width="90%" border="0" align="center" >
+  <tr>
+    <td><PRE class="9t">
+使用SDK调用API测试时，在windows上不定时会报‘Address already in use: connect’
+
+出现原因：
+TCP/IP连接数不够或TIME_WAIT中存在很多链接，导致吞吐量低。
+
+解决办法：
+1、打开注册表：regedit
+2、HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters
+3、新建 DWORD值，name：TCPTimedWaitDelay, value:30（十进制） -&gt; 设置为30秒，默认是240秒
+4、新建 DWORD值，name：MaxUserPort, value:65534（十进制） -&gt; 设置最大连接数65534
+5、重启系统
+
+备注:
+The primary TCP tuning parameters appear in the registry under HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters.
+
+To enable high performance TCP you must turn on RFC1323 features (create REG_DWORD key "Tcp1323Opts" with value 3) and set the maximum 
+TCP buffersize (create REG_DWORD key "GlobalMaxTcpWindowSize" with an appropriate value such as 4000000, decimal).
+
+If you want to set the system wide default buffer size create REG_DWORD key "TcpWindowSize" with an appropriate value. This parameter 
+can also be set per interface at HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interface\interfaceGUID, which 
+may help to protect interactive applications that are using different interfaces from the effects of overbuffering.
+
+Detailed descriptions of the registry parameters
+ 
+Tcp1323Opts
+Key: Tcpip\Parameters
+Value Type: REG_DWORD-number (flags)
+Valid Range: 0, 1, 2, 3
+0 (disable RFC 1323 options)
+1 (window scaling enabled only)
+2 (timestamps enabled only)
+3 (both options enabled)
+
+Default: No value. The default behavior is as follows: do not use the Timestamp and Window Scale options when initiating TCP connections 
+but use them if the TCP peer that is initiating communication includes them in the SYN segment.
+Description: This parameter controls the use of RFC 1323 Timestamp and Window Scale TCP options. Explicit settings for timestamps and 
+window scaling are manipulated with flag bits. Bit 0 controls window scaling, and bit 1 controls timestamps.
+
+ 
+GlobalMaxTcpWindowSize
+Key: Tcpip\Parameters 
+Value Type: REG_DWORD-Number of bytes
+Valid Range: 0-0x3FFFFFFF (1073741823 decimal; however, values greater than 64 KB can only be achieved when connecting to other systems 
+that support RFC 1323 window scaling, which is discussed in the TCP section of this article.)
+
+Default: This parameter does not exist by default.
+Description: The TcpWindowSize parameter can be used to set the receive window on a per-interface basis. This parameter can be used to 
+set a global limit for the TCP window size on a system-wide basis.
+
+ 
+TcpWindowSize
+Key: Tcpip\Parameters, Tcpip\Parameters\Interface\interfaceGUID
+Value Type: REG_DWORD-number of bytes
+ValidRange: 0-0x3FFFFFFF (1073741823 decimal). In practice the TCP/IP stack will round the number set to the nearest multiple of maximum 
+segment size (MSS). Values greater than 64 KB can be achieved only when connecting to other systems that support RFC 1323 Window 
+Scaling, which is discussed in the "Transmission Control Protocol (TCP)" section of this article.
+
+Default: The smaller of the following values:
+    0xFFFF
+    GlobalMaxTcpWindowSize (another registry parameter)
+    The larger of four times the MSS
+    16384 rounded up to an even multiple of the MSS
+
+The stack also tunes itself based on the media speed:
+    Below 1 Mbps: 8 KB
+    1 Mbps - 100 Mbps: 17 KB
+    Greater than 100 Mbps: 64 KB
+
+The default can start at 17520 for Ethernet, but may shrink slightly when the connection is established to another computer that 
+supports extended TCP header options, such as Selective Acknowledgements (SACK) and TCP Timestamps, because these options increase the 
+size of the TCP header beyond the usual 20 bytes, leaving slightly less room for data.
+
+Description: This parameter determines the maximum TCP receive window size offered. The receive window specifies the number of bytes 
+that a sender can transmit without receiving an acknowledgment. In general, larger receive windows improve performance over high-delay, 
+high-bandwidth networks. For greatest efficiency, the receive window should be an even multiple of the TCP Maximum Segment Size (MSS). 
+This parameter is both a per-interface parameter and a global parameter, depending upon where the registry key is located. If there is a 
+value for a specific interface, that value overrides the system-wide value. See also GobalMaxTcpWindowSize.
+
+ 
+EnablePMTUDiscovery
+Key: Tcpip\Parameters
+Value Type: REG_DWORD-Boolean
+ValidRange: 0, 1 (false, true)
+Default: 1 (true)
+
+Description: When this parameter is set to 1 (true) TCP attempts to discover the Maximum Transmission Unit (MTU), or largest packet 
+size, over the path to a remote host. By discovering the Path MTU (PMTU) and limiting TCP segments to this size, TCP can eliminate 
+fragmentation at routers along the path that connect networks with different MTUs. Fragmentation adversely affects TCP throughput and 
+network congestion. Setting this parameter to 0  (not recommended) causes an MTU of 576 bytes to be used for all connections that are 
+not to destinations on a locally attached subnet.
+
+ 
+MTU
+Key:  Tcpip\Parameters\Interfaces\interfaceGUID 
+Value Type: REG_DWORD-number
+ValidRange: 88-the MTU of the underlying network
+Default: 0xFFFFFFFF
+
+Description: This parameter overrides the default Maximum Transmission Unit (MTU) for a network interface. The MTU is the maximum IP 
+packet size, in bytes, that can be transmitted over the underlying network. For values larger than the default for the underlying 
+network, the network default MTU is used. For values smaller than 88, the MTU of 88 is used.
+ 
+Note:
+Windows Server 2003 TCP/IP uses PMTU detection by default and queries the network interface card driver to find out what local MTU is 
+supported. Altering the MTU parameter is generally not necessary and may result in reduced performance. See the "Path Maximum 
+Transmission Unit (PMTU) Discovery" section of this article for more details.
+
+ 
+ 
+</PRE></td>
+  </tr>
+</table>
+</Body>
+</html>

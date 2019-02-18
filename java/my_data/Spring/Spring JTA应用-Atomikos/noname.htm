@@ -1,0 +1,529 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html dir="ltr" xml:lang="zh-CN" xmlns="http://www.w3.org/1999/xhtml"><head><title>Spring JTA应用-Atomikos</title><link 
+href="favicon.ico" type=image/x-icon rel="shortcut icon"><link 
+title=tom.duan href="rss" type=application/rss+xml rel=alternate><link 
+media=screen href="blog.css_1248770300" 
+type=text/css rel=stylesheet><link media=screen 
+href="blue.css_1235723792" 
+type=text/css rel=stylesheet>
+<link media=screen 
+href="SyntaxHighlighter.css_1201588027" 
+type=text/css rel=stylesheet>
+<style>
+    div#main {background-color: transparent; border: 0; padding: 0px; width: 740px;}
+  </style>
+
+<style type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</style>
+
+<style type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</style>
+
+<style type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</style>
+
+<style type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</style>
+
+<style type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</style>
+
+<style type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</style>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+
+<body>
+
+<div id=page>
+
+<div class=clearfix id=content>
+
+<div id=main>
+
+<div class=blog_main><!--StartFragment-->
+<div class=blog_title><h3 title="" ><a href="http://tom-duan.javaeye.com/blog/147599">Spring JTA应用JOTM &amp; Atomikos III 
+Atomikos</a></h3><strong>关键字: jta jotm atomikos</strong> </div>
+<div 
+class=blog_content>前面简单介绍了JOTM如何在Spring中配置，并如何使用它的JTA事务，本节将介绍Atomikos如何与Spring集成，并使用它的JTA事务。 
+<br><br>Atomikos,是一个基于Java的开源事务管理器，提供了事务管理和连接池，不需要应用服务器支持，支持JDBC和JMS事务，能提供对Spring，Hibernate的集成，有兴趣多了解的可以直接参考说明文当，有详细的介绍和使用说明。 
+<br><br>Atomikos可以到http://www.atomikos.com/products.html#ate下载,最新版本是3.2.0 
+<br><br>首先,仍然是一个相关的配置文件，用来设置相关的环境,打开解压缩后Atomikos根目录,拷贝jta.properties到classpath中，并修改为如下内容 
+<br>jta.properties <br>
+<div class=dp-highlighter>
+<div class=bar>
+<div class=tools>Java代码 <a title=复制代码 
+onClick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147599#"><IMG alt=复制代码 
+src="icon_copy.gif"></a></div></div>
+<ol class=dp-j>
+<li><span><span>com.atomikos.icatch.service=com.atomikos.icatch.standalone.UserTransactionServiceFactory 
+&nbsp;&nbsp;</span></span>
+<li><span>com.atomikos.icatch.console_file_name&nbsp;=&nbsp;tm.out &nbsp;&nbsp;</span>
+<li><span>com.atomikos.icatch.log_base_name&nbsp;=&nbsp;tmlog &nbsp;&nbsp;</span>
+<li><span>com.atomikos.icatch.tm_unique_name&nbsp;=&nbsp;com.atomikos.spring.jdbc.tm 
+&nbsp;&nbsp;</span>
+<li><span>com.atomikos.icatch.console_log_level&nbsp;=&nbsp;INFO&nbsp;&nbsp;&nbsp;</span></li></ol></div><pre class=java style="DISPLAY: none" name="code">com.atomikos.icatch.service=com.atomikos.icatch.standalone.UserTransactionServiceFactory
+com.atomikos.icatch.console_file_name = tm.out
+com.atomikos.icatch.log_base_name = tmlog
+com.atomikos.icatch.tm_unique_name = com.atomikos.spring.jdbc.tm
+com.atomikos.icatch.console_log_level = INFO 
+</pre><br><br>随后，是Spring上下文配置，建立一个名为ApplicationContext-atomikos.xml的Spring上下文 
+<br><br>ApplicationContext-atomikos.xml <br>
+<div class=dp-highlighter>
+<div class=bar>
+<div class=tools>Java代码 <a title=复制代码 
+onClick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147599#"><IMG alt=复制代码 
+src="icon_copy.gif"></a></div></div>
+<ol class=dp-j>
+<li><span><span>&lt;?xml&nbsp;version=</span><span 
+class=string>"1.0"</span><span>&nbsp;encoding=</span><span 
+class=string>"UTF-8"</span><span>?&gt; &nbsp;&nbsp;</span></span>
+<li><span>&lt;beans&nbsp;xmlns=</span><span 
+class=string>"http://www.springframework.org/schema/beans"</span><span>&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;xmlns:xsi=</span><span 
+class=string>"http://www.w3.org/2001/XMLSchema-instance"</span><span>&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;xsi:schemaLocation=</span><span 
+class=string>"http://www.springframework.org/schema/beans&nbsp;http://www.springframework.org/schema/beans/spring-beans-2.0.xsd"</span><span>&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;!--&nbsp;XA&nbsp;Datasource&nbsp;--&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"datasource1"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"com.atomikos.jdbc.SimpleDataSourceBean"</span><span>&nbsp;init-method=</span><span 
+class=string>"init"</span><span>&nbsp;destroy-method=</span><span 
+class=string>"close"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"uniqueResourceName"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;mysql/main&lt;/value&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"xaDataSourceClassName"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;com.mysql.jdbc.jdbc2.optional.MysqlXADataSource&lt;/value&gt;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"xaDataSourceProperties"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;URL=jdbc:mysql:</span><span 
+class=comment>//localhost:3306/test;user=root;password=admin&lt;/value&gt;&nbsp;&nbsp;&nbsp; 
+</span><span>&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"exclusiveConnectionMode"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;</span><span 
+class=keyword>true</span><span>&lt;/value&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"connectionPoolSize"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;</span><span 
+class=number>3</span><span>&lt;/value&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"validatingQuery"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;SELECT&nbsp;</span><span 
+class=number>1</span><span>&lt;/value&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"datasource2"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"com.atomikos.jdbc.SimpleDataSourceBean"</span><span>&nbsp;init-method=</span><span 
+class=string>"init"</span><span>&nbsp;destroy-method=</span><span 
+class=string>"close"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"uniqueResourceName"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;mysql/news&lt;/value&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"xaDataSourceClassName"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;com.mysql.jdbc.jdbc2.optional.MysqlXADataSource&lt;/value&gt;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"xaDataSourceProperties"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;URL=jdbc:mysql:</span><span 
+class=comment>//localhost:3306/test2;user=root;password=admin&lt;/value&gt;&nbsp;&nbsp;&nbsp; 
+</span><span>&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"exclusiveConnectionMode"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;</span><span 
+class=keyword>true</span><span>&lt;/value&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"connectionPoolSize"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;</span><span 
+class=number>3</span><span>&lt;/value&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"validatingQuery"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;SELECT&nbsp;</span><span 
+class=number>1</span><span>&lt;/value&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"template1"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"org.springframework.jdbc.core.JdbcTemplate"</span><span>&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"dataSource"</span><span>&nbsp;ref=</span><span 
+class=string>"datasource1"</span><span>&nbsp;/&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"template2"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"org.springframework.jdbc.core.JdbcTemplate"</span><span>&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"dataSource"</span><span>&nbsp;ref=</span><span 
+class=string>"datasource2"</span><span>&nbsp;/&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"atomikosTransactionManager"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"com.atomikos.icatch.jta.UserTransactionManager"</span><span>&nbsp;init-method=</span><span 
+class=string>"init"</span><span>&nbsp;destroy-method=</span><span 
+class=string>"close"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"forceShutdown"</span><span>&gt;&lt;value&gt;</span><span 
+class=keyword>true</span><span>&lt;/value&gt;&lt;/property&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"atomikosUserTransaction"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"com.atomikos.icatch.jta.UserTransactionImp"</span><span>&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"transactionTimeout"</span><span>&nbsp;value=</span><span 
+class=string>"300"</span><span>/&gt;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"springTransactionManager"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"org.springframework.transaction.jta.JtaTransactionManager"</span><span>&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"transactionManager"</span><span>&gt;&lt;ref&nbsp;bean=</span><span 
+class=string>"atomikosTransactionManager"</span><span>&nbsp;&nbsp;/&gt;&lt;/property&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"userTransaction"</span><span>&gt;&lt;ref&nbsp;bean=</span><span 
+class=string>"atomikosUserTransaction"</span><span>&nbsp;&nbsp;/&gt;&lt;/property&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"dao1"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"com.xa.dao.UserDao1"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"jdbcTemplate"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ref&nbsp;bean=</span><span 
+class=string>"template1"</span><span>&gt;&lt;/ref&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"dao2"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"com.xa.dao.UserDao2"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"jdbcTemplate"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ref&nbsp;bean=</span><span 
+class=string>"template2"</span><span>&gt;&lt;/ref&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;!--&nbsp;--&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"userServiceTarget"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"com.xa.service.UserServiceImpl"</span><span>&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"dao1"</span><span>&nbsp;ref=</span><span 
+class=string>"dao1"</span><span>/&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"dao2"</span><span>&nbsp;ref=</span><span 
+class=string>"dao2"</span><span>/&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"userTest"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"org.springframework.transaction.interceptor.TransactionProxyFactoryBean"</span><span>&gt;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"transactionManager"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ref&nbsp;bean=</span><span 
+class=string>"springTransactionManager"</span><span>/&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"target"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ref&nbsp;bean=</span><span 
+class=string>"userServiceTarget"</span><span>/&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"transactionAttributes"</span><span>&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;props&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</span><span 
+class=string>"insert*"</span><span>&gt;PROPAGATION_REQUIRED,-Exception&lt;/prop&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/props&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&lt;/beans&gt;&nbsp;&nbsp;</span></li></ol></div><pre class=java style="DISPLAY: none" name="code">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd"&gt;
+	&lt;!-- XA Datasource --&gt;
+	&lt;bean id="datasource1" class="com.atomikos.jdbc.SimpleDataSourceBean" init-method="init" destroy-method="close"&gt;   
+		&lt;property name="uniqueResourceName"&gt;   
+			&lt;value&gt;mysql/main&lt;/value&gt;   
+		&lt;/property&gt;   
+		&lt;property name=   
+			   
+		"xaDataSourceClassName"&gt;   
+			&lt;value&gt;com.mysql.jdbc.jdbc2.optional.MysqlXADataSource&lt;/value&gt; &lt;/property&gt;&lt;property   
+			name="xaDataSourceProperties"&gt;&lt;value&gt;URL=jdbc:mysql://localhost:3306/test;user=root;password=admin&lt;/value&gt;   
+		&lt;/property&gt;   
+		&lt;property name="exclusiveConnectionMode"&gt;   
+			&lt;value&gt;true&lt;/value&gt;   
+		&lt;/property&gt;   
+		&lt;property name="connectionPoolSize"&gt;   
+			&lt;value&gt;3&lt;/value&gt;   
+		&lt;/property&gt;   
+		&lt;property name="validatingQuery"&gt;   
+			&lt;value&gt;SELECT 1&lt;/value&gt;   
+		&lt;/property&gt;   
+	&lt;/bean&gt;
+	
+	&lt;bean id="datasource2" class="com.atomikos.jdbc.SimpleDataSourceBean" init-method="init" destroy-method="close"&gt;   
+		&lt;property name="uniqueResourceName"&gt;   
+			&lt;value&gt;mysql/news&lt;/value&gt;
+		&lt;/property&gt;   
+		&lt;property name=   
+			   
+		"xaDataSourceClassName"&gt;
+			&lt;value&gt;com.mysql.jdbc.jdbc2.optional.MysqlXADataSource&lt;/value&gt; &lt;/property&gt;&lt;property   
+			name="xaDataSourceProperties"&gt;&lt;value&gt;URL=jdbc:mysql://localhost:3306/test2;user=root;password=admin&lt;/value&gt;   
+		&lt;/property&gt;   
+		&lt;property name="exclusiveConnectionMode"&gt;   
+			&lt;value&gt;true&lt;/value&gt;   
+		&lt;/property&gt;   
+		&lt;property name="connectionPoolSize"&gt;   
+			&lt;value&gt;3&lt;/value&gt;   
+		&lt;/property&gt;   
+		&lt;property name="validatingQuery"&gt;   
+			&lt;value&gt;SELECT 1&lt;/value&gt;   
+		&lt;/property&gt;   
+	&lt;/bean&gt;
+	
+	&lt;bean id="template1" class="org.springframework.jdbc.core.JdbcTemplate"&gt;
+		&lt;property name="dataSource" ref="datasource1" /&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="template2" class="org.springframework.jdbc.core.JdbcTemplate"&gt;
+		&lt;property name="dataSource" ref="datasource2" /&gt;
+	&lt;/bean&gt;
+		
+	&lt;bean id="atomikosTransactionManager" class="com.atomikos.icatch.jta.UserTransactionManager" init-method="init" destroy-method="close"&gt;
+		&lt;property name="forceShutdown"&gt;&lt;value&gt;true&lt;/value&gt;&lt;/property&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="atomikosUserTransaction" class="com.atomikos.icatch.jta.UserTransactionImp"&gt;
+		&lt;property name="transactionTimeout" value="300"/&gt; 
+	&lt;/bean&gt;
+
+	&lt;bean id="springTransactionManager" class="org.springframework.transaction.jta.JtaTransactionManager"&gt;
+		&lt;property name="transactionManager"&gt;&lt;ref bean="atomikosTransactionManager"  /&gt;&lt;/property&gt;
+		&lt;property name="userTransaction"&gt;&lt;ref bean="atomikosUserTransaction"  /&gt;&lt;/property&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="dao1" class="com.xa.dao.UserDao1"&gt;
+		&lt;property name="jdbcTemplate"&gt;
+			&lt;ref bean="template1"&gt;&lt;/ref&gt;
+		&lt;/property&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="dao2" class="com.xa.dao.UserDao2"&gt;
+		&lt;property name="jdbcTemplate"&gt;
+			&lt;ref bean="template2"&gt;&lt;/ref&gt;
+		&lt;/property&gt;
+	&lt;/bean&gt;
+	&lt;!-- --&gt;
+	&lt;bean id="userServiceTarget" class="com.xa.service.UserServiceImpl"&gt;
+		&lt;property name="dao1" ref="dao1"/&gt;
+		&lt;property name="dao2" ref="dao2"/&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="userTest" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean"&gt;    
+		&lt;property name="transactionManager"&gt;
+			&lt;ref bean="springTransactionManager"/&gt;
+		&lt;/property&gt;    
+		&lt;property name="target"&gt;
+			&lt;ref bean="userServiceTarget"/&gt;
+		&lt;/property&gt;
+		&lt;property name="transactionAttributes"&gt;        
+			&lt;props&gt;
+				&lt;prop key="insert*"&gt;PROPAGATION_REQUIRED,-Exception&lt;/prop&gt;            
+			&lt;/props&gt;
+		&lt;/property&gt;
+	&lt;/bean&gt;
+&lt;/beans&gt;
+</pre><br><br>看上下文中的代码，很大部分和JOTM的相似，atomikos使用com.atomikos.jdbc.SimpleDataSourceBean类来创建datasource 
+bean，这里需要特别注意 <br>
+<div class=dp-highlighter>
+<div class=bar>
+<div class=tools>Java代码 <a title=复制代码 
+onClick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147599#"><IMG alt=复制代码 
+src="icon_copy.gif"></a></div></div>
+<ol class=dp-j>
+<li><span><span>&lt;property&nbsp;name=</span><span 
+class=string>"uniqueResourceName"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span></span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;mysql/main&lt;/value&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&lt;/property&gt;&nbsp;&nbsp;&nbsp;&nbsp;</span></li></ol></div><pre class=java style="DISPLAY: none" name="code">&lt;property name="uniqueResourceName"&gt;   
+	&lt;value&gt;mysql/main&lt;/value&gt;   
+&lt;/property&gt;  
+</pre><br><br>
+<div class=dp-highlighter>
+<div class=bar>
+<div class=tools>Java代码 <a title=复制代码 
+onClick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147599#"><IMG alt=复制代码 
+src="icon_copy.gif"></a></div></div>
+<ol class=dp-j>
+<li><span><span>&lt;property&nbsp;name=</span><span 
+class=string>"uniqueResourceName"</span><span>&gt;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span></span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;mysql/news&lt;/value&gt; &nbsp;&nbsp;</span>
+<li><span>&lt;/property&gt;&nbsp;&nbsp;</span></li></ol></div><pre class=java style="DISPLAY: none" name="code">&lt;property name="uniqueResourceName"&gt;   
+	&lt;value&gt;mysql/news&lt;/value&gt;
+&lt;/property&gt;
+</pre><br>上面的代码为每个Datasource配置了一个唯一的名称，名称不允许相同，否则将会使用同一个datasource，而不会出现异常。 
+<br><br>另外在配置文件中定义了Atomikos的事务管理器，并在Spring的JtaTransactionManager中引用 <br>
+<div class=dp-highlighter>
+<div class=bar>
+<div class=tools>Java代码 <a title=复制代码 
+onClick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147599#"><IMG alt=复制代码 
+src="icon_copy.gif"></a></div></div>
+<ol class=dp-j>
+<li><span><span>&lt;bean&nbsp;id=</span><span 
+class=string>"atomikosTransactionManager"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"com.atomikos.icatch.jta.UserTransactionManager"</span><span>&nbsp;init-method=</span><span 
+class=string>"init"</span><span>&nbsp;destroy-method=</span><span 
+class=string>"close"</span><span>&gt; &nbsp;&nbsp;</span></span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"forceShutdown"</span><span>&gt;&lt;value&gt;</span><span 
+class=keyword>true</span><span>&lt;/value&gt;&lt;/property&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"atomikosUserTransaction"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"com.atomikos.icatch.jta.UserTransactionImp"</span><span>&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"transactionTimeout"</span><span>&nbsp;value=</span><span 
+class=string>"300"</span><span>/&gt;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean&nbsp;id=</span><span 
+class=string>"springTransactionManager"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"org.springframework.transaction.jta.JtaTransactionManager"</span><span>&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"transactionManager"</span><span>&gt;&lt;ref&nbsp;bean=</span><span 
+class=string>"atomikosTransactionManager"</span><span>&nbsp;&nbsp;/&gt;&lt;/property&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"userTransaction"</span><span>&gt;&lt;ref&nbsp;bean=</span><span 
+class=string>"atomikosUserTransaction"</span><span>&nbsp;&nbsp;/&gt;&lt;/property&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt;&nbsp;&nbsp;</span></li></ol></div><pre class=java style="DISPLAY: none" name="code">&lt;bean id="atomikosTransactionManager" class="com.atomikos.icatch.jta.UserTransactionManager" init-method="init" destroy-method="close"&gt;
+		&lt;property name="forceShutdown"&gt;&lt;value&gt;true&lt;/value&gt;&lt;/property&gt;
+	&lt;/bean&gt;
+	
+	&lt;bean id="atomikosUserTransaction" class="com.atomikos.icatch.jta.UserTransactionImp"&gt;
+		&lt;property name="transactionTimeout" value="300"/&gt; 
+	&lt;/bean&gt;
+
+	&lt;bean id="springTransactionManager" class="org.springframework.transaction.jta.JtaTransactionManager"&gt;
+		&lt;property name="transactionManager"&gt;&lt;ref bean="atomikosTransactionManager"  /&gt;&lt;/property&gt;
+		&lt;property name="userTransaction"&gt;&lt;ref bean="atomikosUserTransaction"  /&gt;&lt;/property&gt;
+	&lt;/bean&gt;
+</pre><br><br>其它的代码没什么特别，和JOTM配置基本相同，JdbcTemplate，DAO，Service，事务代理等等.... 
+<br><br>仍然使用TestXa.java，修改成引用ApplicationContext-atomikos.xml的上下文配置 <br>
+<div class=dp-highlighter>
+<div class=bar>
+<div class=tools>Java代码 <a title=复制代码 
+onClick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://tom-duan.javaeye.com/blog/147599#"><IMG alt=复制代码 
+src="icon_copy.gif"></a></div></div>
+<ol class=dp-j>
+<li><span><span 
+class=keyword>protected</span><span>&nbsp;String[]&nbsp;getConfigLocations()&nbsp;{ 
+&nbsp;&nbsp;</span></span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;</span><span 
+class=comment>//return&nbsp;new&nbsp;String[]&nbsp;{&nbsp;"classpath:ApplicationContext-jotm.xml"&nbsp;}; 
+</span><span>&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;</span><span class=keyword>return</span><span>&nbsp;</span><span 
+class=keyword>new</span><span>&nbsp;String[]&nbsp;{&nbsp;</span><span 
+class=string>"classpath:ApplicationContext-atomikos.xml"</span><span>&nbsp;}; 
+&nbsp;&nbsp;</span>
+<li><span>}&nbsp;&nbsp;</span></li></ol></div><pre class=java style="DISPLAY: none" name="code">protected String[] getConfigLocations() {
+	//return new String[] { "classpath:ApplicationContext-jotm.xml" };
+	return new String[] { "classpath:ApplicationContext-atomikos.xml" };
+}
+</pre><br><br>运行test，然后查看数据库状态， <br>然后修改方法参数使其不违反数据库约束，再运行Test观察数据库 ：）。 <br></div><!--EndFragment--></div>
+</div>
+</div>
+</div>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</body>
+</html>

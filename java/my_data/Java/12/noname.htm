@@ -1,0 +1,228 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<HTML>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>如何在Java应用程序中实现copy图像功能</title>
+<LINK 
+href="cnsdn.ico" type=image/x-icon rel=icon>
+<LINK 
+href="cnsdn.ico" type=image/x-icon 
+rel="shortcut icon">
+<LINK href="cnsdn.css" type=text/css 
+rel=stylesheet>
+<LINK href="xmenu.css" type=text/css rel=stylesheet>
+</HEAD>
+
+<BODY leftMargin=0 topMargin=0 scroll=yes>
+<TABLE cellSpacing=1 cellPadding=0 width=770 bgColor=#5988b8 border=0>
+  <TBODY>
+    <TR bgColor=#ffffff>
+      <TD><TABLE height=151 cellSpacing=0 cellPadding=0 width=760 align=center border=0>
+          <TBODY>
+            <TR bgColor=#ffffff>
+              <TD vAlign=top align=center bgColor=#ffffff><TABLE cellSpacing=3 cellPadding=2 width=750 border=0>
+                  <TBODY>
+                    <TR height=100>
+                      <TD><!--StartFragment--><FONT id=zoom>用Java开发图形应用程序的朋友一定遇到过如何在程序中实现复制图像的功能。在jdk1.4以前，java本身就支持将程序中文字串复制给其它的非java应用程序使用，而将程序中的图像复制到非java应用程序简直难上加难。只到jdk1.4出来，这个问题才得以解决。<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        一般我们开发java 
+                        application界面，主要用swing图形包。几乎所有的swing控件都是由JComponent继承而来的。如果我们要取得JComponent的图像，可以用以下方式：<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        Rectangle rect =
+                         
+                          comp.getBounds();<BR>
+                        BufferedImage bufImage = new 
+                        BufferedImage(rect.width,<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rect.height,<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BufferedImage.TYPE_INT_RGB);<BR>
+                        Graphics 
+                        g = bufImage.getGraphics();<BR>
+                        g.translate(-rect.x, 
+                        -rect.y);<BR>
+                        comp.paint(g);<BR>
+                        这样的话，图像就保存到BufferedImage对象当中了。<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        现在来看如何将这个BufferedImage复制到系统clipboard中。要做复制功能，一般是继承TransferHandler类，实现Transferable接口，　这样你的复制内容才能传到系统clipboard,为此我们来写一个ImageSelection类:<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        /**<BR>
+                        * 
+                        &lt;p&gt;Copyright: Copyright (c) 2002&lt;/p&gt;<BR>
+                        * @author Turbo Chen<BR>
+                        * 
+                        @version 1.00<BR>
+                        */<BR>
+                        import java.awt.*;<BR>
+                        import java.awt.image.*;<BR>
+                        import 
+                        java.awt.datatransfer.*;<BR>
+                        import javax.swing.*;<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        public class 
+                        ImageSelection extends TransferHandler<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;implements 
+                        Transferable<BR>
+                        {<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        &nbsp;&nbsp;private static final DataFlavor flavors[] 
+                        =<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{DataFlavor.imageFlavor};<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        &nbsp;&nbsp;private Image 
+                        image;<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        &nbsp;&nbsp;public int getSourceActions(JComponent c) 
+                        {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;return TransferHandler.COPY;<BR>
+                        &nbsp;&nbsp;}<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        &nbsp;&nbsp;public boolean 
+                        canImport(JComponent comp, DataFlavor<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;flavor[]) {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;for (int i=0, 
+                        n=flavor.length; i&lt;n; i++) {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if (flavor[i].equals(flavors[0])) 
+                        {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return true;<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;return 
+                        false;<BR>
+                        &nbsp;&nbsp;}<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        //将图像复制到Image对象.<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        &nbsp;&nbsp;public 
+                        Transferable createTransferable(JComponent<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;comp) {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;// Clear 
+                        clip<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;image = null;<BR>&nbsp;&nbsp;&nbsp;&nbsp;Icon icon =
+                           null;<BR>
+                        Rectangle rect = 
+                        comp.getBounds();<BR>
+                        BufferedImage bufImage = new 
+                        BufferedImage(rect.width,<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rect.height,<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BufferedImage.TYPE_INT_RGB);<BR>
+                        Graphics 
+                        g = bufImage.getGraphics();<BR>
+                        &nbsp;&nbsp;comp.paint(g);<BR>
+                        <BR>
+                        <BR>
+                        <BR>&nbsp;&nbsp;&nbsp;&nbsp;if (bufImage !=
+                          
+                         null ) {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;image = bufImage;<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return 
+                        this;<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;return null;<BR>
+                        &nbsp;&nbsp;}<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        &nbsp;&nbsp;// 
+                        Transferable<BR>
+                        &nbsp;&nbsp;public Object getTransferData(DataFlavor flavor) {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;if 
+                        (isDataFlavorSupported(flavor)) {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return image;<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;return 
+                        null;<BR>
+                        &nbsp;&nbsp;}<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        &nbsp;&nbsp;public DataFlavor[] getTransferDataFlavors() 
+                        {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;return flavors;<BR>
+                        &nbsp;&nbsp;}<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        &nbsp;&nbsp;public boolean 
+                        isDataFlavorSupported(DataFlavor<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;flavor) {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;return 
+                        flavor.equals(flavors[0]);<BR>
+                        &nbsp;&nbsp;}<BR>
+                        }<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        利用这个类，就可以轻松的将JComponent图像复制到系统clipboard了.怎么使用呢,再来看看下面的代码：<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;final 
+                        Clipboard clipboard =<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;kit.getSystemClipboard();<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;Icon 
+                        icon = new ImageIcon("myphoto.jpg");<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;final JLabel label = new 
+                        JLabel(icon);<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;label.setTransferHandler(new 
+                        ImageSelection());<BR>
+                        <BR>
+                        <BR>
+                        <BR>&nbsp;&nbsp;&nbsp;&nbsp;JButton copy =
+                           new JButton("Label 
+                        Copy");<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;copy.addActionListener(new ActionListener() {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;public 
+                        void actionPerformed(ActionEvent e) {<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransferHandler handler 
+                        =<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;label.getTransferHandler();<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;handler.exportToClipboard(label, 
+                        clipboard,<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TransferHandler.COPY);<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<BR>
+                        &nbsp;&nbsp;&nbsp;&nbsp;});<BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        <BR>
+                        在你的程序中，要有一个JFrame, 
+                        加上一个JLabel,一个JButton,将上面的代码加进入，你就可以在你的程序中看到图像如何复制到系统clipboard了. </FONT><!--EndFragment--></TD>
+                    </TR>
+                  </TBODY>
+                </TABLE></TD>
+            </TR>
+          </TBODY>
+        </TABLE></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

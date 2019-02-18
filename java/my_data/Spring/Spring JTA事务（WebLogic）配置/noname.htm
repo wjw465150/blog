@@ -1,0 +1,242 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html dir="ltr" xml:lang="zh-CN" xmlns="http://www.w3.org/1999/xhtml"><head><title>Spring JTA事务（WebLogic）配置</title><link 
+href="favicon.ico" type=image/x-icon rel="shortcut icon"><link 
+title=K_Flex href="rss" type=application/rss+xml rel=alternate><link 
+media=screen href="blog.css_1244638099" 
+type=text/css rel=stylesheet><link media=screen 
+href="green.css_1235723792" 
+type=text/css rel=stylesheet>
+<link media=screen 
+href="SyntaxHighlighter.css_1201588027" 
+type=text/css rel=stylesheet>
+<style>
+    div#main {background-color: transparent; border: 0; padding: 0px; width: 740px;}
+  </style>
+<link media=screen 
+href="ui.css_1222156967" 
+type=text/css rel=stylesheet>
+<style type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</style>
+
+<style type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</style>
+
+<style type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</style>
+
+<style type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</style>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+
+<body>
+
+<div id=page>
+
+<div class=clearfix id=content>
+
+<div id=main>
+
+<div class=blog_main><!--StartFragment-->
+<div class=blog_title><h3 class=type_reprint title=转载><a href="http://keren.javaeye.com/blog/409699">Spring 
+JTA事务（WebLogic）配置</a></h3><strong>关键字: spring jta weblogic</strong> </div>
+<div class=blog_content>转：<a 
+href="http://www.blogjava.net/luoqx/articles/16447.html" 
+target=_blank>http://www.blogjava.net/luoqx/articles/16447.html</a> <br>&nbsp; 
+项目组开发服务器使用weblogic，应用服务器上配置了数据源，每个人开发使用eclipse，每人调试程序都使用本机，所以调试使用的服务是跟eclipse的tomcat插件，数据源可以使用tomcat的配置的和weblogic同名的数据源，可是JTA 
+tomcat不支持。 <br>&nbsp; 
+因为整个项目组使用统一的配置管理，spring的applicationContext.xml大家都相同，每天还要做每日构建，部署到服务器上也与配置管理上的文件相同，所以想是否可以将数据源和JTAmanager配置成远程的。 
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+查找spring官方文档，太简单没有这方面描述，上网google了半天，没找到（奇怪？其实后来想想也不奇怪，大家要么使用本地数据源（开发调试），要么使用应用服务的数据源也是在同一应用服务器上，而不是在远程使用（部署的生产环境）。），所以干脆看看源码算了。 
+<br>&nbsp;&nbsp; 已知如下配置可以访问到同一应用服务器的jndi数据源 <br>
+<div class=dp-highlighter>
+<div class=bar>
+<div class=tools>Java代码 <a title=复制代码 
+onClick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://keren.javaeye.com/blog/409699#"><IMG alt=复制代码 
+src="icon_copy.gif"></a></div></div>
+<ol class=dp-j>
+<li><span><span>&lt;bean&nbsp;id=</span><span 
+class=string>"dataSource"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"org.springframework.jndi.JndiObjectFactoryBean"</span><span>&gt; 
+&nbsp;&nbsp;</span></span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"jndiName"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;jdbc/cqccms&lt;/value&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&lt;/bean&gt;&nbsp;&nbsp;</span></li></ol></div><pre class=java style="DISPLAY: none" name="code">&lt;bean id="dataSource" class="org.springframework.jndi.JndiObjectFactoryBean"&gt;
+    &lt;property name="jndiName"&gt;
+        &lt;value&gt;jdbc/cqccms&lt;/value&gt;
+    &lt;/property&gt;
+ &lt;/bean&gt;</pre><br>&nbsp;&nbsp;&nbsp; 
+记得当初使用jndi时可以远程访问写过client程序，主要除了要知道jndi名，还要设置jndi环境（Environment），所以查找一下JndiObjectFactoryBean的源代码，看看有没有设置jndi环境的方法，果然有setJndiEnvironment方法参数为properties，可以了，如下配置就能访问远程数据源了 
+<br>
+<div class=dp-highlighter>
+<div class=bar>
+<div class=tools>Java代码 <a title=复制代码 
+onClick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://keren.javaeye.com/blog/409699#"><IMG alt=复制代码 
+src="icon_copy.gif"></a></div></div>
+<ol class=dp-j>
+<li><span><span>&lt;bean&nbsp;id=</span><span 
+class=string>"dataSource"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"org.springframework.jndi.JndiObjectFactoryBean"</span><span>&gt; 
+&nbsp;&nbsp;</span></span>
+<li><span>&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"jndiName"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&lt;value&gt;jdbc/cqccms&lt;/value&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&lt;/property&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"jndiEnvironment"</span><span>&gt;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;props&gt;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</span><span 
+class=string>"java.naming.factory.initial"</span><span>&gt;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;weblogic.jndi.WLInitialContextFactory&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/prop&gt;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</span><span 
+class=string>"java.naming.provider.url"</span><span>&gt;t3:</span><span 
+class=comment>//172.16.101.42:7001&lt;/prop&gt;&nbsp; 
+</span><span>&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</span><span 
+class=string>"java.naming.security.principal"</span><span>&gt;weblogic&lt;/prop&gt;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</span><span 
+class=string>"java.naming.security.credentials"</span><span>&gt;weblogic&lt;/prop&gt;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/props&gt;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&lt;/bean&gt;&nbsp;&nbsp;</span></li></ol></div><pre class=java style="DISPLAY: none" name="code">&lt;bean id="dataSource" class="org.springframework.jndi.JndiObjectFactoryBean"&gt;
+ &lt;property name="jndiName"&gt;
+  &lt;value&gt;jdbc/cqccms&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property name="jndiEnvironment"&gt; 
+     &lt;props&gt; 
+        &lt;prop key="java.naming.factory.initial"&gt; 
+          weblogic.jndi.WLInitialContextFactory 
+        &lt;/prop&gt; 
+        &lt;prop key="java.naming.provider.url"&gt;t3://172.16.101.42:7001&lt;/prop&gt; 
+        &lt;prop key="java.naming.security.principal"&gt;weblogic&lt;/prop&gt; 
+        &lt;prop key="java.naming.security.credentials"&gt;weblogic&lt;/prop&gt; 
+     &lt;/props&gt;    
+   &lt;/property&gt; 
+  &lt;/bean&gt;</pre>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>&nbsp;&nbsp; 
+不过要记得把weblogic.jar放到自己应用的lib下，要不找不到weblogic.jndi.WLInitialContextFactory类。 
+<br>&nbsp;&nbsp; 
+数据源搞定了，测试一下果真好用，不过jta对象远程访问好像没那么顺利，同理查看org.springframework.transaction.jta.JtaTransactionManager类，没有发现上述方法，不过看到了setJndiTemplate()方法，也不错现配置一个jndiTemplate,如下： 
+<br>
+<div class=dp-highlighter>
+<div class=bar>
+<div class=tools>Java代码 <a title=复制代码 
+onClick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://keren.javaeye.com/blog/409699#"><IMG alt=复制代码 
+src="icon_copy.gif"></a></div></div>
+<ol class=dp-j>
+<li><span><span>&lt;bean&nbsp;id=</span><span 
+class=string>"jndiTemplate"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"org.springframework.jndi.JndiTemplate"</span><span>&nbsp;singleton=</span><span 
+class=string>"true"</span><span>&nbsp;&nbsp;</span></span>
+<li><span>&nbsp;&nbsp;lazy-init=</span><span 
+class=string>"default"</span><span>&nbsp;autowire=</span><span 
+class=string>"default"</span><span>&nbsp;dependency-check=</span><span 
+class=string>"default"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"environment"</span><span>&gt;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;props&gt;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</span><span 
+class=string>"java.naming.factory.initial"</span><span>&gt;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;weblogic.jndi.WLInitialContextFactory&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/prop&gt;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</span><span 
+class=string>"java.naming.provider.url"</span><span>&gt;t3:</span><span 
+class=comment>//172.16.101.42:7001&lt;/prop&gt;&nbsp; 
+</span><span>&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</span><span 
+class=string>"java.naming.security.principal"</span><span>&gt;weblogic&lt;/prop&gt;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prop&nbsp;key=</span><span 
+class=string>"java.naming.security.credentials"</span><span>&gt;weblogic&lt;/prop&gt;&nbsp; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/props&gt;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&lt;/property&gt;&nbsp; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&lt;/bean&gt;&nbsp;&nbsp;</span></li></ol></div><pre class=java style="DISPLAY: none" name="code">&lt;bean id="jndiTemplate" class="org.springframework.jndi.JndiTemplate" singleton="true"
+  lazy-init="default" autowire="default" dependency-check="default"&gt;
+  &lt;property name="environment"&gt; 
+     &lt;props&gt; 
+        &lt;prop key="java.naming.factory.initial"&gt; 
+          weblogic.jndi.WLInitialContextFactory 
+        &lt;/prop&gt; 
+        &lt;prop key="java.naming.provider.url"&gt;t3://172.16.101.42:7001&lt;/prop&gt; 
+        &lt;prop key="java.naming.security.principal"&gt;weblogic&lt;/prop&gt; 
+        &lt;prop key="java.naming.security.credentials"&gt;weblogic&lt;/prop&gt; 
+     &lt;/props&gt;    
+   &lt;/property&gt; 
+ &lt;/bean&gt;</pre>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>&nbsp; 然后在配置一下transactionManager,如下 <br>
+<div class=dp-highlighter>
+<div class=bar>
+<div class=tools>Java代码 <a title=复制代码 
+onClick="dp.sh.Toolbar.CopyToClipboard(this);return false;" 
+href="http://keren.javaeye.com/blog/409699#"><IMG alt=复制代码 
+src="icon_copy.gif"></a></div></div>
+<ol class=dp-j>
+<li><span><span>&lt;bean&nbsp;id=</span><span 
+class=string>"transactionManager"</span><span>&nbsp;</span><span 
+class=keyword>class</span><span>=</span><span 
+class=string>"org.springframework.transaction.jta.JtaTransactionManager"</span><span>&nbsp;singleton=</span><span 
+class=string>"true"</span><span>&nbsp;&nbsp;</span></span>
+<li><span>&nbsp;&nbsp;lazy-init=</span><span 
+class=string>"default"</span><span>&nbsp;autowire=</span><span 
+class=string>"default"</span><span>&nbsp;dependency-check=</span><span 
+class=string>"default"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"jndiTemplate"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&lt;ref&nbsp;local=</span><span 
+class=string>"jndiTemplate"</span><span>&nbsp;/&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&lt;property&nbsp;name=</span><span 
+class=string>"userTransactionName"</span><span>&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&nbsp;&lt;value&gt;weblogic/transaction/UserTransaction&lt;/value&gt; 
+&nbsp;&nbsp;</span>
+<li><span>&nbsp;&nbsp;&lt;/property&gt; &nbsp;&nbsp;</span>
+<li><span>&nbsp;&lt;/bean&gt;&nbsp;&nbsp;</span></li></ol></div><pre class=java style="DISPLAY: none" name="code">&lt;bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager" singleton="true"
+  lazy-init="default" autowire="default" dependency-check="default"&gt;
+  &lt;property name="jndiTemplate"&gt;
+   &lt;ref local="jndiTemplate" /&gt;
+  &lt;/property&gt;
+  &lt;property name="userTransactionName"&gt;
+   &lt;value&gt;weblogic/transaction/UserTransaction&lt;/value&gt;
+  &lt;/property&gt;
+ &lt;/bean&gt;</pre><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 不过JtaTransactionManager默认找jndi 
+name为UserTransaction的jta对象，在同一应用服务器上可以，远程访问不到，后直接查看weblogic的jndi树找到这个jndi名weblogic/transaction/UserTransaction，配置上测试果然成功。 
+</div><!--EndFragment--></div>
+</div>
+</div>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</div>
+</body>

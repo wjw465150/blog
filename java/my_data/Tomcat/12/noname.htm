@@ -1,0 +1,1093 @@
+<!-- saved from url=http://tomcat.apache.org/tomcat-6.0-doc/cluster-howto.html -->
+<script>
+window.onerror = new Function("return(false);")
+</script><!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<HTML><HEAD><TITLE>Tomcat6-Clustering</TITLE>
+<STYLE type=text/css media=print>
+			.noPrint {display: none;}
+			td#mainBody {width: 100%;}
+		</STYLE>
+</HEAD>
+
+<BODY text=#000000 vLink=#525d76 aLink=#525d76 link=#525d76 bgColor=#ffffff>
+
+<TABLE cellSpacing=4 width="100%" border=0>
+
+<TBODY>
+
+<TR>
+
+<TD id=mainBody vAlign=top align=left width="80%"><!--StartFragment--><H1>Apache Tomcat 6.0</H1>
+<H2>Clustering/Session Replication HOW-TO</H2>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name="Important Note"><STRONG>Important Note</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<P><B>You can also check the <A href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster.html">configuration 
+reference documentation.</A></B> </P></BLOCKQUOTE></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name="For the impatient"><STRONG>For the impatient</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<P>Simply add 
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>&lt;Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"/&gt;</PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>to your 
+<CODE>&lt;Engine&gt;</CODE> or your <CODE>&lt;Host&gt;</CODE> element to enable 
+clustering. 
+<P></P>
+<P>Using the above configuration will enable all-to-all session replication 
+using the <CODE>DeltaManager</CODE> to replicate session deltas. By all-to-all 
+we mean that the session gets replicated to all the other nodes in the cluster. 
+This works great for smaller cluster but we don't recommend it for larger 
+clusters(a lot of tomcat nodes). Also when using the delta manager it will 
+replicate to all nodes, even nodes that don't have the application 
+deployed.<BR>To get around this problem, you'll want to use the BackupManager. 
+This manager only replicates the session data to one backup node, and only to 
+nodes that have the application deployed. Downside of the BackupManager: not 
+quite as battle tested as the delta manager. <BR>Here are some of the important 
+default values:<BR>1. Multicast address is 228.0.0.4<BR>2. Multicast port is 
+45564 (the port and the address together determine cluster membership.<BR>3. The 
+IP broadcasted is 
+<CODE>java.net.InetAddress.getLocalHost().getHostAddress()</CODE> (make sure you 
+don't broadcast 127.0.0.1, this is a common error)<BR>4. The TCP port listening 
+for replication messages is the first available server socket in range 
+<CODE>4000-4100</CODE><BR>5. Two listeners are configured 
+<CODE>ClusterSessionListener</CODE> and 
+<CODE>JvmRouteSessionIDBinderListener</CODE><BR>6. Two interceptors are 
+configured <CODE>TcpFailureDetector</CODE> and 
+<CODE>MessageDispatch15Interceptor</CODE><BR>The following is the default 
+cluster configuration:<BR>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>        &lt;Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"
+                 channelSendOptions="8"&gt;
+
+          &lt;Manager className="org.apache.catalina.ha.session.DeltaManager"
+                   expireSessionsOnShutdown="false"
+                   notifyListenersOnReplication="true"/&gt;
+
+          &lt;Channel className="org.apache.catalina.tribes.group.GroupChannel"&gt;
+            &lt;Membership className="org.apache.catalina.tribes.membership.McastService"
+                        address="228.0.0.4"
+                        port="45564"
+                        frequency="500"
+                        dropTime="3000"/&gt;
+            &lt;Receiver className="org.apache.catalina.tribes.transport.nio.NioReceiver"
+                      address="auto"
+                      port="4000"
+                      autoBind="100"
+                      selectorTimeout="5000"
+                      maxThreads="6"/&gt;
+
+            &lt;Sender className="org.apache.catalina.tribes.transport.ReplicationTransmitter"&gt;
+              &lt;Transport className="org.apache.catalina.tribes.transport.nio.PooledParallelSender"/&gt;
+            &lt;/Sender&gt;
+            &lt;Interceptor className="org.apache.catalina.tribes.group.interceptors.TcpFailureDetector"/&gt;
+            &lt;Interceptor className="org.apache.catalina.tribes.group.interceptors.MessageDispatch15Interceptor"/&gt;
+          &lt;/Channel&gt;
+
+          &lt;Valve className="org.apache.catalina.ha.tcp.ReplicationValve"
+                 filter=""/&gt;
+          &lt;Valve className="org.apache.catalina.ha.session.JvmRouteBinderValve"/&gt;
+
+          &lt;Deployer className="org.apache.catalina.ha.deploy.FarmWarDeployer"
+                    tempDir="/tmp/war-temp/"
+                    deployDir="/tmp/war-deploy/"
+                    watchDir="/tmp/war-listen/"
+                    watchEnabled="false"/&gt;
+
+          &lt;ClusterListener className="org.apache.catalina.ha.session.JvmRouteSessionIDBinderListener"/&gt;
+          &lt;ClusterListener className="org.apache.catalina.ha.session.ClusterSessionListener"/&gt;
+        &lt;/Cluster&gt;    
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P></P>
+<P>Will cover this section in more detail later in this 
+document.</P></BLOCKQUOTE></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name="Cluster Basics"><STRONG>Cluster Basics</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<P>To run session replication in your Tomcat 6.0 container, the following steps 
+should be completed:</P>
+<UL>
+<LI>All your session attributes must implement <CODE>java.io.Serializable</CODE> 
+
+<LI>Uncomment the <CODE>Cluster</CODE> element in server.xml 
+<LI>If you have defined custom cluster valves, make sure you have the 
+<CODE>ReplicationValve</CODE> defined as well under the Cluster element in 
+server.xml 
+<LI>If your Tomcat instances are running on the same machine, make sure the 
+<CODE>tcpListenPort</CODE> attribute is unique for each instance, in most cases 
+Tomcat is smart enough to resolve this on it's own by autodetecting available 
+ports in the range 4000-4100 
+<LI>Make sure your <CODE>web.xml</CODE> has the 
+<CODE>&lt;distributable/&gt;</CODE> element or set at your <CODE>&lt;Context 
+distributable="true" /&gt;</CODE> 
+<LI>If you are using mod_jk, make sure that jvmRoute attribute is set at your 
+Engine <CODE>&lt;Engine name="Catalina" jvmRoute="node01" &gt;</CODE> and that 
+the jvmRoute attribute value matches your worker name in workers.properties 
+<LI>Make sure that all nodes have the same time and sync with NTP service! 
+<LI>Make sure that your loadbalancer is configured for sticky session mode. 
+</LI></UL>
+<P>Load balancing can be achieved through many techniques, as seen in the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/balancer-howto.html">Load Balancing</A> chapter.</P>
+<P>Note: Remember that your session state is tracked by a cookie, so your URL 
+must look the same from the out side otherwise, a new session will be 
+created.</P>
+<P>Note: Clustering support currently requires the JDK version 1.5 or later.</P>
+<P>The Cluster module uses the Tomcat JULI logging framework, so you can 
+configure logging through the regular logging.properties file. To track 
+messages, you can enable logging on the 
+key:<CODE>org.apache.catalina.tribes.MESSAGES</CODE></P></BLOCKQUOTE></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name=Overview><STRONG>Overview</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<P>To enable session replication in Tomcat, three different paths can be 
+followed to achieve the exact same thing:</P>
+<OL>
+<LI>Using session persistence, and saving the session to a shared file system 
+(PersistenceManager + FileStore) 
+<LI>Using session persistence, and saving the session to a shared database 
+(PersistenceManager + JDBCStore) 
+<LI>Using in-memory-replication, using the SimpleTcpCluster that ships with 
+Tomcat 6 (lib/catalina-tribes.jar + lib/catalina-ha.jar) </LI></OL>
+<P>In this release of session replication, Tomcat can perform an all-to-all 
+replication of session state using the <CODE>DeltaManager</CODE> or perform 
+backup replication to only one node using the <CODE>BackupManager</CODE>. The 
+all-to-all replication is an algorithm that is only efficient when the clusters 
+are small. For larger clusters, to use a primary-secondary session replication 
+where the session will only be stored at one backup server simply setup the 
+BackupManager. <BR>Currently you can use the domain worker attribute (mod_jk 
+&gt; 1.2.8) to build cluster partitions with the potential of having a more 
+scaleable cluster solution with the DeltaManager(you'll need to configure the 
+domain interceptor for this). In order to keep the network traffic down in an 
+all-to-all environment, you can split your cluster into smaller groups. This can 
+be easily achieved by using different multicast addresses for the different 
+groups. A very simple setup would look like this: </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>        DNS Round Robin
+               |
+         Load Balancer
+          /           \
+      Cluster1      Cluster2
+      /     \        /     \
+  Tomcat1 Tomcat2  Tomcat3 Tomcat4
+</PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>What is important to mention here, is that session replication is only the 
+beginning of clustering. Another popular concept used to implement clusters is 
+farming, ie, you deploy your apps only to one server, and the cluster will 
+distribute the deployments across the entire cluster. This is all capabilities 
+that can go into with the FarmWarDeployer (s. cluster example at 
+<CODE>server.xml</CODE>)</P>
+<P>In the next section will go deeper into how session replication works and how 
+to configure it.</P></BLOCKQUOTE></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name="Cluster Information"><STRONG>Cluster 
+Information</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<P>Membership is established using multicast heartbeats. Hence, if you wish to 
+subdivide your clusters, you can do this by changing the multicast IP address or 
+port in the <CODE>&lt;Membership&gt;</CODE> element. </P>
+<P>The heartbeat contains the IP address of the Tomcat node and the TCP port 
+that Tomcat listens to for replication traffic. All data communication happens 
+over TCP. </P>
+<P>The <CODE>ReplicationValve</CODE> is used to find out when the request has 
+been completed and initiate the replication, if any. Data is only replicated if 
+the session has changed (by calling setAttribute or removeAttribute on the 
+session). </P>
+<P>One of the most important performance considerations is the synchronous 
+versus asynchronous replication. In a synchronous replication mode the request 
+doesn't return until the replicated session has been sent over the wire and 
+reinstantiated on all the other cluster nodes. Synchronous vs asynchronous is 
+configured using the <CODE>channelSendOptions</CODE> flag and is an integer 
+value. The default value for the <CODE>SimpleTcpCluster/DeltaManager</CODE> 
+combo is 8, which is asynchronous. You can read more on the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/tribes/introduction.html">send flag(overview)</A> or the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/api/org/apache/catalina/tribes/Channel.html">send 
+flag(javadoc)</A>. During async replication, the request is returned before the 
+data has been replicated. async replication yields shorter request times, and 
+synchronous replication guarantees the session to be replicated before the 
+request returns. </P></BLOCKQUOTE></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name="Bind session after crash to failover node"><STRONG>Bind session after 
+crash to failover node</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<P>If you are using mod_jk and not using sticky sessions or for some reasons 
+sticky session don't work, or you are simply failing over, the session id will 
+need to be modified as it previously contained the worker id of the previous 
+tomcat (as defined by jvmRoute in the Engine element). To solve this, we will 
+use the JvmRouteBinderValve. </P>
+<P>The JvmRouteBinderValve rewrites the session id to ensure that the next 
+request will remain sticky (and not fall back to go to random nodes since the 
+worker is no longer available) after a fail over. The valve rewrites the 
+JSESSIONID value in the cookie with the same name. Not having this valve in 
+place, will make it harder to ensure stickyness in case of a failure for the 
+mod_jk module. </P>
+<P>By default, if no valves are configured, the JvmRouteBinderValve is added on. 
+The cluster message listener called JvmRouteSessionIDBinderListener is also 
+defined by default and is used to actually rewrite the session id on the other 
+nodes in the cluster once a fail over has occurred. Remember, if you are adding 
+your own valves or cluster listeners in server.xml then the defaults are no 
+longer valid, make sure that you add in all the appropriate valves and listeners 
+as defined by the default. </P>
+<P><B>Hint:</B><BR>With attribute <I>sessionIdAttribute</I> you can change the 
+request attribute name that included the old session id. Default attribuite name 
+is <I>org.apache.catalina.cluster.session.JvmRouteOrignalSessionID</I>. </P>
+<P><B>Trick:</B><BR>You can enable this mod_jk turnover mode via JMX before you 
+drop a node to all backup nodes! Set enable true on all JvmRouteBinderValve 
+backups, disable worker at mod_jk and then drop node and restart it! Then enable 
+mod_jk Worker and disable JvmRouteBinderValves again. This use case means that 
+only requested session are migrated. </P></BLOCKQUOTE></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name="Configuration Example"><STRONG>Configuration 
+Example</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>        &lt;Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"
+                 channelSendOptions="6"&gt;
+
+          &lt;Manager className="org.apache.catalina.ha.session.BackupManager"
+                   expireSessionsOnShutdown="false"
+                   notifyListenersOnReplication="true"
+                   mapSendOptions="6"/&gt;
+          &lt;!--
+          &lt;Manager className="org.apache.catalina.ha.session.DeltaManager"
+                   expireSessionsOnShutdown="false"
+                   notifyListenersOnReplication="true"/&gt;
+          --&gt;        
+          &lt;Channel className="org.apache.catalina.tribes.group.GroupChannel"&gt;
+            &lt;Membership className="org.apache.catalina.tribes.membership.McastService"
+                        address="228.0.0.4"
+                        port="45564"
+                        frequency="500"
+                        dropTime="3000"/&gt;
+            &lt;Receiver className="org.apache.catalina.tribes.transport.nio.NioReceiver"
+                      address="auto"
+                      port="5000"
+                      selectorTimeout="100"
+                      maxThreads="6"/&gt;
+
+            &lt;Sender className="org.apache.catalina.tribes.transport.ReplicationTransmitter"&gt;
+              &lt;Transport className="org.apache.catalina.tribes.transport.nio.PooledParallelSender"/&gt;
+            &lt;/Sender&gt;
+            &lt;Interceptor className="org.apache.catalina.tribes.group.interceptors.TcpFailureDetector"/&gt;
+            &lt;Interceptor className="org.apache.catalina.tribes.group.interceptors.MessageDispatch15Interceptor"/&gt;
+            &lt;Interceptor className="org.apache.catalina.tribes.group.interceptors.ThroughputInterceptor"/&gt;
+          &lt;/Channel&gt;
+
+          &lt;Valve className="org.apache.catalina.ha.tcp.ReplicationValve"
+                 filter=".*\.gif;.*\.js;.*\.jpg;.*\.png;.*\.htm;.*\.html;.*\.css;.*\.txt;"/&gt;
+
+          &lt;Deployer className="org.apache.catalina.ha.deploy.FarmWarDeployer"
+                    tempDir="/tmp/war-temp/"
+                    deployDir="/tmp/war-deploy/"
+                    watchDir="/tmp/war-listen/"
+                    watchEnabled="false"/&gt;
+
+          &lt;ClusterListener className="org.apache.catalina.ha.session.ClusterSessionListener"/&gt;
+        &lt;/Cluster&gt;
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>Break it down!! </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>        &lt;Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster"
+                 channelSendOptions="6"&gt;
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>The main element, inside this element all cluster details can be configured. 
+The <CODE>channelSendOptions</CODE> is the flag that is attached to each message 
+sent by the SimpleTcpCluster class or any objects that are invoking the 
+SimpleTcpCluster.send method. The description of the send flags is available at 
+<A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/api/org/apache/catalina/tribes/Channel.html">our 
+javadoc site</A> The <CODE>DeltaManager</CODE> sends information using the 
+SimpleTcpCluster.send method, while the backup manager sends it itself directly 
+through the channel. <BR>For more info, Please visit the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster.html">reference documentation</A> </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>          &lt;Manager className="org.apache.catalina.ha.session.BackupManager"
+                   expireSessionsOnShutdown="false"
+                   notifyListenersOnReplication="true"
+                   mapSendOptions="6"/&gt;
+          &lt;!--
+          &lt;Manager className="org.apache.catalina.ha.session.DeltaManager"
+                   expireSessionsOnShutdown="false"
+                   notifyListenersOnReplication="true"/&gt;
+          --&gt;        
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>This is a template for the manager configuration that will be used if no 
+manager is defined in the &lt;Context&gt; element. In Tomcat 5.x each webapp 
+marked distributable had to use the same manager, this is no longer the case 
+since Tomcat 6 you can define a manager class for each webapp, so that you can 
+mix managers in your cluster. Obviously the managers on one node's application 
+has to correspond with the same manager on the same application on the other 
+node. If no manager has been specified for the webapp, and the webapp is marked 
+&lt;distributable/&gt; Tomcat will take this manager configuration and create a 
+manager instance cloning this configuration. <BR>For more info, Please visit the 
+<A href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster-manager.html">reference documentation</A> </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>          &lt;Channel className="org.apache.catalina.tribes.group.GroupChannel"&gt;
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>The channel element is <A href="http://tomcat.apache.org/tomcat-6.0-doc/tribes/introduction.html">Tribes</A>, the 
+group communication framework used inside Tomcat. This element encapsulates 
+everything that has to do with communication and membership logic. <BR>For more 
+info, Please visit the <A href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster-channel.html">reference 
+documentation</A> </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>            &lt;Membership className="org.apache.catalina.tribes.membership.McastService"
+                        address="228.0.0.4"
+                        port="45564"
+                        frequency="500"
+                        dropTime="3000"/&gt;
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>Membership is done using multicasting. Please note that Tribes also supports 
+static memberships using the <CODE>StaticMembershipInterceptor</CODE> if you 
+want to extend your membership to points beyond multicasting. The address 
+attribute is the multicast address used and the port is the multicast port. 
+These two together create the cluster separation. If you want a QA cluster and a 
+production cluster, the easiest config is to have the QA cluster be on a 
+separate multicast address/port combination the the production cluster.<BR>The 
+membership component broadcasts TCP adress/port of itselt to the other nodes so 
+that communication between nodes can be done over TCP. Please note that the 
+address being broadcasted is the one of the <CODE>Receiver.address</CODE> 
+attribute. <BR>For more info, Please visit the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster-membership.html">reference documentation</A> </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>            &lt;Receiver className="org.apache.catalina.tribes.transport.nio.NioReceiver"
+                      address="auto"
+                      port="5000"
+                      selectorTimeout="100"
+                      maxThreads="6"/&gt;
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>In tribes the logic of sending and receiving data has been broken into two 
+functional components. The Receiver, as the name suggests is responsible for 
+receiving messages. Since the Tribes stack is thread less, (a popular 
+improvement now adopted by other frameworks as well), there is a thread pool in 
+this component that has a maxThreads and minThreads setting.<BR>The address 
+attribute is the host address that will be broadcasted by the membership 
+component to the other nodes. <BR>For more info, Please visit the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster-receiver.html">reference documentation</A> </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>
+            &lt;Sender className="org.apache.catalina.tribes.transport.ReplicationTransmitter"&gt;
+              &lt;Transport className="org.apache.catalina.tribes.transport.nio.PooledParallelSender"/&gt;
+            &lt;/Sender&gt;
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>The sender component, as the name indicates is responsible for sending 
+messages to other nodes. The sender has a shell component, the 
+<CODE>ReplicationTransmitter</CODE> but the real stuff done is done in the sub 
+component, <CODE>Transport</CODE>. Tribes support having a pool of senders, so 
+that messages can be sent in parallel and if using the NIO sender, you can send 
+messages concurrently as well.<BR>Concurrently means one message to multiple 
+senders at the same time and Parallel means multiple messages to multiple 
+senders at the same time. <BR>For more info, Please visit the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster-sender.html">reference documentation</A> </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>            &lt;Interceptor className="org.apache.catalina.tribes.group.interceptors.TcpFailureDetector"/&gt;
+            &lt;Interceptor className="org.apache.catalina.tribes.group.interceptors.MessageDispatch15Interceptor"/&gt;
+            &lt;Interceptor className="org.apache.catalina.tribes.group.interceptors.ThroughputInterceptor"/&gt;
+          &lt;/Channel&gt;
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>Tribes uses a stack to send messages through. Each element in the stack is 
+called an interceptor, and works much like the valves do in the Tomcat servlet 
+container. Using interceptors, logic can be broken into more managable pieces of 
+code. The interceptors configured above are:<BR>TcpFailureDetector - verifies 
+crashed members through TCP, if multicast packets get dropped, this interceptor 
+protects against false positives, ie the node marked as crashed even though it 
+still is alive and running.<BR>MessageDispatch15Interceptor - dispatches 
+messages to a thread (thread pool) to send message 
+asynchrously.<BR>ThroughputInterceptor - prints out simple stats on message 
+traffic.<BR>Please note that the order of interceptors is important. the way 
+they are defined in server.xml is the way they are represented in the channel 
+stack. Think of it as a linked list, with the head being the first most 
+interceptor and the tail the last. <BR>For more info, Please visit the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster-interceptor.html">reference documentation</A> </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>          &lt;Valve className="org.apache.catalina.ha.tcp.ReplicationValve"
+                 filter=".*\.gif;.*\.js;.*\.jpg;.*\.png;.*\.htm;.*\.html;.*\.css;.*\.txt;"/&gt;
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>The cluster uses valves to track requests to web applications, we've 
+mentioned the ReplicationValve and the JvmRouteBinderValve above. The 
+&lt;Cluster&gt; element itself is not part of the pipeline in Tomcat, instead 
+the cluster adds the valve to its parent container. If the &lt;Cluster&gt; 
+elements is configured in the &lt;Engine&gt; element, the valves get added to 
+the engine and so on. <BR>For more info, Please visit the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster-valve.html">reference documentation</A> </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>          &lt;Deployer className="org.apache.catalina.ha.deploy.FarmWarDeployer"
+                    tempDir="/tmp/war-temp/"
+                    deployDir="/tmp/war-deploy/"
+                    watchDir="/tmp/war-listen/"
+                    watchEnabled="false"/&gt;
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>The default tomcat cluster supports farmed deployment, ie, the cluster can 
+deploy and undeploy applications on the other nodes. The state of this component 
+is currently in flux but will be addressed soon. There was a change in the 
+deployment algorithm between Tomcat 5.0 and 5.5 and at that point, the logic of 
+this component changed to where the deploy dir has to match the webapps 
+directory. <BR>For more info, Please visit the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster-deployer.html">reference documentation</A> </P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>          &lt;ClusterListener className="org.apache.catalina.ha.session.ClusterSessionListener"/&gt;
+        &lt;/Cluster&gt;
+    </PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P>Since the SimpleTcpCluster itself is a sender and receiver of the Channel 
+object, components can register themselves as listeners to the SimpleTcpCluster. 
+The listener above <CODE>ClusterSessionListener</CODE> listens for DeltaManager 
+replication messages and applies the deltas to the manager that in turn applies 
+it to the session. <BR>For more info, Please visit the <A 
+href="http://tomcat.apache.org/tomcat-6.0-doc/config/cluster-listener.html">reference documentation</A> 
+</P></BLOCKQUOTE></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name="Cluster Architecture"><STRONG>Cluster 
+Architecture</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<P><B>Component Levels:</B> 
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>         Server
+           |
+         Service
+           |
+         Engine
+           |  \ 
+           |  --- Cluster --*
+           |
+         Host
+           |
+         ------
+        /      \
+     Cluster    Context(1-N)                 
+        |             \
+        |             -- Manager
+        |                   \
+        |                   -- DeltaManager
+        |                   -- BackupManager
+        |
+     ---------------------------
+        |                       \
+      Channel                    \
+    ----------------------------- \
+        |                          \
+     Interceptor_1 ..               \
+        |                            \
+     Interceptor_N                    \
+    -----------------------------      \
+     |          |         |             \
+   Receiver    Sender   Membership       \
+                                         -- Valve
+                                         |      \
+                                         |       -- ReplicationValve
+                                         |       -- JvmRouteBinderValve 
+                                         |
+                                         -- LifecycleListener 
+                                         |
+                                         -- ClusterListener 
+                                         |      \
+                                         |       -- ClusterSessionListener
+                                         |       -- JvmRouteSessionIDBinderListener
+                                         |
+                                         -- Deployer 
+                                                \
+                                                 -- FarmWarDeployer
+      
+      
+</PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P></P></BLOCKQUOTE></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name="How it Works"><STRONG>How it Works</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<P>To make it easy to understand how clustering works, We are gonna take you 
+through a series of scenarios. In the scenario we only plan to use two tomcat 
+instances <CODE>TomcatA</CODE> and <CODE>TomcatB</CODE>. We will cover the 
+following sequence of events:</P>
+<OL>
+<LI><CODE>TomcatA</CODE> starts up 
+<LI><CODE>TomcatB</CODE> starts up (Wait that TomcatA start is complete) 
+<LI><CODE>TomcatA</CODE> receives a request, a session <CODE>S1</CODE> is 
+created. 
+<LI><CODE>TomcatA</CODE> crashes 
+<LI><CODE>TomcatB</CODE> receives a request for session <CODE>S1</CODE> 
+<LI><CODE>TomcatA</CODE> starts up 
+<LI><CODE>TomcatA</CODE> receives a request, invalidate is called on the session 
+(<CODE>S1</CODE>) 
+<LI><CODE>TomcatB</CODE> receives a request, for a new session (<CODE>S2</CODE>) 
+
+<LI><CODE>TomcatA</CODE> The session <CODE>S2</CODE> expires due to inactivity. 
+</LI></OL>
+<P>Ok, now that we have a good sequence, we will take you through exactly what 
+happens in the session repliction code</P>
+<OL>
+<LI><B><CODE>TomcatA</CODE> starts up</B> 
+<P>Tomcat starts up using the standard start up sequence. When the Host object 
+is created, a cluster object is associated with it. When the contexts are 
+parsed, if the distributable element is in place in web.xml Tomcat asks the 
+Cluster class (in this case <CODE>SimpleTcpCluster</CODE>) to create a manager 
+for the replicated context. So with clustering enabled, distributable set in 
+web.xml Tomcat will create a <CODE>DeltaManager</CODE> for that context instead 
+of a <CODE>StandardManager</CODE>. The cluster class will start up a membership 
+service (multicast) and a replication service (tcp unicast). More on the 
+architecture further down in this document. </P>
+<P></P>
+<LI><B><CODE>TomcatB</CODE> starts up</B> 
+<P>When TomcatB starts up, it follows the same sequence as TomcatA did with one 
+exception. The cluster is started and will establish a membership 
+(TomcatA,TomcatB). TomcatB will now request the session state from a server that 
+already exists in the cluster, in this case TomcatA. TomcatA responds to the 
+request, and before TomcatB starts listening for HTTP requests, the state has 
+been transferred from TomcatA to TomcatB. In case TomcatA doesn't respond, 
+TomcatB will time out after 60 seconds, and issue a log entry. The session state 
+gets transferred for each web application that has distributable in its web.xml. 
+Note: To use session replication efficiently, all your tomcat instances should 
+be configured the same. </P>
+<P></P>
+<LI><B><CODE>TomcatA</CODE> receives a request, a session <CODE>S1</CODE> is 
+created.</B> 
+<P>The request coming in to TomcatA is treated exactly the same way as without 
+session replication. The action happens when the request is completed, the 
+<CODE>ReplicationValve</CODE> will intercept the request before the response is 
+returned to the user. At this point it finds that the session has been modified, 
+and it uses TCP to replicata the session to TomcatB. Once the serialized data 
+has been handed off to the operating systems TCP logic, the request returns to 
+the user, back through the valve pipeline. For each request the entire session 
+is replicated, this allows code that modifies attributes in the session without 
+calling setAttribute or removeAttribute to be replicated. a useDirtyFlag 
+configuration parameter can be used to optimize the number of times a session is 
+replicated. </P>
+<P></P>
+<LI><B><CODE>TomcatA</CODE> crashes</B> 
+<P>When TomcatA crashes, TomcatB receives a notification that TomcatA has 
+dropped out of the cluster. TomcatB removes TomcatA from its membership list, 
+and TomcatA will no longer be notified of any changes that occurs in TomcatB. 
+The load balancer will redirect the requests from TomcatA to TomcatB and all the 
+sessions are current. </P>
+<P></P>
+<LI><B><CODE>TomcatB</CODE> receives a request for session <CODE>S1</CODE></B> 
+<P>Nothing exciting, TomcatB will process the request as any other request. </P>
+<P></P>
+<LI><B><CODE>TomcatA</CODE> starts up</B> 
+<P>Upon start up, before TomcatA starts taking new request and making itself 
+available to it will follow the start up sequence described above 1) 2). It will 
+join the cluster, contact TomcatB for the current state of all the sessions. And 
+once it receives the session state, it finishes loading and opens its 
+HTTP/mod_jk ports. So no requests will make it to TomcatA until it has received 
+the session state from TomcatB. </P>
+<P></P>
+<LI><B><CODE>TomcatA</CODE> receives a request, invalidate is called on the 
+session (<CODE>S1</CODE>)</B> 
+<P>The invalidate is call is intercepted, and the session is queued with 
+invalidated sessions. When the request is complete, instead of sending out the 
+session that has changed, it sends out an "expire" message to TomcatB and 
+TomcatB will invalidate the session as well. </P>
+<P></P>
+<LI><B><CODE>TomcatB</CODE> receives a request, for a new session 
+(<CODE>S2</CODE>)</B> 
+<P>Same scenario as in step 3) </P>
+<P></P>
+<LI><CODE>TomcatA</CODE> The session <CODE>S2</CODE> expires due to inactivity. 
+<P>The invalidate is call is intercepted the same was as when a session is 
+invalidated by the user, and the session is queued with invalidated sessions. At 
+this point, the invalidet session will not be replicated across until another 
+request comes through the system and checks the invalid queue. </P>
+<P></P></LI></OL>
+<P>Phuuuhh! :)</P>
+<P><B>Membership</B> Clustering membership is established using very simple 
+multicast pings. Each Tomcat instance will periodically send out a multicast 
+ping, in the ping message the instance will broad cast its IP and TCP listen 
+port for replication. If an instance has not received such a ping within a given 
+timeframe, the member is considered dead. Very simple, and very effective! Of 
+course, you need to enable multicasting on your system. </P>
+<P><B>TCP Replication</B> Once a multicast ping has been received, the member is 
+added to the cluster Upon the next replication request, the sending instance 
+will use the host and port info and establish a TCP socket. Using this socket it 
+sends over the serialized data. The reason I choose TCP sockets is because it 
+has built in flow control and guaranteed delivery. So I know, when I send some 
+data, it will make it there :) </P>
+<P><B>Distributed locking and pages using frames</B> Tomcat does not keep 
+session instances in sync across the cluster. The implementation of such logic 
+would be to much overhead and cause all kinds of problems. If your client 
+accesses the same session simultanously using multiple requests, then the last 
+request will override the other sessions in the cluster. 
+</P></BLOCKQUOTE></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name="Monitoring your Cluster with JMX"><STRONG>Monitoring your Cluster with 
+JMX</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<P>Monitoring is a very important question when you use a cluster. Some of the 
+cluster objects are JMX MBeans </P>
+<P>Add the following parameter to your startup script with Java 5: 
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>set CATALINA_OPTS=\
+-Dcom.sun.management.jmxremote \
+-Dcom.sun.management.jmxremote.port=%my.jmx.port% \
+-Dcom.sun.management.jmxremote.ssl=false \
+-Dcom.sun.management.jmxremote.authenticate=false
+</PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<P></P>
+<P>Activate JMX with JDK 1.4: 
+<OL>
+<LI>Install the compat package 
+<LI>Install the mx4j-tools.jar at common/lib (use the same mx4j version as your 
+tomcat release) 
+<LI>Configure a MX4J JMX HTTP Adaptor at your AJP Connector
+<P></P>
+<DIV align=left>
+<TABLE cellSpacing=4 cellPadding=0 border=0>
+<TBODY>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD bgColor=#ffffff height=1><PRE>&lt;Connector port="${AJP.PORT}" 
+   handler.list="mx"
+   mx.enabled="true" 
+   mx.httpHost="${JMX.HOST}" 
+   mx.httpPort="${JMX.PORT}" 
+   protocol="AJP/1.3" /&gt;
+</PRE></TD>
+<TD width=1 bgColor=#023264><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD></TR>
+<TR>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD>
+<TD bgColor=#023264 height=1><IMG height=1 hspace=0 src="void.gif" 
+width=1 border=0></TD>
+<TD width=1 bgColor=#023264 height=1><IMG height=1 hspace=0 
+src="void.gif" width=1 border=0></TD></TR></TBODY></TABLE></DIV>
+<LI>Start your tomcat and look with your browser to 
+http://${JMX.HOST}:${JMX.PORT} 
+<LI>With the connector parameter <CODE>mx.authMode="basic" mx.authUser="tomcat" 
+mx.authPassword="strange"</CODE> you can control the access! </LI></OL>
+<P></P>
+<P>List of Cluster Mbeans<BR>
+<TABLE cellPadding=5 border=1>
+<TBODY>
+<TR>
+<TH align=middle bgColor=aqua>Name</TH>
+<TH align=middle bgColor=aqua>Description</TH>
+<TH align=middle bgColor=aqua>MBean ObjectName - Engine</TH>
+<TH align=middle bgColor=aqua>MBean ObjectName - Host</TH></TR>
+<TR>
+<TD>Cluster</TD>
+<TD>The complete cluster element</TD>
+<TD><CODE>type=Cluster</CODE></TD>
+<TD><CODE>type=Cluster,host=${HOST}</CODE></TD></TR>
+<TR>
+<TD>DeltaManager</TD>
+<TD>This manager control the sessions and handle session replication </TD>
+<TD><CODE>type=Manager,path=${APP.CONTEXT.PATH}, host=${HOST}</CODE></TD>
+<TD><CODE>type=Manager,path=${APP.CONTEXT.PATH}, host=${HOST}</CODE></TD></TR>
+<TR>
+<TD>ReplicationValve</TD>
+<TD>This valve control the replication to the backup nodes</TD>
+<TD><CODE>type=Valve,name=ReplicationValve</CODE></TD>
+<TD><CODE>type=Valve,name=ReplicationValve,host=${HOST}</CODE></TD></TR>
+<TR>
+<TD>JvmRouteBinderValve</TD>
+<TD>This is a cluster fallback valve to change the Session ID to the current 
+tomcat jvmroute.</TD>
+<TD><CODE>type=Valve,name=JvmRouteBinderValve, 
+path=${APP.CONTEXT.PATH}</CODE></TD>
+<TD><CODE>type=Valve,name=JvmRouteBinderValve,host=${HOST}, 
+path=${APP.CONTEXT.PATH}</CODE></TD></TR></TBODY></TABLE></P></BLOCKQUOTE></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=2 border=0>
+<TBODY>
+<TR>
+<TD bgColor=#525d76><FONT face=arial,helvetica.sanserif color=#ffffff><A 
+name=FAQ><STRONG>FAQ</STRONG></A></FONT></TD></TR>
+<TR>
+<TD>
+<BLOCKQUOTE>
+<P>Please see <A href="http://wiki.apache.org/tomcat/FAQ/Clustering">the 
+clustering section of the FAQ</A>.</P></BLOCKQUOTE></TD></TR></TBODY></TABLE><!--EndFragment--></TD>
+</TR>
+</TBODY>
+</TABLE>
+</BODY>
+</HTML>

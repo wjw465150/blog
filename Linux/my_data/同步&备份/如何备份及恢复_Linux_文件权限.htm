@@ -1,0 +1,109 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>如何备份及恢复 Linux 文件权限</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">你可能听说或碰到过这样的事情：一个系统管理员菜鸟不小心输入”chmod 
+-R 777 
+/”从而导致了巨大的悲剧，使得整个系统遭到了严重的破坏。在日常管理中，我们有许多工具可以用来备份文件权限，如cp、rsync、etckeeper等。如果你使用了这个备份工具，那么你的确不需要担心改变的文件权限问题。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">但如果只是想暂时备份文件权限(而不是文件本身)，例如：为了阻止一些目录的内容被覆盖暂时移除该目录下所有文件写的权限；或是正在排除文件权限问题的过程中需要对文件进行<SPAN 
+class=wp_keywordlink><A title=chmod命令 
+style="CURSOR: pointer; TEXT-DECORATION: none; COLOR: rgb(0,136,219)" 
+href="http://www.codeceo.com/article/chmod-command.html" 
+target=_blank>chmod命令</A></SPAN>操作。在这些情况下，我们可以在原始文件权限改变之前对其进行备份，一会我们需要它的时候再将原始权限还原。在很多情况下，如果你只是想要备份文件的权限，那么完整的文件备份是不必要的。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在Linux上，实际上备份和恢复文件权限使用访问控制列表(ACL)是容易的。ACL根据不同的属主和属组在兼容posix的文件系统上定义了单个文件的权限。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">以下演示如何使用ACL工具备份和恢复Linux的文件权限</P>
+<H2 
+style="FONT-SIZE: 18px; FONT-FAMILY: 'microsoft yahei'; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 30px 0px 14px; WIDOWS: 1; LETTER-SPACING: normal; LINE-HEIGHT: 25px; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">1. 
+安装ACL工具</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在Debian， 
+Ubuntu，Linux Mint上</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WORD-SPACING: 0px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px 'courier new'; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; font-stretch: normal; -webkit-text-stroke-width: 0px">$ sudo apt-get install acl</PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在CentOS，Fedora，RHEL上</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WORD-SPACING: 0px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px 'courier new'; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; font-stretch: normal; -webkit-text-stroke-width: 0px">$ sudo yum install acl</PRE>
+<H2 
+style="FONT-SIZE: 18px; FONT-FAMILY: 'microsoft yahei'; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 30px 0px 14px; WIDOWS: 1; LETTER-SPACING: normal; LINE-HEIGHT: 25px; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">2. 
+备份当前目录下（包括子目录）所有文件的权限</H2><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WORD-SPACING: 0px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px 'courier new'; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; font-stretch: normal; -webkit-text-stroke-width: 0px">[root@linuxprobe tmp]#  ls -l
+total 8
+-rwxr--r--. 1 root root  0 Mar  3 04:40 install.txt
+-rwxr-xr-x. 1 root root  0 Mar  3 04:41 linuxprobe.txt
+[root@linuxprobe tmp]# getfacl -R . &gt; permissions.txt
+...</PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">此命令将所有文件的ACL信息全部写入名为permissions.txt文件。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">以下是生成的permissions.txt文件中部分目录信息</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WORD-SPACING: 0px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px 'courier new'; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; font-stretch: normal; -webkit-text-stroke-width: 0px">[root@linuxprobe tmp]# cat permissions.txt
+# file: .
+# owner: root
+# group: root
+# flags: --t
+user::rwx
+group::rwx
+other::rwx
+# file: install.txt
+# owner: root
+# group: root
+user::rwx
+group::r--
+other::r--
+
+# file: linuxprobe.txt
+# owner: root
+# group: root
+user::rwx
+group::r-x
+other::r-x
+
+# file: permissions.txt
+# owner: root
+# group: root
+user::rw-
+group::r--
+other::r--
+...</PRE>
+<H2 
+style="FONT-SIZE: 18px; FONT-FAMILY: 'microsoft yahei'; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 30px 0px 14px; WIDOWS: 1; LETTER-SPACING: normal; LINE-HEIGHT: 25px; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">3. 
+修改某一文件权限，如：修改linuxprobe.txt及install.txt权限</H2><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WORD-SPACING: 0px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px 'courier new'; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; font-stretch: normal; -webkit-text-stroke-width: 0px">[root@linuxprobe tmp]# chmod 733 linuxprobe.txt 
+[root@linuxprobe tmp]# chmod 573 install.txt 
+[root@linuxprobe tmp]# ls -l
+total 8
+-r-xrwx-wx. 1 root root    0 Mar  3 04:40 install.txt
+-rwx-wx-wx. 1 root root    0 Mar  3 04:41 linuxprobe.txt
+-rw-r--r--. 1 root root 4361 Mar  3 04:41 permissions.txt
+......</PRE>
+<H2 
+style="FONT-SIZE: 18px; FONT-FAMILY: 'microsoft yahei'; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 30px 0px 14px; WIDOWS: 1; LETTER-SPACING: normal; LINE-HEIGHT: 25px; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">4. 
+恢复原有权限</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">1）cd到创建permissions.txt时所在的目录</STRONG><BR><STRONG 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">2）执行以下命令：</STRONG></P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WORD-SPACING: 0px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px 'courier new'; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; font-stretch: normal; -webkit-text-stroke-width: 0px">setfacl --restore=permissions.txt</PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px 'microsoft yahei'; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">可以看到linuxprobe.txt及install.txt权限恢复了</P><PRE style="WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WORD-SPACING: 0px; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px 'courier new'; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; font-stretch: normal; -webkit-text-stroke-width: 0px">[root@linuxprobe tmp]# setfacl --restore=permissions.txt
+[root@linuxprobe tmp]# ls -l
+total 8
+-rwxr--r--. 1 root root    0 Mar  3 04:40 install.txt
+-rwxr-xr-x. 1 root root    0 Mar  3 04:41 linuxprobe.txt
+-rw-r--r--. 1 root root 4361 Mar  3 04:41 permissions.txt
+......</PRE><A id=soft-link name=soft-link></A><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(68,68,68); TEXT-ALIGN: left; FONT: 14px/25px 'microsoft yahei'; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></SPAN><BR 
+class=Apple-interchange-newline></body>
+</html>

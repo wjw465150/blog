@@ -1,0 +1,292 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML dir=ltr>
+  <HEAD>
+  <title>log4j日志异步化大幅提升系统性能</title>
+  <META content="text/html; charset=UTF-8" http-equiv=Content-Type>
+  <LINK rel="shortcut icon" type=image/x-icon href="favicon.ico">
+  <LINK title=Raymond的Java世界 rel=alternate type=application/rss+xml href="rss">
+  <LINK 
+rel=stylesheet type=text/css href="blog.css_1243862553" media=screen>
+  <LINK 
+rel=stylesheet type=text/css href="green.css_1235723792" media=screen>
+  <LINK rel=stylesheet type=text/css href="SyntaxHighlighter.css_1201588027" 
+media=screen>
+  <STYLE>
+div#main {
+	background-color: transparent;
+	border: 0;
+	padding: 0px;
+	width: 740px;
+}
+</STYLE>
+  <LINK rel=stylesheet type=text/css href="ui.css_1222156967" media=screen>
+  <META name=GENERATOR content="MSHTML 9.00.8112.16447">
+  </HEAD>
+  <BODY>
+  <DIV id=page>
+    <DIV id=content class=clearfix>
+      <DIV id=main>
+        <DIV class=blog_main><!--StartFragment-->
+          <DIV class=blog_title>
+            <DIV class=date><SPAN class=year>2008</SPAN><SPAN class=sep_year>-</SPAN><SPAN 
+class=month>08</SPAN><SPAN class=sep_month>-</SPAN><SPAN 
+class=day>18</SPAN></DIV>
+            <H3 class=type_original title=?shy;创><A 
+href="http://raymondhekk.javaeye.com/blog/229937">log4j日志异步化大幅提升系统性能 </A></H3>
+            <STRONG>关键字: log4j 性能</STRONG> </DIV>
+          <DIV class=blog_title>&nbsp; </DIV>
+          <DIV class=blog_content>
+            <DIV 
+style="TEXT-INDENT: 21pt">?shy;过大型J2EE项目实测，Log4j的日志输出对系统性能有比较显著的影响，尤其是日志输入量比较大时，例如：系统并发量很大，显示Hibernate的sql和参数日志，或日志级别较低DEBUG或INFO时等。</DIV>
+            <DIV style="TEXT-INDENT: 21pt">使用Async 
+              Logger控制日志输出可以显著改善系统性能。</DIV>
+            <DIV style="TEXT-INDENT: 21pt">&nbsp;</DIV>
+            <DIV style="TEXT-INDENT: 21pt">&nbsp;</DIV>
+            <DIV style="TEXT-INDENT: 21pt">1） 测试用例：同步文件日志输出</DIV>
+            <DIV style="TEXT-INDENT: 21pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              测试功能：模块管理功能，</DIV>
+            <DIV style="TEXT-INDENT: 21pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              输出Hibernate SQL和参数，输出到文件，配置如下：</DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;appender 
+              name="Hibernate_SQL" 
+              class="org.apache.log4j.DailyRollingFileAppender"&gt;</SPAN></DIV>
+            <DIV><SPAN 
+style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;param name="File" value="log/Hibernate_SQL.log" /&gt;</SPAN></DIV>
+            <DIV><SPAN 
+style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;param name="Append" value="true" /&gt;</SPAN></DIV>
+            <DIV><SPAN 
+style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;param name="DatePattern" value="'.'yyyy-MM-dd-HH" /&gt;</SPAN></DIV>
+            <DIV><SPAN 
+style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;layout class="org.apache.log4j.PatternLayout"&gt;</SPAN></DIV>
+            <DIV><SPAN 
+style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;param name="ConversionPattern" value="%d [%-5p](%C,%L) - %m%n" 
+              /&gt;</SPAN></DIV>
+            <DIV><SPAN 
+style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;/layout&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;/appender&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;category 
+              name="org.hibernate.SQL"&gt;</SPAN></DIV>
+            <DIV><SPAN 
+style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;priority value="TRACE" /&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </SPAN></DIV>
+            <DIV><SPAN 
+style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;appender-ref ref="Hibernate_SQL" /&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;/category&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;category 
+              name="org.hibernate.type"&gt;</SPAN></DIV>
+            <DIV><SPAN 
+style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;priority value="TRACE" /&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </SPAN></DIV>
+            <DIV><SPAN 
+style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;appender-ref ref="Hibernate_SQL" /&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;/category&gt;</SPAN></DIV>
+            <DIV style="TEXT-INDENT: 21pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              运用JMeter进行压力测试，线程数50，运行4次，计算请求平均响应值（Rame-up Period: 
+              1， ?shy;环次数：1）</DIV>
+            <DIV style="TEXT-INDENT: 21pt"><IMG alt="" width=536 height=287></DIV>
+            <DIV style="TEXT-INDENT: 21pt">&nbsp;</DIV>
+            <DIV>测试结果：AVG: <SPAN style="COLOR: black">12565ms</SPAN></DIV>
+            <DIV>&nbsp;</DIV>
+            <DIV style="TEXT-INDENT: 21pt"><SPAN 
+style="FONT-SIZE: 12pt; COLOR: black">&nbsp;&nbsp;&nbsp; </SPAN>2） 
+              测试用例：异步文件日志输出</DIV>
+            <DIV><SPAN 
+style="FONT-SIZE: 12pt; COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              Log4j.xml </SPAN><SPAN 
+style="FONT-SIZE: 12pt; COLOR: black">配置修改如下：</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp; &lt;appender 
+              name="ASYNC_Hibernate_SQL" 
+              class="org.apache.log4j.AsyncAppender"&gt;&nbsp;&nbsp;&nbsp; </SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp; &lt;param 
+              name="BufferSize" value="512"/&gt;&nbsp;&nbsp;&nbsp; </SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp; &lt;appender-ref 
+              ref="Hibernate_SQL"/&gt; </SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp; &lt;/appender&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp; </SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp; &lt;category 
+              name="org.hibernate.SQL"&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;priority value="TRACE" /&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;appender-ref ref="ASYNC_Hibernate_SQL" /&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp; &lt;/category&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp; </SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp; &lt;category 
+              name="org.hibernate.type"&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;priority value="TRACE" /&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              &lt;appender-ref ref="ASYNC_Hibernate_SQL" /&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp; &lt;/category&gt;</SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp; </SPAN></DIV>
+            <DIV><SPAN style="COLOR: blue">&nbsp;&nbsp;&nbsp; </SPAN><SPAN 
+style="COLOR: blue">在BufferSize为 32， 
+              64，128，256，512，2048时测试的请求平均耗时，及较测试用例1中的性能提高率对比如下所示：</SPAN></DIV>
+            <TABLE style="BORDER-COLLAPSE: collapse; MARGIN-LEFT: 5.4pt" border=0 
+cellSpacing=0 cellPadding=0>
+              <TBODY>
+                <TR>
+                  <TD 
+    style="WIDTH: 134.15pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV><SPAN 
+      style="FONT-SIZE: 12pt; COLOR: black">同步，异步日志性能对比分析</SPAN></DIV></TD>
+                  <TD 
+    style="WIDTH: 163.55pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV><SPAN 
+      style="FONT-SIZE: 12pt; COLOR: black">（每次50并发，运行4次）</SPAN></DIV></TD>
+                  <TD 
+    style="WIDTH: 109.5pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV>&nbsp;</DIV></TD>
+                </TR>
+                <TR>
+                  <TD 
+    style="WIDTH: 134.15pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">sync 
+                    日志输出</SPAN></DIV></TD>
+                  <TD 
+    style="WIDTH: 163.55pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV><SPAN 
+      style="FONT-SIZE: 12pt; COLOR: black">?shy;时间消耗</SPAN></DIV></TD>
+                  <TD 
+    style="WIDTH: 109.5pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV>&nbsp;</DIV></TD>
+                </TR>
+                <TR>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 134.15pt; BACKGROUND: #99cc00; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV>&nbsp;</DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 163.55pt; BACKGROUND: #99cc00; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV><SPAN 
+      style="FONT-SIZE: 12pt; BACKGROUND: #99cc00; COLOR: black">12565</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 109.5pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV>&nbsp;</DIV></TD>
+                </TR>
+                <TR>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 134.15pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">async 
+                    日志输出</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 163.55pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV>&nbsp;</DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 109.5pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV>&nbsp;</DIV></TD>
+                </TR>
+                <TR>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 134.15pt; BACKGROUND: #99cc00; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV><SPAN 
+      style="FONT-SIZE: 12pt; BACKGROUND: #99cc00; COLOR: black">缓冲区大小</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 163.55pt; BACKGROUND: #99cc00; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV><SPAN 
+      style="FONT-SIZE: 12pt; BACKGROUND: #99cc00; COLOR: black">平均耗时</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 109.5pt; BACKGROUND: #99cc00; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV><SPAN 
+      style="FONT-SIZE: 12pt; BACKGROUND: #99cc00; COLOR: black">性能提高率</SPAN></DIV></TD>
+                </TR>
+                <TR>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 134.15pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">32</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 163.55pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">6744</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 109.5pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">46.33%</SPAN></DIV></TD>
+                </TR>
+                <TR>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 134.15pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">64</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 163.55pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">8487</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 109.5pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">32.46%</SPAN></DIV></TD>
+                </TR>
+                <TR>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 134.15pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">128</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 163.55pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">6899</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 109.5pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">45.09%</SPAN></DIV></TD>
+                </TR>
+                <TR>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 134.15pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">256</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 163.55pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">6606</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 109.5pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">47.43%</SPAN></DIV></TD>
+                </TR>
+                <TR>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 134.15pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">512</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 163.55pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">7306</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 109.5pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">41.85%</SPAN></DIV></TD>
+                </TR>
+                <TR>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 134.15pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=179><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">2048</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 163.55pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=218><DIV><SPAN style="FONT-SIZE: 12pt; COLOR: black">3406</SPAN></DIV></TD>
+                  <TD 
+    style="BORDER-TOP: medium none; WIDTH: 109.5pt; PADDING-BOTTOM: 0cm; PADDING-TOP: 0cm; PADDING-LEFT: 5.4pt; BORDER-LEFT: medium none; PADDING-RIGHT: 5.4pt" 
+    vAlign=top width=146><DIV><SPAN 
+  style="FONT-SIZE: 12pt; COLOR: black">72.89%</SPAN></DIV></TD>
+                </TR>
+              </TBODY>
+            </TABLE>
+            <DIV>&nbsp;</DIV>
+            <DIV>&nbsp;&nbsp;&nbsp; 从结果可以看出，性能提高率最高<SPAN> 47%。最低32%。缓冲为256时性能改善最佳， 提高47%</SPAN></DIV>
+            <DIV>&nbsp;&nbsp;&nbsp; </DIV>
+            <DIV>结论：使用<SPAN>Log4j的J2EE应用，日志的优化对系统性能有显著影响：</SPAN></DIV>
+            <DIV>&nbsp;&nbsp;&nbsp; &nbsp;1）尽量减少不必要的日志输出，尤其要避免<SPAN> root 
+              logger上过低级别的输出，避免在生产环境上向控制台输出日志。例如，下面的配置是很影响性能的，：</SPAN></DIV>
+            <DIV>&nbsp;&nbsp;&nbsp; &lt;root&gt;</DIV>
+            <DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;priority value="DEBUG" 
+              /&gt;&nbsp; </DIV>
+            <DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;appender-ref ref="CONSOLE" 
+              &gt;&nbsp;&nbsp; </DIV>
+            <DIV>&nbsp;&nbsp;&nbsp; &lt;/root&gt;</DIV>
+            <DIV>&nbsp;&nbsp;&nbsp; 2） 使用<SPAN>Async 
+              logger输出日志，buffersize在相应日志频率下，越大越好，对于大型项目，可以选2048以上值。</SPAN></DIV>
+          </DIV><!--EndFragment--></DIV>
+      </DIV>
+    </DIV>
+  </DIV>
+</BODY>
+</HTML>

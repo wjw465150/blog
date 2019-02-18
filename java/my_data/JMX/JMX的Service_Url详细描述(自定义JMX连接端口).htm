@@ -1,0 +1,211 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>JMX的Service Url详细描述(自定义JMX连接端口)</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H4 id=subjcns!8C989768DB1A6B14!481 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 13px/25px Verdana, Simsun; MARGIN: 4px 0px 0px; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(238,246,251); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">JMX的Service 
+Url详细描述(自定义JMX连接端口)</H4>
+<DIV id=msgcns!8C989768DB1A6B14!481 class=bvMsg 
+style="OVERFLOW: hidden; WIDTH: 972px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-OVERFLOW: ellipsis; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 12px/21px Verdana, Simsun; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(238,246,251); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P style="LINE-HEIGHT: 21px">首先要从JMX URL说起。如下是一个典型的JMX URL：<FONT style="LINE-HEIGHT: normal" color=#ff0000></FONT></P>
+<BLOCKQUOTE style="LINE-HEIGHT: 21px" dir=ltr>
+  <P style="LINE-HEIGHT: 21px"><FONT style="LINE-HEIGHT: normal" color=#ff0000>service:jmx:rmi://localhost:5000/jndi/rmi://localhost:6000/jmxrmi</FONT></P></BLOCKQUOTE>
+<DIV style="LINE-HEIGHT: 21px"><FONT style="LINE-HEIGHT: normal" color=#000000>这个JMX URL可以分为如下几个部分：</FONT></DIV>
+<UL 
+style="LIST-STYLE-TYPE: disc; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 1em; MARGIN: 0px 0px 20px 1em; LINE-HEIGHT: 21px; PADDING-RIGHT: 0px">
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px"><FONT style="LINE-HEIGHT: normal" color=#ff6600>service:jmx</FONT>: 这个是JMX 
+  URL的标准前缀，所有的JMX URL都必须以该字符串开头。</LI>
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px"><FONT style="LINE-HEIGHT: normal" color=#ff6600>rmi</FONT>: 这个是connector 
+  server的传输协议，在这个url中是使用rmi来进行传输的。<A 
+  style="TEXT-DECORATION: none; COLOR: rgb(1,73,130); LINE-HEIGHT: 21px" 
+  href="http://www.jcp.org/en/jsr/detail?id=160"><FONT style="LINE-HEIGHT: normal" color=#014982><U style="LINE-HEIGHT: 21px">JSR 
+  160</U></FONT></A>规定了所有connector server都必须<FONT style="LINE-HEIGHT: normal" color=#ff0000>至少</FONT>实现rmi传输，是否还支持其他的传输协议依赖于具体的实现。比如<A 
+  style="TEXT-DECORATION: none; COLOR: rgb(1,73,130); LINE-HEIGHT: 21px" 
+  href="http://mx4j.sourceforge.net/"><FONT style="LINE-HEIGHT: normal" color=#014982><U 
+  style="LINE-HEIGHT: 21px">MX4J</U></FONT></A>就支持soap、soap+ssl、hessian、burlap等等传输协议。</LI>
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px"><FONT style="LINE-HEIGHT: normal" color=#ff6600>localhost:5000</FONT>: 这个是connector 
+  server的IP和端口，该部分是一个可选项，可以被省略掉。（具体参见下文解释）</LI>
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px"><FONT style="LINE-HEIGHT: normal" color=#ff6600>/jndi/rmi://localhost:6000/jmxrmi</FONT>: 这个是connector 
+  server的路径，具体含义取决于前面的传输协议。比如该URL中这串字符串就代表着该connector server的stub是使用jndi 
+  api绑定在rmi://localhost:6000/jmxrmi这个地址。</LI></UL>
+<P style="LINE-HEIGHT: 21px">如果在服务器端，我们用该URL创建一个connector server，则大概流程如下：</P>
+<OL style="LINE-HEIGHT: 21px">
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px">将connect 
+  server（javax.management.remote.rmi.RMIConnectorServer）内部的server对象（javax.management.remote.rmi.RMIJRMPServerImpl）的rmi 
+  stub export到本地的5000端口，接收外部连接</LI>
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px">通过jndi 
+  api将该stub绑定在rmi://localhost:6000/jmxrmi这个地址上，这需要在本地的6000端口上运行着一个rmiregistry，如果不存在则会抛出异常</LI>
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px">......</LI></OL>
+<P style="LINE-HEIGHT: 21px">可以看到，如果在服务器端创建connector 
+server时，该URL的第三部分（即localhost:5000）如果省略的话，则connector server会随机任意选择一个可用的端口。</P>
+<P style="LINE-HEIGHT: 21px">如果在客户端，我们通过该URL创建一个connector，则大概按照如下的流程：</P>
+<OL style="LINE-HEIGHT: 21px">
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px">通过jndi 
+  api到rmi://localhost:6000/jmxrmi这个地址取回stub</LI>
+  <LI 
+  style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px">stub中已经包含了真实服务器的地址，所以可以直接根据该stub连接到真实的服务器</LI>
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px">......</LI></OL>
+<P 
+style="LINE-HEIGHT: 21px">可以看到，如果在客户端创建connector时，该URL的第三部分可以被省略掉。事实上我们也经常这么做，比如上面这个示例，在客户端建立connector所用的JMX 
+URL可以被省略为：</P>
+<BLOCKQUOTE style="LINE-HEIGHT: 21px" dir=ltr>
+  <P style="LINE-HEIGHT: 21px"><FONT style="LINE-HEIGHT: normal" color=#ff0000>service:jmx:rmi:///jndi/rmi://localhost:6000/jmxrmi</FONT></P></BLOCKQUOTE>
+<P 
+style="LINE-HEIGHT: 21px">从这个示例中我们也可以看到，如果采用rmi作为传输协议的话，客户端需要进行两个连接。首先客户端连接到rmiregistry上得到真实服务器的stub（如rmi://localhost:6000/rmxrmi），然后客户端再根据该stub连接到真实的服务器上（如rmi://localhost:5000）。</P>
+<P style="LINE-HEIGHT: 21px"></P>
+<P style="LINE-HEIGHT: 21px">在Sun Java 5.0的实现当中，可以通过指定运行期属性来配置JMX。比如：</P>
+<BLOCKQUOTE style="LINE-HEIGHT: 21px" dir=ltr>
+  <P style="LINE-HEIGHT: 21px">-Dcom.sun.management.jmxremote.port=6000<BR 
+  style="LINE-HEIGHT: 21px">-Dcom.sun.management.jmxremote.ssl=false<BR 
+  style="LINE-HEIGHT: 21px">-Dcom.sun.management.jmxremote.password.file=conf/jmxremote.password<BR 
+  style="LINE-HEIGHT: 21px">-Dcom.sun.management.jmxremote.access.file=conf/jmxremote.access</P>不需要验证的配置:
+  <P style="LINE-HEIGHT: 21px"></P>
+  <OL 
+  style="LIST-STYLE-TYPE: decimal; BORDER-TOP: medium none; BORDER-RIGHT: medium none; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/26px Consolas, 'Courier New', Courier, mono, serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px 45px; BORDER-LEFT: medium none; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-stretch: normal">
+    <LI class=alt 
+    style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+    style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; LINE-HEIGHT: 20px; PADDING-RIGHT: 0px"><SPAN 
+    style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; LINE-HEIGHT: 20px; PADDING-RIGHT: 0px">-Dcom.sun.management.jmxremote.port=6000&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+    <LI 
+    style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; COLOR: rgb(92,92,92); PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(248,248,248)"><SPAN 
+    style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; LINE-HEIGHT: 20px; PADDING-RIGHT: 0px">-Dcom.sun.management.jmxremote.authenticate=false&nbsp;&nbsp;&nbsp;</SPAN></LI>
+    <LI class=alt 
+    style="BORDER-TOP-STYLE: none; LIST-STYLE-TYPE: decimal-leading-zero; LIST-STYLE-POSITION: outside; BORDER-BOTTOM-STYLE: none; PADDING-BOTTOM: 0px !important; PADDING-TOP: 0px !important; BORDER-RIGHT-STYLE: none; PADDING-LEFT: 10px !important; MARGIN: 0px; BORDER-LEFT: rgb(108,226,108) 3px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 3px !important; BACKGROUND-COLOR: rgb(255,255,255)"><SPAN 
+    style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; LINE-HEIGHT: 20px; PADDING-RIGHT: 0px">-Dcom.sun.management.jmxremote.ssl=false&nbsp;</SPAN></LI></OL></BLOCKQUOTE>
+<P style="LINE-HEIGHT: 21px" dir=ltr>除开密码和权限控制的配置外，这段运行期相当于一个如下的JMX URL：</P>
+<BLOCKQUOTE style="LINE-HEIGHT: 21px" dir=ltr>
+  <P style="LINE-HEIGHT: 21px" dir=ltr>service:jmx:rmi://<FONT style="LINE-HEIGHT: normal" color=#ff0000>localhost:0</FONT>/jndi/rmi://localhost:6000/jmxrmi 
+  （红色部分可以被省略掉）</P></BLOCKQUOTE>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>可以看到，通过指定com.sun.management.jmxremote.port属性，相当于指定了rmiregistry的运行端口，但是真正运行的服务器的stub 
+export端口为0，会在运行期任意选择一个未被使用的端口号。如果该程序运行在防火墙后面，这个动态分配的端口号会让我们非常难以配置防火墙规则。</P>
+<P style="LINE-HEIGHT: 21px" dir=ltr>由于Sun Java 5.0实现的疏忽，并没有为我们提供一个运行期属性来配置stub 
+export端口号，那么如何自定义一个JMX连接端口呢？</P>
+<P style="LINE-HEIGHT: 21px" dir=ltr>假设我们不传入任何运行期参数，仅通过代码来自定义一个connector 
+server：</P>
+<BLOCKQUOTE style="LINE-HEIGHT: 21px" dir=ltr>
+  <P style="LINE-HEIGHT: 21px" dir=ltr>LocateRegistry.createRegistry(6000);<BR 
+  style="LINE-HEIGHT: 21px">JMXConnectorServer cs = JMXConnectorServerFactory<BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+  .newJMXConnectorServer(url, env, beanServer);<BR 
+  style="LINE-HEIGHT: 21px">cs.start();</P></BLOCKQUOTE>
+<P style="LINE-HEIGHT: 21px" dir=ltr>第一行代码指明在6000端口创建一个rmiregistry。</P>
+<P style="LINE-HEIGHT: 21px" dir=ltr>第二行代码创建了一个connector 
+server。第一个URL参数传入指定的JMXServiceURL，比如new 
+JMXServiceURL("service:jmx:rmi://localhost:5000/jndi/rmi://<FONT style="LINE-HEIGHT: normal" color=#ff0000>localhost:6000</FONT>/jmxrmi")，值得注意的是红色部分标出的IP和端口号要和第一步中创建的rmiregistry一致。第二个参数指定创建时的环境，我们可以暂时传入一个空Map。第三个参数指定要创建连接的MBeanServer，比如在Java 
+5.0下可以是ManagementFactory.getPlatformMBeanServer()。</P>
+<P style="LINE-HEIGHT: 21px" dir=ltr>第三行代码开启了创建的connector server。</P>
+<P style="LINE-HEIGHT: 21px" dir=ltr>这三行代码创建的connector 
+server工作的很好，除了一点：真实的服务器没有任何认证和授权机制，会允许所有人访问。</P>
+<P style="LINE-HEIGHT: 21px" dir=ltr>自定义权限控制可以通过刚才第二行代码的第二个参数来进行设置：</P>
+<BLOCKQUOTE style="LINE-HEIGHT: 21px" dir=ltr>
+  <P style="LINE-HEIGHT: 21px" dir=ltr>Map env = new HashMap();<BR 
+  style="LINE-HEIGHT: 21px">env.put(JMXConnectorServer.AUTHENTICATOR, 
+  JMXAuthenticator子类的实例);</P></BLOCKQUOTE>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>比如在MX4J中就提供了一个mx4j.tools.remote.PasswordAuthenticator的类，通过配置文件来匹配用户名和密码；Sun也提供了一个com.sun.jmx.remote.security.JMXPluggableAuthenticator的类通过JAAS来配置验证和权限。用户可以参照这两个类来提供自定义的实现。这里提供一个简单的示例（不带任何效验机制，仅用于示例）</P>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+env.put(JMXConnectorServer.AUTHENTICATOR, new JMXAuthenticator() {</P>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+public Subject authenticate(Object credentials) {<BR 
+style="LINE-HEIGHT: 21px"><FONT style="LINE-HEIGHT: normal" color=#000000>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+String[] sCredentials = (String[]) credentials;<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+String userName = sCredentials[0];<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+String password =&nbsp; sCredentials[1];<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+if ("test".equals(userName) &amp;&amp; "test".equals(password)) {<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Set principals = new HashSet();<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+principals.add(new JMXPrincipal(user));<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+return new Subject(true, principals, Collections.EMPTY_SET,<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Collections.EMPTY_SET);<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+throw new SecurityException("Authentication failed! "<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
++ message);</FONT></P>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR 
+style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+});</P>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>加入这段代码后，真实的服务器必须要验证后才能访问，但又有了一个新问题：rmiregistry没有任何验证。这意味着其他人可以把一个不相干的stub绑定到同一地址，从而替换掉真实服务器stub。好在幸运的是，无法把一个服务器端类路径上不存在的stub类绑定到rmiregistry，否则真实的用户名和密码就有可能被泄漏出去。</P>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>如果直接通过rmi对外提供的接口，我们没有办法修正这个问题，除非将代码绑定于特定的Java实现，比如Sun就直接通过它自己的rmi实现类来做（所以通过运行期参数配置jmx生成的rmiregistry是只读的，没有该安全性问题）。具体可参见sun.management.Agent和sun.management.jmxremote包下相关类。</P>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>但是我们可以换一个思路，比如不绑定到rmiregistry而绑定到其他的实现了验证机制的jndi provider，例如ldap上。由于bind 
+jndi的代码在相关connector 
+server的实现类中，比如javax.management.remote.rmi.RMIConnectorServer中bind jndi的代码：</P>
+<BLOCKQUOTE style="LINE-HEIGHT: 21px" dir=ltr>
+  <P style="LINE-HEIGHT: 21px" dir=ltr>void bind(String jndiUrl, Hashtable 
+  attributes,<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+  RMIServer rmiServer, boolean rebind)<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; throws 
+  NamingException, MalformedURLException {<BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // if 
+  jndiURL is not null, we nust bind the stub to a<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // 
+  directory.<BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><FONT style="LINE-HEIGHT: normal" color=#ff0000>InitialContext ctx =<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+  new InitialContext(attributes);<BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if 
+  (rebind)<BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+  ctx.rebind(jndiUrl, rmiServer);<BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; else<BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+  ctx.bind(jndiUrl, rmiServer);<BR 
+  style="LINE-HEIGHT: 21px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+  ctx.close();<BR style="LINE-HEIGHT: 21px"></FONT>&nbsp;&nbsp;&nbsp; 
+}</P></BLOCKQUOTE>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>它在传入attributes时并没有特定的jndi的INITIAL_CONTEXT_FACTORY，所以我们可以通过两种方法来指定特定的INITIAL_CONTEXT_FACTORY：</P>
+<UL 
+style="LIST-STYLE-TYPE: disc; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 1em; MARGIN: 0px 0px 20px 1em; LINE-HEIGHT: 21px; PADDING-RIGHT: 0px" 
+dir=ltr>
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px">
+  <DIV style="LINE-HEIGHT: 21px">在类路径上放上一个jndi.properties，配置相应的jndi属性</DIV></LI>
+  <LI style="MARGIN: 0px 0px 3px; LINE-HEIGHT: 21px">
+  <DIV style="LINE-HEIGHT: 21px">在start connector 
+  server前，先在系统属性中指定相应的jndi属性，start后再把这些属性恢复成原有属性</DIV></LI></UL>
+<P 
+style="LINE-HEIGHT: 21px">其中第一种方式不需要额外的代码，但是可能会对系统中其他jndi的InitialContext产生影响；第二种方式稍微麻烦点，但是在实现上比较完美。</P>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>值得提到的是，如果采用rmiregistry，并且rmiregistry和server在<FONT style="LINE-HEIGHT: normal" color=#ff0000>同一个JVM内</FONT>，stub和rmiregistry可以共享一个端口。比如可以使用如下的JMX URL：</P>
+<BLOCKQUOTE style="LINE-HEIGHT: 21px" dir=ltr>
+  <P style="LINE-HEIGHT: 21px" 
+  dir=ltr>service:jmx:rmi://localhost:6000/jndi/rmi://localhost:6000/jmxrmi</P></BLOCKQUOTE>
+<P style="LINE-HEIGHT: 21px" 
+dir=ltr>但注意一定要在同一JVM内，比如先用LocateRegistry.createRegistry(6000)创建本地rmiregistry，再通过该URL开启connector 
+server，则可以共享6000端口。</P></DIV></body>
+</html>

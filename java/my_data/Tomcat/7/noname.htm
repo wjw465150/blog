@@ -1,0 +1,229 @@
+﻿<HTML><HEAD><title>轻松实现Apache,Tomcat集群和负载均衡</title>
+<STYLE type=text/css>
+.error{color:#FF0000;font-size:12px}
+</STYLE>
+</HEAD>
+<BODY>
+
+<CENTER>
+
+<DIV id=main style="WIDTH: 996px" align=left>
+
+<DIV class=stage>
+
+<DIV class=stagepad>
+
+<DIV style="WIDTH: 100%">
+
+<DIV class=modbox id=m_blog><!--StartFragment--><DIV class=tit>轻松实现Apache,Tomcat集群和负载均衡</DIV>
+<DIV class=date>2006-11-18 12:15</DIV>
+<TABLE style="TABLE-LAYOUT: fixed">
+<TBODY>
+<TR>
+<TD>
+<DIV class=cnt id=blog_text>
+<P><STRONG>0， 环境说明</STRONG></P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Apache&nbsp; :apache_2.0.55&nbsp;&nbsp;&nbsp;&nbsp; 1 个</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Tomcat:&nbsp; apache-tomcat-5.5.17 (zip版) 2个</P>
+<P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mod_jk:: mod_jk-apache-2.0.55.so&nbsp; 1个</P>
+<P><STRONG>第一部分：负载均衡</STRONG></P>
+<P>&nbsp;&nbsp;&nbsp; 负载均衡，就是apache将客户请求均衡的分给tomcat1,tomcat2....去处理</P>
+<P><STRONG>&nbsp;&nbsp; 1.安装apche,tomcat</STRONG></P>
+<P>&nbsp;&nbsp; <A href="http://httpd.apache.org/">http://httpd.apache.org/</A>&nbsp;下载Apache 
+2.0.55</P>
+<P>&nbsp;&nbsp;&nbsp; <A 
+href="http://tomcat.apache.org/download-55.cgi">http://tomcat.apache.org/download-55.cgi</A>&nbsp;下载tomcat5.5 
+zip版本（解压即可，绿色版）</P>
+<P>&nbsp;&nbsp; <A 
+href="http://apache.justdn.org/tomcat/tomcat-connectors/jk/binaries/win32/jk-1.2.15/">http://apache.justdn.org/tomcat/tomcat-connectors/jk/binaries/win32/jk-1.2.15/</A>&nbsp; 
+下载mod_jk,注意和&nbsp; apache版本匹配</P>
+<P>&nbsp;&nbsp; 按照jdk,我的路径为:E:\ide\apache\Apache2</P>
+<P>&nbsp;&nbsp; 解压两份Tomcat, 路径分别为 E:\ide\tomcat1,E:\ide\tomcat2</P>
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="a1.jpg"  small="0"></DIV>
+<P>下载mod_jk</P>
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="52855e82373a3ea20df4d224.jpg"  small="0"></DIV>
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="46899c50d44e3b628435245b.jpg"  small="0"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<P><STRONG>2.修改Apache配置文件http.conf</STRONG></P>
+<P>&nbsp;&nbsp; 在apache安装目录下conf目录中找到http.conf</P>
+<P>&nbsp;&nbsp; 在文件最后加上下面一句话就可以了</P>
+<P>&nbsp; include "E:\ide\apache\Apache2\conf\mod_jk.conf"</P>
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="d1c28cd49b8d6901a08bb720.jpg"  small="0"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"><STRONG>2. http.conf 同目录下新建mod_jk.conf文件，内容如下</STRONG></DIV>
+<DIV forimg="1">&nbsp;&nbsp; </DIV>
+<DIV forimg="1">#加载mod_jk Module<BR>LoadModule jk_module 
+modules/mod_jk-apache-2.0.55.so</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">#指定 workers.properties文件路径<BR>JkWorkersFile 
+conf/workers.properties</DIV>
+<DIV forimg="1"></DIV>
+<DIV 
+forimg="1">#指定那些请求交给tomcat处理,"controller"为在workers.propertise里指定的负载分配控制器</DIV>
+<DIV forimg="1">JkMount /*.jsp controller</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"><STRONG>3.在http.conf同目录下新建 
+workers.properties文件，内容如下</STRONG></DIV>
+<DIV forimg="1">&nbsp;</DIV>
+<DIV forimg="1">worker.list =  controller,tomcat1,tomcat2&nbsp; #server 列表</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">#========tomcat1========</DIV>
+<DIV forimg="1">worker.tomcat1.port=8009&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; #ajp13 
+端口号，在tomcat下server.xml配置,默认8009<BR>worker.tomcat1.host=localhost&nbsp; 
+#tomcat的主机地址，如不为本机，请填写ip地址<BR>worker.tomcat1.type=ajp13<BR>worker.tomcat1.lbfactor 
+= 1&nbsp;&nbsp; #server的加权比重，值越高，分得的请求越多</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">#========tomcat2========</DIV>
+<DIV forimg="1">worker.tomcat2.port=9009&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; #ajp13 
+端口号，在tomcat下server.xml配置,默认8009<BR>worker.tomcat2.host=localhost&nbsp; 
+#tomcat的主机地址，如不为本机，请填写ip地址<BR>worker.tomcat2.type=ajp13<BR>worker.tomcat2.lbfactor 
+= 1&nbsp;&nbsp; #server的加权比重，值越高，分得的请求越多</DIV>
+<DIV 
+forimg="1"><BR>#========controller,负载均衡控制器========<BR>worker.controller.type=lb<BR>worker.controller.balanced_workers=tomcat1,tomcat2&nbsp;&nbsp; 
+#指定分担请求的tomcat<BR>worker.controller.sticky_session=1</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"><STRONG>4.修改tomcat配置文件server.xml</STRONG></DIV>
+<DIV forimg="1">如果你在不同电脑上安装tomcat,tomcat的安装数量为一个，可以不必修改tomcat配置文件</DIV>
+<DIV forimg="1">我这里是在同一台电脑上安装两个tomcat，所以需要更改其中一个的设置</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">打开tomcat2/conf/server.xml文件</DIV>
+<DIV forimg="1">
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="a3d133a8ed4063b1ca130c36.jpg"  small="0"> 
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="8c3cae7727b25d1bb151b937.jpg"  small="0"></DIV>
+<DIV forimg="1">
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="56b04b085ba7f3950b7b8230.jpg"  small="0"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"><STRONG>5.编写一个测试jsp</STRONG></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">建立一个目录test.里面新建一个test.jsp,内容为</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">&lt;% <BR>&nbsp;&nbsp; 
+System.out.println("===========================");<BR>%&gt;<BR></DIV>
+<DIV forimg="1">把test放到tomcat1,tomcat2的webapps下</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"><STRONG>6.启动apache,tomcat1,tomcat2,进行测试</STRONG></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">通过 <A 
+href="http://localhost/test/test.jsp">http://localhost/test/test.jsp</A>&nbsp;访问，查看tomcat1的窗口，可以看到打印了一行"=========="</DIV>
+<DIV 
+forimg="1">再刷新一次，tomcat2也打印了一条，再刷新，可以看到请求会被tomcat1,tomcat2轮流处理,实现了负载均衡</DIV>
+<DIV forimg="1">
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="acf2fcf2c8b77d13b17ec53d.jpg" width=830  small="0"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"><STRONG>第二部分，配置集群</STRONG></DIV>
+<DIV forimg="1">&nbsp;&nbsp; 
+只配置负载均衡还不行，还要session复制，也就是说其中任何一个tomcat的添加的session，是要同步复制到其它tomcat， 
+集群内的tomcat都有相同的session</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"><STRONG>1. 修改tomcat1, 
+tomcat2的server.xml</STRONG>,将集群部分配置的在注释符删掉,并将tomcat2的4001端口改为4002，以避免与tomcat冲突，当然，如果是两台电脑，是不用改端口的，去掉注释符即可</DIV>
+<DIV forimg="1">&nbsp;&nbsp; 
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="aa4ab5fb0f3582224f4aeab2.jpg"  small="0"></DIV>
+<DIV forimg="1">
+<DIV forimg="1">
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="89b84c3627ecc1dda3cc2b92.jpg"  small="0"></DIV></DIV>
+<DIV forimg="1">
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="cc4b858b603d47d3fd1f10b2.jpg"  small="0"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1"><STRONG>
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="52dfdac4bc506ecb38db4959.jpg"  small="0"></DIV></STRONG></DIV>
+<DIV forimg="1"><STRONG></STRONG></DIV>
+<DIV forimg="1"><STRONG>2，修改测试项目test</STRONG></DIV>
+<DIV forimg="1">修改test.jsp,内容如下</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">&nbsp; &lt;%@ page contentType="text/html; charset=UTF-8" 
+%&gt;<BR>&lt;%@ page import="java.util.*" 
+%&gt;<BR>&lt;html&gt;&lt;head&gt;&lt;title&gt;Cluster App 
+Test&lt;/title&gt;&lt;/head&gt;<BR>&lt;body&gt;<BR>Server 
+Info:<BR>&lt;%<BR>out.println(request.getLocalAddr() + " : " + 
+request.getLocalPort()+"&lt;br&gt;");%&gt;<BR>&lt;%<BR>&nbsp; out.println("&lt;br&gt; 
+ID " + session.getId()+"&lt;br&gt;");</DIV>
+<DIV forimg="1">&nbsp; // 如果有新的 Session 属性设置<BR>&nbsp; String dataName =    
+request.getParameter("dataName");<BR>&nbsp; if (dataName != null &amp;&amp; 
+dataName.length() &gt; 0) {<BR>&nbsp;&nbsp;&nbsp;&nbsp; String dataValue =    
+request.getParameter("dataValue");<BR>&nbsp;&nbsp;&nbsp;&nbsp; session.setAttribute(dataName, 
+dataValue);<BR>&nbsp; }</DIV>
+<DIV forimg="1">&nbsp; out.print("&lt;b&gt;Session 列表&lt;/b&gt;");</DIV>
+<DIV forimg="1">&nbsp; Enumeration e =    session.getAttributeNames();<BR>&nbsp; while 
+(e.hasMoreElements()) {<BR>&nbsp;&nbsp;&nbsp;&nbsp; String name = (String)e.nextElement();<BR>&nbsp;&nbsp;&nbsp;&nbsp; String value = 
+   session.getAttribute(name).toString();<BR>&nbsp;&nbsp;&nbsp;&nbsp; out.println( name 
++ " = " + value+"&lt;br&gt;");<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.out.println( name + " = " + 
+value);<BR>&nbsp;&nbsp; }<BR>%&gt;<BR>&nbsp; &lt;form action="index.jsp" 
+method="POST"&gt;<BR>&nbsp;&nbsp;&nbsp; 名称:&lt;input type=text size=20 
+name="dataName"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp; &lt;br&gt;<BR>&nbsp;&nbsp;&nbsp; 值:&lt;input type=text size=20 
+name="dataValue"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp; &lt;br&gt;<BR>&nbsp;&nbsp;&nbsp; &lt;input type=submit&gt;<BR>&nbsp;&nbsp; 
+&lt;/form&gt;<BR>&lt;/body&gt;<BR>&lt;/html&gt;</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">然后在test 新建WEB-INF目录，WEB-INF下新建web.xml,内容如下</DIV>
+<DIV forimg="1">&lt;web-app xmlns="<A 
+href="http://java.sun.com/xml/ns/j2ee">http://java.sun.com/xml/ns/j2ee</A>" 
+xmlns:xsi="<A 
+href="http://www.w3.org/2001/XMLSchema-instance">http://www.w3.org/2001/XMLSchema-instance</A>" 
+xsi:schemaLocation="<A 
+href="http://java.sun.com/xml/ns/j2ee">http://java.sun.com/xml/ns/j2ee</A> <A 
+href="http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd</A>" 
+version="2.4"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;display-name&gt;TomcatDemo&lt;/display-name&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<STRONG><FONT color=#ff0000> &lt;distributable/&gt;</FONT></STRONG><BR>&lt;/web-app&gt;</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">注意：在你的应用的web.xml加入&nbsp;<FONT color=#ff0000><STRONG> 
+&lt;distributable/&gt;</STRONG> </FONT><FONT color=#000000>即可</FONT></DIV>
+<DIV forimg="1"></DIV>
+<DIV 
+forimg="1">ok,讲test复制到tomcat1,tomcat2的webapps下，重启apache,tomcat1,tomcat2,</DIV>
+<DIV forimg="1">输入网址 <A 
+href="http://localhost/test/test.jsp">http://localhost/test/test.jsp</A>&nbsp;&nbsp; 
+</DIV>
+<DIV forimg="1"></DIV>
+<DIV forimg="1">新建一个 名称为 xiaoluo&nbsp; ,值为 cdut 
+的session,提交查询，新开一个ie窗口，再提交查询，如图，可以看到，两个tomcat 是负载均衡，并且session同步的</DIV>
+<DIV forimg="1">
+<DIV forimg="1"><IMG class=blogimg 
+border=0 
+src="79a9317af99aa5ed2e73b385.jpg" width=830  small="0"></DIV></DIV>
+<DIV 
+forimg="1"></DIV></DIV></DIV></DIV></DIV></DIV></DIV></DIV></DIV></TD></TR></TBODY></TABLE><BR><!--EndFragment--></DIV>
+</DIV>
+</DIV>
+</DIV>
+</DIV>
+</CENTER>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

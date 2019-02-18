@@ -1,0 +1,358 @@
+﻿<HTML lang=zh-CN dir=ltr xmlns="http://www.w3.org/1999/xhtml">
+<HEAD profile=http://gmpg.org/xfn/11>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>tomcat启用apr的情况下使用非自签名证书进行ssl双向认证配置</title>
+  <LINK href="favicon.ico" rel="shortcut icon">
+  <LINK href="animated_favicon1.gif" type=image/gif rel=icon>
+  <LINK media=screen href="style.css" type=text/css rel=stylesheet>
+  <LINK title="lizongbo at 618119.com RSS Feed" href="feed" type=application/rss+xml rel=alternate>
+  <LINK title="lizongbo at 618119.com Atom Feed" href="atom" type=application/atom+xml rel=alternate>
+  <LINK href="xmlrpc.php" rel=pingback>
+  <STYLE type=text/css media=screen>
+    #page {
+      background: url("http://618119.com/wp-content/themes/default/images/kubrickbgwide.jpg") repeat-y top;
+      border: none;
+    }
+  </STYLE>
+  <LINK title=RSD href="xmlrpc.php_rsd" type=application/rsd+xml rel=EditURI>
+  <LINK href="wlwmanifest.xml" type=application/wlwmanifest+xml rel=wlwmanifest>
+  <SCRIPT src="jquery.js_ver=1.2.6" type=text/javascript></SCRIPT>
+
+  <SCRIPT src="comment-reply.js_ver=20081210" type=text/javascript></SCRIPT>
+  <LINK href="13.html" rel=canonical>
+  <STYLE type=text/css>
+    /*<![CDATA[*/
+    
+    p.scp_message strong {
+      color: #EB5050;
+    }
+    /*]]>*/
+  </STYLE>
+  <!-- wp thread comment 1.4.9.4.002 -->
+  <STYLE type=text/css media=screen>
+    .editComment,
+    .editableComment,
+    .textComment {
+      display: inline;
+    }
+    
+    .comment-childs {
+      border-top: 2px solid #000;
+      border-bottom: 1px solid #000;
+      margin: 5px 10px 10px 80px;
+      padding: 10px;
+      background: #E8E8E8;
+    }
+  </STYLE>
+</HEAD>
+
+<BODY>
+
+  <DIV id=page>
+
+    <DIV class=widecolumn id=content>
+      <!--StartFragment-->
+      <DIV class=navigation>
+        <DIV class=alignleft>?
+          <A href="http://618119.com/archives/2007/10/22/12.html">在 
+Spket IDE 1.6.4 中使用 Ext 2.0</A>
+        </DIV>
+        <DIV class=alignright>
+          <A href="http://618119.com/archives/2007/10/25/14.html">Windows系统中使用jvmstat查看Java虚拟机信息</A> ?
+        </DIV>
+      </DIV>
+      <DIV class="post hentry category-tomcat tag-12227 tag-apr tag-clientauth tag-https tag-openssl tag-tomcat" id=post-13>
+        <H2><A title="Permanent Link: tomcat启用apr的情况下使用非自签名证书进行ssl双向认证配置" 
+href="http://618119.com/archives/2007/10/23/13.html" 
+rel=bookmark>tomcat启用apr的情况下使用非自签名证书进行ssl双向认证配置</A></H2>作者：
+        <A href="http://618119.com/">lizongbo</A> 发表于：8:47 上午. 星期二, 10月 23rd, 2007
+        <BR>
+        <A href="http://creativecommons.org/licenses/by/3.0/deed.zh">版权声明</A>：可以任意转载，转载时请务必以超链接形式标明文章
+        <A class=permalink href="13.html">原始出处</A>和作者信息及
+        <A href="http://618119.com/archives/2007/10/23/13.html">本版权声明</A>。
+        <BR>
+        <A class=permalink href="13.html">http://618119.com/archives/2007/10/23/13.html</A>
+
+        <HR>
+
+        <DIV class=entry>
+          <P>
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">Tomcat</A>的
+            <A class="st_tag internal_tag" title="标签 APR 下的日志" href="http://618119.com/tag/apr" rel="tag nofollow">apr</A>组件是使用JNI用来提升
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">Tomcat</A>的系统性能，在启用
+            <A class="st_tag internal_tag" title="标签 APR 下的日志" href="http://618119.com/tag/apr" rel="tag nofollow">apr</A>特性之后，
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">Tomcat</A>的
+            <A class="st_tag internal_tag" title="标签 https 下的日志" href="http://618119.com/tag/https" rel="tag nofollow">https</A>功能不能使用JSSE的证书配置，
+            <BR>而需要使用
+            <A class="st_tag internal_tag" title="标签 openssl 下的日志" href="http://618119.com/tag/openssl" rel="tag nofollow">OpenSSL</A>,对于
+            <A class="st_tag internal_tag" title="标签 clientAuth 下的日志" href="http://618119.com/tag/clientauth" rel="tag nofollow">clientAuth</A>的双向认证配置，也与一般方式不同，经过试验，摸索出配置步骤如下：</P>
+          <P>证书文件的制作步骤如下:</P>
+          <P>下载并安装openvpn,然后在
+            <BR>C:\Program Files\OpenVPN\easy-rsa下根据readme指导的步骤生成根证书,服务器证书(非自签名证书),客户端证书.
+          </P>
+          <P>我的具体步骤:
+            <BR>1.命令行下进入 C:\Program Files\OpenVPN\easy-rsa
+            <BR>首先运行init-config.bat
+            <BR>当前目录下会生成
+            <A class="st_tag internal_tag" title="标签 openssl 下的日志" href="http://618119.com/tag/openssl" rel="tag nofollow">openssl</A>.cnf和vars.bat
+            <BR>2.编辑vars,bat,修改以下变量,保存文件.
+            <BR>set KEY_SIZE=2048
+            <BR>set KEY_COUNTRY=CN
+            <BR>set KEY_PROVINCE=GD
+            <BR>set KEY_CITY=ShenZhen
+            <BR>set KEY_ORG=zongbo.Inc
+            <BR>set KEY_EMAIL=lizongbo@618119.com
+          </P>
+          <P>3.命令行下运行
+            <BR>vars.bat
+            <BR>clean-all
+            <BR>4.创建ca证书
+            <BR>1. vars
+            <BR>2. build-ca
+            <BR>5.创建服务器公匙密码
+            <BR>(由于KEY_SIZE设置成了2048,因此可能需要很长的是时间才能创建,此时可以改回1024)
+            <BR>1. vars
+            <BR>2. build-dh</P>
+          <P>6.创建服务器证书和key.
+            <BR>1. vars
+            <BR>2. build-key-server www</P>
+          <P>7.创建客户端证书(创建可导入的格式)
+            <BR>1. vars
+            <BR>2. build-key-pkcs12 lizongbo</P>
+          <P>以下是整个命令执行的过程</P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;init-config</P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;copy vars.bat.sample vars.bat
+            <BR>已复制 1 个文件。
+          </P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;copy
+            <A class="st_tag internal_tag" title="标签 openssl 下的日志" href="http://618119.com/tag/openssl" rel="tag nofollow">openssl</A>.cnf.sample
+            <A class="st_tag internal_tag" title="标签 openssl 下的日志" href="http://618119.com/tag/openssl" rel="tag nofollow">openssl</A>.cnf
+            <BR>已复制 1 个文件。</P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;vars.bat</P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;clean-all
+            <BR>系统找不到指定的文件。
+            <BR>已复制 1 个文件。
+            <BR>已复制 1 个文件。</P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;vars</P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;build-ca
+            <BR>Loading ’screen’ into random state - done
+            <BR>Generating a 2048 bit RSA private key
+            <BR>…………………………………..+++
+            <BR>……………………………………………………………………..
+            <BR>……………………………………………………………………..
+            <BR>…………………….+++
+            <BR>writing new private key to ‘keys\ca.key’
+            <BR>—–
+            <BR>You are about to be asked to enter information that will be incorporated
+            <BR>into your certificate request.
+            <BR>What you are about to enter is what is called a Distinguished Name or a DN.
+            <BR>There are quite a few fields but you can leave some blank
+            <BR>For some fields there will be a default value,
+            <BR>If you enter ‘.’, the field will be left blank.
+            <BR>—–
+            <BR>Country Name (2 letter code) [CN]:CN
+            <BR>State or Province Name (full name) [GD]:GD
+            <BR>Locality Name (eg, city) [ShenZhen]:ShenZhen
+            <BR>Organization Name (eg, company) [zongbo.Inc]:zongbo.Inc
+            <BR>Organizational Unit Name (eg, section) []:lzb.Inc
+            <BR>Common Name (eg, your name or your server’s hostname) []:ca.lizongbo.com
+            <BR>Email Address [lizongbo@618119.com]:lizongbo@618119.com
+          </P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;vars</P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;build-dh
+            <BR>Loading ’screen’ into random state - done
+            <BR>Generating DH parameters, 2048 bit long safe prime, generator 2
+            <BR>This is going to take a long time
+            <BR>………………………………………………..+……………..+…..
+            <BR>……………………………………………………………..+……..
+            <BR>……………………………………………………………………..
+            <BR>………………….+…………………………………………………
+            <BR>……………………………………………………………………..
+            <BR>……………………………………………………………………..
+            <BR>…………………..+…………………………………………..+…..
+            <BR>…………………………………+………………………..+……….
+            <BR>……………………………………………………………..+……..
+            <BR>………………………………………………………….+…………
+            <BR>………………………….+…………………………………………
+            <BR>……………………………………………………………+……….
+            <BR>……………………………………………………………………..
+            <BR>…+…………………………………+………..+……………………
+            <BR>………………………………+…………………………………….
+            <BR>……………………………………………………………………..
+            <BR>.+………………………………………………………………+…..
+            <BR>……………………………………………………………………..
+            <BR>………………………………………………………….+…………
+            <BR>…………………………………………
+            <BR>C:\Program Files\OpenVPN\easy-rsa&gt;vars
+          </P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;build-key-server www
+            <BR>Loading ’screen’ into random state - done
+            <BR>Generating a 2048 bit RSA private key
+            <BR>……….+++
+            <BR>…………………………….+++
+            <BR>writing new private key to ‘keys\www.key’
+            <BR>—–
+            <BR>You are about to be asked to enter information that will be incorporated
+            <BR>into your certificate request.
+            <BR>What you are about to enter is what is called a Distinguished Name or a DN.
+            <BR>There are quite a few fields but you can leave some blank
+            <BR>For some fields there will be a default value,
+            <BR>If you enter ‘.’, the field will be left blank.
+            <BR>—–
+            <BR>Country Name (2 letter code) [CN]:CN
+            <BR>State or Province Name (full name) [GD]:GD
+            <BR>Locality Name (eg, city) [ShenZhen]:ShenZhen
+            <BR>Organization Name (eg, company) [zongbo.Inc]:zongbo.Inc
+            <BR>Organizational Unit Name (eg, section) []:lzb.Inc
+            <BR>Common Name (eg, your name or your server’s hostname) []:
+            <A href="http://www.618119.com/">www.618119.com</A>
+            <BR>Email Address [lizongbo@618119.com]:lizongbo@618119.com
+          </P>
+          <P>Please enter the following ‘extra’ attributes
+            <BR>to be sent with your certificate request
+            <BR>A challenge password []:lizongbo
+            <BR>An optional company name []:lzb.cmp
+            <BR>Using configuration from
+            <A class="st_tag internal_tag" title="标签 openssl 下的日志" href="http://618119.com/tag/openssl" rel="tag nofollow">openssl</A>.cnf
+            <BR>Loading ’screen’ into random state - done
+            <BR>Check that the request matches the signature
+            <BR>Signature ok
+            <BR>The Subject’s Distinguished Name is as follows
+            <BR>countryName :PRINTABLE:’CN’
+            <BR>stateOrProvinceName :PRINTABLE:’GD’
+            <BR>localityName :PRINTABLE:’ShenZhen’
+            <BR>organizationName :PRINTABLE:’zongbo.Inc’
+            <BR>organizationalUnitName:PRINTABLE:’lzb.Inc’
+            <BR>commonName :PRINTABLE:’
+            <A href="http://www.618119.com/">www.618119.com</A>’
+            <BR>emailAddress :IA5STRING:’lizongbo@618119.com’
+            <BR>Certificate is to be certified until Sep 17 02:27:21 2017 GMT (3650 days)
+            <BR>Sign the certificate? [y/n]:y</P>
+          <P>1 out of 1 certificate requests certified, commit? [y/n]y
+            <BR>Write out database with 1 new entries
+            <BR>Data Base Updated</P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;vars</P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;build-key lizongbo
+            <BR>Loading ’screen’ into random state - done
+            <BR>Generating a 2048 bit RSA private key
+            <BR>……………+++
+            <BR>……………………+++
+            <BR>writing new private key to ‘keys\lizongbo.key’
+            <BR>—–
+            <BR>You are about to be asked to enter information that will be incorporated
+            <BR>into your certificate request.
+            <BR>What you are about to enter is what is called a Distinguished Name or a DN.
+            <BR>There are quite a few fields but you can leave some blank
+            <BR>For some fields there will be a default value,
+            <BR>If you enter ‘.’, the field will be left blank.
+            <BR>—–
+            <BR>Country Name (2 letter code) [CN]:CN
+            <BR>State or Province Name (full name) [GD]:GD
+            <BR>Locality Name (eg, city) [ShenZhen]:ShenZhen
+            <BR>Organization Name (eg, company) [zongbo.Inc]:zongbo.Inc
+            <BR>Organizational Unit Name (eg, section) []:lzb.Inc
+            <BR>Common Name (eg, your name or your server’s hostname) []:lizongbo
+            <BR>Email Address [lizongbo@618119.com]:lizongbo@618119.com</P>
+          <P>Please enter the following ‘extra’ attributes
+            <BR>to be sent with your certificate request
+            <BR>A challenge password []:lizongbo
+            <BR>An optional company name []:lzb.cmp
+            <BR>Using configuration from
+            <A class="st_tag internal_tag" title="标签 openssl 下的日志" href="http://618119.com/tag/openssl" rel="tag nofollow">openssl</A>.cnf
+            <BR>Loading ’screen’ into random state - done
+            <BR>DEBUG[load_index]: unique_subject = “yes”
+            <BR>Check that the request matches the signature
+            <BR>Signature ok
+            <BR>The Subject’s Distinguished Name is as follows
+            <BR>countryName :PRINTABLE:’CN’
+            <BR>stateOrProvinceName :PRINTABLE:’GD’
+            <BR>localityName :PRINTABLE:’ShenZhen’
+            <BR>organizationName :PRINTABLE:’zongbo.Inc’
+            <BR>organizationalUnitName:PRINTABLE:’lzb.Inc’
+            <BR>commonName :PRINTABLE:’lizongbo’
+            <BR>emailAddress :IA5STRING:’lizongbo@618119.com’
+            <BR>Certificate is to be certified until Sep 17 02:28:38 2017 GMT (3650 days)
+            <BR>Sign the certificate? [y/n]:y</P>
+          <P>1 out of 1 certificate requests certified, commit? [y/n]y
+            <BR>Write out database with 1 new entries
+            <BR>Data Base Updated</P>
+          <P>C:\Program Files\OpenVPN\easy-rsa&gt;</P>
+          <P>证书文件的安装步骤如下:</P>
+          <P>在IE中 :
+            <BR>在资源管理其中,双击easy-rsa\keys\ca.crt,导入根证书.双击www.crt,导入服务器证书,双击lizongbo.p12,导入客户端证书.</P>
+          <P>在Firefox中:</P>
+          <P>主菜单–&gt;工具–&gt;选项–&gt;加密,察看证书–&gt;证书机构-&gt;导入,选择ca.crt,导入之后,选中刚导入的证书,然后点”编辑”,将三项新任设置全部打上钩.</P>
+          <P>切换面板到”web站点”,导入,选择www.crt,导入之后,选中刚导入的证书,然后点”编辑”,选择”信任此证书的认证”</P>
+          <P>切换到”您的证书”,导入,选择lizongbo.p12, 输入生成证书时设置的密码,导入成功.
+            <BR>(Firefox中如果不首先导入根证书，Firefox会提示-12227错误，”接收到错误或未期望的消息，错误号-12227 “, 与IE的表现不同)
+            <BR>
+            <SPAN id=more-13></SPAN>
+            <BR>
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">Tomcat</A>配置步骤如下:
+            <BR>1.下载tcnative-1.dll，来源：
+            <BR>http://
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">tomcat</A>.heanet.ie/native/1.1.10/binaries/win32/tcnative-1.dll
+            <BR>下载
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">Tomcat</A>:
+            <BR>
+            <A href="http://www.apache.org/dist/--escaped_anchor">http://www.apache.org/dist/--escaped_anchor</A>:079305423cce36d6691457475e081123--/
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">tomcat</A>-6/v6.
+            <A class="st_tag internal_tag" title="标签 0 下的日志" href="http://618119.com/tag/12227" rel="tag nofollow">0</A>.14/bin/apache-
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">tomcat</A>-6.
+            <A class="st_tag internal_tag" title="标签 0 下的日志" href="http://618119.com/tag/12227" rel="tag nofollow">0</A>.14.zip</P>
+          <P>2.解压apache-
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">tomcat</A>-6.
+            <A class="st_tag internal_tag" title="标签 0 下的日志" href="http://618119.com/tag/12227" rel="tag nofollow">0</A>.14.zip为D:\Java\apache-
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">tomcat</A>-6.
+            <A class="st_tag internal_tag" title="标签 0 下的日志" href="http://618119.com/tag/12227" rel="tag nofollow">0</A>.14
+            <BR>复制tcnative-1.dll到D:\Java\apache-
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">tomcat</A>-6.
+            <A class="st_tag internal_tag" title="标签 0 下的日志" href="http://618119.com/tag/12227" rel="tag nofollow">0</A>.14\bin</P>
+          <P>3.在D:\Java\apache-
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">tomcat</A>-6.
+            <A class="st_tag internal_tag" title="标签 0 下的日志" href="http://618119.com/tag/12227" rel="tag nofollow">0</A>.14\conf下新建ca目录。
+            <BR>复制 C:\Program Files\OpenVPN\easy-rsa\keys下的www.crt，www.key，ca.crt到D:\Java\apache-
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">tomcat</A>-6.
+            <A class="st_tag internal_tag" title="标签 0 下的日志" href="http://618119.com/tag/12227" rel="tag nofollow">0</A>.14\conf\ca\</P>
+          <P>4.编辑D:\Java\apache-
+            <A class="st_tag internal_tag" title="标签 Tomcat 下的日志" href="http://618119.com/tag/tomcat" rel="tag nofollow">tomcat</A>-6.
+            <A class="st_tag internal_tag" title="标签 0 下的日志" href="http://618119.com/tag/12227" rel="tag nofollow">0</A>.14\conf\server.xml
+            <BR>增加对
+            <A class="st_tag internal_tag" title="标签 https 下的日志" href="http://618119.com/tag/https" rel="tag nofollow">https</A>的配置，配置内容如下：</P>
+          <P>&lt;Connector port=”22443″ maxHttpHeaderSize=”8192″ protocol=”HTTP/1.1″
+            <BR>maxThreads=”150″ minSpareThreads=”25″ maxSpareThreads=”75″
+            <BR>enableLookups=”false” disableUploadTimeout=”true”
+            <BR>acceptCount=”100″ scheme=”
+            <A class="st_tag internal_tag" title="标签 https 下的日志" href="http://618119.com/tag/https" rel="tag nofollow">https</A>” secure=”true”
+            <BR>
+            <A class="st_tag internal_tag" title="标签 clientAuth 下的日志" href="http://618119.com/tag/clientauth" rel="tag nofollow">clientAuth</A>=”true”
+            <BR>SSLEngine=”on” bufferSize=”8192″
+            <BR>SSLEnabled=”true”
+            <BR>SSLProtocol=”all”
+            <BR>SSLCipherSuite=”ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP:+eNULL”
+            <BR>SSLCertificateFile=”..\conf\ca\www.crt”
+            <BR>SSLCertificateKeyFile=”..\conf\ca\www.key”
+            <BR>SSLCACertificateFile=”..\conf\ca\ca.crt”
+            <BR>SSLCACertificatePath=”..\conf\ca”
+            <BR>SSLVerifyDepth=”15″
+            <BR>SSLVerifyClient=”require”
+            <BR>/&gt;</P>
+          <P>验证:</P>
+          <P>分别使用IE和Firefox访问
+            <A class="st_tag internal_tag" title="标签 https 下的日志" href="http://618119.com/tag/https" rel="tag nofollow">https</A>://
+            <A href="http://www.618119.com/">www.618119.com</A>:22443/,均可得到选择证书的提示,选择对应的客户端证书即可.</P>
+          <P>验证服务器的证书信息:</P>
+          <P>命令行下运行:
+            <A class="st_tag internal_tag" title="标签 openssl 下的日志" href="http://618119.com/tag/openssl" rel="tag nofollow">openssl</A> s_client -connect
+            <A href="http://www.618119.com/">www.618119.com</A>:22443 -prexit
+            <BR>即可看到ssl连接中携带的证书信息</P>
+        </DIV>
+      </DIV>
+      <!--EndFragment-->
+    </DIV>
+  </DIV>
+  <P>&nbsp;</P>
+  <P>&nbsp;</P>
+</BODY>
+
+</HTML>

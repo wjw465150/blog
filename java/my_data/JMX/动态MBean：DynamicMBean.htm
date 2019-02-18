@@ -1,0 +1,445 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>动态MBean：DynamicMBean</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">一、前言<BR>&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">动态MBean是在运行期才定义它的属性和方法，也就是说 
+它有什么属性和方法是可以动态改变的。动态MBean主要利用一 
+些辅助类（构造函数类MBeanConstructorInfo、属性类MBeanAttributeInfo、方法类 
+MBeanOperationInfo）来完成这个功能，所有的动态MBean必须实现DynamicMBean接口。DynamicMBean写好后， 
+使用方法和第一篇文章中普通的MBean一样。<BR><BR>&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">给出一个动态MBean的实例，这个实例最初动态构了一个Name属性及一个print方法，当我们执行它的print方法之后，又给此MBean新增了一个print1方法。实例的代码如下：<BR><BR></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">二、实例<BR></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">1、HelloDynamic类</SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=dp-highlighter>
+<OL class=dp-j><SPAN>
+  <LI class=alt><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;java.lang.reflect.Constructor;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;java.util.Iterator;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.Attribute;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.AttributeList;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.DynamicMBean;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.MBeanAttributeInfo;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.MBeanConstructorInfo;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.MBeanException;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.MBeanInfo;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.MBeanNotificationInfo;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.MBeanOperationInfo;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.MBeanParameterInfo;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.ReflectionException;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN><SPAN class=comment>/**</SPAN>&nbsp;</SPAN></LI>
+  <LI><SPAN><SPAN 
+  class=comment>&nbsp;*&nbsp;@author&nbsp;Sunny&nbsp;Peng</SPAN>&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN><SPAN 
+  class=comment>&nbsp;*&nbsp;@author&nbsp;change&nbsp;by&nbsp;Chen.Gang,&nbsp;add&nbsp;a&nbsp;feature&nbsp;for&nbsp;dynamic&nbsp;add&nbsp;operation</SPAN>&nbsp;</SPAN></LI>
+  <LI><SPAN><SPAN 
+  class=comment>&nbsp;*&nbsp;@version&nbsp;1.0</SPAN>&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN><SPAN 
+  class=comment>&nbsp;*/</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN><SPAN class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>class</SPAN><SPAN>&nbsp;HelloDynamic&nbsp;</SPAN><SPAN 
+  class=keyword>implements</SPAN><SPAN>&nbsp;DynamicMBean&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//这是我们的属性名称</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>private</SPAN><SPAN>&nbsp;String&nbsp;name;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>private</SPAN><SPAN>&nbsp;MBeanInfo&nbsp;mBeanInfo&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>private</SPAN><SPAN>&nbsp;String&nbsp;className;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>private</SPAN><SPAN>&nbsp;String&nbsp;description;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>private</SPAN><SPAN>&nbsp;MBeanAttributeInfo[]&nbsp;attributes;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>private</SPAN><SPAN>&nbsp;MBeanConstructorInfo[]&nbsp;constructors;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>private</SPAN><SPAN>&nbsp;MBeanOperationInfo[]&nbsp;operations;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;MBeanNotificationInfo[]&nbsp;mBeanNotificationInfoArray;&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>public</SPAN><SPAN>&nbsp;HelloDynamic()&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buildDynamicMBean();&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>private</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>void</SPAN><SPAN>&nbsp;init()&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;className&nbsp;=&nbsp;<SPAN 
+  class=keyword>this</SPAN><SPAN>.getClass().getName();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;description&nbsp;=&nbsp;<SPAN 
+  class=string>"Simple&nbsp;implementation&nbsp;of&nbsp;a&nbsp;dynamic&nbsp;MBean."</SPAN><SPAN>;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;attributes&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanAttributeInfo[</SPAN><SPAN 
+  class=number>1</SPAN><SPAN>];&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constructors&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanConstructorInfo[</SPAN><SPAN 
+  class=number>1</SPAN><SPAN>];&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;operations&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanOperationInfo[</SPAN><SPAN 
+  class=number>1</SPAN><SPAN>];&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mBeanNotificationInfoArray&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanNotificationInfo[</SPAN><SPAN 
+  class=number>0</SPAN><SPAN>];&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>private</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>void</SPAN><SPAN>&nbsp;buildDynamicMBean()&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//设定构造函数</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Constructor[]&nbsp;thisconstructors&nbsp;=&nbsp;<SPAN 
+  class=keyword>this</SPAN><SPAN>.getClass().getConstructors();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constructors[<SPAN 
+  class=number>0</SPAN><SPAN>]&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanConstructorInfo(</SPAN><SPAN 
+  class=string>"HelloDynamic():&nbsp;Constructs&nbsp;a&nbsp;HelloDynamic&nbsp;object"</SPAN><SPAN>,&nbsp;thisconstructors[</SPAN><SPAN 
+  class=number>0</SPAN><SPAN>]);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//设定一个属性</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;attributes[<SPAN 
+  class=number>0</SPAN><SPAN>]&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanAttributeInfo(</SPAN><SPAN 
+  class=string>"Name"</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+  class=string>"java.lang.String"</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+  class=string>"Name:&nbsp;name&nbsp;string."</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+  class=keyword>true</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+  class=keyword>true</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+  class=keyword>false</SPAN><SPAN>);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//operate&nbsp;method&nbsp;我们的操作方法是print</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MBeanParameterInfo[]&nbsp;params&nbsp;=&nbsp;<SPAN 
+  class=keyword>null</SPAN><SPAN>;</SPAN><SPAN 
+  class=comment>//无参数</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;operations[<SPAN 
+  class=number>0</SPAN><SPAN>]&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanOperationInfo(</SPAN><SPAN 
+  class=string>"print"</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+  class=string>"print():&nbsp;print&nbsp;the&nbsp;name"</SPAN><SPAN>,&nbsp;params,&nbsp;</SPAN><SPAN 
+  class=string>"void"</SPAN><SPAN>,&nbsp;MBeanOperationInfo.INFO);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mBeanInfo&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanInfo(className,&nbsp;description,&nbsp;attributes,&nbsp;constructors,&nbsp;operations,&nbsp;mBeanNotificationInfoArray);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//动态增加一个print1方法</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>private</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>void</SPAN><SPAN>&nbsp;dynamicAddOperation()&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;init();&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;operations&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanOperationInfo[</SPAN><SPAN 
+  class=number>2</SPAN><SPAN>];</SPAN><SPAN 
+  class=comment>//设定数组为两个</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;buildDynamicMBean();&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;operations[<SPAN 
+  class=number>1</SPAN><SPAN>]&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanOperationInfo(</SPAN><SPAN 
+  class=string>"print1"</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+  class=string>"print1():&nbsp;print&nbsp;the&nbsp;name"</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+  class=string>"void"</SPAN><SPAN>,&nbsp;MBeanOperationInfo.INFO);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mBeanInfo&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;MBeanInfo(className,&nbsp;description,&nbsp;attributes,&nbsp;constructors,&nbsp;operations,&nbsp;mBeanNotificationInfoArray);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>public</SPAN><SPAN>&nbsp;Object&nbsp;getAttribute(String&nbsp;attribute_name)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(attribute_name&nbsp;!=&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>)&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(attribute_name.equals(</SPAN><SPAN 
+  class=string>"Name"</SPAN><SPAN>))&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;name;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>void</SPAN><SPAN>&nbsp;setAttribute(Attribute&nbsp;attribute)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(attribute&nbsp;==&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>)&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;Name&nbsp;=&nbsp;attribute.getName();&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Object&nbsp;value&nbsp;=&nbsp;attribute.getValue();&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>try</SPAN><SPAN>&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(Name.equals(</SPAN><SPAN 
+  class=string>"Name"</SPAN><SPAN>))&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//&nbsp;if&nbsp;null&nbsp;value,&nbsp;try&nbsp;and&nbsp;see&nbsp;if&nbsp;the&nbsp;setter&nbsp;returns&nbsp;any&nbsp;exception</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(value&nbsp;==&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;name&nbsp;=&nbsp;<SPAN 
+  class=keyword>null</SPAN><SPAN>;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//&nbsp;if&nbsp;non&nbsp;null&nbsp;value,&nbsp;make&nbsp;sure&nbsp;it&nbsp;is&nbsp;assignable&nbsp;to&nbsp;the&nbsp;attribute</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword>else</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;((Class.forName(</SPAN><SPAN 
+  class=string>"java.lang.String"</SPAN><SPAN>)).isAssignableFrom(value.getClass()))&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;name&nbsp;=&nbsp;(String)&nbsp;value;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword>catch</SPAN><SPAN>&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>public</SPAN><SPAN>&nbsp;AttributeList&nbsp;getAttributes(String[]&nbsp;attributeNames)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(attributeNames&nbsp;==&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>)&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttributeList&nbsp;resultList&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;AttributeList();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//&nbsp;if&nbsp;attributeNames&nbsp;is&nbsp;empty,&nbsp;return&nbsp;an&nbsp;empty&nbsp;result&nbsp;list</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(attributeNames.length&nbsp;==&nbsp;</SPAN><SPAN 
+  class=number>0</SPAN><SPAN>)&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;resultList;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>for</SPAN><SPAN>&nbsp;(</SPAN><SPAN 
+  class=keyword>int</SPAN><SPAN>&nbsp;i&nbsp;=&nbsp;</SPAN><SPAN 
+  class=number>0</SPAN><SPAN>;&nbsp;i&nbsp;&lt;&nbsp;attributeNames.length;&nbsp;i++)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>try</SPAN><SPAN>&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Object&nbsp;value&nbsp;=&nbsp;getAttribute(attributeNames[i]);&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultList.add(<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;Attribute(attributeNames[i],&nbsp;value));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword>catch</SPAN><SPAN>&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;resultList;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>public</SPAN><SPAN>&nbsp;AttributeList&nbsp;setAttributes(AttributeList&nbsp;attributes)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(attributes&nbsp;==&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>)&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AttributeList&nbsp;resultList&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;AttributeList();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//&nbsp;if&nbsp;attributeNames&nbsp;is&nbsp;empty,&nbsp;nothing&nbsp;more&nbsp;to&nbsp;do</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(attributes.isEmpty())&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;resultList;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//&nbsp;for&nbsp;each&nbsp;attribute,&nbsp;try&nbsp;to&nbsp;set&nbsp;it&nbsp;and&nbsp;add&nbsp;to&nbsp;the&nbsp;result&nbsp;list&nbsp;if&nbsp;successfull</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>for</SPAN><SPAN>&nbsp;(Iterator&nbsp;i&nbsp;=&nbsp;attributes.iterator();&nbsp;i.hasNext();)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Attribute&nbsp;attr&nbsp;=&nbsp;(Attribute)&nbsp;i.next();&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>try</SPAN><SPAN>&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;setAttribute(attr);&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;name&nbsp;=&nbsp;attr.getName();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Object&nbsp;value&nbsp;=&nbsp;getAttribute(name);&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;resultList.add(<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;Attribute(name,&nbsp;value));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword>catch</SPAN><SPAN>&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;resultList;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>public</SPAN><SPAN>&nbsp;Object&nbsp;invoke(String&nbsp;operationName,&nbsp;Object&nbsp;params[],&nbsp;String&nbsp;signature[])&nbsp;</SPAN><SPAN 
+  class=keyword>throws</SPAN><SPAN>&nbsp;MBeanException,&nbsp;ReflectionException&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//&nbsp;Check&nbsp;for&nbsp;a&nbsp;recognized&nbsp;operation&nbsp;name&nbsp;and&nbsp;call&nbsp;the&nbsp;corresponding&nbsp;operation</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(operationName.equals(</SPAN><SPAN 
+  class=string>"print"</SPAN><SPAN>))&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//具体实现我们的操作方法print</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string>"Hello,&nbsp;"</SPAN><SPAN>&nbsp;+&nbsp;name&nbsp;+&nbsp;</SPAN><SPAN 
+  class=string>",&nbsp;this&nbsp;is&nbsp;HellDynamic!"</SPAN><SPAN>);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dynamicAddOperation();&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword>else</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>if</SPAN><SPAN>&nbsp;(operationName.equals(</SPAN><SPAN 
+  class=string>"print1"</SPAN><SPAN>))&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string>"这是动态增加的一方法print1"</SPAN><SPAN>);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>null</SPAN><SPAN>;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+  class=keyword>else</SPAN><SPAN>&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment>//&nbsp;unrecognized&nbsp;operation&nbsp;name:</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>throw</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;ReflectionException(</SPAN><SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;NoSuchMethodException(operationName),&nbsp;</SPAN><SPAN 
+  class=string>"Cannot&nbsp;find&nbsp;the&nbsp;operation&nbsp;"</SPAN><SPAN>&nbsp;+&nbsp;operationName&nbsp;+&nbsp;</SPAN><SPAN 
+  class=string>"&nbsp;in&nbsp;"</SPAN><SPAN>&nbsp;+&nbsp;className);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;</SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>public</SPAN><SPAN>&nbsp;MBeanInfo&nbsp;getMBeanInfo()&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>return</SPAN><SPAN>&nbsp;mBeanInfo;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>}&nbsp;&nbsp;</SPAN></LI></SPAN></OL></DIV></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">说明：<BR>&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">* 
+实现于接口DynamicMBean<BR>&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">* 
+借助于各种辅助类完成一个类的构造。构造函数类MBeanConstructorInfo、属性类MBeanAttributeInfo、方法类MBeanOperationInfo<BR>&nbsp;&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">* 
+这里所有public方法是实现于DynamicMBean的。主要提供：setAttribute设置属性、 
+getAttribute取得属性、setAttributes设置一组属性、getAttributes取得一组属性、invoke方法调用、 
+getMBeanInfo　MBeanServer由这个方法得到关键的MBean类的构造信息。<BR><BR></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">2、HelloAgent类<BR></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp; 
+前面说了HelloDynamic和普通MBean的使用方法是一样的，因此HelloAgent和第一篇的HelloAgent基本一样，就是把Hello改成HelloDynamic而已。为了实例完整，也一并帖出来吧。<BR>
+<DIV class=dp-highlighter>
+<OL class=dp-j><SPAN>
+  <LI class=alt><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.MBeanServerFactory;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;javax.management.ObjectName;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN><SPAN 
+  class=keyword>import</SPAN><SPAN>&nbsp;com.sun.jdmk.comm.HtmlAdaptorServer;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN><SPAN class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>class</SPAN><SPAN>&nbsp;HelloAgent&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>static</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+  class=keyword>void</SPAN><SPAN>&nbsp;main(String[]&nbsp;args)&nbsp;</SPAN><SPAN 
+  class=keyword>throws</SPAN><SPAN>&nbsp;Exception&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MBeanServer&nbsp;server&nbsp;=&nbsp;MBeanServerFactory.createMBeanServer();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ObjectName&nbsp;helloName&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;ObjectName(</SPAN><SPAN 
+  class=string>"chengang:name=HelloDynamic"</SPAN><SPAN>);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HelloDynamic&nbsp;hello&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;HelloDynamic();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;server.registerMBean(hello,&nbsp;helloName);&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ObjectName&nbsp;adapterName&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;ObjectName(</SPAN><SPAN 
+  class=string>"HelloAgent:name=htmladapter,port=8082"</SPAN><SPAN>);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HtmlAdaptorServer&nbsp;adapter&nbsp;=&nbsp;<SPAN 
+  class=keyword>new</SPAN><SPAN>&nbsp;HtmlAdaptorServer();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;server.registerMBean(adapter,&nbsp;adapterName);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;adapter.start();&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(<SPAN 
+  class=string>"start....."</SPAN><SPAN>);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI><SPAN>}&nbsp;&nbsp;</SPAN></LI></SPAN></OL></DIV><BR></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">3、运行<BR>&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">先运行HelloAgent。再打开浏览器，输入网址：http://localhost:8082/。单击进入“name=HelloDynamic 
+”项，执行print方法后再回到上一页面你会发现又多了一个print1方法。<BR><BR></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">4、总结<BR>&nbsp;&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">动态MBean的代码稍显复杂，但对于一些特殊需求的情况，它将显示出强大威力。而且它还是模型MBeans（Model 
+MBeans）的基础。不过在一般的项目中，动态MBean还是用得比较少，所谓利器深藏之而不用，非常时方现光芒。</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: medium Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: x-small Simsun; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></SPAN></body>
+</html>

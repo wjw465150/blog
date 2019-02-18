@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Java 8系列之Stream中万能的reduce</title>
+  </head>
+  <body>
+    <div class="article_title" style="margin-bottom: 21px; color: rgb(0, 0, 0); font-family: &quot;microsoft yahei&quot;; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;"><span></span>
+      <h1 style="margin: 0px; padding: 0px; display: inline-block; vertical-align: middle; font-size: 18px;"><span class="link_title"><a
+            href="http://blog.csdn.net/io_field/article/details/54971679" style="text-decoration: none; color: rgb(0, 0, 0);">Java
+            8系列之Stream中万能的reduce</a></span></h1>
+    </div>
+    <div id="article_content" class="article_content csdn-tracking-statistics" data-pid="blog" data-mod="popu_307" data-dsm="post"
+      style="margin: 35px 0px; font-size: 15px; color: rgb(85, 85, 85); line-height: 35px; font-family: &quot;microsoft yahei&quot;; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; overflow: hidden;">
+      <div class="markdown_views" style="font-family: &quot;microsoft yahei&quot;; font-size: 16px; color: rgb(63, 63, 63);"><br>
+      </div>
+      <div class="markdown_views" style="font-family: &quot;microsoft yahei&quot;; font-size: 16px; color: rgb(63, 63, 63);">reduce
+        操作可以实现从Stream中生成一个值，其生成的值不是随意的，而是根据指定的计算模型。比如，之前提到count、min和max方<span>&nbsp;</span><br style="box-sizing: border-box;">
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;">法，
+          因为常用而被纳入标准库中。事实上，这些方法都是reduce操作。</p>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;">reduce
+          方法有三个override的方法：</p>
+        <ul style="box-sizing: border-box; line-height: 27.2px; margin-bottom: 1.7em;">
+          <li style="box-sizing: border-box;">Optional&lt;T&gt; reduce(BinaryOperator&lt;T&gt; accumulator);</li>
+          <li style="box-sizing: border-box;">T reduce(T identity, BinaryOperator&lt;T&gt; accumulator);</li>
+          <li style="box-sizing: border-box;">&lt;U&gt; U reduce(U identity,BiFunction&lt;U, ? super T, U&gt;
+            accumulator,BinaryOperator&lt;U&gt; combiner);</li>
+        </ul>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;">我
+          们先看第一个变形，其接受一个函数接口BinaryOperator&lt;T&gt;，而这个接口又继承于BiFunction&lt;T, T,
+          T&gt;.在BinaryOperator接口中，又定义了两个静态方法minBy和maxBy。这里我们先不管这两个静态方法，先了解reduce的操作。</p>
+        <pre style="white-space: pre-wrap; word-wrap: break-word; box-sizing: border-box; margin: 0px 0px 10.5px; line-height: 1.45; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 10px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 1px solid rgba(128, 128, 128, 0.075); border-radius: 0px;"><code
+style="box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; padding: 0px; font-size: 12.6px; color: inherit; background-color: transparent; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;">@FunctionalInterface
+public interface BinaryOperator&lt;T&gt; extends BiFunction&lt;T,T,T&gt; {
+
+    public static &lt;T&gt; BinaryOperator&lt;T&gt; minBy(Comparator&lt;? super T&gt; comparator) {
+        Objects.requireNonNull(comparator);
+        return (a, b) -&gt; comparator.compare(a, b) &lt;= 0 ? a : b;
+    }
+
+
+    public static &lt;T&gt; BinaryOperator&lt;T&gt; maxBy(Comparator&lt;? super T&gt; comparator) {
+        Objects.requireNonNull(comparator);
+        return (a, b) -&gt; comparator.compare(a, b) &gt;= 0 ? a : b;
+    }
+}
+</code></pre>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;">在
+          使用时，我们可以使用Lambada表达式来表示</p>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;">BinaryOperator
+          接口，可以看到reduce方法接受一个函数，这个函数有两个参数，第一个参数是上次函数执行的返回值（也称为中间结果），第二个参数是stream中的元素，这个函数把这两个值相加，得到的和会被赋值给下次执行这个函数的第一个参
+          数。要注意的是：<strong style="box-sizing: border-box;">第一次执行的时候第一个参数的值是Stream的第一个元素，第二个参数是Stream的第二个元素</strong>。这个方法返
+          回值类型是Optional，</p>
+        <pre style="white-space: pre-wrap; word-wrap: break-word; box-sizing: border-box; margin: 0px 0px 10.5px; line-height: 1.45; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 10px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 1px solid rgba(128, 128, 128, 0.075); border-radius: 0px;"><code
+style="box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; padding: 0px; font-size: 12.6px; color: inherit; background-color: transparent; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;">Optional accResult = Stream.of(1, 2, 3, 4)
+        .reduce((acc, item) -&gt; {
+            System.out.println("acc : "  + acc);
+            acc += item;
+            System.out.println("item: " + item);
+            System.out.println("acc+ : "  + acc);
+            System.out.println("--------");
+            return acc;
+        });
+System.out.println("accResult: " + accResult.get());
+System.out.println("--------");
+// 结果打印
+--------
+acc : 1
+item: 2
+acc+ : 3
+--------
+acc : 3
+item: 3
+acc+ : 6
+--------
+acc : 6
+item: 4
+acc+ : 10
+--------
+accResult: 10
+--------
+</code></pre>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;"><img
+            src="http://img.blog.csdn.net/20170206113403917?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvSU9fRmllbGQ=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast"
+            alt="这里写图片描述" title="" style="border: none; box-sizing: border-box; margin-top: 15px; margin-bottom: 15px; max-width: 602px; max-height: 100%; height: auto;"></p>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;">下
+          面来看第二个变形，与第一种变形相同的是都会接受一个BinaryOperator函数接口，不同的是其会接受一个identity参数，用来指定Stream循环的初始值。如果Stream为空，就直接返回该值。另一方面，该方法不
+          会返回Optional，因为该方法不会出现null。</p>
+        <pre style="white-space: pre-wrap; word-wrap: break-word; box-sizing: border-box; margin: 0px 0px 10.5px; line-height: 1.45; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 10px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 1px solid rgba(128, 128, 128, 0.075); border-radius: 0px;"><code
+style="box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; padding: 0px; font-size: 12.6px; color: inherit; background-color: transparent; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;">int accResult = Stream.of(1, 2, 3, 4)
+            .reduce(0, (acc, item) -&gt; {
+                System.out.println("acc : "  + acc);
+                acc += item;
+                System.out.println("item: " + item);
+                System.out.println("acc+ : "  + acc);
+                System.out.println("--------");
+                return acc;
+            });
+System.out.println("accResult: " + accResult);
+System.out.println("--------");
+// 结果打印
+acc : 0
+item: 1
+acc+ : 1
+--------
+acc : 1
+item: 2
+acc+ : 3
+--------
+acc : 3
+item: 3
+acc+ : 6
+--------
+acc : 6
+item: 4
+acc+ : 10
+--------
+accResult: 10
+--------
+</code></pre>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;">从
+          打印结果可以看出，reduce前两种变形，因为接受参数不同，其执行的操作也有相应变化：</p>
+        <ul style="box-sizing: border-box; line-height: 27.2px; margin-bottom: 1.7em;">
+          <li style="box-sizing: border-box;">变形1，未定义初始值，从而第一次执行的时候第一个参数的值是Stream的第一个元素，第二个参数是Stream的第二个元素</li>
+          <li style="box-sizing: border-box;">变形2，定义了初始值，从而第一次执行的时候第一个参数的值是初始值，第二个参数是Stream的第一个元素</li>
+        </ul>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;">对
+          于第三种变形，我们先看各个参数的含义，第一个参数返回实例u，传递你要返回的U类型对象的初始化实例u，第二个参数累加器accumulator，可以使用二元?表达式（即二元lambda表达式），声明你在u上累加你的数据来源t
+          的逻辑，例如(u,t)-&gt;u.sum(t),此时lambda表达式的行参列表是返回实例u和遍历的集合元素t，函数体是在u上累加t，第三个参数组合器combiner，同样是二元?表达式，(u,t)-&gt;u。在官方
+          文档上有这么一段介绍，</p>
+        <blockquote style="box-sizing: border-box; margin: 0px 0px 1.7em; line-height: 27.2px; padding: 15px 20px; border-left: 10px solid rgba(128, 128, 128, 0.075); background-color: rgba(128, 128, 128, 0.05); border-radius: 0px 5px 5px 0px;">
+          <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 1.5; font-size: 1em; color: rgb(111, 111, 111); word-wrap: break-word; word-break: normal;">U
+            result = identity;<span>&nbsp;</span><br style="box-sizing: border-box;">
+            <br style="box-sizing: border-box;">
+            for (T element : this stream)<span>&nbsp;</span><br style="box-sizing: border-box;">
+            <br style="box-sizing: border-box;">
+            &nbsp; &nbsp; &nbsp; &nbsp; result = accumulator.apply(result, element)<span>&nbsp;</span><br style="box-sizing: border-box;">
+            <br style="box-sizing: border-box;">
+            return result;</p>
+          <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 1.5; font-size: 1em; color: rgb(111, 111, 111); word-wrap: break-word; word-break: normal;">but
+            is not constrained to execute sequentially.</p>
+          <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 1.5; font-size: 1em; color: rgb(111, 111, 111); word-wrap: break-word; word-break: normal;">The
+            identity value must be an identity for the combiner function. This means that for all u, combiner(identity,
+            u) is equal to u. Additionally, the combiner function must be compatible with the accumulator function; for
+            all u and t, the following must hold:</p>
+          <p style="margin: 0px; padding: 0px; box-sizing: border-box; line-height: 1.5; font-size: 1em; color: rgb(111, 111, 111); word-wrap: break-word; word-break: normal;">combiner.apply(u,
+            accumulator.apply(identity, t)) == accumulator.apply(u, t)</p>
+        </blockquote>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;">因
+          为reduce的变形的第一个参数类型是实际返回实例的数据类型，同时其为一个泛型也就是意味着该变形的可以返回任意类型的数据。从上面文档介绍的字面意思解读是第三个参数函数用来组合两个值，而这两个值必须与第二个函数参数相兼容，
+          也就是说它们所得的结果是一样的。看到这里肯定有迷惑的地方，第三个参数到底是用来干嘛的？我们先看一段代码，为了便于了解其中的缘由，并没有使用Lambda表达式，</p>
+        <pre style="white-space: pre-wrap; word-wrap: break-word; box-sizing: border-box; margin: 0px 0px 10.5px; line-height: 1.45; font-family: &quot;Source Code Pro&quot;, monospace; display: block; padding: 10px; font-size: 14px; word-break: break-all; color: rgb(51, 51, 51); background-color: rgba(128, 128, 128, 0.05); border: 1px solid rgba(128, 128, 128, 0.075); border-radius: 0px;"><code
+style="box-sizing: border-box; font-family: &quot;Source Code Pro&quot;, monospace; padding: 0px; font-size: 12.6px; color: inherit; background-color: transparent; white-space: pre; border-radius: 0px; overflow-x: auto; word-wrap: normal;">ArrayList&lt;Integer&gt; accResult_ = Stream.of(1, 2, 3, 4)
+        .reduce(new ArrayList&lt;Integer&gt;(),
+                new BiFunction&lt;ArrayList&lt;Integer&gt;, Integer, ArrayList&lt;Integer&gt;&gt;() {
+                    @Override
+                    public ArrayList&lt;Integer&gt; apply(ArrayList&lt;Integer&gt; acc, Integer item) {
+
+                        acc.add(item);
+                        System.out.println("item: " + item);
+                        System.out.println("acc+ : " + acc);
+                        System.out.println("BiFunction");
+                        return acc;
+                    }
+                }, new BinaryOperator&lt;ArrayList&lt;Integer&gt;&gt;() {
+                    @Override
+                    public ArrayList&lt;Integer&gt; apply(ArrayList&lt;Integer&gt; acc, ArrayList&lt;Integer&gt; item) {
+                        System.out.println("BinaryOperator");
+                        acc.addAll(item);
+                        System.out.println("item: " + item);
+                        System.out.println("acc+ : " + acc);
+                        System.out.println("--------");
+                        return acc;
+                    }
+                });
+System.out.println("accResult_: " + accResult_);
+// 结果打印
+item: 1
+acc+ : [1]
+BiFunction
+item: 2
+acc+ : [1, 2]
+BiFunction
+item: 3
+acc+ : [1, 2, 3]
+BiFunction
+item: 4
+acc+ : [1, 2, 3, 4]
+BiFunction
+accResult_: [1, 2, 3, 4]
+accResult_: 10
+</code></pre>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;">首
+          先示例代码中，传递给第一个参数是ArrayList,在第二个函数参数中打印了“BiFunction”，而在第三个参数接口中打印了函数接口中打印了”BinaryOperator“.可是，看打印结果，只是打印了
+          “BiFunction”，而没有打印”BinaryOperator“，说明第三个函数参数病没有执行。这里我们知道了该变形可以返回任意类型的数据。对于第三个函数参数，为什么没有执行，刚开始的时候也是没有看懂到底是啥意思呢，
+          而且其参数必须为返回的数据类型？看了好几遍文档也是一头雾水。在<span>&nbsp;</span><a href="https://www.zhihu.com/question/35451347?q=Stream%20%E7%9A%84%20reduce"
+            target="_blank" style="text-decoration: none; box-sizing: border-box; color: rgb(12, 137, 207);">java8
+            reduce方法中的第三个参数combiner有什么作用？</a>这里找到了答案，Stream是支持并发操作的，为了避免竞争，对于reduce线程都会有独立的result，combiner的作用在于合并每个线程的
+          result得到最终结果。这也说明了了第三个函数参数的数据类型必须为返回数据类型了。</p>
+        <p style="margin: 0px 0px 1.7em; padding: 0px; box-sizing: border-box; line-height: 27.2px; word-wrap: break-word; word-break: normal;"><font
+            style="box-sizing: border-box;" color="#ff0000"><br style="box-sizing: border-box;">
+            需要注意的是，因为第三个参数用来处理并发操作，如何处理数据的重复性，应多做考虑，否则会出现重复数据！</font></p>
+      </div>
+    </div>
+  </body>
+</html>

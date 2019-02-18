@@ -1,0 +1,177 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+<HTML dir=ltr xml:lang="zh-CN" 
+xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>优化JVM参数提高eclipse运行速度</title><LINK 
+rel="shortcut icon" type=image/x-icon href="favicon.ico"><LINK 
+title=JavaEye论坛 rel=alternate type=application/rss+xml 
+href="Java"><LINK title=JavaEye rel=search 
+type=application/opensearchdescription+xml href="open_search.xml"><LINK 
+rel=stylesheet type=text/css 
+href="forum.css_1283419980" media=screen>
+<LINK rel=stylesheet type=text/css 
+href="SyntaxHighlighter.css_1268040798" 
+media=screen>
+<STYLE type=text/css>.dp-sql .func {
+	COLOR: #ff1493
+}
+.dp-sql .op {
+	COLOR: #808080
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+
+<STYLE type=text/css>.dp-j .annotation {
+	COLOR: #646464
+}
+.dp-j .number {
+	COLOR: #c00000
+}
+</STYLE>
+</HEAD>
+
+<BODY>
+
+<DIV id=page>
+
+<DIV id=content class=clearfix>
+
+<DIV id=main>
+
+<TABLE id=forum_main cellSpacing=1>
+
+<TBODY id=posts>
+
+<TR id=1659035>
+
+<TD class=postcontent>
+
+<DIV class="postbody clearfix"><!--StartFragment--><SPAN style="FONT-SIZE: medium">性能优化从身边做起。</SPAN> 
+<BR><BR>首先建立评估体系，将workspace里所有的项目close掉，关闭eclipse。优化的用例就是启动eclipse，open一个项目，eclipse会自动build这个项目，保证没有感觉到明显的卡，也就是没有full 
+GC。 <BR><BR>开始： <BR><BR>eclipse.ini里加入打印gc情况的参数： <BR><BR>
+<TABLE class=bbcode>
+<TBODY>
+<TR>
+<TD>-XX:+PrintGCTimeStamps</TD></TR>
+<TR>
+<TD>-XX:+PrintGCDetails</TD></TR>
+<TR>
+<TD>-verbose:gc</TD></TR>
+<TR>
+<TD>-Xloggc:gc.log</TD></TR></TBODY></TABLE><BR><BR>这样eclipse在运行过程中会记录gc日志，显示详细的gc情况，并打印在gc.log中，通过分析这个日志寻找eclipse的性能瓶颈和优化方式。 
+<BR>我最初的参数只是在原版基础上调了堆大小 <BR>
+<TABLE class=bbcode>
+<TBODY>
+<TR>
+<TD>-Xms512m</TD></TR>
+<TR>
+<TD>-Xmx512m</TD></TR></TBODY></TABLE><BR><BR>将堆初始化和最大值设为一样，消除堆大小根据当前堆使用情况而变化带来的影响。 
+<BR>启动eclipse，发现gc.log里打出了很多full gc的日志 <BR>
+<DIV class=quote_title>引用</DIV>
+<DIV class=quote_div>4.226: [Full GC 4.226: [Tenured: 18470K-&gt;19304K(30544K), 
+0.1159544 secs] 25154K-&gt;19304K(44368K), [Perm : 24574K-&gt;24554K(24576K)], 
+0.1160431 secs] [Times: user=0.13 sys=0.00, real=0.13 
+secs]</DIV><BR>在启动的6秒多时间里共出现了8次full gc，所以启动慢，觉得启动时候挺卡的。从日志里可以看出来 
+FullGC主要是在回收tenured区和Perm区，其中Perm一直都是快满的状态，Perm : 
+24574K-&gt;24554K(24576K)，Perm大小在不断调整，所以需要固定Perm区的大小，保证够用，eclipse.ini里加入 <BR>
+<TABLE class=bbcode>
+<TBODY>
+<TR>
+<TD>-XX:PermSize=64m</TD></TR>
+<TR>
+<TD>-XX:MaxPermSize=64m</TD></TR></TBODY></TABLE><BR><BR>再启动：发现没有full 
+gc了只有数量比较多的minor gc，挑启动开始到启动完成的第一条和最后一条日志 <BR>
+<DIV class=quote_title>引用</DIV>
+<DIV class=quote_div>0.209: [GC 0.209: [DefNew: 4416K-&gt;511K(4928K), 0.0034707 
+secs] 4416K-&gt;614K(15872K), 0.0035239 secs] [Times: user=0.00 sys=0.00, 
+real=0.00 secs] <BR>…. <BR>6.383: [GC 6.383: [DefNew: 18880K-&gt;1985K(21184K), 
+0.0055311 secs] 46992K-&gt;30098K(68040K), 0.0055694 
+secs]</DIV><BR>这6秒中GC日志打了69次， 而内存回收率还是蛮高的 young区18880-1985=16895 jvm 
+46992-30098=16894 
+都快接近100%了，可以看出young区是由小到大在不断调整大小，所以不断GC，因此设一个初始值吧，据说设置heap的1/4比较好，那就是128M，所以eclipse.ini加入 
+<BR>
+<TABLE class=bbcode>
+<TBODY>
+<TR>
+<TD>-Xmn128m</TD></TR></TBODY></TABLE><BR><BR>再重启，发现GC日志就四条了，eclipse启动自然快了 
+<BR><BR>
+<DIV class=quote_title>引用</DIV>
+<DIV class=quote_div>1.292: [GC 1.292: [DefNew: 104960K-&gt;10984K(118016K), 
+0.0334165 secs] 104960K-&gt;10984K(511232K), 0.0334603 secs] [Times: user=0.03 
+sys=0.00, real=0.03 secs] <BR>2.182: [GC 2.182: [DefNew: 
+115944K-&gt;1852K(118016K), 0.0221714 secs] 115944K-&gt;11466K(511232K), 
+0.0222142 secs] [Times: user=0.00 sys=0.02, real=0.02 secs] <BR>3.987: [GC 
+3.987: [DefNew: 106779K-&gt;12531K(118016K), 0.0378228 secs] 
+116393K-&gt;22145K(511232K), 0.0378692 secs] [Times: user=0.03 sys=0.00, 
+real=0.03 secs] <BR>5.377: [GC 5.377: [DefNew: 117491K-&gt;9403K(118016K), 
+0.0513728 secs] 127105K-&gt;31364K(511232K), 0.0514133 
+secs]</DIV><BR><BR>但是，启动后open我的多个项目，这些项目互相依赖，eclipse自动build，感觉有点小卡，发现日志里多了4次full 
+GC，所以就卡了… <BR>
+<DIV class=quote_title>引用</DIV>
+<DIV class=quote_div>67.320: [Full GC (System) 67.320: [Tenured: 
+88847K-&gt;68809K(393216K), 0.2121213 secs] 117385K-&gt;68809K(511232K), [Perm : 
+41915K-&gt;41915K(65536K)], 0.2121747 secs] [Times: user=0.20 sys=0.00, 
+real=0.20 secs] <BR>103.759: [Full GC (System) 103.759: [Tenured: 
+81882K-&gt;66784K(393216K), 0.3287387 secs] 185350K-&gt;66784K(511232K), [Perm : 
+53464K-&gt;53414K(65536K)], 0.3287897 secs] [Times: user=0.33 sys=0.00, 
+real=0.33 secs]</DIV><BR><BR>这个时候Tenured区和Perm都还没到很接近最大值，但是为什么还有full 
+GC呢，开始以为是JVM悲观认为Tenured区剩余空间不足以应对下一次minor GC 所以进行了full 
+GC调整Tenured空间，索性直接增加了堆最大值到-Xmx728m（工作电脑的内存是3.5G），但重启后full gc还是有4次，而且有几次minor 
+GC用的时间超过了0.1秒，这是因为增加了堆大小，导致GC用时也增加了，不能接受。所以还是改回-Xmx512m。 <BR>再仔细观察日志，发现Full GC 
+(System) 
+字样，这个意思是eclipse里调用了System.gc()手动触发了系统GC，好吧，哥已经给你分配足够空间了，你就省省吧，在eclipse.ini里加入： 
+<BR>
+<TABLE class=bbcode>
+<TBODY>
+<TR>
+<TD>-XX:+DisableExplicitGC</TD></TR></TBODY></TABLE><BR><BR>这样就差不多了，整个过程没有出现full 
+gc，再编码2个小时，中间只出现了一次full gc，在open build某50W行+的代码的时候，eclipse还是卡了… 
+<BR>最后又稍微调了一下各代的大小，得到目前的参数： <BR>
+<TABLE class=bbcode>
+<TBODY>
+<TR>
+<TD>-Xms512m</TD></TR>
+<TR>
+<TD>-Xmx512m</TD></TR>
+<TR>
+<TD>-XX:PermSize=96m</TD></TR>
+<TR>
+<TD>-XX:MaxPermSize=96m</TD></TR>
+<TR>
+<TD>-Xmn168m</TD></TR>
+<TR>
+<TD>-XX:+DisableExplicitGC</TD></TR></TBODY></TABLE><BR>另外没有去调GC策略，主要是觉得eclipse是客户端程序，默认的client单线程的GC策略应该是比较适合的，以后有时间再试试看吧。 
+<!--EndFragment--></DIV>
+</TD>
+</TR>
+</TBODY>
+</TABLE>
+</DIV>
+</DIV>
+</DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

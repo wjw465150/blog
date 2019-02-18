@@ -1,0 +1,922 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>多个MapReduce任务实现任务间相互依赖</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">工作过程工遇到有些情况，需要多个mapreduce程序相互依赖执行，使用ControlledJob类可以轻松处理多个JOB之间按照顺序执行。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">输入文件为2个，t1.txt和t2.txt，内容如下：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">t1:</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">a<BR>b<BR>a<BR>c<BR>d<BR>a<BR>b</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">t2:</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">c<BR>a<BR>e<BR>d<BR>b<BR>a<BR>e<BR>c<BR>c</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">执行如下命令：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">hadoop 
+jar /home/sospdm/morejobs.jar morejobs.morejobs input output output1</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">分别得到2个输出文件夹output和output1,内容如下：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">[sospdm@master2-dev 
+~]$ hadoop fs -cat output/part-r-00000<BR>a&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+5<BR>b&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+3<BR>c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+4<BR>d&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+2<BR>e&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">[sospdm@master2-dev 
+~]$ hadoop fs -cat output1/part-r-00000<BR>sum&nbsp;&nbsp;&nbsp;&nbsp; 16</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">经过处理后第一个MAPREDUCE程序得到词频，第二个程序以第一个输出文件夹作为输入，得出总词频。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px Helvetica, Tahoma, Arial, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">代码：</P>
+<DIV class=dp-highlighter 
+style="OVERFLOW: auto; WORD-WRAP: break-word; WIDTH: 679px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(0,0,0); PADDING-BOTTOM: 1px; TEXT-ALIGN: left; PADDING-TOP: 1px; FONT: 12px/25px Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 1px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Java代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><EMBED 
+type=application/x-shockwave-flash 
+pluginspage=http://www.macromedia.com/go/getflashplayer height=15 width=14 
+src=http://zl520878.iteye.com/javascripts/syntaxhighlighter/clipboard_new.swf 
+allowscriptaccess="always" quality="high" 
+flashvars="clipboard=package%20morejobs%3B%0A%0Aimport%20java.io.IOException%3B%0Aimport%20org.apache.hadoop.fs.Path%3B%0Aimport%20org.apache.hadoop.io.IntWritable%3B%0Aimport%20org.apache.hadoop.io.Text%3B%0Aimport%20org.apache.hadoop.mapred.JobConf%3B%0Aimport%20org.apache.hadoop.mapreduce.Job%3B%0Aimport%20org.apache.hadoop.mapreduce.Mapper%3B%0Aimport%20org.apache.hadoop.mapreduce.Reducer%3B%0Aimport%20org.apache.hadoop.mapreduce.lib.input.FileInputFormat%3B%0Aimport%20org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob%3B%0Aimport%20org.apache.hadoop.mapreduce.lib.jobcontrol.JobControl%3B%0Aimport%20org.apache.hadoop.mapreduce.lib.output.FileOutputFormat%3B%0Aimport%20java.util.regex.Matcher%3B%0Aimport%20java.util.regex.Pattern%3B%3B%0A%0A%20public%20class%20morejobs%20%7B%0A%20%20%20%0A%2F***************%E7%AC%AC%E4%B8%80%E4%B8%AAMAPREDUCE%E5%AE%9E%E7%8E%B0%E5%8D%95%E8%AF%8D%E8%AE%A1%E6%95%B0%0A%20*%20%0A%20*%20%40author%20zhangliang%0A%20*%0A%20*%2F%0A%20%20%20%2F%2F%E7%AC%AC%E4%B8%80%E4%B8%AAJob%E7%9A%84map%E5%87%BD%E6%95%B0%0A%20%20%20public%20static%20class%20Map_First%20extends%20Mapper%3CObject%2C%20Text%20%20%2CText%20%2C%20IntWritable%3E%7B%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%0A%20%20%20%20%20%20%20%20private%20final%20static%20IntWritable%20one%20%3D%20new%20IntWritable(1)%3B%0A%20%20%20%20%20%20%20%20private%20Text%20keys%20%3D%20new%20Text()%3B%0A%20%20%20%20%20%20%20%20public%20void%20map(Object%20key%2CText%20value%2C%20Context%20context%20)%20throws%20IOException%2C%20InterruptedException%20%7B%0A%20%20%20%20%20%20%20%20%09String%20s%20%3D%20value.toString()%3B%0A%20%20%20%20%20%20%20%20%20%20%20%20keys.set(s)%3B%20%0A%20%20%20%20%20%20%20%20%09context.write(keys%2C%20one)%3B%0A%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%20%20%0A%20%20%20%2F%2F%E7%AC%AC%E4%B8%80%E4%B8%AAJob%E7%9A%84reduce%E5%87%BD%E6%95%B0%0A%20%20%20%20public%20static%20class%20Reduce_First%20extends%20Reducer%3CText%2C%20IntWritable%2C%20Text%2C%20IntWritable%3E%20%7B%0A%20%20%20%20%20%20private%20IntWritable%20result%20%3D%20new%20IntWritable()%3B%0A%20%20%20%20%20%20public%20void%20reduce(Text%20key%2CIterable%3CIntWritable%3Evalues%2C%20Context%20context)%20throws%20IOException%2C%20InterruptedException%20%7B%0A%20%20%20%20%20%20%20%20%20int%20sum%20%3D%200%3B%0A%20%20%20%20%20%20%20%20%20for(IntWritable%20value%3Avalues)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20sum%20%20%2B%3D%20%20value.get()%3B%0A%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20result.set(sum)%3B%0A%20%20%20%20%20%20%20%20%20%0A%20%20%20%20%20%20%20%20%20%20context.write(key%2C%20result)%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20%0A%20%20%20%20%0A%2F***************************%E7%AC%AC%E4%BA%8C%E4%B8%AAMAPREDUCE%E5%AE%9E%E7%8E%B0%E8%AE%A1%E6%95%B0%E5%90%8E%E6%B1%82%E5%92%8C%0A%20*%20%0A%20*%20%40author%2011100198%0A%20*%0A%20*%2F%0A%20%20%20%20%0A%20%20%20%20%0A%20%20%20%20%2F%2F%E7%AC%AC%E4%BA%8C%E4%B8%AAjob%E7%9A%84map%E5%87%BD%E6%95%B0%0A%20%20%20%20public%20static%20class%20Map_Second%20extends%20Mapper%3CObject%2C%20Text%20%20%2CText%20%2C%20IntWritable%3E%7B%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%0A%20%20%20%20%20%20%20%20private%20final%20static%20IntWritable%20one%20%3D%20new%20IntWritable(1)%3B%0A%20%20%20%20%20%20%20%20private%20Text%20keys%20%3D%20new%20Text(%22sum%22)%3B%0A%20%20%20%20%20%20%20%20public%20void%20map(Object%20key%2CText%20value%2C%20Context%20context%20)%20throws%20IOException%2C%20InterruptedException%20%7B%0A%20%20%20%20%20%20%20%20%09Pattern%20p%20%3D%20Pattern.compile(%22%5C%5Cd%7B1%2C10%7D%24%22)%3B%0A%20%20%20%20%20%20%20%20%09Matcher%20m%20%3D%20p.matcher(value.toString())%3B%0A%20%20%20%20%20%20%20%20%09m.find()%3B%0A%20%20%20%20%20%20%20%20%09int%20s%20%3D%20Integer.valueOf(m.group()).intValue()%3B%0A%20%20%20%20%20%20%20%20%09one.set(s)%3B%0A%20%20%20%20%20%20%20%20%09context.write(keys%2C%20one)%3B%0A%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20%0A%20%20%20%20%2F%2F%E7%AC%AC%E4%BA%8C%E4%B8%AAJob%E7%9A%84reduce%E5%87%BD%E6%95%B0%0A%20%20%20%20public%20static%20class%20Reduce_Second%20extends%20Reducer%3CText%2C%20IntWritable%2C%20Text%2C%20IntWritable%3E%20%7B%0A%20%20%20%20%20%20private%20IntWritable%20result%20%3D%20new%20IntWritable()%3B%0A%20%20%20%20%20%20public%20void%20reduce(Text%20key%2CIterable%3CIntWritable%3Evalues%2C%20Context%20context)%20throws%20IOException%2C%20InterruptedException%20%7B%0A%20%20%20%20%20%20%20%20%20int%20sum%20%3D%200%3B%0A%20%20%20%20%20%20%20%20%20for(IntWritable%20value%3Avalues)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20sum%20%20%2B%3D%20%20value.get()%3B%0A%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20result.set(sum)%3B%0A%20%20%20%20%20%20%20%20%20%20context.write(key%2C%20result)%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20%0A%2F**********************%0A%20*%20%E4%BB%A5%E4%B8%8BJOB%E9%85%8D%E7%BD%AE%E5%8F%82%E8%80%83%EF%BC%9Ahttp%3A%2F%2Fwww.tuicool.com%2Farticles%2FN7buuy%0A%20*%20%40param%20args%0A%20*%20%40throws%20IOException%0A%20*%2F%0A%0A%20%20%20%20%2F%2F%E5%90%AF%E5%8A%A8%E5%87%BD%E6%95%B0%0A%20%20%20%20public%20static%20void%20main(String%5B%5D%20args)%20throws%20IOException%20%7B%0A%20%20%20%20%0A%20%20%20%20JobConf%20conf%20%3D%20new%20JobConf(morejobs.class)%3B%0A%20%20%20%20%0A%20%20%20%20%2F%2F%E7%AC%AC%E4%B8%80%E4%B8%AAjob%E7%9A%84%E9%85%8D%E7%BD%AE%0A%20%20%20%20Job%20job1%20%3D%20new%20Job(conf%2C%22join1%22)%3B%0A%20%20%20%20job1.setJarByClass(morejobs.class)%3B%20%0A%0A%20%20%20%20%20%20job1.setMapperClass(Map_First.class)%3B%20%0A%20%20%20%20%20%20job1.setReducerClass(Reduce_First.class)%3B%20%0A%0A%20%20%20%20job1.setMapOutputKeyClass(Text.class)%3B%2F%2Fmap%E9%98%B6%E6%AE%B5%E7%9A%84%E8%BE%93%E5%87%BA%E7%9A%84key%20%0A%20%20%20%20job1.setMapOutputValueClass(IntWritable.class)%3B%2F%2Fmap%E9%98%B6%E6%AE%B5%E7%9A%84%E8%BE%93%E5%87%BA%E7%9A%84value%20%0A%20%20%0A%20%20%20%20job1.setOutputKeyClass(Text.class)%3B%2F%2Freduce%E9%98%B6%E6%AE%B5%E7%9A%84%E8%BE%93%E5%87%BA%E7%9A%84key%20%0A%20%20%20%20job1.setOutputValueClass(IntWritable.class)%3B%2F%2Freduce%E9%98%B6%E6%AE%B5%E7%9A%84%E8%BE%93%E5%87%BA%E7%9A%84value%20%0A%20%20%20%20%0A%20%20%20%20%2F%2F%E5%8A%A0%E5%85%A5%E6%8E%A7%E5%88%B6%E5%AE%B9%E5%99%A8%20%0A%20%20%20%20ControlledJob%20ctrljob1%3Dnew%20%20ControlledJob(conf)%3B%20%0A%20%20%20%20ctrljob1.setJob(job1)%3B%20%0A%20%20%20%20%2F%2Fjob1%E7%9A%84%E8%BE%93%E5%85%A5%E8%BE%93%E5%87%BA%E6%96%87%E4%BB%B6%E8%B7%AF%E5%BE%84%0A%20%20%20%20FileInputFormat.addInputPath(job1%2C%20new%20Path(args%5B0%5D))%3B%20%0A%20%20%20%20%20%20FileOutputFormat.setOutputPath(job1%2C%20new%20Path(args%5B1%5D))%3B%20%0A%0A%20%20%20%20%20%20%2F%2F%E7%AC%AC%E4%BA%8C%E4%B8%AA%E4%BD%9C%E4%B8%9A%E7%9A%84%E9%85%8D%E7%BD%AE%0A%20%20%20%20%09Job%20job2%3Dnew%20Job(conf%2C%22Join2%22)%3B%20%0A%20%20%20%20%20%20job2.setJarByClass(morejobs.class)%3B%20%0A%20%20%20%20%20%20%0A%20%20%20%20%20%20job2.setMapperClass(Map_Second.class)%3B%20%0A%20%20%20%20%20job2.setReducerClass(Reduce_Second.class)%3B%20%0A%20%20%20%20%20%0A%20%20%20%20job2.setMapOutputKeyClass(Text.class)%3B%2F%2Fmap%E9%98%B6%E6%AE%B5%E7%9A%84%E8%BE%93%E5%87%BA%E7%9A%84key%20%0A%20%20%20%20job2.setMapOutputValueClass(IntWritable.class)%3B%2F%2Fmap%E9%98%B6%E6%AE%B5%E7%9A%84%E8%BE%93%E5%87%BA%E7%9A%84value%20%0A%0A%20%20%20%20job2.setOutputKeyClass(Text.class)%3B%2F%2Freduce%E9%98%B6%E6%AE%B5%E7%9A%84%E8%BE%93%E5%87%BA%E7%9A%84key%20%0A%20%20%20%20job2.setOutputValueClass(IntWritable.class)%3B%2F%2Freduce%E9%98%B6%E6%AE%B5%E7%9A%84%E8%BE%93%E5%87%BA%E7%9A%84value%20%0A%0A%20%20%20%20%2F%2F%E4%BD%9C%E4%B8%9A2%E5%8A%A0%E5%85%A5%E6%8E%A7%E5%88%B6%E5%AE%B9%E5%99%A8%20%0A%20%20%20%20ControlledJob%20ctrljob2%3Dnew%20ControlledJob(conf)%3B%20%0A%20%20%20%20ctrljob2.setJob(job2)%3B%20%0A%20%20%0A%20%20%20%20%20%2F%2F%E8%AE%BE%E7%BD%AE%E5%A4%9A%E4%B8%AA%E4%BD%9C%E4%B8%9A%E7%9B%B4%E6%8E%A5%E7%9A%84%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB%20%0A%20%20%20%20%20%20%20%2F%2F%E5%A6%82%E4%B8%8B%E6%89%80%E5%86%99%EF%BC%9A%20%0A%20%20%20%20%20%2F%2F%E6%84%8F%E6%80%9D%E4%B8%BAjob2%E7%9A%84%E5%90%AF%E5%8A%A8%EF%BC%8C%E4%BE%9D%E8%B5%96%E4%BA%8Ejob1%E4%BD%9C%E4%B8%9A%E7%9A%84%E5%AE%8C%E6%88%90%20%0A%20%20%0A%20%20%20%20ctrljob2.addDependingJob(ctrljob1)%3B%20%0A%20%20%20%20%0A%20%20%20%20%2F%2F%E8%BE%93%E5%85%A5%E8%B7%AF%E5%BE%84%E6%98%AF%E4%B8%8A%E4%B8%80%E4%B8%AA%E4%BD%9C%E4%B8%9A%E7%9A%84%E8%BE%93%E5%87%BA%E8%B7%AF%E5%BE%84%EF%BC%8C%E5%9B%A0%E6%AD%A4%E8%BF%99%E9%87%8C%E5%A1%ABargs%5B1%5D%2C%E8%A6%81%E5%92%8C%E4%B8%8A%E9%9D%A2%E5%AF%B9%E5%BA%94%E5%A5%BD%0A%20%20%20%20FileInputFormat.addInputPath(job2%2C%20new%20Path(args%5B1%5D))%3B%0A%20%20%20%20%0A%20%20%20%20%2F%2F%E8%BE%93%E5%87%BA%E8%B7%AF%E5%BE%84%E4%BB%8E%E6%96%B0%E4%BC%A0%E5%85%A5%E4%B8%80%E4%B8%AA%E5%8F%82%E6%95%B0%EF%BC%8C%E8%BF%99%E9%87%8C%E9%9C%80%E8%A6%81%E6%B3%A8%E6%84%8F%EF%BC%8C%E5%9B%A0%E4%B8%BA%E6%88%91%E4%BB%AC%E6%9C%80%E5%90%8E%E7%9A%84%E8%BE%93%E5%87%BA%E6%96%87%E4%BB%B6%E4%B8%80%E5%AE%9A%E8%A6%81%E6%98%AF%E6%B2%A1%E6%9C%89%E5%87%BA%E7%8E%B0%E8%BF%87%E5%BE%97%0A%20%20%20%20%2F%2F%E5%9B%A0%E6%AD%A4%E6%88%91%E4%BB%AC%E5%9C%A8%E8%BF%99%E9%87%8Cnew%20Path(args%5B2%5D)%E5%9B%A0%E4%B8%BAargs%5B2%5D%E5%9C%A8%E4%B8%8A%E9%9D%A2%E6%B2%A1%E6%9C%89%E7%94%A8%E8%BF%87%EF%BC%8C%E5%8F%AA%E8%A6%81%E5%92%8C%E4%B8%8A%E9%9D%A2%E4%B8%8D%E5%90%8C%E5%B0%B1%E5%8F%AF%E4%BB%A5%E4%BA%86%0A%20%20%20%20FileOutputFormat.setOutputPath(job2%2Cnew%20Path(args%5B2%5D)%20)%3B%0A%0A%20%20%20%20%2F%2F%E4%B8%BB%E7%9A%84%E6%8E%A7%E5%88%B6%E5%AE%B9%E5%99%A8%EF%BC%8C%E6%8E%A7%E5%88%B6%E4%B8%8A%E9%9D%A2%E7%9A%84%E6%80%BB%E7%9A%84%E4%B8%A4%E4%B8%AA%E5%AD%90%E4%BD%9C%E4%B8%9A%20%0A%20%20%20%20JobControl%20jobCtrl%3Dnew%20JobControl(%22myctrl%22)%3B%20%0A%20%20%0A%20%20%20%20%2F%2F%E6%B7%BB%E5%8A%A0%E5%88%B0%E6%80%BB%E7%9A%84JobControl%E9%87%8C%EF%BC%8C%E8%BF%9B%E8%A1%8C%E6%8E%A7%E5%88%B6%0A%20%20%20%20jobCtrl.addJob(ctrljob1)%3B%20%0A%20%20%20%20jobCtrl.addJob(ctrljob2)%3B%20%0A%0A%0A%20%20%20%20%2F%2F%E5%9C%A8%E7%BA%BF%E7%A8%8B%E5%90%AF%E5%8A%A8%EF%BC%8C%E8%AE%B0%E4%BD%8F%E4%B8%80%E5%AE%9A%E8%A6%81%E6%9C%89%E8%BF%99%E4%B8%AA%0A%20%20%20%20Thread%20%20t%3Dnew%20Thread(jobCtrl)%3B%20%0A%20%20%20%20t.start()%3B%20%0A%0A%20%20%20%20while(true)%7B%20%0A%0A%20%20%20%20if(jobCtrl.allFinished())%7B%2F%2F%E5%A6%82%E6%9E%9C%E4%BD%9C%E4%B8%9A%E6%88%90%E5%8A%9F%E5%AE%8C%E6%88%90%EF%BC%8C%E5%B0%B1%E6%89%93%E5%8D%B0%E6%88%90%E5%8A%9F%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%BF%A1%E6%81%AF%20%0A%20%20%20%20System.out.println(jobCtrl.getSuccessfulJobList())%3B%20%0A%20%20%20%20jobCtrl.stop()%3B%20%0A%20%20%20%20break%3B%20%0A%20%20%20%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20%7D%0A%20%7D" 
+wmode="transparent">&nbsp;<A 
+onclick="code_favorites_do_favorite(this);return false;" title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 src="http://zl520878.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">package</SPAN><SPAN 
+  style="COLOR: black">&nbsp;morejobs;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.io.IOException;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.fs.Path;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.io.IntWritable;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.io.Text;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.mapred.JobConf;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.mapreduce.Job;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.mapreduce.Mapper;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.mapreduce.Reducer;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.mapreduce.lib.input.FileInputFormat;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.mapreduce.lib.jobcontrol.JobControl;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.util.regex.Matcher;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.util.regex.Pattern;;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">&nbsp;morejobs&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/***************第一个MAPREDUCE实现单词计数</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*&nbsp;</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*&nbsp;@author&nbsp;zhangliang</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//第一个Job的map函数</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Map_First&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">extends</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Mapper&lt;Object,&nbsp;Text&nbsp;&nbsp;,Text&nbsp;,&nbsp;IntWritable&gt;{&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">private</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">final</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IntWritable&nbsp;one&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IntWritable(</SPAN><SPAN class=number 
+  style="COLOR: rgb(192,0,0)">1</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">private</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Text&nbsp;keys&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Text();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;map(Object&nbsp;key,Text&nbsp;value,&nbsp;Context&nbsp;context&nbsp;)&nbsp;</SPAN><SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">throws</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IOException,&nbsp;InterruptedException&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;s&nbsp;=&nbsp;value.toString();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;keys.set(s);&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.write(keys,&nbsp;one);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//第一个Job的reduce函数</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Reduce_First&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">extends</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Reducer&lt;Text,&nbsp;IntWritable,&nbsp;Text,&nbsp;IntWritable&gt;&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">private</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IntWritable&nbsp;result&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IntWritable();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;reduce(Text&nbsp;key,Iterable&lt;IntWritable&gt;values,&nbsp;Context&nbsp;context)&nbsp;</SPAN><SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">throws</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IOException,&nbsp;InterruptedException&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">int</SPAN><SPAN 
+  style="COLOR: black">&nbsp;sum&nbsp;=&nbsp;</SPAN><SPAN class=number 
+  style="COLOR: rgb(192,0,0)">0</SPAN><SPAN 
+  style="COLOR: black">;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">(IntWritable&nbsp;value:values)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum&nbsp;&nbsp;+=&nbsp;&nbsp;value.get();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result.set(sum);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.write(key,&nbsp;result);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/***************************第二个MAPREDUCE实现计数后求和</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*&nbsp;</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*&nbsp;@author&nbsp;11100198</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//第二个job的map函数</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Map_Second&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">extends</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Mapper&lt;Object,&nbsp;Text&nbsp;&nbsp;,Text&nbsp;,&nbsp;IntWritable&gt;{&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">private</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">final</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IntWritable&nbsp;one&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IntWritable(</SPAN><SPAN class=number 
+  style="COLOR: rgb(192,0,0)">1</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">private</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Text&nbsp;keys&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Text(</SPAN><SPAN class=string 
+  style="COLOR: blue">"sum"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;map(Object&nbsp;key,Text&nbsp;value,&nbsp;Context&nbsp;context&nbsp;)&nbsp;</SPAN><SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">throws</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IOException,&nbsp;InterruptedException&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Pattern&nbsp;p&nbsp;=&nbsp;Pattern.compile(<SPAN 
+  class=string style="COLOR: blue">"\\d{1,10}$"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Matcher&nbsp;m&nbsp;=&nbsp;p.matcher(value.toString());&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m.find();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">int</SPAN><SPAN 
+  style="COLOR: black">&nbsp;s&nbsp;=&nbsp;Integer.valueOf(m.group()).intValue();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;one.set(s);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.write(keys,&nbsp;one);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//第二个Job的reduce函数</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Reduce_Second&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">extends</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Reducer&lt;Text,&nbsp;IntWritable,&nbsp;Text,&nbsp;IntWritable&gt;&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">private</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IntWritable&nbsp;result&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IntWritable();&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;reduce(Text&nbsp;key,Iterable&lt;IntWritable&gt;values,&nbsp;Context&nbsp;context)&nbsp;</SPAN><SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">throws</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IOException,&nbsp;InterruptedException&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">int</SPAN><SPAN 
+  style="COLOR: black">&nbsp;sum&nbsp;=&nbsp;</SPAN><SPAN class=number 
+  style="COLOR: rgb(192,0,0)">0</SPAN><SPAN 
+  style="COLOR: black">;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">for</SPAN><SPAN 
+  style="COLOR: black">(IntWritable&nbsp;value:values)&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sum&nbsp;&nbsp;+=&nbsp;&nbsp;value.get();&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result.set(sum);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;context.write(key,&nbsp;result);&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">/**********************</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*&nbsp;以下JOB配置参考：http://www.tuicool.com/articles/N7buuy</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*&nbsp;@param&nbsp;args</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*&nbsp;@throws&nbsp;IOException</SPAN>&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">&nbsp;*/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//启动函数</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">static</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;main(String[]&nbsp;args)&nbsp;</SPAN><SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">throws</SPAN><SPAN 
+  style="COLOR: black">&nbsp;IOException&nbsp;{&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;JobConf&nbsp;conf&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;JobConf(morejobs.</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//第一个job的配置</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;Job&nbsp;job1&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Job(conf,</SPAN><SPAN class=string 
+  style="COLOR: blue">"join1"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;job1.setJarByClass(morejobs.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job1.setMapperClass(Map_First.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job1.setReducerClass(Reduce_First.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;job1.setMapOutputKeyClass(Text.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//map阶段的输出的key&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;job1.setMapOutputValueClass(IntWritable.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//map阶段的输出的value&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;job1.setOutputKeyClass(Text.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//reduce阶段的输出的key&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;job1.setOutputValueClass(IntWritable.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//reduce阶段的输出的value&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//加入控制容器&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;ControlledJob&nbsp;ctrljob1=<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;ControlledJob(conf);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;ctrljob1.setJob(job1);&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//job1的输入输出文件路径</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;FileInputFormat.addInputPath(job1,&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Path(args[</SPAN><SPAN class=number 
+  style="COLOR: rgb(192,0,0)">0</SPAN><SPAN 
+  style="COLOR: black">]));&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FileOutputFormat.setOutputPath(job1,&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Path(args[</SPAN><SPAN class=number 
+  style="COLOR: rgb(192,0,0)">1</SPAN><SPAN 
+  style="COLOR: black">]));&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//第二个作业的配置</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Job&nbsp;job2=<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Job(conf,</SPAN><SPAN class=string 
+  style="COLOR: blue">"Join2"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job2.setJarByClass(morejobs.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job2.setMapperClass(Map_Second.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;job2.setReducerClass(Reduce_Second.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;job2.setMapOutputKeyClass(Text.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//map阶段的输出的key&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;job2.setMapOutputValueClass(IntWritable.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//map阶段的输出的value&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;job2.setOutputKeyClass(Text.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//reduce阶段的输出的key&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;job2.setOutputValueClass(IntWritable.<SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">);</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//reduce阶段的输出的value&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//作业2加入控制容器&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;ControlledJob&nbsp;ctrljob2=<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;ControlledJob(conf);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;ctrljob2.setJob(job2);&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//设置多个作业直接的依赖关系&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+  class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//如下所写：&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//意思为job2的启动，依赖于job1作业的完成&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;ctrljob2.addDependingJob(ctrljob1);&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//输入路径是上一个作业的输出路径，因此这里填args[1],要和上面对应好</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;FileInputFormat.addInputPath(job2,&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Path(args[</SPAN><SPAN class=number 
+  style="COLOR: rgb(192,0,0)">1</SPAN><SPAN 
+  style="COLOR: black">]));&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//输出路径从新传入一个参数，这里需要注意，因为我们最后的输出文件一定要是没有出现过得</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//因此我们在这里new&nbsp;Path(args[2])因为args[2]在上面没有用过，只要和上面不同就可以了</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;FileOutputFormat.setOutputPath(job2,<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Path(args[</SPAN><SPAN class=number 
+  style="COLOR: rgb(192,0,0)">2</SPAN><SPAN 
+  style="COLOR: black">])&nbsp;);&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//主的控制容器，控制上面的总的两个子作业&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;JobControl&nbsp;jobCtrl=<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;JobControl(</SPAN><SPAN class=string 
+  style="COLOR: blue">"myctrl"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//添加到总的JobControl里，进行控制</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;jobCtrl.addJob(ctrljob1);&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;jobCtrl.addJob(ctrljob2);&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//在线程启动，记住一定要有这个</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;Thread&nbsp;&nbsp;t=<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Thread(jobCtrl);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;t.start();&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">while</SPAN><SPAN 
+  style="COLOR: black">(</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">true</SPAN><SPAN 
+  style="COLOR: black">){&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">if</SPAN><SPAN 
+  style="COLOR: black">(jobCtrl.allFinished()){</SPAN><SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//如果作业成功完成，就打印成功作业的信息&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(jobCtrl.getSuccessfulJobList());&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;jobCtrl.stop();&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">break</SPAN><SPAN 
+  style="COLOR: black">;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;}&nbsp;&nbsp;</SPAN></LI></OL></DIV></body>
+</html>

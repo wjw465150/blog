@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html lang="zh-cn">
+<head>
+  <meta content="text/html; charset=ISO-8859-1"
+ http-equiv="content-type">
+  <title>Parsing Commandline Arguments with CliBuilder</title>
+</head>
+<body>
+<div id="body_content"
+ style="border: 0px none ; margin: 0px; padding: 0px; background: rgb(255, 255, 255) none repeat scroll 0%; color: rgb(0, 0, 0); font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size: 16px; font-style: normal; font-variant: normal; font-weight: 300; letter-spacing: normal; line-height: 28px; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 1; word-spacing: 0px; -moz-background-clip: initial; -moz-background-origin: initial; -moz-background-inline-policy: initial;">
+<div id="main_content"
+ style="border: 0px none ; margin: 0px; padding: 0px;">
+<div class="main section" id="main"
+ style="border: 0px none ; margin: 0px; padding: 0px;">
+<div class="widget Blog" id="Blog1"
+ style="border: 0px none ; margin: 0px; padding: 0px;">
+<div class="blog-posts hfeed"
+ style="border: 0px none ; margin: 0px; padding: 0px;">
+<div class="post hentry"
+ style="border: 0px none ; margin: 0px 0px 40px; padding: 0px;">
+<h3 class="post-title entry-title"
+ style="border: 0px none ; margin: 0px 0px 16px; padding: 0px; font-weight: lighter; font-size: 26px; line-height: 26px; font-family: 'Helvetica Neue UltraLight','Helvetica Neue Light','Helvetica Neue',Helvetica,Arial,sans-serif;">Groovy
+Goodness: Parsing Commandline Arguments with CliBuilder</h3>
+<div class="post-body entry-content"
+ style="border: 0px none ; margin: 0px; padding: 0px;">
+<p style="border: 0px none ; margin: 0px 0px 20px; padding: 0px;">Groovy
+is a great language to create scripts. Most of the time if we invoke
+the scripts we pass arguments to the script. These arguments are
+available as a<span class="Apple-converted-space">&nbsp;</span><code
+ style="border: 1px solid rgb(212, 217, 217); margin: 0px; padding: 1px 4px; font-style: normal; font-variant: normal; font-weight: normal; font-stretch: normal; font-size: 0.9375em; line-height: 24px; font-family: Menlo,Monaco,'Liberation Mono',Consolas,monospace; color: rgb(59, 59, 59); white-space: nowrap; text-shadow: none; background-color: rgb(239, 241, 241);">String[]</code><span
+ class="Apple-converted-space">&nbsp;</span>array in our script. For
+example to get the first argument we can use the following code<span
+ class="Apple-converted-space">&nbsp;</span><code
+ style="border: 1px solid rgb(212, 217, 217); margin: 0px; padding: 1px 4px; font-style: normal; font-variant: normal; font-weight: normal; font-stretch: normal; font-size: 0.9375em; line-height: 24px; font-family: Menlo,Monaco,'Liberation Mono',Consolas,monospace; color: rgb(59, 59, 59); white-space: nowrap; text-shadow: none; background-color: rgb(239, 241, 241);">s
+= args[0]</code>. To have real argument handling in our script we use
+Groovy's<span class="Apple-converted-space">&nbsp;</span><a
+ href="http://groovy.codehaus.org/gapi/groovy/util/CliBuilder.html"
+ style="border: 0px none ; margin: 0px; padding: 0px; color: rgb(51, 51, 51);">CliBuilder</a><span
+ class="Apple-converted-space">&nbsp;</span>class. This class uses<span
+ class="Apple-converted-space">&nbsp;</span><a
+ href="http://commons.apache.org/cli"
+ style="border: 0px none ; margin: 0px; padding: 0px; color: rgb(51, 51, 51);">Jakarta
+Commons CLI</a><span class="Apple-converted-space">&nbsp;</span>under
+the hood. With CliBuilder we can define the argument options and parse
+the arguments. CliBuilder adds Groovyness by allowing us to invoke
+non-existing one-letter methods, which are turned into argument options
+with the one-letter shortcut. Furthermore we can use named parameters
+to define usage text, parser implementation, formatter implementation
+and option properties.</p>
+<p style="border: 0px none ; margin: 0px 0px 20px; padding: 0px;">Let's
+see the CliBuilder in action. We create a script to show a date
+formatted according to defined arguments. If we don't define a date the
+current date is assumed. And furthermore we want to be able to define a
+prefix text, which is added before the formatted date (is empty by
+default).</p>
+<pre class="brush:groovy"
+ style="border: 0px none ; margin: 0px; padding: 0px; font-style: normal; font-variant: normal; font-weight: normal; font-stretch: normal; font-size: 16px; line-height: 24px; font-family: Menlo,Monaco,'Liberation Mono',Consolas,monospace;">import java.text.*<br><br>def showdate(args) {<br>    def cli = new CliBuilder(usage: 'showdate.groovy -[chflms] [date] [prefix]')<br>    // Create the list of options.<br>    cli.with {<br>        h longOpt: 'help', 'Show usage information'<br>        c longOpt: 'format-custom', args: 1, argName: 'format', 'Format date with custom format defined by "format"'<br>        f longOpt: 'format-full',   'Use DateFormat#FULL format'<br>        l longOpt: 'format-long',   'Use DateFormat#LONG format'<br>        m longOpt: 'format-medium', 'Use DateFormat#MEDIUM format (default)'<br>        s longOpt: 'format-short',  'Use DateFormat#SHORT format'<br>    }<br>    <br>    def options = cli.parse(args)<br>    if (!options) {<br>        return<br>    }<br>    // Show usage text when -h or --help option is used.<br>    if (options.h) {<br>        cli.usage()<br>        // Will output:<br>        // usage: showdate.groovy -[chflms] [date] [prefix]<br>        //  -c,--format-custom &lt;format&gt;   Format date with custom format defined by "format"<br>        //  -f,--format-full              Use DateFormat#FULL format   <br>        //  -h,--help                     Show usage information   <br>        //  -l,--format-long              Use DateFormat#LONG format   <br>        //  -m,--format-medium            Use DateFormat#MEDIUM format   <br>        //  -s,--format-short             Use DateFormat#SHORT format   <br>        return<br>    }<br>    <br>    // Determine formatter.<br>    def df = DateFormat.getDateInstance(DateFormat.MEDIUM)  // Defeault.<br>    if (options.f) {  // Using short option.<br>        df = DateFormat.getDateInstance(DateFormat.FULL) <br>    } else if (options.'format-long') {  // Using long option.<br>        df = DateFormat.getDateInstance(DateFormat.LONG) <br>    } else if (options.'format-medium') {<br>        df = DateFormat.getDateInstance(DateFormat.MEDIUM) <br>    } else if (options.s) {<br>        df = DateFormat.getDateInstance(DateFormat.SHORT) <br>    } else if (options.'format-custom') {<br>        df = new SimpleDateFormat(options.c)<br>    }<br><br>    // Handle all non-option arguments.<br>    def prefix = ''  // Default is empty prefix.<br>    def date = new Date()  // Default is current date.<br>    def extraArguments = options.arguments()<br>    if (extraArguments) {<br>        date = new Date().parse(extraArguments[0])<br>        // The rest of the arguments belong to the prefix.<br>        if (extraArguments.size() &gt; 1) {<br>            prefix = extraArguments[1..-1].join(' ')<br>        }<br>    }<br>    <br>    "$prefix${df.format(date)}"<br>}<br><br>// Set locale for assertions.<br>Locale.setDefault(Locale.US)<br>assert '12/1/09' == showdate(['--format-short', '2009/12/1'])<br>assert '12/1/09' == showdate(['-s', '2009/12/1'])<br>assert 'Dec 1, 2009' == showdate(['2009/12/1'])<br>assert 'Dec 1, 2009' == showdate(['--format-medium', '2009/12/1'])<br>assert 'Dec 1, 2009' == showdate(['-m', '2009/12/1'])<br>assert 'December 1, 2009' == showdate(['--format-long', '2009/12/1'])<br>assert 'December 1, 2009' == showdate(['-l', '2009/12/1'])<br>assert 'Tuesday, December 1, 2009' == showdate(['--format-full', '2009/12/1'])<br>assert 'Tuesday, December 1, 2009' == showdate(['-f', '2009/12/1'])<br>assert 'Default date format: Dec 1, 2009' == showdate(['2009/12/1', 'Default', 'date', 'format: '])<br>assert 'Important date: Dec 1, 2009' == showdate(['-m', '2009/12/1', 'Important date: '])<br>assert 'week 49 of the year 2009 AD' == showdate(['-c', "'week' w 'of the year' yyyy G", '2009/12/1'])<br>assert '2009/12/01' == showdate(['--format-custom', 'yyyy/MM/dd', '2009/12/01'])<br>assert '2009' == showdate(['-cyyyy', '2009/12/1'])<br>assert new Date().format('yyyy/MM/dd') == showdate(['--format-custom', 'yyyy/MM/dd'])<br><br>println showdate(args) <br></pre>
+<p style="border: 0px none ; margin: 0px 0px 20px; padding: 0px;"></p>
+<div style="border: 0px none ; margin: 0px; padding: 0px; clear: both;"></div>
+</div>
+</div>
+</div>
+<div class="clear"
+ style="border: 0px none ; margin: 0px; padding: 0px; clear: both;"></div>
+</div>
+</div>
+</div>
+</div>
+<iframe name="oauth2relay439783798" id="oauth2relay439783798"
+ src="about:blank" tabindex="-1"
+ style="border: 0px none ; margin: 0px; padding: 0px; color: rgb(0, 0, 0); font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size: 16px; font-style: normal; font-variant: normal; font-weight: 300; letter-spacing: normal; line-height: 28px; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 1; word-spacing: 0px; width: 1px; height: 1px; position: absolute; top: -100px;"></iframe><br
+ class="Apple-interchange-newline">
+</body>
+</html>

@@ -1,0 +1,494 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>JVM上最快的Bloom filter实现</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>英文原始出处:<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://alexandrnikitin.github.io/blog/bloom-filter-for-scala/" 
+rel=nofollow,noindex target=_blank>Bloom filter for Scala, the fastest for 
+JVM</A></P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>本文介绍的是我用Scala实现的Bloom 
+filter。 源代码在<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://github.com/alexandrnikitin/bloom-filter-scala" 
+rel=nofollow,noindex target=_blank>github</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>上。依照<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>性能测试结果</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>，它是JVM上的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><STRONG 
+style="FONT-WEIGHT: bold; TEXT-INDENT: 0px">最快</STRONG><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的Bloom 
+filter实现。零分配(Zero-allocation)和高度优化的代码。 无内存限制，所以没有包含元素的数量限制和可控的误报率(false positive 
+rate)。<BR>扩展：可插拔的Hash算法，任意的元素类型。<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>没错，它使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>sun.misc.unsafe</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>。<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR></P>
+<H3 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>介绍</H3>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">"A 
+Bloom filter is a space-efficient probabilistic data structure that is used to 
+test whether an element is a member of a set. False positive matches are 
+possible, but false negatives are not. In other words, a query returns either 
+“possibly in set” or “definitely not in set”. Elements can be added to the set, 
+but not removed,” says<A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://en.wikipedia.org/wiki/Bloom_filter" rel=nofollow,noindex 
+target=_blank>Wikipedia</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>.</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">Bloom 
+filter 是由 Howard Bloom 在 1970 
+年提出的二进制向量数据结构，它具有很好的空间和时间效率，被用来检测一个元素是不是集合中的一个成员。如果检测结果为是，该元素不一定在集合中；但如果检测结果为否，该元素一定不在集合中。因此Bloom 
+filter具有100%的召回率。这样每个检测请求返回有“在集合内（可能错报）”和“不在集合内（绝对不在集合内）”两种情况，可见 Bloom filter 
+是牺牲了正确率和时间以节省空间。 引自<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://baike.baidu.com/view/1912944.htm" rel=nofollow,noindex 
+target=_blank>百度百科</A></P></DIV>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>简而言之，Bloom 
+filter是:</P>
+<UL 
+style='LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'>
+  <LI style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">优化内存占用， 
+  当整个集合太大而不能全部放到内存中。Optimization for memory. It comes into play when you cannot 
+  put whole set into memory.</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">解决成员存在性的问题。它可以回答下面的问题：一个元素属于一个集合还是不属于？</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">概率(有损)数据结构。它可以返回一个元素有多大的概率属于一个集合</LI></UL>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>后面这篇文章介绍的Bloom 
+filter很详尽 -<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://sc5.io/posts/what-are-bloom-filters-and-why-are-they-useful/" 
+rel=nofollow,noindex target=_blank>“What are Bloom filters, and why are they 
+useful?”</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>by<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://twitter.com/maxpagels" rel=nofollow,noindex target=_blank>@Max 
+Pagels</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>。我没必要再献丑了，如果你还不熟悉Bloom 
+filter不妨看一看。</P>
+<H3 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>为何再造轮子？</H3>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>因为性能或者内存限制的原因，已有的Bloom 
+filter并不能满足我们的需求，或者你发现你可以做的更好。坦率的说，都不是。只不过有时候你厌倦了而已。(作者吐槽，可忽略之)</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>主要的原因是性能。当开发高性能和低延迟的系统的时候，你可不想被外部的库所拖累，甚至分配了很多的内存。你的注意力应该集中在业务逻辑上，依赖的库应该尽可能的有效。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>另一个原因还是内存限制。所有的实现都会因为JVM数组的大小的限制而受限制。JVM中，数字使用整数integer做索引，所以数组的最大长度也就是整数的最大值<STRONG 
+style="FONT-WEIGHT: bold; TEXT-INDENT: 0px">2147483647</STRONG><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>。如果我们创建一个元素类型为long的数组存储比特位bit的值，那么最多我们可以存储64 
+bit * 2147483647 = 137438953408 bits,大概需要15 
+GB左右的内存。你可以放入大约10000000000左右的元素到误报率为0.1%的Bloom 
+filter。这对于大部分软件来说足够了，但是当你处理大数据，比如URL，图标广告，实时竞价请求或者是事件流的时候，100亿的数据只是一个起步量。当然你可以有一些变通的办法：部署多个Bloom 
+filter,将它们分布到多个节点，或者设计你的软件适应这些限制，但这些办法并不总是有效，可能花费较高护着不满足你的架构。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>让我们看看当前已有的一些Bllom 
+filter的实现。</P>
+<H4 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>Google 
+guava</H4>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://github.com/google/guava" rel=nofollow,noindex 
+target=_blank>Guava</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>是Google开发的一个高质量的核心库，它包含集合、基本数据、并发、I/O、Cache等模块。 
+它也包含一个<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://github.com/google/guava/wiki/HashingExplained#bloomfilter" 
+rel=nofollow,noindex target=_blank>Bloom filter</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>实现。Guava是我的初始选择，它经受考验、也很快，但是……</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>令人咂舌的是，它会额外分配内存。我使用Google的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://github.com/google/allocation-instrumenter" rel=nofollow,noindex 
+target=_blank>Allocation Instrumenter</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>监控所有的分配allocation。下面的分配监控显示了检查包含100字符的字符串是否存在于一个Bloom 
+filter中:</P><PRE class="prettyprint python" style='WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, "Courier New", monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px'>I just allocated the object [B<SPAN class=decorator>@39420d59 of type byte whose size is 40 It's an array of size 23</SPAN>
+I just allocated the object java.nio.HeapByteBuffer[pos=<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN> lim=<SPAN class=number style="COLOR: rgb(0,153,153)">23</SPAN> cap=<SPAN class=number style="COLOR: rgb(0,153,153)">23</SPAN>] of type java/nio/HeapByteBuffer whose size <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">is</SPAN> <SPAN class=number style="COLOR: rgb(0,153,153)">48</SPAN>
+I just allocated the object com.google.common.hash.Murmur3_128HashFunction$Murmur3_128Hasher<SPAN class=decorator>@5dd227b7 of type com/google/common/hash/Murmur3_128HashFunction$Murmur3_128Hasher whose size is 48</SPAN>
+I just allocated the object [B<SPAN class=decorator>@3d3b852e of type byte whose size is 24 It's an array of size 1</SPAN>
+I just allocated the object [B<SPAN class=decorator>@14ba7f15 of type byte whose size is 24 It's an array of size 1</SPAN>
+I just allocated the object sun.nio.cs.UTF_8$Encoder<SPAN class=decorator>@55cb3b7 of type sun/nio/cs/UTF_8$Encoder whose size is 56</SPAN>
+I just allocated the object [B<SPAN class=decorator>@497fd334 of type byte whose size is 320 It's an array of size 300</SPAN>
+I just allocated the object [B<SPAN class=decorator>@280c3dc0 of type byte whose size is 312 It's an array of size 296</SPAN>
+I just allocated the object java.nio.HeapByteBuffer[pos=<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN> lim=<SPAN class=number style="COLOR: rgb(0,153,153)">296</SPAN> cap=<SPAN class=number style="COLOR: rgb(0,153,153)">296</SPAN>] of type java/nio/HeapByteBuffer whose size <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">is</SPAN> <SPAN class=number style="COLOR: rgb(0,153,153)">48</SPAN>
+I just allocated the object [B<SPAN class=decorator>@6f89ad03 of type byte whose size is 32 It's an array of size 16</SPAN>
+I just allocated the object java.nio.HeapByteBuffer[pos=<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN> lim=<SPAN class=number style="COLOR: rgb(0,153,153)">16</SPAN> cap=<SPAN class=number style="COLOR: rgb(0,153,153)">16</SPAN>] of type java/nio/HeapByteBuffer whose size <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">is</SPAN> <SPAN class=number style="COLOR: rgb(0,153,153)">48</SPAN>
+I just allocated the object <SPAN class=number style="COLOR: rgb(0,153,153)">36</SPAN>db757cdd5ae408ef61dca2406d0d35 of type com/google/common/hash/HashCode$BytesHashCode whose size <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">is</SPAN> <SPAN class=number style="COLOR: rgb(0,153,153)">16</SPAN></PRE>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>一共1016个字节。想象一下，我们计算一个短字符串的hash值，检查它相应的bit位设置已经设置，它需要分配大于1Kb的数据。太多了。那你可能会说内存占用已经很小了，好吧，当你做一个单独的微性能测试的时候，影响不是很大，但是在产品级的环境中，它会变得更糟：它会影响GC，导致分配变慢，触发GC，导致更高的延迟等。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>不管怎样，review一下代码会很有趣，有时候你会发现一些复活节彩蛋在里面，比如下面的例子：<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR><IMG class=alignCenter 
+style="MAX-WIDTH: 96%; BORDER-TOP: 0px; HEIGHT: auto; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; TEXT-ALIGN: center; MARGIN: 0px auto 10px; BORDER-LEFT: 0px; DISPLAY: block" 
+src="http://img2.tuicool.com/Er6Nfem.png!web"></P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>这些注释行来自Naughty 
+by Nature说唱组合的歌曲“O.P.P.”,在上世纪90年代早期很流行。这段代码的开发者可能那时是四五十岁的人(偏题了)。</P>
+<H4 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>Twitter 
+Algebird</H4>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>Algebird 
+"为Scala提供的抽象代数库，这些代码主要是用于建立聚合系统（通过Scalding或Storm）。 它是函数式functional，不可变immutable, 
+monadic,但是非常非常非常慢，并且仅仅支持字符串作为元素类型。字符串是万能的数据格式，你可硬用它存任何值 :) 。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>它使用人人皆爱的MurmurHash3算法，它是最好的通用的hash算法。它计算出128-bit的 
+hash值，分割成4个32-bit的数字。然后它为每个32-bit的数字设置相应的位，而不是整个的hash值。这是相当有争议的设计，我进行了粗略的测试，测试表明Teitter 
+Bloom filter有超过 10% 的误报率。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>更深一步，有趣的是Twitter 
+Bloom filter 底层使用<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://github.com/lemire/javaewah" rel=nofollow,noindex 
+target=_blank>EWAHCompressedBitmap</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>,它是一个压缩的可替代BitSet的实现。它专门为内存占用而优化，适合稀疏数据的场景。比如，如果你的位数从1000000开始，EWAH可以优化set而不会为前面的0位分配内存。集合的操作如交集、并集和差也更快。但是随机访问却很慢。 
+而且hash的目标就是有一个均匀分布的hash值，越均匀越好。这两点就排除了使用压缩bitset的好处。我做了一点点测试来检查整个的内存分配，结果显示Twitter 
+Bloom filter比我的实现还要分配更多的内存。 同样，在我看来，Twitter的实现也是相当有争议。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>内存检查的结果很长我就不贴了。为包含100个字符的字符串的检查要分配<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><STRONG 
+style="FONT-WEIGHT: bold; TEXT-INDENT: 0px">1808</STRONG><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>字节，我哭!</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>同样，它是函数式functional, 
+不可变immutable, 使用持久化数据结构, monad, 但这些不足以让我们使用它。 大话说在前， 
+它的读性能要比我的实现慢10倍，写要慢100倍。</P>
+<H4 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>ScalaNLP’s 
+Breeze</H4>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">Breeze 
+is a generic, clean and powerful Scala numerical processing library… Breeze is a 
+part of ScalaNLP project, a scientific computing platform for Scala</P></DIV>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>Breeze的介绍看起来很有吸引力，如清爽的新风，但是，有一个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://github.com/scalanlp/breeze/blob/c12763387cb0741e6d588435d7da92b505f12843/math/src/main/scala/breeze/util/BloomFilter.scala#L36" 
+rel=nofollow,noindex target=_blank>花招在它的实现里</A>。它直接使用对象的hash值。 
+"WTF,我钟爱的MurmurHash3哪去了"，你可能会问。MurmurHash3仅仅用来计算最终的对象的hash值，没错，它可以和任意类型一起工作，但是你不会知道你的大数据集的细微差别(编者按:较难理解，需要配合代码一起理解。 
+英文原意为：It’s used only for “finalizing” the object’s hash. Yeah, it works with any 
+type out-of-the-box but if you don’t know that little nuance you are done with 
+large datasets.)</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>测试中它会分配544字节，看看代码你会发现通用的Scala的问题：</P><PRE class="prettyprint xml" style='WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, "Courier New", monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px'>for{
+ i <SPAN class=tag style="FONT-WEIGHT: normal; COLOR: rgb(0,0,128)">&lt;<SPAN class=title style="FONT-WEIGHT: normal; COLOR: rgb(0,0,128)">-</SPAN> <SPAN class=attribute style="COLOR: rgb(0,128,128)">0to</SPAN> <SPAN class=attribute style="COLOR: rgb(0,128,128)">numHashFunctions</SPAN>
+} <SPAN class=attribute style="COLOR: rgb(0,128,128)">yield</SPAN>{
+<SPAN class=attribute style="COLOR: rgb(0,128,128)">valh</SPAN> = <SPAN class=attribute style="COLOR: rgb(0,128,128)">hash1</SPAN> + <SPAN class=attribute style="COLOR: rgb(0,128,128)">i</SPAN> * <SPAN class=attribute style="COLOR: rgb(0,128,128)">hash2</SPAN>
+<SPAN class=attribute style="COLOR: rgb(0,128,128)">valnextHash</SPAN> =<SPAN class=value style="COLOR: rgb(221,17,68)">if(h</SPAN> &lt;<SPAN class=attribute style="COLOR: rgb(0,128,128)">0</SPAN>) ~<SPAN class=attribute style="COLOR: rgb(0,128,128)">helseh</SPAN>
+ <SPAN class=attribute style="COLOR: rgb(0,128,128)">nextHash</SPAN> % <SPAN class=attribute style="COLOR: rgb(0,128,128)">numBuckets</SPAN>
+}
+</SPAN></PRE>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>看起来很简洁：for语句，延迟计算,漂亮的DSL。但是当它编译成Java代码的时候就不那么好看了，它会分配很多对象: 
+intWrapper(), RichInt, Range.Inclusive, VectorBuilder/Vector, boxing/unboxing 
+等等：</P><PRE class="prettyprint ruby" style='WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, "Courier New", monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px'><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN>(<SPAN class=constant>IndexedSeq</SPAN>)<SPAN class=constant>RichInt</SPAN><SPAN class=variable style="COLOR: rgb(0,128,128)">$.</SPAN><SPAN class=constant>MODULE</SPAN><SPAN class=variable style="COLOR: rgb(0,128,128)">$.</SPAN>to<SPAN class=variable style="COLOR: rgb(0,128,128)">$extension0</SPAN>(<SPAN class=constant>Predef</SPAN><SPAN class=variable style="COLOR: rgb(0,128,128)">$.</SPAN><SPAN class=constant>MODULE</SPAN><SPAN class=variable style="COLOR: rgb(0,128,128)">$.</SPAN>intWrapper(<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>), numHashFunctions()).map(newSerializable(hash1, hash2) {
+
+publicfinalintapply(inti)
+ {
+returnapply<SPAN class=variable style="COLOR: rgb(0,128,128)">$mcII</SPAN><SPAN class=variable style="COLOR: rgb(0,128,128)">$sp</SPAN>(i);
+ }
+
+publicintapply<SPAN class=variable style="COLOR: rgb(0,128,128)">$mcII</SPAN><SPAN class=variable style="COLOR: rgb(0,128,128)">$sp</SPAN>(inti)
+ {
+inth = hash1<SPAN class=variable style="COLOR: rgb(0,128,128)">$1</SPAN>+ i * hash2<SPAN class=variable style="COLOR: rgb(0,128,128)">$1</SPAN>;
+intnextHash = h &gt;=<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>? h <SPAN class=symbol style="COLOR: rgb(153,0,115)">:</SPAN> ~h;
+returnnextHash % <SPAN class=variable style="COLOR: rgb(0,128,128)">$outer</SPAN>.numBuckets();
+ }
+
+publicfinalvolatileObjectapply(<SPAN class=constant>Object</SPAN> v1)
+ {
+returnBoxesRunTime.boxToInteger(apply(<SPAN class=constant>BoxesRunTime</SPAN>.unboxToInt(v1)));
+ }
+
+publicstaticfinallongserialVersionUID =0L;
+privatefinalBloomFilter <SPAN class=variable style="COLOR: rgb(0,128,128)">$outer</SPAN>;
+privatefinalinthash1<SPAN class=variable style="COLOR: rgb(0,128,128)">$1</SPAN>;
+privatefinalinthash2<SPAN class=variable style="COLOR: rgb(0,128,128)">$1</SPAN>;
+
+public
+ {
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN>(<SPAN class=constant>BloomFilter</SPAN>.this==null)
+ {
+thrownull;
+ } <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">else</SPAN>
+ {
+this.<SPAN class=variable style="COLOR: rgb(0,128,128)">$outer</SPAN> = <SPAN class=constant>BloomFilter</SPAN>.this;
+this.hash1<SPAN class=variable style="COLOR: rgb(0,128,128)">$1</SPAN>= hash1<SPAN class=variable style="COLOR: rgb(0,128,128)">$1</SPAN>;
+this.hash2<SPAN class=variable style="COLOR: rgb(0,128,128)">$1</SPAN>= hash2<SPAN class=variable style="COLOR: rgb(0,128,128)">$1</SPAN>;
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">super</SPAN>();
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN>;
+ }
+ }
+}
+, <SPAN class=constant>IndexedSeq</SPAN><SPAN class=variable style="COLOR: rgb(0,128,128)">$.</SPAN><SPAN class=constant>MODULE</SPAN><SPAN class=variable style="COLOR: rgb(0,128,128)">$.</SPAN>canBuildFrom());
+</PRE>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>震撼吗？我想你被震惊了。接下来看看我的实现。</P>
+<H3 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>我是如何实现的？</H3>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>一句话，我重新实现了Bloom 
+filter的数据结构。源代码在<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://github.com/alexandrnikitin/bloom-filter-scala" 
+rel=nofollow,noindex target=_blank>github</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>上，可以通过<A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://mvnrepository.com/artifact/com.github.alexandrnikitin/bloom-filter_2.11" 
+rel=nofollow,noindex target=_blank>maven repository引用</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>:</P><PRE class="prettyprint ruby" style='WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, "Courier New", monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px'>libraryDependencies += <SPAN class=string style="COLOR: rgb(221,17,68)">"com.github.alexandrnikitin"</SPAN><SPAN class=string style="COLOR: rgb(221,17,68)">%%"bloom-filter"%</SPAN><SPAN class=string style="COLOR: rgb(221,17,68)">"0.3.1"</SPAN>
+</PRE>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>下面是使用的例子：</P><PRE class="prettyprint cpp" style='WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, "Courier New", monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px'>importbloomfilter.<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">mutable</SPAN>.BloomFilter
+
+valexpectedElements =<SPAN class=number style="COLOR: rgb(0,153,153)">1000</SPAN>
+valfalsePositiveRate =<SPAN class=number style="COLOR: rgb(0,153,153)">0.1</SPAN>
+valbf = BloomFilter[String](expectedElements, falsePositiveRate)
+bf.add(<SPAN class=string style="COLOR: rgb(221,17,68)">"some string"</SPAN>)
+bf.mightContain(<SPAN class=string style="COLOR: rgb(221,17,68)">"some string"</SPAN>)
+bf.dispose()
+</PRE>
+<H4 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>Unsafe</H4>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>一个重要的设计就是底层使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>sun.misc.unsafe</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>包。使用它分配一块内存来保存bit，所以你需要主动dispose Bloom 
+filter 实例和不受管的内存释放。而且我的实现还使用<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>usafe</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>做了一些花招以避免内存分配，比如直接访问字符串内部的char数组。</P>
+<H4 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>type 
+class模式</H4>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>我的实现是可扩展的，你可以为任意类型使用任意的hash算法。它通过<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><STRONG 
+style="FONT-WEIGHT: bold; TEXT-INDENT: 0px">type class模式</STRONG><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>实现。如果你不熟悉它，你可以阅读<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://twitter.com/kaffeecoder" rel=nofollow,noindex 
+target=_blank>@Daniel Westheide</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的文章<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://danielwestheide.com/blog/2013/02/06/the-neophytes-guide-to-scala-part-12-type-classes.html" 
+rel=nofollow,noindex target=_blank>“The Neophyte’s Guide to Scala”</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>基本上，你所需的就是实现<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>CanGenerateHashFrom[From]</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>trait,就像这样:</P><PRE class=cs style='WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, "Courier New", monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px'>traitCanGenerateHashFrom[From]{
+defgenerateHash(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">from</SPAN>: From): Long
+}
+</PRE>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>不幸的是，它是<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>invariant</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>不变类型。我想实现为逆变类型contravariant但是Scala编译器不能正确的解决contravariant 
+implicits,将来在<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://dotty.epfl.ch/#so-features" rel=nofollow,noindex 
+target=_blank>Dotty</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>编译器中会支持。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>缺省地提供了一个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>MurmurHash3</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的通用实现。我使用Scala实现了它，比Guava、Algebird、Cassandra的实现更快（希望我没有犯错）。为<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>Long</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>、<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>String</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>、<CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>Array[Byte]</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>提供可开箱即用的库。作为一个福利，为无限唯一性(unlimited 
+uniqueness)提供了128bit的版本。</P>
+<H4 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>零分配Zero-allocation</H4>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>我的Bloom 
+filter实现没有分配任何对象，代码被高度优化。我计划写一篇独立的文章来描述这些优化，敬请关注。通过一系列的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>unsafe</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>技巧来实现的。下面是为String类型实现的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>CanGenerateHashFrom</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>trait:</P><PRE class="prettyprint cs" style='WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, "Courier New", monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px'><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">implicit</SPAN> objectCanGenerateHashFromStringextendsCanGenerateHashFrom[String]{
+
+importscala.concurrent.util.Unsafe.{instance =&gt; <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">unsafe</SPAN>}
+
+privatevalvalueOffset = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">unsafe</SPAN>.objectFieldOffset(classOf[String].getDeclaredField(<SPAN class=string style="COLOR: rgb(221,17,68)">"value"</SPAN>))
+
+overridedefgenerateHash(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">from</SPAN>: String): Long = {
+valvalue = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">unsafe</SPAN>.getObject(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">from</SPAN>, valueOffset).asInstanceOf[Array[Char]]
+ MurmurHash3Generic.murmurhash3_x64_64(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">value</SPAN>, <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>, <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">from</SPAN>.length,<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>)
+ }
+}
+</PRE>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>unsafe.objectFieldOffset()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法获取String类型的value字段，它是字符串底层的char数组。然后使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>unsafe.getObject()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法访问字符数组,用来计算hash值。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>不幸的是，128-bit的实现会分配一个对象。我在<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>(Long, 
+Long)</CODE><SPAN class=Apple-converted-space>&nbsp;</SPAN>tuple和<CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>ThreadLocal</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的字段选择上很犹豫，对于整体的性能，没有影响，有什么意见吗？在我的有生之年我希望能看到<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://mail.openjdk.java.net/pipermail/valhalla-dev/2016-June/001981.html" 
+rel=nofollow,noindex target=_blank>JVM的值类型</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>,<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://twitter.com/giltene" rel=nofollow,noindex target=_blank>@Gil 
+Tene</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://objectlayout.github.io/ObjectLayout/" rel=nofollow,noindex 
+target=_blank>ObjectLayout</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>尝试实现它。</P>
+<H4 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>限制</H4>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>你可能已经注意到了，当前实现有一些限制。<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>CanGenerateHashFrom[From]</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>trait是不可变的invariant,它不允许回退到对象的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>hashCode()</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>方法。你需要为你的类型实现它的hash算法。但我相信，为了性能这也是值得的。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>并不是所有的JVM都支持，因为底层使用了“unsafe” 
+包，而且这也没有退路(fallback )的实现。</P>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em"><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>sun.misc.Unsafe</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>至少从2004年Java1.4开始就存在于Java中了。在Java9中，为了提高JVM的可维护性，Unsafe和许多其他的东西一起都被作为内部使用类隐藏起来了。但是究竟是什么取代Unsafe不得而知。 
+摘自:<A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://www.importnew.com/14511.html" rel=nofollow,noindex 
+target=_blank>http://www.importnew.com/14511.html</A></P></DIV>
+<H4 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>可以在Java中用它吗？</H4>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>可以，但是代码不会和Scala一样漂亮，当然你已经习惯了这一切。Java中没有implicit，而且Java编译器也不会帮你调用它。在Java中使用它很丑但是能工作：</P><PRE class="prettyprint xml" style='WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, "Courier New", monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px'>importbloomfilter.CanGenerateHashFrom;
+importbloomfilter.mutable.BloomFilter;
+
+longexpectedElements =10000000;
+doublefalsePositiveRate =0.1;
+BloomFilter<SPAN class=tag style="FONT-WEIGHT: normal; COLOR: rgb(0,0,128)">&lt;<SPAN class=title style="FONT-WEIGHT: normal; COLOR: rgb(0,0,128)">byte[]</SPAN>&gt;</SPAN> bf = BloomFilter.apply(
+ expectedElements,
+ falsePositiveRate,
+ CanGenerateHashFrom.CanGenerateHashFromByteArray$.MODULE$);
+
+byte[] element =newbyte[100];
+bf.add(element);
+bf.mightContain(element);
+bf.dispose();
+</PRE>
+<H3 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>性能benchmark</H3>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>我们都喜欢性能基准数据，对不？令人兴奋的数字在空中游荡，是那么的迷人。如果你准备写性能基准的测试，请使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://openjdk.java.net/projects/code-tools/jmh/" rel=nofollow,noindex 
+target=_blank>JMH</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>。 
+它是Oracle的性能工程师<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" rel=nofollow,noindex 
+target=_blank>@Aleksey Shipilev</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>创建的一个微性能基准库： “for building, running, 
+and analyzing nano/micro/milli/macro benchmarks written in Java and other 
+languages targeting the JVM.”，<SPAN class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://twitter.com/ktosopl" rel=nofollow,noindex target=_blank>@Konrad 
+Malawski</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>写了一个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://github.com/ktoso/sbt-jmh" rel=nofollow,noindex 
+target=_blank>SBT的插件</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>下面是一个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='BORDER-TOP: medium none; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>String</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>类型的基准测试，其它类型的测试结果和此类似：</P><PRE class="prettyprint cpp" style='WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, "Courier New", monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px'>[info] Benchmark                                              (length)   Mode  Cnt          Score         Error  Units
+[info] alternatives.algebird.StringItemBenchmark.algebirdGet      <SPAN class=number style="COLOR: rgb(0,153,153)">1024</SPAN>  thrpt   <SPAN class=number style="COLOR: rgb(0,153,153)">20</SPAN>    <SPAN class=number style="COLOR: rgb(0,153,153)">1181080.172</SPAN> ▒    <SPAN class=number style="COLOR: rgb(0,153,153)">9867.840</SPAN>  ops/s
+[info] alternatives.algebird.StringItemBenchmark.algebirdPut      <SPAN class=number style="COLOR: rgb(0,153,153)">1024</SPAN>  thrpt   <SPAN class=number style="COLOR: rgb(0,153,153)">20</SPAN>     <SPAN class=number style="COLOR: rgb(0,153,153)">157158.453</SPAN> ▒     <SPAN class=number style="COLOR: rgb(0,153,153)">844.623</SPAN>  ops/s
+[info] alternatives.breeze.StringItemBenchmark.breezeGet          <SPAN class=number style="COLOR: rgb(0,153,153)">1024</SPAN>  thrpt   <SPAN class=number style="COLOR: rgb(0,153,153)">20</SPAN>    <SPAN class=number style="COLOR: rgb(0,153,153)">5113222.168</SPAN> ▒   <SPAN class=number style="COLOR: rgb(0,153,153)">47005.466</SPAN>  ops/s
+[info] alternatives.breeze.StringItemBenchmark.breezePut          <SPAN class=number style="COLOR: rgb(0,153,153)">1024</SPAN>  thrpt   <SPAN class=number style="COLOR: rgb(0,153,153)">20</SPAN>    <SPAN class=number style="COLOR: rgb(0,153,153)">4482377.337</SPAN> ▒   <SPAN class=number style="COLOR: rgb(0,153,153)">19971.209</SPAN>  ops/s
+[info] alternatives.guava.StringItemBenchmark.guavaGet            <SPAN class=number style="COLOR: rgb(0,153,153)">1024</SPAN>  thrpt   <SPAN class=number style="COLOR: rgb(0,153,153)">20</SPAN>    <SPAN class=number style="COLOR: rgb(0,153,153)">5712237.339</SPAN> ▒  <SPAN class=number style="COLOR: rgb(0,153,153)">115453.495</SPAN>  ops/s
+[info] alternatives.guava.StringItemBenchmark.guavaPut            <SPAN class=number style="COLOR: rgb(0,153,153)">1024</SPAN>  thrpt   <SPAN class=number style="COLOR: rgb(0,153,153)">20</SPAN>    <SPAN class=number style="COLOR: rgb(0,153,153)">5621712.282</SPAN> ▒  <SPAN class=number style="COLOR: rgb(0,153,153)">307133.297</SPAN>  ops/s
+
+<SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">// My Bloom filter</SPAN>
+[info] bloomfilter.<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">mutable</SPAN>.StringItemBenchmark.myGet              <SPAN class=number style="COLOR: rgb(0,153,153)">1024</SPAN>  thrpt   <SPAN class=number style="COLOR: rgb(0,153,153)">20</SPAN>   <SPAN class=number style="COLOR: rgb(0,153,153)">11483828.730</SPAN> ▒  <SPAN class=number style="COLOR: rgb(0,153,153)">342980.166</SPAN>  ops/s
+[info] bloomfilter.<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">mutable</SPAN>.StringItemBenchmark.myPut              <SPAN class=number style="COLOR: rgb(0,153,153)">1024</SPAN>  thrpt   <SPAN class=number style="COLOR: rgb(0,153,153)">20</SPAN>   <SPAN class=number style="COLOR: rgb(0,153,153)">11634399.272</SPAN> ▒   <SPAN class=number style="COLOR: rgb(0,153,153)">45645.105</SPAN>  ops/s
+[info] bloomfilter.<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">mutable</SPAN>._128bit.StringItemBenchmark.myGet      <SPAN class=number style="COLOR: rgb(0,153,153)">1024</SPAN>  thrpt   <SPAN class=number style="COLOR: rgb(0,153,153)">20</SPAN>   <SPAN class=number style="COLOR: rgb(0,153,153)">11119086.965</SPAN> ▒   <SPAN class=number style="COLOR: rgb(0,153,153)">43696.519</SPAN>  ops/s
+[info] bloomfilter.<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">mutable</SPAN>._128bit.StringItemBenchmark.myPut      <SPAN class=number style="COLOR: rgb(0,153,153)">1024</SPAN>  thrpt   <SPAN class=number style="COLOR: rgb(0,153,153)">20</SPAN>   <SPAN class=number style="COLOR: rgb(0,153,153)">11303765.075</SPAN> ▒   <SPAN class=number style="COLOR: rgb(0,153,153)">52581.059</SPAN>  ops/s</PRE>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>我的实现大致要比Goole 
+Guava的实现快2倍， 比Twitter Algebird快10 ~ 80倍，其它的benchmark你可以在<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="https://github.com/alexandrnikitin/bloom-filter-scala/tree/0e9d0ba103c314ae2c071a107ff7fbc48af4c904/benchmarks/src/main/scala" 
+rel=nofollow,noindex target=_blank>github上的“benchmarks’模块</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>找到。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>警告：这是在独立环境中的综合测试。通常吞吐率和延迟的差别要比产品环境中要大，因为它会对GC有压力，导致分配很慢，更高的延迟，触发GC等。</P>
+<H3 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>用在哪里？</H3>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>高性能和低延迟系统。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>大数据和机器学习系统，有巨量唯一的数据。</P>
+<H4 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>什么时候不用它?</H4>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>如果你当前的解决方案已满足需求，大部分软件都不需要这么快。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>你只信任那些大公司如Google、Twitter出品的已被证明的、经受考验的库。</P>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>你想要开箱即用的库。</P></body>
+</html>

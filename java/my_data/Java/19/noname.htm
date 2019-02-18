@@ -1,0 +1,134 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>用ServletFilter缓存页面图片及js</title>
+</head>
+
+<body>
+<span id="ArticleContent1_ArticleContent1_lblContent">
+<p><font size="2">import java.io.*;<br>
+  import java.util.*;<br>
+  import javax.servlet.*;<br>
+  import javax.servlet.http.*;<br>
+  import com.elink.util.*;</font></p>
+<p><font size="2">public class BusiCacheFilter implements Filter<br>
+  {<br>
+  &nbsp;private FilterConfig config&nbsp; = null;<br>
+  &nbsp;private HashMap expiresMap = new HashMap();</font></p>
+<p><font size="2">&nbsp;public void init(FilterConfig filterConfig)<br>
+  &nbsp;{<br>
+  &nbsp; this.config = filterConfig;<br>
+  &nbsp; expiresMap.clear();<br>
+  &nbsp; Enumeration names = config.getInitParameterNames();<br>
+  &nbsp; while( names.hasMoreElements() )<br>
+  &nbsp; {<br>
+  &nbsp;&nbsp; try<br>
+  &nbsp;&nbsp; {<br>
+  &nbsp;&nbsp;&nbsp; String name = (String)names.nextElement();<br>
+  &nbsp;&nbsp;&nbsp; String value = config.getInitParameter( name );<br>&nbsp;&nbsp;&nbsp; Integer expire =
+      Integer.valueOf( value );<br>
+  &nbsp;&nbsp;&nbsp; expiresMap.put( name, expire );<br>
+  &nbsp;&nbsp; }<br>
+  &nbsp;&nbsp; catch( Exception ex)<br>
+  &nbsp;&nbsp; {<br>
+  &nbsp;&nbsp; }<br>
+  &nbsp; }<br>
+  &nbsp;}</font></p>
+<p><font size="2">&nbsp;public void doFilter( ServletRequest request, ServletResponse 
+  response, FilterChain chain)<br>
+  &nbsp; throws IOException, ServletException<br>
+  &nbsp;{<br>
+  &nbsp; HttpServletRequest req = (HttpServletRequest) request;<br>
+  &nbsp; HttpServletResponse res = (HttpServletResponse) response;<br>
+  &nbsp; <br>&nbsp; String uri =
+      req.getRequestURI();<br>
+  &nbsp; String ext = null;<br>
+  &nbsp; int dot =&nbsp; uri.lastIndexOf(".");<br>
+  &nbsp; if( dot != -1 )<br>
+  &nbsp; {<br>
+  &nbsp;&nbsp; ext = uri.substring( dot+1 );<br>
+  &nbsp; }<br>
+  &nbsp; <br>
+  &nbsp; setResponseHeader( res, uri, ext );<br>
+  &nbsp; chain.doFilter(request, response);<br>
+  &nbsp;}</font></p>
+<p><font size="2">&nbsp;public void destroy()<br>
+  &nbsp;{<br>
+  &nbsp;}<br>
+  &nbsp;<br>
+  &nbsp;protected FilterConfig getFilterConfig()<br>
+  &nbsp;{<br>
+  &nbsp; return (config);<br>
+  &nbsp;}<br>
+  &nbsp;<br>
+  &nbsp;<br>
+  &nbsp;private void setResponseHeader( HttpServletResponse response, String uri, 
+  String ext )<br>
+  &nbsp;{<br>
+  &nbsp; if( ext!= null &amp;&amp; ext.length() &gt; 0 )<br>
+  &nbsp; {<br>
+  &nbsp;&nbsp; Integer expires = (Integer)expiresMap.get(ext);<br>
+  &nbsp;&nbsp; if( expires != null )<br>
+  &nbsp;&nbsp; {<br>
+  &nbsp;&nbsp;&nbsp; LogUtil.logDebug( uri + ".Expires: "+ expires.intValue());<br>
+  &nbsp;&nbsp;&nbsp; if( expires.intValue() &gt; 0 )<br>
+  &nbsp;&nbsp;&nbsp; {<br>
+  &nbsp;&nbsp;&nbsp;&nbsp; response.setHeader("Cache-Control","max-age="+expires.intValue()); 
+  //HTTP 1.1<br>
+  &nbsp;&nbsp;&nbsp; }<br>
+  &nbsp;&nbsp;&nbsp; else<br>
+  &nbsp;&nbsp;&nbsp; {<br>
+  &nbsp;&nbsp;&nbsp;&nbsp; response.setHeader("Cache-Control","no-cache");<br>
+  &nbsp;&nbsp;&nbsp;&nbsp; response.setHeader("Pragma","no-cache"); //HTTP 1.0<br>
+  &nbsp;&nbsp;&nbsp;&nbsp; response.setDateHeader ("Expires", 0 );<br>
+  &nbsp;&nbsp;&nbsp; }<br>
+  &nbsp;&nbsp; }<br>
+  &nbsp; }<br>
+  &nbsp;}<br>
+  }<br>
+  <br>
+  <br>
+  <br>
+  web.xml<br>
+  <br>
+  &lt;filter&gt;<br>
+  &nbsp;&lt;filter-name&gt;busicachefilter&lt;/filter-name&gt;<br>
+  &nbsp;&lt;filter-class&gt;com.elink.control.BusiCacheFilter&lt;/filter-class&gt;<br>
+  &nbsp;&lt;init-param&gt;<br>
+  &nbsp; &lt;param-name&gt;js&lt;/param-name&gt;<br>
+  &nbsp; &lt;param-value&gt;3600&lt;/param-value&gt;<br>
+  &nbsp;&lt;/init-param&gt;<br>
+  &nbsp;&lt;init-param&gt;<br>
+  &nbsp; &lt;param-name&gt;gif&lt;/param-name&gt;<br>
+  &nbsp; &lt;param-value&gt;3600&lt;/param-value&gt;<br>
+  &nbsp;&lt;/init-param&gt;<br>
+  &nbsp;&lt;init-param&gt;<br>
+  &nbsp; &lt;param-name&gt;jpg&lt;/param-name&gt;<br>
+  &nbsp; &lt;param-value&gt;3600&lt;/param-value&gt;<br>
+  &nbsp;&lt;/init-param&gt;<br>
+  &nbsp;&lt;init-param&gt;<br>
+  &nbsp; &lt;param-name&gt;css&lt;/param-name&gt;<br>
+  &nbsp; &lt;param-value&gt;3600&lt;/param-value&gt;<br>
+  &nbsp;&lt;/init-param&gt;<br>
+  &nbsp; &lt;/filter&gt;<br>
+  &nbsp; &lt;filter-mapping&gt;<br>
+  &nbsp;&lt;filter-name&gt;busicachefilter&lt;/filter-name&gt;<br>
+  &nbsp;&lt;url-pattern&gt;*.js&lt;/url-pattern&gt;<br>
+  &nbsp; &lt;/filter-mapping&gt;<br>
+  &nbsp; &lt;filter-mapping&gt;<br>
+  &nbsp;&lt;filter-name&gt;busicachefilter&lt;/filter-name&gt;<br>
+  &nbsp;&lt;url-pattern&gt;*.gif&lt;/url-pattern&gt;<br>
+  &nbsp; &lt;/filter-mapping&gt;<br>
+  &nbsp; &lt;filter-mapping&gt;<br>
+  &nbsp;&lt;filter-name&gt;busicachefilter&lt;/filter-name&gt;<br>
+  &nbsp;&lt;url-pattern&gt;*.jpg&lt;/url-pattern&gt;<br>
+  &nbsp; &lt;/filter-mapping&gt;<br>
+  &nbsp; &lt;filter-mapping&gt;<br>
+  &nbsp;&lt;filter-name&gt;busicachefilter&lt;/filter-name&gt;<br>
+  &nbsp;&lt;url-pattern&gt;*.css&lt;/url-pattern&gt;<br>
+  &nbsp; &lt;/filter-mapping&gt;<br>
+  </font></p>
+<p><font size="2">&nbsp;</p></FONT>
+</span>
+</body>
+</html>

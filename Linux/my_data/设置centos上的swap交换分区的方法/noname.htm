@@ -1,0 +1,21 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>设置centos上的swap交换分区的方法</title>
+</head>
+<body><!--StartFragment--><div id="article_content" class="article_content">
+    <p>设置centos上的swap交换分区的方法<br><br>作为linux世界里最稳定的服务器版本，rhas5一直有很大的应用面，之前一直关注的是freebsd，因为应用的需要，特别在配合mysql和oracle上red hat有着太多优势。<br><br>用centos来代替red hat as的使用，因为centos5是利用rhas5的源码，去掉redhat的商标、图标之后编译发行的，是最一个源码编译版本，我用的是centos 5.2<br><br>在安装centos 5.2的时候，忘设置swap交换分区，在内存小的情况下，增大swap的作用比较有效的。<br><br>第一步 创建文件块<br><br>#cd /var   (进入一个文件夹)<br><br>#dd if=/dev/zero of=swapfile bs=1024 count=524288    （创建512M的swap ,一般是内存的两倍）<br><br>#/sbin/mkswap swapfile   （创建swap文件）<br><br>#/sbin/swapon swapfile   (激活swap文件)<br><br>#/sbin/swapon -s          (检查swap是否正确)<br><br>结果：<br><br>Filename                                Type            Size    Used    Priority<br><br>/var/swapfile                           file            524016  0       -1<br><br>#vi /etc/fstab       （加到fstab文件中让系统引导时自动启动）<br><br>在末尾增加以下内容：<br><br>/var/swapfile swap swap defaults 0 0<br><br>#reboot<br><br>重启之后，top命令查看，有swap分区的大小了<br><br> <br><br>swap的问题已经解决（源自网络）<br><br>解决办法：<br><br>2、格式华及启动swap文件 <br><br>接下来执行mkswap命令,将myswap文件格式化成s文件系统,系统才能使用,切换到/tmp目录,并执行以下命令: <br><br># mkswap swapfree (#将文件格式化为swap文件格式) <br><br>setting up swapspace version 1 , size = 262144 KB <br><br># swapon /tmp/swapfree (#启动swap分区) <br><br>要停止使用新创建的swap文件,只要执行 swapoff /tmp/swapfree命令即可,如果swap交换文件不再使用，可以删除此文件。<br><br>3、检查swap<br><br>     #swapon -s<br><br>4、 开机时自动启动新添加的swap分区 <br><br>如果每次开机后都要执行swapon命令启动swap分区或者文件,这太麻烦了.这时可以利用文字编辑器在/etc/fstab文件加一行,好让开机时自动启动swap分区及文件: <br><br>/dec/hdb5 swap swap defaults 0 0 (开机时启动此swap分区) <br><br>/tmp/swapfree swap swap defaults 0 0 (开机时启动此swap文件) .<br><br>swap空间大小：<br><br>
+
+
+通常情况下，Swap空间应大于或等于物理内存的大小，最小不应小于64M，通常Swap空间的大小应是物理内存的2-2.5倍。但根据不同的应用，应有不同的配置：如果是小的桌面系统，则只需要较小的Swap空间，而大的服务器系统则视情况不同需要不同大小的Swap空间。特别是数据库服务器和Web服务器，随着访问量的增加，对Swap空间的要求也会增加，具体配置参见各服务器产品的说明。<br><br>swap数量：<br><br>
+
+Swap分区的数量对性能也有很大的影响。因为Swap交换的操作是磁盘IO的操作，如果有多个Swap交换区，Swap空间的分配会以轮流的方式操作于所有的
+Swap，这样会大大均衡IO的负载，加快Swap交换的速度。如果只有一个交换区，所有的交换操作会使交换区变得很忙，使系统大多数时间处于等待状态，效率很低。用性能监视工具就会发现，此时的CPU并不很忙，而系统却慢。这说明，瓶颈在IO上，依靠提高CPU的速度是解决不了问题的。</p>
+<p>&nbsp;</p>
+<p>注：</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>查看swap 空间大小(总计)： <br># free -m          默认单位为k, -m 单位为M<br>total       used       free     shared    buffers     cached<br>Mem:           377        180        197          0         19        110<br>-/+ buffers/cache:         50        327<br>Swap:          572          0        572<br><br>Mem 行显示了从系统角度看来内存使用的情况, total是系统可用的内存大小, 数量上等于系统物理内存减去内核保留的内存. <br>buffers和cached是系统用做缓冲的内存. buffers与某个块设备关联, 包含了文件系统元数据, 并且跟踪了块的变化. cache只包含了文件本身.<br><br>-/+ buffers/cache  行则从用户角度显示内存信息, 可用内存从数量上等于mem行used列值减去buffers和cached内存的大小.<br><br> 因为buffers和cached是操作系统为加快系统运行而设置的, 当用户需要时, 可以只接为用户使用.<br><br>top 显示系统运行时的各进程动态、实时的状态(cpu、内存)<br><br>top 中有3个列 VIRT RES SHR, 标示了进程使用的内存情况.<br>VIRT 标识这个进程 可以使用的内存总大小, 包括这个进程真实使用的内存, 映射过的文件, 和别的进程共享的内存等. <br>RES 标识这个这个进程真实占用内存的大小. <br>SHR 标识可以和别的进程共享的内存和库大小.<br><br>vmstat 显示内存的使用情况<br><br>这些命令都是从/proc/meminfo中读取内存 信息.<br><br>关于/proc/meminfo中各行的含意, 在内核源代码的Documentation/filesystems/proc.txt文 件中有叙述<br><br>系统的真实内存大小可以用 dmesg | grep [mM][eE][mM]看到<br><br>/proc/pid/status显示一个进程的详细 状态</p>
+<p> &nbsp;</p>
+</div><!--EndFragment-->
+</body>

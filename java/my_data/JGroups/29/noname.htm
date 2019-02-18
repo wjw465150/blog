@@ -1,0 +1,289 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML xmlns="http://www.w3.org/1999/xhtml">
+<HEAD>`
+<title>JGroups之皮毛-企业应用-Java -JavaEye做最棒的软件开发交流社区</title>
+<LINK 
+href="favicon.gif" type=image/gif 
+rel="shortcut icon">
+<LINK title=JavaEye热点话题RSS 
+href="rss_index_topics" type=application/rss+xml 
+rel=alternate>
+<LINK media=screen href="forum.css_1172652795" 
+type=text/css rel=Stylesheet>
+<LINK media=screen 
+href="hse.css_1164769789" type=text/css rel=Stylesheet>
+<LINK 
+media=screen href="application.css_1177397879" type=text/css 
+rel=Stylesheet>
+<LINK media=screen href="highlight.css_1162654323" 
+type=text/css rel=Stylesheet>
+<LINK media=screen 
+href="default.css_1158756033" type=text/css 
+rel=Stylesheet>
+<LINK media=screen 
+href="alphacube.css_1158756033" type=text/css 
+rel=Stylesheet>
+<style type="text/css">
+body {
+	margin-left: 50px;
+	margin-right: 50px;
+}
+</style>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</HEAD>
+
+<BODY>
+<div class="helpline"  bgcolor="#D6D6D6">前些天看了些关于JGroups方面的资料，怕时间久了将之忘于脑后，觉得有必要记录一下，这样日后就不用再从头看啦。 <BR>
+  现在有很多项目都使用JGroups做底层的通讯，知道的开源项目有JBoss 
+  Cache和OSCache用它做为底层支持来实现集群的，一定还有其他的项目也用到了，只不过我不知道而已了。 <BR>
+  JGroups是一个可靠的组间通讯工具，进程可以加入一个通讯组，给组内所有的成员或单独的成员发送消息，同样，也可以从组中的成员处接收消息。系统会记录组的每一个成员，在新成员加入或是现有的成员离开或是崩溃时，会通知组内的其他成员，这样我们就不必自己去管理这些事情了。 <BR>
+  要想加入一个组，并与组内其他的成员交互，必须建立一个Channel连接到组，同一个组内的所有成员使用相同的组名称。首先是创建一个Channel，可以直接实例化一个Channel的实现，这里用的是JChannel： <BR>
+<DIV class=code_title>代码</DIV>
+<DIV class=code_div>
+  <DIV class=dp-highlighter>
+    <DIV class=bar></DIV>
+    <OL class=dp-j>
+      <LI class=alt><SPAN><SPAN>JChannel&nbsp;channel&nbsp;=&nbsp;</SPAN><SPAN 
+class=keyword>new</SPAN><SPAN>&nbsp;JChannel(props);&nbsp;&nbsp;</SPAN></SPAN></LI>
+    </OL>
+  </DIV>
+</DIV>
+<BR>
+参数里指定Channel使用的协议栈，如果是空的，则使用默认的协议栈，位于JGroups包里的udp.xml。参数可以是一个以冒号分隔的字符串，或是一个XML文件，在XML文件里定义协议栈。 <BR>
+下面的是JGroups文档里给出的字符串的例子： <BR>
+<DIV class=code_title>代码</DIV>
+<DIV class=code_div>
+  <DIV class=dp-highlighter>
+    <DIV class=bar></DIV>
+    <OL class=dp-j>
+      <LI class=alt><SPAN><SPAN>String&nbsp;props=</SPAN><SPAN 
+class=string>"UDP(mcast_addr=228.1.2.3;mcast_port=45566;ip_ttl=32):"</SPAN><SPAN>&nbsp;+ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=string>"PING(timeout=3000;num_initial_members=6):"</SPAN><SPAN>&nbsp;+ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=string>"FD(timeout=5000):"</SPAN><SPAN>&nbsp;+ &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=string>"VERIFY_SUSPECT(timeout=1500):"</SPAN><SPAN>&nbsp;+ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=string>"pbcast.STABLE(desired_avg_gossip=10000):"</SPAN><SPAN>&nbsp;+ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=string>"pbcast.NAKACK(gc_lag=10;retransmit_timeout=3000):"</SPAN><SPAN>&nbsp;+ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=string>"UNICAST(timeout=5000;min_wait_time=2000):"</SPAN><SPAN>&nbsp;+ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN class=string>"FRAG:"</SPAN><SPAN>&nbsp;+ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=string>"pbcast.GMS(initial_mbrs_timeout=4000;join_timeout=5000;"</SPAN><SPAN>&nbsp;+ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=string>"join_retry_timeout=2000;shun=false;print_local_addr=false)"</SPAN><SPAN>; 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>JChannel&nbsp;channel; &nbsp;&nbsp;</SPAN>
+      <LI ><SPAN></SPAN><SPAN class=keyword>try</SPAN><SPAN>&nbsp;{ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;channel=</SPAN><SPAN 
+class=keyword>new</SPAN><SPAN>&nbsp;JChannel(props); &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>} &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN></SPAN><SPAN 
+class=keyword>catch</SPAN><SPAN>(Exception&nbsp;ex)&nbsp;{ &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN></SPAN><SPAN 
+class=comment>//&nbsp;channel&nbsp;creation&nbsp;failed</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+    </OL>
+  </DIV>
+</DIV>
+<BR>
+创建完之后，Channel现在处于未连接状态，需要通过connect方法将之连接到组，使其处于连接状态：
+<P></P>
+<P>
+<DIV class=code_title>代码</DIV>
+<DIV class=code_div>
+  <DIV class=dp-highlighter>
+    <DIV class=bar></DIV>
+    <OL class=dp-j>
+      <LI class=alt><SPAN><SPAN class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;connect(String&nbsp;groupname)&nbsp;</SPAN><SPAN 
+class=keyword>throws</SPAN><SPAN>&nbsp;ChannelClosed;&nbsp;&nbsp;</SPAN></SPAN></LI>
+    </OL>
+  </DIV>
+</DIV>
+<P></P>
+<P>它的参数就是要加入组的组名字，如果加入的组之前没有任何成员，则会自动创建一个组。 <BR>
+  此时，Channel已处于连接状态，可以发送/接收消息了，发送消息的方法为：</P>
+<P>
+<DIV class=code_title>代码</DIV>
+<DIV class=code_div>
+  <DIV class=dp-highlighter>
+    <DIV class=bar></DIV>
+    <OL class=dp-j>
+      <LI class=alt><SPAN><SPAN class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;send(Message&nbsp;msg)&nbsp;</SPAN><SPAN 
+class=keyword>throws</SPAN><SPAN>&nbsp;ChannelNotConnected,&nbsp;ChannelClosed; 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN></SPAN><SPAN class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;send(Address&nbsp;dst,&nbsp;Address&nbsp;src,&nbsp;Object&nbsp;obj)&nbsp;</SPAN><SPAN 
+class=keyword>throws</SPAN><SPAN>&nbsp;ChannelNotConnected,&nbsp;ChannelClosed; 
+        &nbsp;&nbsp;</SPAN></SPAN></LI>
+    </OL>
+  </DIV>
+</DIV>
+<P></P>
+<P>两个方法基本是一样的，只不过一个是直接提供一个消息，而另一个只是提供了消息的目的地，源，和消息内容，其实这个方法在内部也是通过第一个方法来实现的，在其内部，将提供的这三个参数组合成一个消息，再调用第一个方法，具体使用哪个方法，则看个人喜好和实际情况了。 <BR>
+  消息的由消息的目的地，源，Flag，消息内容，Header组成。其中如果目的地为空，则认为是发给所有组成员的消息；源为空的话，在底层的协议将其放到网络上时，会自动的将本Channel的地址填充进去。Address则是组成员的地址，用于唯一的标识一个组成员的接口，JGroups提供了几种默认的实现。下面的例子是发送一条消息到组内所有的成员处：</P>
+<P>
+<DIV class=code_title>代码</DIV>
+<DIV class=code_div>
+  <DIV class=dp-highlighter>
+    <DIV class=bar></DIV>
+    <OL class=dp-j>
+      <LI class=alt><SPAN><SPAN>Hashtable&nbsp;data;&nbsp;</SPAN><SPAN 
+class=comment>//&nbsp;any&nbsp;serializable&nbsp;data </SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN></SPAN><SPAN class=keyword>try</SPAN><SPAN>&nbsp;{ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;channel.send(</SPAN><SPAN 
+class=keyword>null</SPAN><SPAN>,&nbsp;</SPAN><SPAN 
+class=keyword>null</SPAN><SPAN>,&nbsp;data); &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>} &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN></SPAN><SPAN 
+class=keyword>catch</SPAN><SPAN>(Exception&nbsp;ex)&nbsp;{ &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN></SPAN><SPAN class=comment>//&nbsp;handle&nbsp;errors </SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+    </OL>
+  </DIV>
+</DIV>
+<P></P>
+<P>再来一个发送到单独的组成员的例子：</P>
+<P>
+<DIV class=code_title>代码</DIV>
+<DIV class=code_div>
+  <DIV class=dp-highlighter>
+    <DIV class=bar></DIV>
+    <OL class=dp-j>
+      <LI class=alt><SPAN><SPAN>Address&nbsp;receiver; &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>Hashtable&nbsp;data; &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN></SPAN><SPAN class=keyword>try</SPAN><SPAN>&nbsp;{ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>receiver=channel.getView().getMembers().first(); 
+        &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN>channel.send(receiver,&nbsp;</SPAN><SPAN 
+class=keyword>null</SPAN><SPAN>,&nbsp;data); &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>} &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN></SPAN><SPAN 
+class=keyword>catch</SPAN><SPAN>(Exception&nbsp;ex)&nbsp;{ &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN></SPAN><SPAN class=comment>//&nbsp;handle&nbsp;errors </SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>} &nbsp;&nbsp;</SPAN></LI>
+    </OL>
+  </DIV>
+</DIV>
+<P></P>
+<P>其中的channel.getView().getMembers().first()是指从Channel中取出当前的成员列表，再从中取出第一个成员。之后就可以将这个成员做为目的地来发送消息了。 <BR>
+  可以发送消息，同样也可以接收消息：</P>
+<P>
+<DIV class=code_title>代码</DIV>
+<DIV class=code_div>
+  <DIV class=dp-highlighter>
+    <DIV class=bar></DIV>
+    <OL class=dp-j>
+      <LI class=alt><SPAN><SPAN 
+class=keyword>public</SPAN><SPAN>&nbsp;Object&nbsp;receive(</SPAN><SPAN 
+class=keyword>long</SPAN><SPAN>&nbsp;timeout)&nbsp;</SPAN><SPAN 
+class=keyword>throws</SPAN><SPAN>&nbsp;ChannelNotConnected,&nbsp;ChannelClosed,&nbsp;Timeout; 
+        &nbsp;&nbsp;</SPAN></SPAN></LI>
+    </OL>
+  </DIV>
+</DIV>
+<P></P>
+<P>利用此方法可以取回多种消息，如普通的消息，View消息，等等。它的timeout参数则是指定超时的时间，如果设置为0时，而此时又没有新消息可以接收，此方法则会形成一个阻塞，在这一直等到有可用的消息为止；设置为大于0时，如果没有可用消息，超过此值后，会抛出一个Timeout异常。 <BR>
+  下面的列表则是可以接收的消息的详细清单： <BR>
+<DIV class=code_title>代码</DIV>
+<DIV class=code_div>
+  <DIV class=dp-highlighter>
+    <OL class=dp-j>
+      <LI class=alt><SPAN><SPAN>Message &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>View &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN>SuspectEvent &nbsp;&nbsp;</SPAN>
+      <LI ><SPAN>BlockEvent &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN>UnblockEvent &nbsp;&nbsp;</SPAN>
+      <LI ><SPAN>GetStateEvent &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN>StreamingGetStateEvent &nbsp;&nbsp;</SPAN>
+      <LI ><SPAN>SetStateEvent &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN>StreamingSetStateEvent &nbsp;&nbsp;</SPAN></LI>
+    </OL>
+  </DIV>
+</DIV>
+<P></P>
+<P>同样，也给出一个此方法的应用小例子：</P>
+<P>
+<DIV class=code_title>代码</DIV>
+<DIV class=code_div>
+  <DIV class=dp-highlighter>
+    <DIV class=bar></DIV>
+    <OL class=dp-j>
+      <LI class=alt><SPAN><SPAN>Object&nbsp;obj; &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>Message&nbsp;msg; &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN>View&nbsp;v; &nbsp;&nbsp;</SPAN>
+      <LI ><SPAN>obj=channel.receive(</SPAN><SPAN 
+class=number>0</SPAN><SPAN>);&nbsp;</SPAN><SPAN class=comment>//&nbsp;wait&nbsp;forever </SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN></SPAN><SPAN class=keyword>if</SPAN><SPAN>(obj&nbsp;</SPAN><SPAN 
+class=keyword>instanceof</SPAN><SPAN>&nbsp;Message) &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>msg=(Message)obj; &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN></SPAN><SPAN class=keyword>else</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>if</SPAN><SPAN>(obj&nbsp;</SPAN><SPAN 
+class=keyword>instanceof</SPAN><SPAN>&nbsp;View) &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>v=(View)obj; &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN></SPAN><SPAN 
+class=keyword>else</SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>;&nbsp;</SPAN><SPAN 
+class=comment>//&nbsp;don't&nbsp;handle&nbsp;suspicions&nbsp;or&nbsp;blocks </SPAN><SPAN>&nbsp;&nbsp;</SPAN></SPAN></LI>
+    </OL>
+  </DIV>
+</DIV>
+<P></P>
+<P>receive()方法是Channel主动的去取消息，这种方式在现在的JGroups版本中已经不赞成被使用了，而替代方式则是通过setReceiver()方法向Channel注册一个监听器，在有消息到达的时候，自动的调用相应的方法来处理消息。 <BR>
+  setReceiver()方法的参数是一个Receiver接口，此接口继承了MessageListener和MembershipListener，呵，看名字就知道这两个Listener是做什么的了。JGroups里提供了一个Receiver的Adapter：ReceiverAdapter，它只是为Receiver接口里的方法提供了一空的实现，可以让我们在自己的实现中只需实现关心的方法就OK了。下面是一个用注册Receiver的形式接收消息的实例：</P>
+<P>
+<DIV class=code_title>代码</DIV>
+<DIV class=code_div>
+  <DIV class=dp-highlighter>
+    <DIV class=bar></DIV>
+    <OL class=dp-j>
+      <LI class=alt><SPAN><SPAN>JChannel&nbsp;ch=</SPAN><SPAN 
+class=keyword>new</SPAN><SPAN>&nbsp;JChannel(); &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>ch.setReceiver(</SPAN><SPAN 
+class=keyword>new</SPAN><SPAN>&nbsp;ReceiverAdapter()&nbsp;{ &nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;receive(Message&nbsp;msg)&nbsp;{ &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(</SPAN><SPAN 
+class=string>"received&nbsp;message&nbsp;"</SPAN><SPAN>&nbsp;+&nbsp;msg); &nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN>
+      <LI ><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><SPAN 
+class=keyword>public</SPAN><SPAN>&nbsp;</SPAN><SPAN 
+class=keyword>void</SPAN><SPAN>&nbsp;viewAccepted(View&nbsp;new_view)&nbsp;{ 
+        &nbsp;&nbsp;</SPAN></SPAN>
+      <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(</SPAN><SPAN 
+class=string>"received&nbsp;view&nbsp;"</SPAN><SPAN>&nbsp;+&nbsp;new_view); &nbsp;&nbsp;</SPAN></SPAN>
+      <LI ><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN>
+      <LI class=alt><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;}); &nbsp;&nbsp;</SPAN>
+      <LI ><SPAN>ch.connect(</SPAN><SPAN class=string>"bla"</SPAN><SPAN>); 
+        &nbsp;&nbsp;</SPAN></SPAN></LI>
+    </OL>
+  </DIV>
+</DIV>
+<P></P>
+<P>利用上面的的两种方式接收消息时，会将接收到的消息从消息队列中删除，如果只是想了解一下下一条消息，而又不想将它从消息队列中删除时，可以使用peek()方法，它的使用方式同receive()。 <BR>
+  了解了如果发送和接收消息之后，现在Channel想转移到未连接状态啦，可以使用disconnect()，将Channel与组断开连接，这个时候如果再执行发送或接收消息的操作的话，那就等着接收异常吧，呵。 <BR>
+  Channel处于未连接状态之后，可以重新连接到组，也可以通过close()方法关闭Channel，需要注意的是，执行了close()之后，就不能直接执行connect()方法来使Channel连接到组了，需要使用open()来将Channel重新打开，之后再能与组进行连接。</P>
+<P>上面只是对JGroups的简单应用做一下整理，其实这只是JGroups的皮毛而已，JGroups还包含很多内容：状态传递，Building 
+Blocks(OSCache使用的就是Building Blocks里的NotificationBus)，还有协议栈等等好多内容，这些还得慢慢的继续学习啊。
+<P>&nbsp;
+<P>&nbsp;</P> 
+   
+  </div>
+</BODY>
+</HTML>

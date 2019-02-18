@@ -1,0 +1,726 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML><head>
+<title>Servlet3.0: 简介AsyncContext</title>
+
+<META content="text/html; charset=UTF-8" http-equiv=Content-Type>
+<META name=GENERATOR content="MSHTML 11.00.9600.18015"></HEAD>
+<BODY>
+<DIV class=blog_main 
+style="BORDER-TOP-COLOR: rgb(98,0,145); WIDTH: 700px; BORDER-BOTTOM: rgb(98,0,145) 1px dotted; BORDER-LEFT-COLOR: rgb(98,0,145); PADDING-BOTTOM: 15px; PADDING-TOP: 10px; PADDING-LEFT: 11px; MARGIN: auto auto 10px; BORDER-RIGHT-COLOR: rgb(98,0,145); PADDING-RIGHT: 11px; BACKGROUND-COLOR: white">
+<DIV class=blog_title style="MARGIN-BOTTOM: 15px">
+<H3 
+style="FONT-SIZE: 16px; COLOR: black; PADDING-BOTTOM: 0px; PADDING-TOP: 10px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0px"><A 
+style="TEXT-DECORATION: underline; COLOR: rgb(98,0,145)" 
+href="http://nanquan.iteye.com/blog/1466353">Servlet3.0: 简介AsyncContext</A><EM 
+class=actions style="FONT-STYLE: italic"></EM></H3></DIV>
+<DIV id=blog_content class=blog_content 
+style="FONT-SIZE: 14px; LINE-HEIGHT: 1.8em">
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3>每个请求来到Web容器，Web容器会为其分配一条执行绪来专门负责该请求，直到回应完成前，该执行绪都不会被释放回容器。</FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3>执行绪会耗用系统资源，若有些请求需要长时间处理（例如长时间运算、等待某个资源），就会长时间占用执行绪，若这类的请求很多，许多执行绪都被长时间占用，对于系统就会是个效能负担，甚至造成应用程式的效能瓶颈。</FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><SMALL 
+style="TEXT-ALIGN: left"><BR></SMALL><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3>基本上一些需长时间处理的请求，通常客户端也较不在乎请求后要有立即的回应，若可以，让这类请求先释放容器分配给该请求的执行绪，让容器可以有机会将执行绪资源分配给其它的请求，可以减轻系统负担。</FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3>原先释放了容器所分配执行绪的请求，其回应将被延后，直到处理完成（例如长时间运算完成、所需资源已获得）再行对客户端的回应。</FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN><SMALL 
+style="FONT-FAMILY: serif; TEXT-ALIGN: left"><BR><BR></SMALL><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3>在Servlet 3.0中，在<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace; FONT-WEIGHT: bold'>ServletRequest</SPAN>上提供了</FONT></SMALL><FONT size=4>&nbsp;</FONT><SMALL 
+style='FONT-FAMILY: "Courier New", Courier, monospace; FONT-WEIGHT: bold'><FONT size=3>startAsync(</FONT></SMALL><FONT size=4>&nbsp;</FONT><SMALL><FONT size=3><SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace; FONT-WEIGHT: bold'>)</SPAN>方法：</FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<DIV class=dp-highlighter 
+style='OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Consolas, "Courier New", monospace; WIDTH: 679px; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent'>
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Java代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>&nbsp;<A title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(98,0,145)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 src="http://nanquan.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN 
+  style="COLOR: black">AsyncContext&nbsp;startAsync()&nbsp;</SPAN><SPAN 
+  class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">throws</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.lang.IllegalStateException;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">AsyncContext&nbsp;startAsync(ServletRequest&nbsp;servletRequest,&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">ServletResponse&nbsp;servletResponse)&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">throws</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.lang.IllegalStateException&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;<SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3>这两个方法都会传回<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>AsyncContext</SPAN>介面的实作物件，前者会直接利用原有的请求与回应物件来建立<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>AsyncContext</SPAN>&nbsp;，后者可以让你传入自己建立的请求、回应包裹物件。</FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3>在呼叫了<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>startAsync()方法取得AsyncContext</SPAN>物件之后，这次的回应会被延后，并释放容器所分配的执行绪。</FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><SMALL 
+style="TEXT-ALIGN: left"><BR></SMALL><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3><SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>你可以透过AsyncContext的<SPAN 
+style="FONT-WEIGHT: bold">getRequest()</SPAN>&nbsp;、&nbsp;<SPAN 
+style="FONT-WEIGHT: bold">getResponse()</SPAN>方法取得请求、回应物件，此次对客户端的回应将暂缓至呼叫AsyncContext的<SPAN 
+style="FONT-WEIGHT: bold">complete()</SPAN>方法或<SPAN 
+style="FONT-WEIGHT: bold">dispatch()</SPAN>为止，前者表示回应完成，后者表示将回应调派给指定的</SPAN>URL&nbsp;<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>。</SPAN></FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN><SPAN 
+style='FONT-SIZE: medium; FONT-FAMILY: "Courier New", Courier, monospace; TEXT-ALIGN: left'><SMALL><BR><BR></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3><SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>若要能呼叫ServletRequest的startAsync()使用AsyncContext，你的</SPAN>&nbsp;Servlet&nbsp;<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>必须能支援非同步处理，如果使用@WebServlet来标注，则可以设定其<SPAN 
+style="FONT-WEIGHT: bold">asyncSupported</SPAN>为<SPAN 
+style="FONT-WEIGHT: bold">true</SPAN>&nbsp;。</SPAN></FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'><SMALL><FONT size=3>例如：</FONT></SMALL></SPAN></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<DIV class=dp-highlighter 
+style='OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Consolas, "Courier New", monospace; WIDTH: 679px; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent'>
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Java代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>&nbsp;<A title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(98,0,145)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 src="http://nanquan.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=annotation 
+  style="COLOR: rgb(100,100,100)">@WebServlet</SPAN><SPAN 
+  style="COLOR: black">(urlPatterns&nbsp;=&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">"/some.do"</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;asyncSupported&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">true</SPAN><SPAN 
+  style="COLOR: black">&nbsp;)&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">&nbsp;AsyncServlet&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">extends</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HttpServlet&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">...&nbsp;&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;<SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: serif; TEXT-ALIGN: left">如果使用web.xml设定Servlet，则可以设定</SPAN><SPAN 
+style='FONT-SIZE: 13px; FONT-FAMILY: "Courier New", Courier, monospace; TEXT-ALIGN: left'><SPAN 
+style="FONT-WEIGHT: bold">&lt;async-supported&gt;</SPAN>标签为<SPAN 
+style="FONT-WEIGHT: bold">true</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: serif; TEXT-ALIGN: left">&nbsp;：</SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<DIV class=dp-highlighter 
+style='OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Consolas, "Courier New", monospace; WIDTH: 679px; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent'>
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Xml代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>&nbsp;<A title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(98,0,145)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 src="http://nanquan.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-xml 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN 
+  style="COLOR: black">...&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">servlet</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">servlet-name</SPAN><SPAN 
+  class=tag style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">AsyncServlet</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;/</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">servlet-name</SPAN><SPAN 
+  class=tag style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">servlet-class</SPAN><SPAN 
+  class=tag style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">cc.openhome.AsyncServlet</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;/</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">servlet-class</SPAN><SPAN 
+  class=tag style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">async-supported</SPAN><SPAN 
+  class=tag style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">true</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;/</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">async-supported</SPAN><SPAN 
+  class=tag style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;/</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">servlet</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">...&nbsp;&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;<SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3>如果Servlet将会非同步处理，若其前端有过滤器，则过滤器亦需标示其支援非同步处理，如果使用<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>@WebFilter</SPAN>&nbsp;，同样是<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>可以设定其<SPAN 
+style="FONT-WEIGHT: bold">asyncSupported</SPAN>为<SPAN 
+style="FONT-WEIGHT: bold">true</SPAN>&nbsp;。</SPAN></FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'><SMALL><FONT size=3>例如：</FONT></SMALL></SPAN></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<DIV class=dp-highlighter 
+style='OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Consolas, "Courier New", monospace; WIDTH: 679px; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent'>
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Java代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>&nbsp;<A title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(98,0,145)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 src="http://nanquan.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=annotation 
+  style="COLOR: rgb(100,100,100)">@WebFilter</SPAN><SPAN 
+  style="COLOR: black">(urlPatterns&nbsp;=&nbsp;</SPAN><SPAN class=string 
+  style="COLOR: blue">"/some.do"</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;asyncSupported&nbsp;=&nbsp;</SPAN><SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">true</SPAN><SPAN 
+  style="COLOR: black">&nbsp;)&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">&nbsp;AsyncFilter&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">implements</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Filter{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">...&nbsp;&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;<SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3>如果使用web.xml设定过滤器，则可以设定<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'><SPAN 
+style="FONT-WEIGHT: bold">&lt;async-supported&gt;</SPAN>标签为<SPAN 
+style="FONT-WEIGHT: bold">true</SPAN></SPAN>&nbsp;：</FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<DIV class=dp-highlighter 
+style='OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Consolas, "Courier New", monospace; WIDTH: 679px; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent'>
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Xml代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>&nbsp;<A title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(98,0,145)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 src="http://nanquan.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-xml 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN 
+  style="COLOR: black">...&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">filter</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">filter</SPAN><SPAN 
+  style="COLOR: black">&nbsp;-name</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">AsyncFilter</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">filter</SPAN><SPAN 
+  style="COLOR: black">&nbsp;-name</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">filter</SPAN><SPAN 
+  style="COLOR: black">&nbsp;-class</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">cc.openhome.AsyncFilter</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">filter</SPAN><SPAN 
+  style="COLOR: black">&nbsp;-class</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">async-supported</SPAN><SPAN 
+  class=tag style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">true</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;/</SPAN><SPAN 
+  class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">async-supported</SPAN><SPAN 
+  class=tag style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&lt;/</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=tag-name 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">filter</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=tag 
+  style="FONT-WEIGHT: bold; COLOR: rgb(0,102,153)">&gt;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">...&nbsp;&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;<SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left; BACKGROUND-COLOR: rgb(230,236,249)"><SMALL><FONT size=3>底下示范一个非同步处理的例子，对于进来的请求，Servlet会取得其<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>AsyncContext</SPAN>&nbsp;，并释放容器所分配的执行绪，回应被延后，对于这些被延后回应的请求，建立一个<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>Runnable</SPAN>的物件，并将其排入一个执行绪池（Thread 
+pool），执行绪池的执行绪数量是固定的，让这些必须长时间处理的请求，在这些有限数量的执行绪中完成，而不用每次请求都占用容器所分配的执行绪。</FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<DIV class=dp-highlighter 
+style='OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Consolas, "Courier New", monospace; WIDTH: 679px; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent'>
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Java代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>&nbsp;<A title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(98,0,145)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 src="http://nanquan.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">package</SPAN><SPAN 
+  style="COLOR: black">&nbsp;cc.openhome;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.io.*;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.util.concurrent.*;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;javax.servlet.*;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;javax.servlet.annotation.*;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;javax.servlet.http.*;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=annotation 
+  style="COLOR: rgb(100,100,100)">@WebServlet</SPAN><SPAN 
+  style="COLOR: black">(name=</SPAN><SPAN class=string 
+  style="COLOR: blue">"AsyncServlet"</SPAN><SPAN 
+  style="COLOR: black">,&nbsp;urlPatterns={</SPAN><SPAN class=string 
+  style="COLOR: blue">"/async.do"</SPAN><SPAN 
+  style="COLOR: black">},&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;asyncSupported&nbsp;=&nbsp;<SPAN 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">true</SPAN><SPAN 
+  style="COLOR: black">&nbsp;)&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">&nbsp;AsyncServlet&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">extends</SPAN><SPAN 
+  style="COLOR: black">&nbsp;HttpServlet&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;执行绪池&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">private</SPAN><SPAN 
+  style="COLOR: black">&nbsp;ExecutorService&nbsp;executorService&nbsp;=&nbsp;Executors.newFixedThreadPool(</SPAN><SPAN 
+  class=number style="COLOR: rgb(192,0,0)">10</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">protected</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;processRequest(HttpServletRequest&nbsp;request,&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;HttpServletResponse&nbsp;response)&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">throws</SPAN><SPAN 
+  style="COLOR: black">&nbsp;ServletException,&nbsp;IOException&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;response.setContentType(<SPAN class=string 
+  style="COLOR: blue">"text/html;&nbsp;charset=UTF8"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;AsyncContext&nbsp;ctx&nbsp;=&nbsp;request.startAsync();&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;executorService.submit(<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">new</SPAN><SPAN 
+  style="COLOR: black">&nbsp;AsyncRequest(ctx));&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;}&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=annotation 
+  style="COLOR: rgb(100,100,100)">@Override</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">protected</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;doGet(HttpServletRequest&nbsp;request,&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;HttpServletResponse&nbsp;response)&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">throws</SPAN><SPAN 
+  style="COLOR: black">&nbsp;ServletException,&nbsp;IOException&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;processRequest(request,&nbsp;response);&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;}&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=annotation 
+  style="COLOR: rgb(100,100,100)">@Override</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">protected</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;doPost(HttpServletRequest&nbsp;request,&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;HttpServletResponse&nbsp;response)&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">throws</SPAN><SPAN 
+  style="COLOR: black">&nbsp;ServletException,&nbsp;IOException&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;processRequest(request,&nbsp;response);&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;}&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=annotation 
+  style="COLOR: rgb(100,100,100)">@Override</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;destroy()&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;executorService.shutdown();&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;}&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;}&nbsp;&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;<SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><SMALL><FONT size=3><SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>AsyncRequest</SPAN>是个实作<SPAN 
+style='FONT-FAMILY: "Courier New", Courier, monospace'>Runnable</SPAN>的类别，其模拟了长时间处理：</FONT></SMALL></SPAN><SPAN 
+style="FONT-SIZE: medium; FONT-FAMILY: serif; TEXT-ALIGN: left"><FONT size=4>&nbsp;</FONT></SPAN></P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<DIV class=dp-highlighter 
+style='OVERFLOW: auto; WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, "DejaVu Sans Mono", "Bitstream Vera Sans Mono", Consolas, "Courier New", monospace; WIDTH: 679px; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent'>
+<DIV class=bar>
+<DIV class=tools 
+style="FONT-WEIGHT: bold; COLOR: black; PADDING-BOTTOM: 3px; TEXT-ALIGN: left; PADDING-TOP: 3px; PADDING-LEFT: 3px; MARGIN: 0px; PADDING-RIGHT: 3px">Java代码<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>&nbsp;<A title=收藏这段代码 
+style="TEXT-DECORATION: underline; COLOR: rgb(98,0,145)" 
+href="javascript:void()"><IMG class=star 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt=收藏代码 src="http://nanquan.iteye.com/images/icon_star.png"></A></DIV></DIV>
+<OL class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black"><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">package</SPAN><SPAN 
+  style="COLOR: black">&nbsp;cc.openhome;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;java.io.PrintWriter;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">import</SPAN><SPAN 
+  style="COLOR: black">&nbsp;javax.servlet.AsyncContext;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">class</SPAN><SPAN 
+  style="COLOR: black">&nbsp;AsyncRequest&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">implements</SPAN><SPAN 
+  style="COLOR: black">&nbsp;Runnable&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">private</SPAN><SPAN 
+  style="COLOR: black">&nbsp;AsyncContext&nbsp;ctx;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;AsyncRequest(&nbsp;AsyncContext&nbsp;ctx&nbsp;)&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">this</SPAN><SPAN 
+  style="COLOR: black">.ctx&nbsp;=&nbsp;ctx;&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;}&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=annotation 
+  style="COLOR: rgb(100,100,100)">@Override</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">public</SPAN><SPAN 
+  style="COLOR: black">&nbsp;</SPAN><SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">void</SPAN><SPAN 
+  style="COLOR: black">&nbsp;run()&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">try</SPAN><SPAN 
+  style="COLOR: black">&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;模拟长时间的处理&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;Thread.sleep(<SPAN class=number 
+  style="COLOR: rgb(192,0,0)">10000</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;PrintWriter&nbsp;out&nbsp;=&nbsp;ctx.getResponse()&nbsp;.getWriter();&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;out.println(<SPAN class=string 
+  style="COLOR: blue">"久等了...XD"</SPAN><SPAN 
+  style="COLOR: black">);&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;<SPAN class=comment 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; WIDTH: auto; BORDER-BOTTOM: 0px; COLOR: rgb(0,130,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">//&nbsp;这边才真正送出回应&nbsp;</SPAN><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;ctx.complete();&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;}&nbsp;<SPAN class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)">catch</SPAN><SPAN 
+  style="COLOR: black">&nbsp;(Exception&nbsp;e)&nbsp;{&nbsp;&nbsp;&nbsp;</SPAN></SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;e.printStackTrace();&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;}&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;}&nbsp;&nbsp;&nbsp;</SPAN></LI>
+  <LI 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)"><SPAN 
+  style="COLOR: black">&nbsp;&nbsp;}&nbsp;&nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">&nbsp;</P></DIV><INS 
+data-revive-id="8c38e720de1c90a6f6ff52f3f89c4d57" 
+data-revive-zoneid="171"></INS>
+<DIV id=bottoms class=clearfix style="DISPLAY: block">&nbsp;</DIV>
+<DIV class=blog_nav style="MARGIN-BOTTOM: 15px; RIGHT: 20px">&nbsp;</DIV>
+<DIV class=blog_bottom 
+style="PADDING-BOTTOM: 5px; PADDING-TOP: 15px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"></DIV></DIV></BODY></HTML>

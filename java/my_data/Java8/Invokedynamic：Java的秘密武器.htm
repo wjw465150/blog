@@ -1,0 +1,330 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Invokedynamic：Java的秘密武器</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>在Java 
+7的发布版中包含了多项新的特性，这些特性乍看上去Java开发人员对它们的使用非常有限，在我们之前的<A 
+style="TEXT-DECORATION: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; COLOR: rgb(40,106,178); OUTLINE-WIDTH: medium !important; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; PADDING-RIGHT: 0px" 
+href="http://www.infoq.com/articles/Java-7-Features-Which-Enable-Java-8">文章</A>中，曾经对其进行过介绍。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>但是，其中有项特性对于实现Java 
+8中“头版标题”类型的特性来说至关重要（如lambdas和默认方法）。在本文中，我们将会深入学习invokedynamic，并阐述它对于Java平台以及像JRuby和Nashorn这样的JVM语言来讲为何如此重要。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'><A 
+style="TEXT-DECORATION: none; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; COLOR: rgb(40,106,178); OUTLINE-WIDTH: medium !important; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; OUTLINE-STYLE: none !important; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; OUTLINE-COLOR: invert !important; PADDING-RIGHT: 0px" 
+href="http://blog.headius.com/2008/09/first-taste-of-invokedynamic.html">invokedynamic最初的工作</A>至少始于2007年，而第一次成功的动态调用发生在2008年8月26日。这比Oracle收购Sun还要早，按照大多数开发人员的标准，这个特性的研发已经持续了相当长的时间。</P>
+<DIV class=clear 
+style='FONT-SIZE: 0px; BORDER-TOP: 0px; HEIGHT: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: both; MARGIN: 0px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'></DIV>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>值得注意的是，从Java 
+1.0到现在，invokedynamic是第一个新加入的Java字节码，它与已有的字节码invokevirtual、invokestatic、invokeinterface和invokespecial组合在了一起。已有的这四个操作码实现了Java开发人员所熟知的所有形式的方法分派（dispatch）：</P>
+<UL 
+style='LIST-STYLE-TYPE: disc; FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: left; MARGIN: 0px 0px 15px 10px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">invokevirtual——对实例方法的标准分派</LI>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">invokestatic——用于分派静态方法</LI>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">invokeinterface——用于通过接口进行方法调用的分派</LI>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">invokespecial——当需要进行非虚（也就是“精确”）分派时会用到</LI></UL>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>有些开发人员可能会好奇平台为何需要这四种操作码，所以我们看一个简单的样例，这个样例会用到不同的调用操作码，以此来阐述它们之间的差异：</P><PRE style='OVERFLOW: auto; FONT-SIZE: 14px; BORDER-TOP: rgb(232,232,232) 1px solid; FONT-FAMILY: Consolas, Monaco, "Andale Mono", monospace; BORDER-RIGHT: rgb(232,232,232) 1px solid; WIDTH: 597px; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(232,232,232) 1px solid; TEXT-TRANSFORM: none; BACKGROUND-POSITION: -29px 0px; FLOAT: none !important; FONT-WEIGHT: 400; COLOR: rgb(49,78,100); PADDING-BOTTOM: 10px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 10px; PADDING-LEFT: 5px; CLEAR: none; MARGIN: 10px 0px; BORDER-LEFT: rgb(232,232,232) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 21px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(245,242,240); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>public class InvokeExamples {
+    public static void main(String[] args) {
+        InvokeExamples sc = new InvokeExamples();
+        sc.run();
+    }
+
+    private void run() {
+        List ls = new ArrayList();
+        ls.add("Good Day");
+
+        ArrayList als = new ArrayList();
+        als.add("Dydh Da");
+    }
+}</PRE>
+<DIV id=lowerFullwidthVCR 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'></DIV>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>我们可以使用javap反汇编从而得到它所产生的字节码：</P><PRE style='OVERFLOW: auto; FONT-SIZE: 14px; BORDER-TOP: rgb(232,232,232) 1px solid; HEIGHT: 841px; FONT-FAMILY: Consolas, Monaco, "Andale Mono", monospace; BORDER-RIGHT: rgb(232,232,232) 1px solid; WIDTH: 937px; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(232,232,232) 1px solid; TEXT-TRANSFORM: none; BACKGROUND-POSITION: -29px 0px; FLOAT: none !important; FONT-WEIGHT: 400; COLOR: rgb(49,78,100); PADDING-BOTTOM: 10px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 10px; PADDING-LEFT: 5px; CLEAR: none; MARGIN: 10px 0px; BORDER-LEFT: rgb(232,232,232) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 21px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(245,242,240); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>javap -c InvokeExamples.class
+
+public class kathik.InvokeExamples {
+  public kathik.InvokeExamples();
+    Code:
+       0: aload_0
+       1: invokespecial #1                  // Method java/lang/Object."":()V
+       4: return
+
+  public static void main(java.lang.String[]);
+    Code:
+       0: new           #2                  // class kathik/InvokeExamples
+       3: dup
+       4: invokespecial #3                  // Method "":()V
+       7: astore_1
+       8: aload_1
+       9: invokespecial #4                  // Method run:()V
+      12: return
+
+  private void run();
+    Code:
+       0: new           #5                  // class java/util/ArrayList
+       3: dup
+       4: invokespecial #6                  // Method java/util/ArrayList."":()V
+       7: astore_1
+       8: aload_1
+       9: ldc           #7                  // String Good Day
+      11: invokeinterface #8,  2            // InterfaceMethod java/util/List.add:(Ljava/lang/Object;)Z
+      16: pop
+      17: new           #5                  // class java/util/ArrayList
+      20: dup
+      21: invokespecial #6                  // Method java/util/ArrayList."":()V
+      24: astore_2
+      25: aload_2
+      26: ldc           #9                  // String Dydh Da
+      28: invokevirtual #10                 // Method java/util/ArrayList.add:(Ljava/lang/Object;)Z
+      31: pop
+      32: return
+}</PRE>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>在这个示例中，展现了四个调用操作码中的三个（剩下的一个也就是invokestatic，是一个非常简单的扩展）。作为开始，我们可以看一下如下的两个调用（在run方法的字节11和28）：</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'><CODE 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FONT-WEIGHT: normal; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">ls.add("Good 
+Day")</CODE></P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>和</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'><CODE 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FONT-WEIGHT: normal; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">als.add("Dydh 
+Da")</CODE></P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>在Java源码中它们看起来非常相似，但它们实际上却代表两种不同的字节码。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>对于javac来说，变量ls具有的静态类型是<CODE 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FONT-WEIGHT: normal; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">List&lt;String&gt;</CODE>，而List是一个接口。所以，在运行时方法表（通常称为“vtable”）中，add()方法的精确位置还没有在编译时确定。因此，源码编译器会生成一个invokeinterface指令，将实际的方法查找推迟到运行期，也就是当ls的实际vtable能够探查到并且add()方法的位置能够找到的时候。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>与之相反，对<CODE 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FONT-WEIGHT: normal; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">als.add("Dydh 
+Da")</CODE>的调用是通过als来执行的，这里的静态类型是类类型（class type）——<CODE 
+style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FONT-WEIGHT: normal; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">ArrayList&lt;String&gt;</CODE>。这意味着在vtable中，方法的位置在编译期是可知的。因此，javac会针对这个精确的vtable条目生成一个invokevirtual指令。不过，最终的方法选择依然是在运行期确定的，因为这里还有方法重写（overriding）的可能性，但是vtable 
+slot在编译期就已经确定了。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>除此之外，这个样例还展现了invokespecial的两个使用场景。这个操作码用于在运行时确定如何分派的场景之中，具体来讲，在这里没有方法重写的需求，另外这也不可能实现。样例中所阐述的场景是<EM 
+style="FONT-SIZE: 14px; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FONT-WEIGHT: normal; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; LINE-HEIGHT: 21px; PADDING-RIGHT: 0px">private 
+methods</EM>和<EM 
+style="FONT-SIZE: 14px; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FONT-WEIGHT: normal; PADDING-BOTTOM: 0px; FONT-STYLE: normal; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: 0px; LINE-HEIGHT: 21px; PADDING-RIGHT: 0px">super 
+calls</EM>，这些方法在编译期是可知的，并且无法进行重写。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>细心的读者可能已经发现，对Java方法的所有调用都编译成了四个操作码中的某一个，那么问题就来了——invokedynamic是做什么的，它对于Java开发人员有什么用处呢？</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>这个特性的主要目标在于创建一个字节码，用于处理新型的方法分派——它的本质是允许应用级别的代码来确定执行哪一个方法调用，只有在调用要执行的时候，才会进行这种判断。这样的话，相对于Java平台之前所提供的编程风格，允许语言和框架的编写人员支持更加动态的编码风格。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>它的目的在于由用户代码通过方法句柄API（method 
+handles 
+API）在运行时确定如何分派，同时避免反射带来的性能惩罚和安全问题。实际上，invokedynamic所宣称的目标就是一旦该特性足够成熟，它的速度要像常规的方法分派（invokevirtual）一样快。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>当Java 
+7发布的时候，JVM就已经支持执行新的字节码了，但是不管提交什么样的Java代码，javac都不会产生包含invokedynamic的字节码。这项特性用来支持JRuby和其他运行在JVM上的动态语言。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>在Java 
+8中，这发生了变化，在实现lambda表达式和默认方法时，底层会生成和使用invokedynamic，它同时还会作为Nashorn的首选分派机制。但是，对于Java应用的开发人员来说，依然没有直接的方式实现完全的动态方法处理（resolution）。也就是说，Java语言并没有提供关键字或库来创建通用的invokedynamic调用点（call 
+site）。这意味着，尽管这种机制的功能非常强大，但它对于大多数的Java开发人员来说依然有些陌生。接下来，我们看一下如何在自己的代码中使用这项技术。</P>
+<H2 
+style='FONT-SIZE: 20px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: normal; COLOR: rgb(34,34,34); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 10px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 24px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>方法句柄简介</H2>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>要让invokedynamic正常运行，一个核心的概念就是方法句柄（method 
+handle）。它代表了一个可以从invokedynamic调用点进行调用的方法。这里的基本理念就是每个invokedynamic指令都会与一个特定的方法关联（也就是引导方法或BSM）。当解释器（interpreter）遇到invokedynamic指令的时候，BSM会被调用。它会返回一个对象（包含了一个方法句柄），这个对象表明了调用点要实际执行哪个方法。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>在一定程度上，这与反射有些类似，但是反射有它的局限性，这些局限性使它不适合与invokedynamic协作使用。Java 
+7 
+API中加入了java.lang.invoke.MethodHandle（及其子类），通过它们来代表invokedynamic指向的方法。为了实现操作的正确性，MethodHandle会得到JVM的一些特殊处理。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>理解方法句柄的一种方式就是将其视为以安全、现代的方式来实现反射的核心功能，在这个过程会尽可能地保证类型的安全。invokedynamic需要方法句柄，另外它们也可以单独使用。</P>
+<H2 
+style='FONT-SIZE: 20px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: normal; COLOR: rgb(34,34,34); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 10px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 24px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>方法类型</H2>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>一个Java方法可以视为由四个基本内容所构成：</P>
+<UL 
+style='LIST-STYLE-TYPE: disc; FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: left; MARGIN: 0px 0px 15px 10px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">名称</LI>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">签名（包含返回类型）</LI>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">定义它的类</LI>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">实现方法的字节码</LI></UL>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>这意味着如果要引用某个方法，我们需要有一种有效的方式来表示方法签名（而不是反射中强制使用的令人讨厌的Class&lt;?&gt;[] 
+hack方式）。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>接下来我们采用另外的方式，方法句柄首先需要的一个构建块就是表达方法签名的方式，以便于查找。在Java 
+7引入的Method Handles 
+API中，这个角色是由java.lang.invoke.MethodType类来完成的，它使用一个不可变的实例来代表签名。要获取MethodType，我们可以使用methodType()工厂方法。这是一个参数可变（variadic）的方法，以class对象作为参数。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>第一个参数所使用的class对象，对应着签名的返回类型；剩余参数中所使用的class对象，对应着签名中方法参数的类型。例如：</P><PRE style='OVERFLOW: auto; FONT-SIZE: 14px; BORDER-TOP: rgb(232,232,232) 1px solid; HEIGHT: 190px; FONT-FAMILY: Consolas, Monaco, "Andale Mono", monospace; BORDER-RIGHT: rgb(232,232,232) 1px solid; WIDTH: 794px; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(232,232,232) 1px solid; TEXT-TRANSFORM: none; BACKGROUND-POSITION: -29px 0px; FLOAT: none !important; FONT-WEIGHT: 400; COLOR: rgb(49,78,100); PADDING-BOTTOM: 10px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 10px; PADDING-LEFT: 5px; CLEAR: none; MARGIN: 10px 0px; BORDER-LEFT: rgb(232,232,232) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 21px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(245,242,240); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>//toString()的签名
+MethodType mtToString = MethodType.methodType(String.class);
+
+// setter方法的签名
+MethodType mtSetter = MethodType.methodType(void.class, Object.class);
+
+// Comparator中compare()方法的签名
+MethodType mtStringComparator = MethodType.methodType(int.class, String.class, String.class); </PRE>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>现在我们就可以使用MethodType，再组合方法名称以及定义方法的类来查找方法句柄。要实现这一点，我们需要调用静态的MethodHandles.lookup()方法。这样的话，会给我们一个“查找上下文（lookup 
+context）”，这个上下文基于当前正在执行的方法（也就是调用lookup()的方法）的访问权限。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>查找上下文对象有一些以“find”开头的方法，例如，findVirtual()、findConstructor()、findStatic()等。这些方法将会返回实际的方法句柄，需要注意的是，只有在创建查找上下文的方法能够访问（调用）被请求方法的情况下，才会返回句柄。这与反射不同，我们没有办法绕过访问控制。换句话说，方法句柄中并没有与setAccessible()对应的方法。例如：</P><PRE style='OVERFLOW: auto; FONT-SIZE: 14px; BORDER-TOP: rgb(232,232,232) 1px solid; FONT-FAMILY: Consolas, Monaco, "Andale Mono", monospace; BORDER-RIGHT: rgb(232,232,232) 1px solid; WIDTH: 597px; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(232,232,232) 1px solid; TEXT-TRANSFORM: none; BACKGROUND-POSITION: -29px 0px; FLOAT: none !important; FONT-WEIGHT: 400; COLOR: rgb(49,78,100); PADDING-BOTTOM: 10px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 10px; PADDING-LEFT: 5px; CLEAR: none; MARGIN: 10px 0px; BORDER-LEFT: rgb(232,232,232) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 21px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(245,242,240); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>public MethodHandle getToStringMH() {
+    MethodHandle mh = null;
+    MethodType mt = MethodType.methodType(String.class);
+    MethodHandles.Lookup lk = MethodHandles.lookup();
+
+    try {
+        mh = lk.findVirtual(getClass(), "toString", mt);
+    } catch (NoSuchMethodException | IllegalAccessException mhx) {
+        throw (AssertionError)new AssertionError().initCause(mhx);
+    }
+
+    return mh;
+}</PRE>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>MethodHandle中有两个方法能够触发对方法句柄的调用，那就是invoke()和invokeExact()。这两个方法都是以接收者（receiver）和调用变量作为参数，所以它们的签名为：</P><PRE style='OVERFLOW: auto; FONT-SIZE: 14px; BORDER-TOP: rgb(232,232,232) 1px solid; FONT-FAMILY: Consolas, Monaco, "Andale Mono", monospace; BORDER-RIGHT: rgb(232,232,232) 1px solid; WIDTH: 597px; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(232,232,232) 1px solid; TEXT-TRANSFORM: none; BACKGROUND-POSITION: -29px 0px; FLOAT: none !important; FONT-WEIGHT: 400; COLOR: rgb(49,78,100); PADDING-BOTTOM: 10px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 10px; PADDING-LEFT: 5px; CLEAR: none; MARGIN: 10px 0px; BORDER-LEFT: rgb(232,232,232) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 21px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(245,242,240); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>public final Object invoke(Object... args) throws Throwable;
+public final Object invokeExact(Object... args) throws Throwable; </PRE>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>两者的区别在于，invokeExact()在调用方法句柄时会试图严格地直接匹配所提供的变量。而invoke()与之不同，在需要的时候，invoke()能够稍微调整一下方法的变量。invoke()会执行一个asType()转换，它会根据如下的这组规则来进行变量的转换：</P>
+<UL 
+style='LIST-STYLE-TYPE: disc; FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: left; MARGIN: 0px 0px 15px 10px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">如果需要的话，原始类型会进行装箱操作</LI>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">如果需要的话，装箱后的原始类型会进行拆箱操作</LI>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">如果必要的话，原始类型会进行扩展</LI>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">void返回类型会转换为0（对于返回原始类型的情况），而对于预期得到引用类型的返回值的地方，将会转换为null</LI>
+  <LI 
+  style="BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; FLOAT: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 0px 15px; BORDER-LEFT: 0px; PADDING-RIGHT: 0px">null值会被视为正确的，不管静态类型是什么都可以进行传递</LI></UL>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>接下来，我们看一下考虑上述规则的简单调用样例：</P><PRE style='OVERFLOW: auto; FONT-SIZE: 14px; BORDER-TOP: rgb(232,232,232) 1px solid; HEIGHT: 400px; FONT-FAMILY: Consolas, Monaco, "Andale Mono", monospace; BORDER-RIGHT: rgb(232,232,232) 1px solid; WIDTH: 768px; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(232,232,232) 1px solid; TEXT-TRANSFORM: none; BACKGROUND-POSITION: -29px 0px; FLOAT: none !important; FONT-WEIGHT: 400; COLOR: rgb(49,78,100); PADDING-BOTTOM: 10px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 10px; PADDING-LEFT: 5px; CLEAR: none; MARGIN: 10px 0px; BORDER-LEFT: rgb(232,232,232) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 21px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(245,242,240); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>Object rcvr = "a";
+try {
+    MethodType mt = MethodType.methodType(int.class);
+    MethodHandles.Lookup l = MethodHandles.lookup();
+    MethodHandle mh = l.findVirtual(rcvr.getClass(), "hashCode", mt);
+
+    int ret;
+    try {
+        ret = (int)mh.invoke(rcvr);
+        System.out.println(ret);
+    } catch (Throwable t) {
+        t.printStackTrace();
+    }
+} catch (IllegalArgumentException | NoSuchMethodException | SecurityException e) {
+    e.printStackTrace();
+} catch (IllegalAccessException x) {
+    x.printStackTrace();
+} </PRE>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>在更为复杂的样例中，方法句柄能够以更清晰的方式来执行与核心反射功能相同的动态编程任务。除此之外，在设计之初，方法句柄就与JVM底层的执行模型协作地更好，并且可能会提供更好的性能（尽管性能的问题还没有展开叙述）。</P>
+<H2 
+style='FONT-SIZE: 20px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: normal; COLOR: rgb(34,34,34); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 10px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 24px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>方法句柄与invokedynamic</H2>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>invokedynamic指令通过引导方法（bootstrap 
+method，BSM）机制来使用方法句柄。与invokevirtual指令不同，invokedynamic指令没有接收者对象。相反，它们的行为类似于invokestatic，会使用BSM来返回一个CallSite类型的对象。这个对象包含一个方法句柄（称之为“target”），它代表了当前invokedynamic指令要执行的方法。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>当包含invokedynamic的类加载时，调用点会处于“unlaced”状态，在BSM返回之后，得到的CallSite和方法句柄会让调用点处于“laced”状态。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>BSM的签名大致会如下所示（注意，BSM的名称是任意的）：</P><PRE style='OVERFLOW: auto; FONT-SIZE: 14px; BORDER-TOP: rgb(232,232,232) 1px solid; HEIGHT: 63px; FONT-FAMILY: Consolas, Monaco, "Andale Mono", monospace; BORDER-RIGHT: rgb(232,232,232) 1px solid; WIDTH: 737px; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(232,232,232) 1px solid; TEXT-TRANSFORM: none; BACKGROUND-POSITION: -29px 0px; FLOAT: none !important; FONT-WEIGHT: 400; COLOR: rgb(49,78,100); PADDING-BOTTOM: 10px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 10px; PADDING-LEFT: 5px; CLEAR: none; MARGIN: 10px 0px; BORDER-LEFT: rgb(232,232,232) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 21px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(245,242,240); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>static CallSite bootstrap(MethodHandles.Lookup caller, String name, MethodType type);</PRE>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>如果你希望创建包含invokedynamic的代码，那么我们需要使用一个字节码操纵库（因为Java语言本身并不包含我们所需的构造）。在本文剩余的内容中，我们将会使用ASM库来生成包含invokedynamic指令的字节码。从Java应用程序的角度来看，它们看起来就像是常规的类文件（当然，它们没有相关的Java源码表述）。Java代码会将其视为“黑盒”，不过我们可以调用方法并使用invokedynamic及其相关的功能。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>下面，我们来看一下基于ASM的类，它会使用invokedynamic指令来生成“Hello 
+World”。</P><PRE style='OVERFLOW: auto; FONT-SIZE: 14px; BORDER-TOP: rgb(232,232,232) 1px solid; HEIGHT: 1219px; FONT-FAMILY: Consolas, Monaco, "Andale Mono", monospace; BORDER-RIGHT: rgb(232,232,232) 1px solid; WIDTH: 1285px; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(232,232,232) 1px solid; TEXT-TRANSFORM: none; BACKGROUND-POSITION: -29px 0px; FLOAT: none !important; FONT-WEIGHT: 400; COLOR: rgb(49,78,100); PADDING-BOTTOM: 10px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 10px; PADDING-LEFT: 5px; CLEAR: none; MARGIN: 10px 0px; BORDER-LEFT: rgb(232,232,232) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 21px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(245,242,240); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>public class InvokeDynamicCreator {
+
+    public static void main(final String[] args) throws Exception {
+        final String outputClassName = "kathik/Dynamic";
+        try (FileOutputStream fos
+                = new FileOutputStream(new File("target/classes/" + outputClassName + ".class"))) {
+            fos.write(dump(outputClassName, "bootstrap", "()V"));
+        }
+    }
+
+    public static byte[] dump(String outputClassName, String bsmName, String targetMethodDescriptor)
+            throws Exception {
+        final ClassWriter cw = new ClassWriter(0);
+        MethodVisitor mv;
+
+        // 为引导类搭建基本的元数据
+        cw.visit(V1_7, ACC_PUBLIC + ACC_SUPER, outputClassName, null, "java/lang/Object", null);
+
+        // 创建标准的void构造器
+        mv = cw.visitMethod(ACC_PUBLIC, "", "()V", null, null);
+        mv.visitCode();
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "", "()V");
+        mv.visitInsn(RETURN);
+        mv.visitMaxs(1, 1);
+        mv.visitEnd();
+
+        // 创建标准的main方法
+        mv = cw.visitMethod(ACC_PUBLIC + ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null);
+        mv.visitCode();
+        MethodType mt = MethodType.methodType(CallSite.class, MethodHandles.Lookup.class, String.class,
+                MethodType.class);
+        Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "kathik/InvokeDynamicCreator", bsmName,
+                mt.toMethodDescriptorString());
+        mv.visitInvokeDynamicInsn("runDynamic", targetMethodDescriptor, bootstrap);
+        mv.visitInsn(RETURN);
+        mv.visitMaxs(0, 1);
+        mv.visitEnd();
+
+        cw.visitEnd();
+
+        return cw.toByteArray();
+    }
+
+    private static void targetMethod() {
+        System.out.println("Hello World!");
+    }
+
+    public static CallSite bootstrap(MethodHandles.Lookup caller, String name, MethodType type) throws NoSuchMethodException, IllegalAccessException {
+        final MethodHandles.Lookup lookup = MethodHandles.lookup();
+        // 需要使用lookupClass()，因为这个方法是静态的
+        final Class currentClass = lookup.lookupClass();
+        final MethodType targetSignature = MethodType.methodType(void.class);
+        final MethodHandle targetMH = lookup.findStatic(currentClass, "targetMethod", targetSignature);
+        return new ConstantCallSite(targetMH.asType(type));
+    }
+} </PRE>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>这个代码分为两部分，第一部分使用ASM 
+Visitor 
+API来创建名为kathik.Dynamic的类文件。注意，核心的调用是visitInvokeDynamicInsn()。第二部分包含了要捆绑到调用点中的目标方法，并且还包括invokedynamic指令所需的BSM。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>注意，上述的方法是位于InvokeDynamicCreator类中的，而不是所生成的kathik.Dynamic类的一部分。这意味着，在运行时，InvokeDynamicCreator必须也要和kathik.Dynamic一起位于类路径中，否则的话，就会无法找到方法。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>当InvokeDynamicCreator运行时，它会创建一个新的类文件Dynamic.class，这个文件中包含了invokedynamic指令，通过在这个类上执行javap，我们可以看到这一点：</P><PRE style='OVERFLOW: auto; FONT-SIZE: 14px; BORDER-TOP: rgb(232,232,232) 1px solid; HEIGHT: 169px; FONT-FAMILY: Consolas, Monaco, "Andale Mono", monospace; BORDER-RIGHT: rgb(232,232,232) 1px solid; WIDTH: 769px; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(232,232,232) 1px solid; TEXT-TRANSFORM: none; BACKGROUND-POSITION: -29px 0px; FLOAT: none !important; FONT-WEIGHT: 400; COLOR: rgb(49,78,100); PADDING-BOTTOM: 10px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 10px; PADDING-LEFT: 5px; CLEAR: none; MARGIN: 10px 0px; BORDER-LEFT: rgb(232,232,232) 1px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 21px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(245,242,240); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=0, locals=1, args_size=1
+         0: invokedynamic #20,  0             // InvokeDynamic #0:runDynamic:()V
+         5: return </PRE>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>这个样例阐述了invokedynamic最简单的使用场景，它会使用一个特定的常量CallSite对象。这意味着BSM（和lookup）只会执行一次，所以后续的调用会很快。</P>
+<P 
+style='FONT-SIZE: 14px; BORDER-TOP: 0px; FONT-FAMILY: Helvetica, "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", 微软雅黑, STHeiti, "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: 0px; WIDTH: 610px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: 400; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; CLEAR: none; MARGIN: 0px 0px 15px; BORDER-LEFT: 0px; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; LINE-HEIGHT: 1.8; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial'>但是，针对invokedynamic的高级用法很快就会变得非常复杂，当调用点和目标方法在程序生命周期中会发生变化时更是如此。</P></body>
+</html>

@@ -1,0 +1,774 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="zh-CN">
+
+<head profile="http://gmpg.org/xfn/11">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<title>  tomcat启用apr的情况下使用非自签名证书进行ssl双向认证配置  --  lizongbo at 618119.com</title>
+
+<link rel="shortcut icon" href="/favicon.ico" />
+<link rel="icon" href="/animated_favicon1.gif" type="image/gif" />
+<meta name="keywords" content="-12227, APR, clientAuth, https, openssl, Tomcat, Firefox 12227,Firefox 12227 解决,双向ssl server.xml crt 文件,tcnative-1.dll 下载,tomcat apr 問題,tomcat 6.0 ssl 双向验证,tomcat apr ssl,openvpn生成证书,tomcat6 ssl ca 双向验证,tomcat6 ssl双向验证,非自签名证书,tomcat6 ssl双向认证," />
+<meta name="description" content="Tomcat的apr组件是使用JNI用来提升Tomcat的系统性能，在启用apr特性之后，Tomcat的 https功能不能使用JSSE的证书配置，
+而需要使用OpenSSL,对于clientAuth的双向认证配置，也与一般方式不同，经过试验，摸索出配置步骤如下：
+
+证书文件的制作步骤如下:
+
+下载并安装openvpn,然后在
+C:\Program Files\OpenVPN\easy-rsa下根" />
+<meta name="Author" content="lizongbo at gmail.com" />
+
+<link rel="stylesheet" href="http://618119.com/wp-content/themes/default/style.css" type="text/css" media="screen" />
+<link rel="alternate" type="application/rss+xml" title="lizongbo at 618119.com RSS Feed" href="http://618119.com/feed" />
+<link rel="alternate" type="application/atom+xml" title="lizongbo at 618119.com Atom Feed" href="http://618119.com/feed/atom" />
+<link rel="pingback" href="http://618119.com/xmlrpc.php" />
+
+<style type="text/css" media="screen">
+
+	#page { background: url("http://618119.com/wp-content/themes/default/images/kubrickbgwide.jpg") repeat-y top; border: none; }
+
+</style>
+
+
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://618119.com/xmlrpc.php?rsd" />
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://618119.com/wp-includes/wlwmanifest.xml" /> 
+<script type='text/javascript' src='http://618119.com/wp-includes/js/jquery/jquery.js?ver=1.2.6'></script>
+<script type='text/javascript' src='http://618119.com/wp-includes/js/comment-reply.js?ver=20081210'></script>
+<meta name="generator" content="WordPress 2.7" />
+
+<link rel="canonical" href="http://618119.com/archives/2007/10/23/13.html"/><style type="text/css">
+/*<![CDATA[*/
+p.scp_message strong{color: #EB5050;}
+/*]]>*/
+</style><!-- wp thread comment 1.4.9.4.002 -->
+<style type="text/css" media="screen">
+.editComment, .editableComment, .textComment{ display: inline;}.comment-childs{border-top: 2px solid #000;border-bottom: 1px solid #000;margin: 5px 10px 10px 80px;padding: 10px;background: #E8E8E8;}
+</style>
+</head>
+<body>
+<div id="page">
+
+
+<div id="header">
+	<div id="headerimg">
+		<h1><a href="http://618119.com/">lizongbo at 618119.com</a></h1>
+		<div class="description">工作,生活,java,apache,tomcat,Resin,mina,Hessian,Openfire,XMPP,RPC,Ubuntu</div>
+	</div>
+</div>
+<hr />
+
+	<div id="content" class="widecolumn">
+
+	
+		<div class="navigation">
+			<div class="alignleft">&laquo; <a href="http://618119.com/archives/2007/10/22/12.html">在 Spket IDE 1.6.4 中使用 Ext 2.0</a></div>
+			<div class="alignright"><a href="http://618119.com/archives/2007/10/25/14.html">Windows系统中使用jvmstat查看Java虚拟机信息</a> &raquo;</div>
+		</div>
+
+		<div class="post hentry category-tomcat tag-12227 tag-apr tag-clientauth tag-https tag-openssl tag-tomcat" id="post-13">
+			<h2><a href="http://618119.com/archives/2007/10/23/13.html" rel="bookmark" title="Permanent Link: tomcat启用apr的情况下使用非自签名证书进行ssl双向认证配置">tomcat启用apr的情况下使用非自签名证书进行ssl双向认证配置</a></h2>
+
+      作者：<a href="http://618119.com">lizongbo</a>  发表于：8:47 上午. 星期二, 10月 23rd, 2007 <br/>
+                                   <a href="http://creativecommons.org/licenses/by/3.0/deed.zh">版权声明</a>：可以任意转载，转载时请务必以超链接形式标明文章<a class="permalink" href="http://618119.com/archives/2007/10/23/13.html">原始出处</a>和作者信息及<a href="http://618119.com/archives/2007/10/23/13.html">本版权声明</a>。<br/>
+<a class="permalink" href="http://618119.com/archives/2007/10/23/13.html">http://618119.com/archives/2007/10/23/13.html</a>
+<hr/>
+			<div class="entry">
+				<p><a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">Tomcat</a>的<a href="http://618119.com/tag/apr" class="st_tag internal_tag" rel="tag nofollow" title="标签 APR 下的日志">apr</a>组件是使用JNI用来提升<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">Tomcat</a>的系统性能，在启用<a href="http://618119.com/tag/apr" class="st_tag internal_tag" rel="tag nofollow" title="标签 APR 下的日志">apr</a>特性之后，<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">Tomcat</a>的 <a href="http://618119.com/tag/https" class="st_tag internal_tag" rel="tag nofollow" title="标签 https 下的日志">https</a>功能不能使用JSSE的证书配置，<br />
+而需要使用<a href="http://618119.com/tag/openssl" class="st_tag internal_tag" rel="tag nofollow" title="标签 openssl 下的日志">OpenSSL</a>,对于<a href="http://618119.com/tag/clientauth" class="st_tag internal_tag" rel="tag nofollow" title="标签 clientAuth 下的日志">clientAuth</a>的双向认证配置，也与一般方式不同，经过试验，摸索出配置步骤如下：</p>
+<p>证书文件的制作步骤如下:</p>
+<p>下载并安装openvpn,然后在<br />
+C:\Program Files\OpenVPN\easy-rsa下根据readme指导的步骤生成根证书,服务器证书(非自签名证书),客户端证书.</p>
+<p>我的具体步骤:<br />
+1.命令行下进入 C:\Program Files\OpenVPN\easy-rsa<br />
+首先运行init-config.bat<br />
+当前目录下会生成<a href="http://618119.com/tag/openssl" class="st_tag internal_tag" rel="tag nofollow" title="标签 openssl 下的日志">openssl</a>.cnf和vars.bat<br />
+2.编辑vars,bat,修改以下变量,保存文件.<br />
+set KEY_SIZE=2048<br />
+set KEY_COUNTRY=CN<br />
+set KEY_PROVINCE=GD<br />
+set KEY_CITY=ShenZhen<br />
+set KEY_ORG=zongbo.Inc<br />
+set KEY_EMAIL=lizongbo@618119.com</p>
+<p>3.命令行下运行<br />
+vars.bat<br />
+clean-all<br />
+4.创建ca证书<br />
+1. vars<br />
+2. build-ca<br />
+5.创建服务器公匙密码<br />
+(由于KEY_SIZE设置成了2048,因此可能需要很长的是时间才能创建,此时可以改回1024)<br />
+1. vars<br />
+2. build-dh</p>
+<p>6.创建服务器证书和key.<br />
+1. vars<br />
+2. build-key-server www</p>
+<p>7.创建客户端证书(创建可导入的格式)<br />
+1. vars<br />
+2. build-key-pkcs12 lizongbo</p>
+<p>以下是整个命令执行的过程</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;init-config</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;copy vars.bat.sample vars.bat<br />
+已复制         1 个文件。</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;copy <a href="http://618119.com/tag/openssl" class="st_tag internal_tag" rel="tag nofollow" title="标签 openssl 下的日志">openssl</a>.cnf.sample <a href="http://618119.com/tag/openssl" class="st_tag internal_tag" rel="tag nofollow" title="标签 openssl 下的日志">openssl</a>.cnf<br />
+已复制         1 个文件。</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;vars.bat</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;clean-all<br />
+系统找不到指定的文件。<br />
+已复制         1 个文件。<br />
+已复制         1 个文件。</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;vars</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;build-ca<br />
+Loading &#8217;screen&#8217; into random state - done<br />
+Generating a 2048 bit RSA private key<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..+++<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;.+++<br />
+writing new private key to &#8216;keys\ca.key&#8217;<br />
+&#8212;&#8211;<br />
+You are about to be asked to enter information that will be incorporated<br />
+into your certificate request.<br />
+What you are about to enter is what is called a Distinguished Name or a DN.<br />
+There are quite a few fields but you can leave some blank<br />
+For some fields there will be a default value,<br />
+If you enter &#8216;.&#8217;, the field will be left blank.<br />
+&#8212;&#8211;<br />
+Country Name (2 letter code) [CN]:CN<br />
+State or Province Name (full name) [GD]:GD<br />
+Locality Name (eg, city) [ShenZhen]:ShenZhen<br />
+Organization Name (eg, company) [zongbo.Inc]:zongbo.Inc<br />
+Organizational Unit Name (eg, section) []:lzb.Inc<br />
+Common Name (eg, your name or your server&#8217;s hostname) []:ca.lizongbo.com<br />
+Email Address [lizongbo@618119.com]:lizongbo@618119.com</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;vars</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;build-dh<br />
+Loading &#8217;screen&#8217; into random state - done<br />
+Generating DH parameters, 2048 bit long safe prime, generator 2<br />
+This is going to take a long time<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..+&#8230;&#8230;&#8230;&#8230;&#8230;..+&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..+&#8230;&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;.+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..+&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..+&#8230;&#8230;&#8230;.<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..+&#8230;&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;.+&#8230;&#8230;&#8230;&#8230;<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;.+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;+&#8230;&#8230;&#8230;.<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..<br />
+&#8230;+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;+&#8230;&#8230;&#8230;..+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;.<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..<br />
+.+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;+&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;..<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;.+&#8230;&#8230;&#8230;&#8230;<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;<br />
+C:\Program Files\OpenVPN\easy-rsa&gt;vars</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;build-key-server www<br />
+Loading &#8217;screen&#8217; into random state - done<br />
+Generating a 2048 bit RSA private key<br />
+&#8230;&#8230;&#8230;.+++<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;.+++<br />
+writing new private key to &#8216;keys\www.key&#8217;<br />
+&#8212;&#8211;<br />
+You are about to be asked to enter information that will be incorporated<br />
+into your certificate request.<br />
+What you are about to enter is what is called a Distinguished Name or a DN.<br />
+There are quite a few fields but you can leave some blank<br />
+For some fields there will be a default value,<br />
+If you enter &#8216;.&#8217;, the field will be left blank.<br />
+&#8212;&#8211;<br />
+Country Name (2 letter code) [CN]:CN<br />
+State or Province Name (full name) [GD]:GD<br />
+Locality Name (eg, city) [ShenZhen]:ShenZhen<br />
+Organization Name (eg, company) [zongbo.Inc]:zongbo.Inc<br />
+Organizational Unit Name (eg, section) []:lzb.Inc<br />
+Common Name (eg, your name or your server&#8217;s hostname) []:<a href="http://www.618119.com">www.618119.com</a><br />
+Email Address [lizongbo@618119.com]:lizongbo@618119.com</p>
+<p>Please enter the following &#8216;extra&#8217; attributes<br />
+to be sent with your certificate request<br />
+A challenge password []:lizongbo<br />
+An optional company name []:lzb.cmp<br />
+Using configuration from <a href="http://618119.com/tag/openssl" class="st_tag internal_tag" rel="tag nofollow" title="标签 openssl 下的日志">openssl</a>.cnf<br />
+Loading &#8217;screen&#8217; into random state - done<br />
+Check that the request matches the signature<br />
+Signature ok<br />
+The Subject&#8217;s Distinguished Name is as follows<br />
+countryName           :PRINTABLE:&#8217;CN&#8217;<br />
+stateOrProvinceName   :PRINTABLE:&#8217;GD&#8217;<br />
+localityName          :PRINTABLE:&#8217;ShenZhen&#8217;<br />
+organizationName      :PRINTABLE:&#8217;zongbo.Inc&#8217;<br />
+organizationalUnitName:PRINTABLE:&#8217;lzb.Inc&#8217;<br />
+commonName            :PRINTABLE:&#8217;<a href="http://www.618119.com">www.618119.com</a>&#8217;<br />
+emailAddress          :IA5STRING:&#8217;lizongbo@618119.com&#8217;<br />
+Certificate is to be certified until Sep 17 02:27:21 2017 GMT (3650 days)<br />
+Sign the certificate? [y/n]:y</p>
+<p>1 out of 1 certificate requests certified, commit? [y/n]y<br />
+Write out database with 1 new entries<br />
+Data Base Updated</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;vars</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;build-key lizongbo<br />
+Loading &#8217;screen&#8217; into random state - done<br />
+Generating a 2048 bit RSA private key<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;+++<br />
+&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;&#8230;+++<br />
+writing new private key to &#8216;keys\lizongbo.key&#8217;<br />
+&#8212;&#8211;<br />
+You are about to be asked to enter information that will be incorporated<br />
+into your certificate request.<br />
+What you are about to enter is what is called a Distinguished Name or a DN.<br />
+There are quite a few fields but you can leave some blank<br />
+For some fields there will be a default value,<br />
+If you enter &#8216;.&#8217;, the field will be left blank.<br />
+&#8212;&#8211;<br />
+Country Name (2 letter code) [CN]:CN<br />
+State or Province Name (full name) [GD]:GD<br />
+Locality Name (eg, city) [ShenZhen]:ShenZhen<br />
+Organization Name (eg, company) [zongbo.Inc]:zongbo.Inc<br />
+Organizational Unit Name (eg, section) []:lzb.Inc<br />
+Common Name (eg, your name or your server&#8217;s hostname) []:lizongbo<br />
+Email Address [lizongbo@618119.com]:lizongbo@618119.com</p>
+<p>Please enter the following &#8216;extra&#8217; attributes<br />
+to be sent with your certificate request<br />
+A challenge password []:lizongbo<br />
+An optional company name []:lzb.cmp<br />
+Using configuration from <a href="http://618119.com/tag/openssl" class="st_tag internal_tag" rel="tag nofollow" title="标签 openssl 下的日志">openssl</a>.cnf<br />
+Loading &#8217;screen&#8217; into random state - done<br />
+DEBUG[load_index]: unique_subject = &#8220;yes&#8221;<br />
+Check that the request matches the signature<br />
+Signature ok<br />
+The Subject&#8217;s Distinguished Name is as follows<br />
+countryName           :PRINTABLE:&#8217;CN&#8217;<br />
+stateOrProvinceName   :PRINTABLE:&#8217;GD&#8217;<br />
+localityName          :PRINTABLE:&#8217;ShenZhen&#8217;<br />
+organizationName      :PRINTABLE:&#8217;zongbo.Inc&#8217;<br />
+organizationalUnitName:PRINTABLE:&#8217;lzb.Inc&#8217;<br />
+commonName            :PRINTABLE:&#8217;lizongbo&#8217;<br />
+emailAddress          :IA5STRING:&#8217;lizongbo@618119.com&#8217;<br />
+Certificate is to be certified until Sep 17 02:28:38 2017 GMT (3650 days)<br />
+Sign the certificate? [y/n]:y</p>
+<p>1 out of 1 certificate requests certified, commit? [y/n]y<br />
+Write out database with 1 new entries<br />
+Data Base Updated</p>
+<p>C:\Program Files\OpenVPN\easy-rsa&gt;</p>
+<p>证书文件的安装步骤如下:</p>
+<p>在IE中 :<br />
+在资源管理其中,双击easy-rsa\keys\ca.crt,导入根证书.双击www.crt,导入服务器证书,双击lizongbo.p12,导入客户端证书.</p>
+<p>在Firefox中:</p>
+<p>主菜单&#8211;&gt;工具&#8211;&gt;选项&#8211;&gt;加密,察看证书&#8211;&gt;证书机构-&gt;导入,选择ca.crt,导入之后,选中刚导入的证书,然后点&#8221;编辑&#8221;,将三项新任设置全部打上钩.</p>
+<p>切换面板到&#8221;web站点&#8221;,导入,选择www.crt,导入之后,选中刚导入的证书,然后点&#8221;编辑&#8221;,选择&#8221;信任此证书的认证&#8221;</p>
+<p>切换到&#8221;您的证书&#8221;,导入,选择lizongbo.p12, 输入生成证书时设置的密码,导入成功.<br />
+(Firefox中如果不首先导入根证书，Firefox会提示-12227错误，&#8221;接收到错误或未期望的消息，错误号-12227 &#8220;, 与IE的表现不同)<br />
+<span id="more-13"></span><br />
+<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">Tomcat</a>配置步骤如下:<br />
+1.下载tcnative-1.dll，来源：<br />
+http://<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">tomcat</a>.heanet.ie/native/1.1.10/binaries/win32/tcnative-1.dll<br />
+下载 <a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">Tomcat</a>:<br />
+<a href="http://www.apache.org/dist/--escaped_anchor">http://www.apache.org/dist/--escaped_anchor</a>:079305423cce36d6691457475e081123--/<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">tomcat</a>-6/v6.<a href="http://618119.com/tag/12227" class="st_tag internal_tag" rel="tag nofollow" title="标签 0 下的日志">0</a>.14/bin/apache-<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">tomcat</a>-6.<a href="http://618119.com/tag/12227" class="st_tag internal_tag" rel="tag nofollow" title="标签 0 下的日志">0</a>.14.zip</p>
+<p>2.解压apache-<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">tomcat</a>-6.<a href="http://618119.com/tag/12227" class="st_tag internal_tag" rel="tag nofollow" title="标签 0 下的日志">0</a>.14.zip为D:\Java\apache-<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">tomcat</a>-6.<a href="http://618119.com/tag/12227" class="st_tag internal_tag" rel="tag nofollow" title="标签 0 下的日志">0</a>.14<br />
+复制tcnative-1.dll到D:\Java\apache-<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">tomcat</a>-6.<a href="http://618119.com/tag/12227" class="st_tag internal_tag" rel="tag nofollow" title="标签 0 下的日志">0</a>.14\bin</p>
+<p>3.在D:\Java\apache-<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">tomcat</a>-6.<a href="http://618119.com/tag/12227" class="st_tag internal_tag" rel="tag nofollow" title="标签 0 下的日志">0</a>.14\conf下新建ca目录。<br />
+复制 C:\Program Files\OpenVPN\easy-rsa\keys下的www.crt，www.key，ca.crt到D:\Java\apache-<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">tomcat</a>-6.<a href="http://618119.com/tag/12227" class="st_tag internal_tag" rel="tag nofollow" title="标签 0 下的日志">0</a>.14\conf\ca\</p>
+<p>4.编辑D:\Java\apache-<a href="http://618119.com/tag/tomcat" class="st_tag internal_tag" rel="tag nofollow" title="标签 Tomcat 下的日志">tomcat</a>-6.<a href="http://618119.com/tag/12227" class="st_tag internal_tag" rel="tag nofollow" title="标签 0 下的日志">0</a>.14\conf\server.xml<br />
+增加对<a href="http://618119.com/tag/https" class="st_tag internal_tag" rel="tag nofollow" title="标签 https 下的日志">https</a>的配置，配置内容如下：</p>
+<p>&lt;Connector port=&#8221;22443&#8243; maxHttpHeaderSize=&#8221;8192&#8243; protocol=&#8221;HTTP/1.1&#8243;<br />
+maxThreads=&#8221;150&#8243; minSpareThreads=&#8221;25&#8243; maxSpareThreads=&#8221;75&#8243;<br />
+enableLookups=&#8221;false&#8221; disableUploadTimeout=&#8221;true&#8221;<br />
+acceptCount=&#8221;100&#8243; scheme=&#8221;<a href="http://618119.com/tag/https" class="st_tag internal_tag" rel="tag nofollow" title="标签 https 下的日志">https</a>&#8221; secure=&#8221;true&#8221;<br />
+<a href="http://618119.com/tag/clientauth" class="st_tag internal_tag" rel="tag nofollow" title="标签 clientAuth 下的日志">clientAuth</a>=&#8221;true&#8221;<br />
+SSLEngine=&#8221;on&#8221; bufferSize=&#8221;8192&#8243;<br />
+SSLEnabled=&#8221;true&#8221;<br />
+SSLProtocol=&#8221;all&#8221;<br />
+SSLCipherSuite=&#8221;ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP:+eNULL&#8221;<br />
+SSLCertificateFile=&#8221;..\conf\ca\www.crt&#8221;<br />
+SSLCertificateKeyFile=&#8221;..\conf\ca\www.key&#8221;<br />
+SSLCACertificateFile=&#8221;..\conf\ca\ca.crt&#8221;<br />
+SSLCACertificatePath=&#8221;..\conf\ca&#8221;<br />
+SSLVerifyDepth=&#8221;15&#8243;<br />
+SSLVerifyClient=&#8221;require&#8221;<br />
+/&gt;</p>
+<p>验证:</p>
+<p>分别使用IE和Firefox访问<a href="http://618119.com/tag/https" class="st_tag internal_tag" rel="tag nofollow" title="标签 https 下的日志">https</a>://<a href="http://www.618119.com">www.618119.com</a>:22443/,均可得到选择证书的提示,选择对应的客户端证书即可.</p>
+<p>验证服务器的证书信息:</p>
+<p>命令行下运行: <a href="http://618119.com/tag/openssl" class="st_tag internal_tag" rel="tag nofollow" title="标签 openssl 下的日志">openssl</a> s_client -connect <a href="http://www.618119.com">www.618119.com</a>:22443 -prexit<br />
+即可看到ssl连接中携带的证书信息.</p>
+
+	Tags: <a href="http://618119.com/tag/12227" title="-12227" rel="tag nofollow">-12227</a>, <a href="http://618119.com/tag/apr" title="APR" rel="tag nofollow">APR</a>, <a href="http://618119.com/tag/clientauth" title="clientAuth" rel="tag nofollow">clientAuth</a>, <a href="http://618119.com/tag/https" title="https" rel="tag nofollow">https</a>, <a href="http://618119.com/tag/openssl" title="openssl" rel="tag nofollow">openssl</a>, <a href="http://618119.com/tag/tomcat" title="Tomcat" rel="tag nofollow">Tomcat</a><br />
+
+	<h4>Related posts</h4>
+	<ul class="st-related-posts">
+	<li><a href="http://618119.com/archives/2008/05/08/86.html" title="配置独立运行的jsp预编译ant脚本 (5月 8 ,2008 星期四)">配置独立运行的jsp预编译ant脚本</a> (0)</li>
+	<li><a href="http://618119.com/archives/2007/10/26/16.html" title="配置windows下的curl来获取https页面内容 (10月 26 ,2007 星期五)">配置windows下的curl来获取https页面内容</a> (8)</li>
+	<li><a href="http://618119.com/archives/2009/01/11/126.html" title="扩展java.net.URL支持自定义协议来优化hessian的调用 (1月 11 ,2009 星期日)">扩展java.net.URL支持自定义协议来优化hessian的调用</a> (1)</li>
+	<li><a href="http://618119.com/archives/2008/03/08/74.html" title="慎用ByteBuffer.allocateDirect (3月 8 ,2008 星期六)">慎用ByteBuffer.allocateDirect</a> (1)</li>
+	<li><a href="http://618119.com/archives/2007/10/15/4.html" title="开张了。 (10月 15 ,2007 星期一)">开张了。</a> (0)</li>
+</ul>
+
+
+								<p>Tags: <a href="http://618119.com/tag/12227" rel="tag">-12227</a>, <a href="http://618119.com/tag/apr" rel="tag">APR</a>, <a href="http://618119.com/tag/clientauth" rel="tag">clientAuth</a>, <a href="http://618119.com/tag/https" rel="tag">https</a>, <a href="http://618119.com/tag/openssl" rel="tag">openssl</a>, <a href="http://618119.com/tag/tomcat" rel="tag">Tomcat</a></p>
+				<p class="postmetadata alt">
+								 
+	<h4>recent related 12 searches : </h4>
+	<ul class='st-related-posts'>
+	<li><a href="http://www.google.com/search?q=Firefox+12227+%E8%A7%A3%E5%86%B3"  target="_blank" title="Firefox 12227 解决">Firefox 12227 解决</a></li>
+	<li><a href="http://www.google.com/search?q=%E5%8F%8C%E5%90%91ssl+server.xml+crt+%E6%96%87%E4%BB%B6"  target="_blank" title="双向ssl server.xml crt 文件">双向ssl server.xml crt 文件</a></li>
+	<li><a href="http://www.baidu.com/s?wd=tcnative-1.dll+%CF%C2%D4%D8"  target="_blank" title="tcnative-1.dll 下载">tcnative-1.dll 下载</a></li>
+	<li><a href="http://www.google.com/search?q=tomcat+apr+%E5%95%8F%E9%A1%8C"  target="_blank" title="tomcat apr 問題">tomcat apr 問題</a></li>
+	<li><a href="http://www.google.com/search?q=tomcat+6.0+ssl+%E5%8F%8C%E5%90%91%E9%AA%8C%E8%AF%81"  target="_blank" title="tomcat 6.0 ssl 双向验证">tomcat 6.0 ssl 双向验证</a></li>
+	<li><a href="http://www.google.com/search?q=tomcat+apr+ssl"  target="_blank" title="tomcat apr ssl">tomcat apr ssl</a></li>
+	<li><a href="http://www.baidu.com/s?wd=openvpn%C9%FA%B3%C9%D6%A4%CA%E9"  target="_blank" title="openvpn生成证书">openvpn生成证书</a></li>
+	<li><a href="http://www.google.com/search?q=tomcat6+ssl+ca+%E5%8F%8C%E5%90%91%E9%AA%8C%E8%AF%81"  target="_blank" title="tomcat6 ssl ca 双向验证">tomcat6 ssl ca 双向验证</a></li>
+	<li><a href="http://www.google.com/search?q=tomcat6+ssl%E5%8F%8C%E5%90%91%E9%AA%8C%E8%AF%81"  target="_blank" title="tomcat6 ssl双向验证">tomcat6 ssl双向验证</a></li>
+	<li><a href="http://www.google.com/search?q=%E9%9D%9E%E8%87%AA%E7%AD%BE%E5%90%8D%E8%AF%81%E4%B9%A6"  target="_blank" title="非自签名证书">非自签名证书</a></li>
+	<li><a href="http://www.google.com/search?q=tomcat6+ssl%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81"  target="_blank" title="tomcat6 ssl双向认证">tomcat6 ssl双向认证</a></li>
+	<li><a href="http://www.baidu.com/s?wd=tomcat+apr+SSL"  target="_blank" title="tomcat apr SSL">tomcat apr SSL</a></li>
+</ul>
+					<small>
+						本文发表于
+												on 星期二, 10月 23rd, 2007 at 8:47 上午						and is filed under <a href="http://618119.com/category/webserver/tomcat" title="查看 Tomcat 的全部文章" rel="category tag">Tomcat</a>.
+						You can follow any responses to this entry through the <a href='http://618119.com/archives/2007/10/23/13.html/feed'>RSS 2.0</a> feed.
+
+													You can skip to the end and leave a response. Pinging is currently not allowed.
+
+						
+					</small>
+				</p>
+
+			</div>
+		</div>
+
+	
+<!-- You can start editing here. -->
+
+	<h3 id="comments">3 Responses to &#8220;tomcat启用apr的情况下使用非自签名证书进行ssl双向认证配置&#8221;</h3>
+
+	<div class="navigation">
+		<div class="alignleft"></div>
+		<div class="alignright"></div>
+	</div>
+
+	<ol class="commentlist">
+			<li class="comment even thread-even depth-1" id="comment-2">
+				<div id="div-comment-2">
+				<div class="comment-author vcard">
+		<img alt='' src='http://www.gravatar.com/avatar/3256ddb61e215d9ebd1c2046e5a93bb7?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=G' class='avatar avatar-32 photo' height='32' width='32' />		<cite class="fn">vicalloy</cite> <span class="says">说：</span>		</div>
+
+		<div class="comment-meta commentmetadata"><a href="http://618119.com/archives/2007/10/23/13.html/comment-page-1#comment-2">10月 23 ,2007 星期二 - 11:29 上午</a></div>
+
+		<p>这两天好多篇啊。</p>
+<p class="thdrpy"><a href="javascript:void(0)" onclick="movecfm(event,2,1,'vicalloy');">Reply</a></p>
+		<div class="reply">
+				</div>
+				</div>
+		</li>
+		<li class="comment odd alt thread-odd thread-alt depth-1" id="comment-3060">
+				<div id="div-comment-3060">
+				<div class="comment-author vcard">
+		<img alt='' src='http://www.gravatar.com/avatar/e952225288cc381216b5c30821362fda?s=32&amp;d=http%3A%2F%2Fwww.gravatar.com%2Favatar%2Fad516503a11cd5ca435acc9bb6523536%3Fs%3D32&amp;r=G' class='avatar avatar-32 photo' height='32' width='32' />		<cite class="fn">sailor</cite> <span class="says">说：</span>		</div>
+
+		<div class="comment-meta commentmetadata"><a href="http://618119.com/archives/2007/10/23/13.html/comment-page-1#comment-3060">7月 22 ,2008 星期二 - 6:24 下午</a></div>
+
+		<p>我根据以上情况去做不行呀:(</p>
+<p class="thdrpy"><a href="javascript:void(0)" onclick="movecfm(event,3060,1,'sailor');">Reply</a></p><div class="comment-childs" id="comment-3061"><p>sailor <em>reply on 7月 22nd, 2008</em>:</p><p>这两天好多篇啊。</p>
+</div>
+		<div class="reply">
+				</div>
+				</div>
+		</li>
+	</ol>
+
+	<div class="navigation">
+		<div class="alignleft"></div>
+		<div class="alignright"></div>
+	</div>
+ 
+
+
+<div id="respond">
+
+<h3>Leave a Reply</h3>
+
+<div class="cancel-comment-reply">
+	<small><a rel="nofollow" id="cancel-comment-reply-link" href="/archives/2007/10/23/13.html#respond" style="display:none;">点击这里取消回复。</a></small>
+</div>
+
+
+<form action="http://618119.com/wp-comments-post.php" method="post" id="commentform">
+
+
+<p><input type="text" name="author" id="author" value="" size="22" tabindex="1" aria-required='true' />
+<label for="author"><small>Name (required)</small></label></p>
+
+<p><input type="text" name="email" id="email" value="" size="22" tabindex="2" aria-required='true' />
+<label for="email"><small>Mail (will not be published) (required)</small></label></p>
+
+<p><input type="text" name="url" id="url" value="" size="22" tabindex="3" />
+<label for="url"><small>Website</small></label></p>
+
+
+<!--<p><small><strong>XHTML:</strong> You can use these tags: <code>&lt;a href=&quot;&quot; title=&quot;&quot;&gt; &lt;abbr title=&quot;&quot;&gt; &lt;acronym title=&quot;&quot;&gt; &lt;b&gt; &lt;blockquote cite=&quot;&quot;&gt; &lt;cite&gt; &lt;code&gt; &lt;del datetime=&quot;&quot;&gt; &lt;em&gt; &lt;i&gt; &lt;q cite=&quot;&quot;&gt; &lt;strike&gt; &lt;strong&gt; </code></small></p>-->
+
+<p><textarea name="comment" id="comment" cols="100%" rows="10" tabindex="4"></textarea></p>
+
+<p><input name="submit" type="submit" id="submit" tabindex="5" value="Submit Comment" />
+<input type='hidden' name='comment_post_ID' value='13' id='comment_post_ID' />
+<input type='hidden' name='comment_parent' id='comment_parent' value='0' />
+</p>
+<p><input type="hidden" id="comment_reply_ID" name="comment_reply_ID" value="0" /><input type="hidden" id="comment_reply_dp" name="comment_reply_dp" value="0" /></p><div id="cancel_reply" style="display:none;"><a href="javascript:void(0)" onclick="movecfm(null,0,1,null);" style="color:red;">Click to cancel reply</a></div><script type="text/javascript">
+/* <![CDATA[ */
+var commentformid = "commentform";
+var USERINFO = false;
+var atreply = "no";
+/* ]]> */
+</script>
+<script type="text/javascript" src="http://618119.com/wp-content/plugins/wordpress-thread-comment/wp-thread-comment.js.php?jsver=common"></script>
+
+</form>
+
+</div>
+
+
+	
+	</div>
+	<div id="sidebar">
+		<ul><li>
+
+
+<a href="http://toolbar.google.com/buttons/add?url=http://618119.com/618119_button.xml">添加到Google工具栏</a>
+<br/>
+<!-- Feedsky FEED发布代码开始 -->
+<script language="javascript"><!-- 
+main_sub="";
+more_subs="google_02,qq_02,youdao_02,zhuaxia_02,xianguo_02,pageflakes_02,rojo_02,netvibes_02,yahoo_02,newsgator_02,bloglines_02,nazha_02";
+is_new="yes";
+--> </script>
+<script language="javascript" src="http://www.feedsky.com/jsout/publishlist_v2.js?burl=lizongbo&out_html=true"></script>
+<!-- Feedsky FEED发布代码结束 -->
+
+<script type="text/javascript">
+(function() {
+var selfurl=window.location.href,siteurl,regex=/(^\w+:\/\/)((\w|\.)+)(:\d+)?\//;
+var results=regex.exec( selfurl+"/" );if (results==null) siteurl = selfurl; else siteurl = results[1]+results[2];
+document.write("<scr"+"ipt src=\""+"http://sitemap.cn.yahoo.com/inlink.js?url="+encodeURIComponent(siteurl)+"&site=1&sty=1\" charset=\"UTF-8\"></scr"+"ipt>");
+})();
+</script>
+
+
+<!-- Google CSE Search Box Begins  -->
+<form action="http://www.google.com/cse" id="searchbox_004269974546450879935:vglcoepj9wy">
+  <input type="hidden" name="cx" value="004269974546450879935:vglcoepj9wy" />
+  <input type="text" name="q" />
+  <input type="submit" name="sa" value="搜索" />
+</form>
+<script type="text/javascript" src="http://www.google.com/coop/cse/brand?form=searchbox_004269974546450879935%3Avglcoepj9wy"></script>
+<!-- Google CSE Search Box Ends -->
+<br/>
+<a href="http://www.dnspod.com/" target="_blank"><img src="http://www.dnspod.com/images/logo_88_31.gif"/> </a>
+<br/>
+</li>
+			<li id="search" class="widget widget_search"><form method="get" id="searchform" action="http://618119.com/">
+<label class="hidden" for="s">搜索：</label>
+<div><input type="text" value="" name="s" id="s" />
+<input type="submit" id="searchsubmit" value="查找" />
+</div>
+</form>
+</li><li id="calendar" class="widget widget_calendar"><h2 class="widgettitle">&nbsp;</h2><div id="calendar_wrap"><table id="wp-calendar" summary="日历">
+	<caption>10月 2007</caption>
+	<thead>
+	<tr>
+		<th abbr="星期一" scope="col" title="星期一">一</th>
+		<th abbr="星期二" scope="col" title="星期二">二</th>
+		<th abbr="星期三" scope="col" title="星期三">三</th>
+		<th abbr="星期四" scope="col" title="星期四">四</th>
+		<th abbr="星期五" scope="col" title="星期五">五</th>
+		<th abbr="星期六" scope="col" title="星期六">六</th>
+		<th abbr="星期日" scope="col" title="星期日">日</th>
+	</tr>
+	</thead>
+
+	<tfoot>
+	<tr>
+		<td colspan="3" id="prev" class="pad">&nbsp;</td>
+		<td class="pad">&nbsp;</td>
+		<td abbr="11月" colspan="3" id="next"><a href="http://618119.com/archives/2007/11" title="查看 11月 2007 的文章">11 &raquo;</a></td>
+	</tr>
+	</tfoot>
+
+	<tbody>
+	<tr><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td>
+	</tr>
+	<tr>
+		<td>8</td><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td>
+	</tr>
+	<tr>
+		<td><a href="http://618119.com/archives/2007/10/15" title="开张了。
+用java实现HashCalc的文件指纹校验功能
+安装hyperic hq 3.1.0的注意事项。">15</a></td><td>16</td><td><a href="http://618119.com/archives/2007/10/17" title="无意中发现隐藏qq的IP的方法(未完全确认)">17</a></td><td>18</td><td><a href="http://618119.com/archives/2007/10/19" title="618119.com改用免费的DNSPOD提供dns解析服务
+DbVisualizer 6.0.6 发布了.">19</a></td><td>20</td><td>21</td>
+	</tr>
+	<tr>
+		<td><a href="http://618119.com/archives/2007/10/22" title="在Apache Tomcat上安装Wordpress 2.3
+在 Spket IDE 1.6.4 中使用 Ext 2.0">22</a></td><td><a href="http://618119.com/archives/2007/10/23" title="tomcat启用apr的情况下使用非自签名证书进行ssl双向认证配置">23</a></td><td>24</td><td><a href="http://618119.com/archives/2007/10/25" title="Windows系统中使用jvmstat查看Java虚拟机信息">25</a></td><td><a href="http://618119.com/archives/2007/10/26" title="关于OpenSSL里libssl32.dll与ssleay32.dll的区别
+配置windows下的curl来获取https页面内容
+Apache整合Tomcat的vhosts及mod_jk配置">26</a></td><td><a href="http://618119.com/archives/2007/10/27" title="关于java客户端与c写的服务器通信时的整数字节存放顺序">27</a></td><td>28</td>
+	</tr>
+	<tr>
+		<td>29</td><td>30</td><td><a href="http://618119.com/archives/2007/10/31" title="安装了Workrave v1.8.5 多国语言版">31</a></td>
+		<td class="pad" colspan="4">&nbsp;</td>
+	</tr>
+	</tbody>
+	</table></div></li>	<li id="pages" class="widget widget_pages">		<h2 class="widgettitle">页面</h2>		<ul>
+			<li class="page_item page-item-3"><a href="http://618119.com/about" title="About">About</a>
+<ul>
+	<li class="page_item page-item-24"><a href="http://618119.com/about/lizongbo" title="lizongbo">lizongbo</a></li>
+</ul>
+</li>
+<li class="page_item page-item-57"><a href="http://618119.com/archives" title="archives">archives</a></li>
+<li class="page_item page-item-33"><a href="http://618119.com/links" title="links">links</a></li>
+<li class="page_item page-item-10"><a href="http://618119.com/seo" title="seo">seo</a></li>
+<li class="page_item page-item-112"><a href="http://618119.com/about" title="关于">关于</a></li>
+<li class="page_item page-item-114"><a href="http://618119.com/about" title="关于">关于</a></li>
+<li class="page_item page-item-116"><a href="http://618119.com/about" title="关于">关于</a></li>
+<li class="page_item page-item-118"><a href="http://618119.com/about" title="关于">关于</a></li>
+<li class="page_item page-item-134"><a href="http://618119.com/about" title="关于">关于</a></li>
+		</ul>
+	</li><li id="archives" class="widget widget_archive"><h2 class="widgettitle">归档</h2>		<ul>
+			<li><a href='http://618119.com/archives/2009/07' title='2009年7月'>2009年7月</a></li>
+	<li><a href='http://618119.com/archives/2009/04' title='2009年4月'>2009年4月</a></li>
+	<li><a href='http://618119.com/archives/2009/03' title='2009年3月'>2009年3月</a></li>
+	<li><a href='http://618119.com/archives/2009/02' title='2009年2月'>2009年2月</a></li>
+	<li><a href='http://618119.com/archives/2009/01' title='2009年1月'>2009年1月</a></li>
+	<li><a href='http://618119.com/archives/2008/12' title='2008年12月'>2008年12月</a></li>
+	<li><a href='http://618119.com/archives/2008/09' title='2008年9月'>2008年9月</a></li>
+	<li><a href='http://618119.com/archives/2008/08' title='2008年8月'>2008年8月</a></li>
+	<li><a href='http://618119.com/archives/2008/07' title='2008年7月'>2008年7月</a></li>
+	<li><a href='http://618119.com/archives/2008/06' title='2008年6月'>2008年6月</a></li>
+	<li><a href='http://618119.com/archives/2008/05' title='2008年5月'>2008年5月</a></li>
+	<li><a href='http://618119.com/archives/2008/04' title='2008年4月'>2008年4月</a></li>
+	<li><a href='http://618119.com/archives/2008/03' title='2008年3月'>2008年3月</a></li>
+	<li><a href='http://618119.com/archives/2008/02' title='2008年2月'>2008年2月</a></li>
+	<li><a href='http://618119.com/archives/2008/01' title='2008年1月'>2008年1月</a></li>
+	<li><a href='http://618119.com/archives/2007/12' title='2007年12月'>2007年12月</a></li>
+	<li><a href='http://618119.com/archives/2007/11' title='2007年11月'>2007年11月</a></li>
+	<li><a href='http://618119.com/archives/2007/10' title='2007年10月'>2007年10月</a></li>
+		</ul>
+</li><li id="categories-1" class="widget widget_categories"><h2 class="widgettitle">分类</h2>		<ul>
+			<li class="cat-item cat-item-135"><a href="http://618119.com/category/webserver/apache" title="Apache Web Server">Apache</a>
+</li>
+	<li class="cat-item cat-item-170"><a href="http://618119.com/category/cache" title="缓存">cache</a>
+</li>
+	<li class="cat-item cat-item-184"><a href="http://618119.com/category/cluster" title="cluster">Cluster</a>
+</li>
+	<li class="cat-item cat-item-140"><a href="http://618119.com/category/database/dbvisualizer-database" title="DbVisualizer">DbVisualizer</a>
+</li>
+	<li class="cat-item cat-item-93"><a href="http://618119.com/category/dns" title="DNS 协议">DNS</a>
+</li>
+	<li class="cat-item cat-item-276"><a href="http://618119.com/category/rpc/hessian" title="Hessian http://hessian.caucho.com/#Java">Hessian</a>
+</li>
+	<li class="cat-item cat-item-23"><a href="http://618119.com/category/hyperic-hq" title="hyperic hq">hyperic-hq</a>
+</li>
+	<li class="cat-item cat-item-232"><a href="http://618119.com/category/im" title="IM">IM</a>
+</li>
+	<li class="cat-item cat-item-145"><a href="http://618119.com/category/dns/ip" title="IP 地址">IP</a>
+</li>
+	<li class="cat-item cat-item-15"><a href="http://618119.com/category/java" title="Java 相关">Java</a>
+</li>
+	<li class="cat-item cat-item-144"><a href="http://618119.com/category/java/ide" title="java ide">JAVA IDE</a>
+</li>
+	<li class="cat-item cat-item-148"><a href="http://618119.com/category/web/javascript-web" title="JavaScript">JavaScript</a>
+</li>
+	<li class="cat-item cat-item-175"><a href="http://618119.com/category/cache/jbosscache-cache" title="JbossCache 的使用">JbossCache</a>
+</li>
+	<li class="cat-item cat-item-139"><a href="http://618119.com/category/java/jvm" title="JAVA 虚拟机">JVM</a>
+</li>
+	<li class="cat-item cat-item-6"><a href="http://618119.com/category/webserver/lighttpd" title="Lighttpd">Lighttpd</a>
+</li>
+	<li class="cat-item cat-item-11"><a href="http://618119.com/category/linux" title="Linux">Linux</a>
+</li>
+	<li class="cat-item cat-item-152"><a href="http://618119.com/category/database/mysql-database" title="mysql">mysql</a>
+</li>
+	<li class="cat-item cat-item-9"><a href="http://618119.com/category/webserver/nginx" title="Nginx">nginx</a>
+</li>
+	<li class="cat-item cat-item-269"><a href="http://618119.com/category/im/openfire-im" title="Openfire">Openfire</a>
+</li>
+	<li class="cat-item cat-item-151"><a href="http://618119.com/category/database/oracle" title="Oracle">Oracle</a>
+</li>
+	<li class="cat-item cat-item-7"><a href="http://618119.com/category/webserver/resin" title="caucho Resin">Resin</a>
+</li>
+	<li class="cat-item cat-item-277"><a href="http://618119.com/category/rpc/rmi" title="java RMI">RMI</a>
+</li>
+	<li class="cat-item cat-item-274"><a href="http://618119.com/category/rpc" title="RPC">RPC</a>
+</li>
+	<li class="cat-item cat-item-270"><a href="http://618119.com/category/im/spark-im" title="Spark">Spark</a>
+</li>
+	<li class="cat-item cat-item-5"><a href="http://618119.com/category/webserver/squid" title="Squid">Squid</a>
+</li>
+	<li class="cat-item cat-item-146"><a href="http://618119.com/category/java/ssl" title="SSL TLS OpenSSL">SSL</a>
+</li>
+	<li class="cat-item cat-item-4"><a href="http://618119.com/category/webserver/tomcat" title="Apache Tomcat">Tomcat</a>
+</li>
+	<li class="cat-item cat-item-147"><a href="http://618119.com/category/web" title="Web,Html,Xhtml,css">Web</a>
+</li>
+	<li class="cat-item cat-item-3"><a href="http://618119.com/category/webserver" title="web服务器">Web Server</a>
+</li>
+	<li class="cat-item cat-item-149"><a href="http://618119.com/category/web/xhtml" title="Xhtml">Xhtml</a>
+</li>
+	<li class="cat-item cat-item-275"><a href="http://618119.com/category/rpc/xmlrpc" title="XML-RPC">XML-RPC</a>
+</li>
+	<li class="cat-item cat-item-268"><a href="http://618119.com/category/im/xmpp-im" title="XMPP">XMPP</a>
+</li>
+	<li class="cat-item cat-item-313"><a href="http://618119.com/category/im/mqq" title="手机QQ 2009">手机QQ</a>
+</li>
+	<li class="cat-item cat-item-8"><a href="http://618119.com/category/database" title="数据库">数据库</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://618119.com/category/uncategorized" title="未分类的">未分类</a>
+</li>
+	<li class="cat-item cat-item-178"><a href="http://618119.com/category/others" title="杂七杂八">杂七杂八</a>
+</li>
+	<li class="cat-item cat-item-227"><a href="http://618119.com/category/life" title="记录生活中的东西">生活点滴</a>
+</li>
+		</ul>
+</li><li id="linkcat-2" class="widget widget_links"><h2 class="widgettitle">友情连接</h2>
+	<ul class='xoxo blogroll'>
+<li><a href="http://rabbit8.bokee.com/" title="兔八哥的狗窝(ltf)">兔八哥的狗窝</a></li>
+<li><a href="http://sunflower5914.spaces.live.com/default.aspx" title="忘忘">忘忘</a></li>
+
+	</ul>
+</li>
+<li id="linkcat-12" class="widget widget_links"><h2 class="widgettitle">常用连接</h2>
+	<ul class='xoxo blogroll'>
+<li><a href="https://gmail.google.com" title="Google mail" target="_blank">Gmail</a></li>
+<li><a href="https://www.google.com/analytics/home/?hl=zh-CN" title="google的站点分析工具">google站点分析工具</a></li>
+<li><a href="https://www.google.com/webmasters/tools/" title="google的网络管理员工具">google网络管理员工具</a></li>
+<li><a href="http://google.com/reader" title="Google Reader" target="_blank">Greader</a></li>
+<li><a href="http://sitemap.cn.yahoo.com/" title="Yahoo的站长工具箱，可以看sitemap和统计信息">Yahoo站长工具箱</a></li>
+<li><a href="http://www.618100.com" title="四川省中江县" target="_blank">中江</a></li>
+<li><a href="http://www.deyang.gov.cn" title="四川省德阳市" target="_blank">德阳</a></li>
+
+	</ul>
+</li>
+<li id="linkcat-14" class="widget widget_links"><h2 class="widgettitle">我曾经的blog</h2>
+	<ul class='xoxo blogroll'>
+<li><a href="http://www.blogjava.net/lizongbo" title="lizongbo在blogjava的blog">lizongbo blogjava</a></li>
+<li><a href="http://blog.csdn.net/lizongbo" title="lizongbo在csdn的blog">lizongbo csdn</a></li>
+<li><a href="http://blog.donews.com/lizongbo" title="lizongbo在donews的blog">lizongbo donews</a></li>
+<li><a href="http://lizongbo.googlepages.com" rel="me" title="曾经的 google page">lizongbo的google page</a></li>
+
+	</ul>
+</li>
+<li id="linkcat-13" class="widget widget_links"><h2 class="widgettitle">相关Blog</h2>
+	<ul class='xoxo blogroll'>
+<li><a href="http://dev2dev.bea.com.cn/blog/lizongbo/" rel="me" title="lizongbo 在 bea 的blog">lizongbo blog @dev2dev.bea</a></li>
+<li><a href="http://www.storyday.com/" title="China.cos的blog" target="_blank">生活点滴Enjoy Life</a></li>
+
+	</ul>
+</li>
+<li id="linkcat-30" class="widget widget_links"><h2 class="widgettitle">相关信息</h2>
+	<ul class='xoxo blogroll'>
+<li><a href="http://www.robtex.com/dns/618119.com.html" title="618119.com的dns信息">618119的dns信息</a></li>
+<li><a href="http://partnerpage.google.com/618119.com" title="618119.com的google企业应用套件">618119的google企业应用套件</a></li>
+<li><a href="http://www.robtex.com/ip/69.89.31.74.html" title="618119.com的IP信息">618119的IP信息</a></li>
+<li><a href="http://www.robtex.com/whois/618119.com.html" title="618119.com的whois信息">618119的whois信息</a></li>
+<li><a href="http://www.dnsstuff.com/tools/dnsreport.ch?domain=618119.com" title="618119.com的dnsreport">dnsreport</a></li>
+
+	</ul>
+</li>
+<li id="tag_cloud" class="widget widget_tag_cloud"><h2 class="widgettitle">标签</h2><a href='http://618119.com/tag/%e4%bb%a3%e7%a0%81%e7%94%9f%e6%88%90%e5%99%a8' class='tag-link-245' title='3 个主题' rel="tag" style='font-size: 8pt;'>代码生成器</a>
+<a href='http://618119.com/tag/%e7%9f%ad%e4%bf%a1' class='tag-link-210' title='8 个主题' rel="tag" style='font-size: 11.04347826087pt;'>短信</a>
+<a href='http://618119.com/tag/%e9%9b%86%e7%be%a4' class='tag-link-186' title='5 个主题' rel="tag" style='font-size: 9.2173913043478pt;'>集群</a>
+<a href='http://618119.com/tag/618119com' class='tag-link-95' title='4 个主题' rel="tag" style='font-size: 8.6086956521739pt;'>618119.com</a>
+<a href='http://618119.com/tag/apache' class='tag-link-135' title='4 个主题' rel="tag" style='font-size: 8.6086956521739pt;'>Apache</a>
+<a href='http://618119.com/tag/apache-mina' class='tag-link-207' title='19 个主题' rel="tag" style='font-size: 17.739130434783pt;'>apache mina</a>
+<a href='http://618119.com/tag/apache-tomcat' class='tag-link-216' title='4 个主题' rel="tag" style='font-size: 8.6086956521739pt;'>Apache Tomcat</a>
+<a href='http://618119.com/tag/commons-ssl' class='tag-link-209' title='6 个主题' rel="tag" style='font-size: 9.8260869565217pt;'>commons ssl</a>
+<a href='http://618119.com/tag/dbvisualizer' class='tag-link-107' title='7 个主题' rel="tag" style='font-size: 10.434782608696pt;'>DbVisualizer</a>
+<a href='http://618119.com/tag/dns' class='tag-link-93' title='5 个主题' rel="tag" style='font-size: 9.2173913043478pt;'>DNS</a>
+<a href='http://618119.com/tag/eclipse' class='tag-link-201' title='6 个主题' rel="tag" style='font-size: 9.8260869565217pt;'>eclipse</a>
+<a href='http://618119.com/tag/firefox' class='tag-link-237' title='4 个主题' rel="tag" style='font-size: 8.6086956521739pt;'>FireFox</a>
+<a href='http://618119.com/tag/geoserver' class='tag-link-255' title='5 个主题' rel="tag" style='font-size: 9.2173913043478pt;'>geoserver</a>
+<a href='http://618119.com/tag/gis' class='tag-link-254' title='7 个主题' rel="tag" style='font-size: 10.434782608696pt;'>gis</a>
+<a href='http://618119.com/tag/google-app-engine' class='tag-link-337' title='4 个主题' rel="tag" style='font-size: 8.6086956521739pt;'>Google App Engine</a>
+<a href='http://618119.com/tag/google-protobuf' class='tag-link-300' title='10 个主题' rel="tag" style='font-size: 12.260869565217pt;'>google protobuf</a>
+<a href='http://618119.com/tag/hessian' class='tag-link-276' title='13 个主题' rel="tag" style='font-size: 14.086956521739pt;'>Hessian</a>
+<a href='http://618119.com/tag/https' class='tag-link-124' title='3 个主题' rel="tag" style='font-size: 8pt;'>https</a>
+<a href='http://618119.com/tag/im' class='tag-link-232' title='4 个主题' rel="tag" style='font-size: 8.6086956521739pt;'>IM</a>
+<a href='http://618119.com/tag/java' class='tag-link-15' title='26 个主题' rel="tag" style='font-size: 22pt;'>Java</a>
+<a href='http://618119.com/tag/java-ide' class='tag-link-214' title='6 个主题' rel="tag" style='font-size: 9.8260869565217pt;'>java ide</a>
+<a href='http://618119.com/tag/javascript' class='tag-link-120' title='6 个主题' rel="tag" style='font-size: 9.8260869565217pt;'>javascript</a>
+<a href='http://618119.com/tag/jbosscache' class='tag-link-162' title='3 个主题' rel="tag" style='font-size: 8pt;'>JbossCache</a>
+<a href='http://618119.com/tag/jdk' class='tag-link-127' title='5 个主题' rel="tag" style='font-size: 9.2173913043478pt;'>JDK</a>
+<a href='http://618119.com/tag/linux' class='tag-link-11' title='8 个主题' rel="tag" style='font-size: 11.04347826087pt;'>Linux</a>
+<a href='http://618119.com/tag/log' class='tag-link-224' title='4 个主题' rel="tag" style='font-size: 8.6086956521739pt;'>log</a>
+<a href='http://618119.com/tag/mysql' class='tag-link-115' title='4 个主题' rel="tag" style='font-size: 8.6086956521739pt;'>mysql</a>
+<a href='http://618119.com/tag/openfire' class='tag-link-230' title='9 个主题' rel="tag" style='font-size: 11.652173913043pt;'>OpenFire</a>
+<a href='http://618119.com/tag/openlayers' class='tag-link-256' title='5 个主题' rel="tag" style='font-size: 9.2173913043478pt;'>OpenLayers</a>
+<a href='http://618119.com/tag/openssl' class='tag-link-121' title='3 个主题' rel="tag" style='font-size: 8pt;'>openssl</a>
+<a href='http://618119.com/tag/oracle' class='tag-link-151' title='3 个主题' rel="tag" style='font-size: 8pt;'>Oracle</a>
+<a href='http://618119.com/tag/php' class='tag-link-223' title='5 个主题' rel="tag" style='font-size: 9.2173913043478pt;'>php</a>
+<a href='http://618119.com/tag/postgresql' class='tag-link-25' title='4 个主题' rel="tag" style='font-size: 8.6086956521739pt;'>PostgreSQL</a>
+<a href='http://618119.com/tag/qq' class='tag-link-85' title='10 个主题' rel="tag" style='font-size: 12.260869565217pt;'>QQ</a>
+<a href='http://618119.com/tag/resin' class='tag-link-7' title='3 个主题' rel="tag" style='font-size: 8pt;'>Resin</a>
+<a href='http://618119.com/tag/rpc' class='tag-link-274' title='11 个主题' rel="tag" style='font-size: 12.869565217391pt;'>RPC</a>
+<a href='http://618119.com/tag/smpp' class='tag-link-204' title='10 个主题' rel="tag" style='font-size: 12.260869565217pt;'>smpp</a>
+<a href='http://618119.com/tag/smppapi' class='tag-link-206' title='8 个主题' rel="tag" style='font-size: 11.04347826087pt;'>smppapi</a>
+<a href='http://618119.com/tag/smsc' class='tag-link-205' title='7 个主题' rel="tag" style='font-size: 10.434782608696pt;'>smsc</a>
+<a href='http://618119.com/tag/spark' class='tag-link-233' title='9 个主题' rel="tag" style='font-size: 11.652173913043pt;'>spark</a>
+<a href='http://618119.com/tag/spring' class='tag-link-208' title='7 个主题' rel="tag" style='font-size: 10.434782608696pt;'>spring</a>
+<a href='http://618119.com/tag/ssl' class='tag-link-146' title='3 个主题' rel="tag" style='font-size: 8pt;'>SSL</a>
+<a href='http://618119.com/tag/tomcat' class='tag-link-4' title='8 个主题' rel="tag" style='font-size: 11.04347826087pt;'>Tomcat</a>
+<a href='http://618119.com/tag/ubuntu' class='tag-link-329' title='4 个主题' rel="tag" style='font-size: 8.6086956521739pt;'>Ubuntu</a>
+<a href='http://618119.com/tag/wordpress' class='tag-link-116' title='5 个主题' rel="tag" style='font-size: 9.2173913043478pt;'>Wordpress</a></li>		<li id="recent-posts" class="widget widget_recent_entries">			<h2 class="widgettitle">最新文章</h2>			<ul>
+						<li><a href="http://618119.com/archives/2009/07/01/150.html">最新隐藏和显示手机腾讯网与手机QQ图标的方法 </a></li>
+						<li><a href="http://618119.com/archives/2009/04/19/149.html">神舟笔记本升级安装ubuntu 9.04 64位并编译 multige </a></li>
+						<li><a href="http://618119.com/archives/2009/04/12/148.html">Windows下编写google app engine jsp出现中文乱码问题的真正原因 </a></li>
+						<li><a href="http://618119.com/archives/2009/04/11/147.html">使用Google App Engine的URLFetchService实现类似phpproxy访问页面 </a></li>
+						<li><a href="http://618119.com/archives/2009/04/08/146.html">Google App Engine Java runtime的file.encoding居然不是UTF-8 </a></li>
+						</ul>
+		</li>		<li id="meta" class="widget widget_meta">			<h2 class="widgettitle">其它</h2>			<ul>
+						<li><a href="http://618119.com/wp-login.php">登录</a></li>
+			<li><a href="http://618119.com/feed" title="使用 RSS 2.0 同步本站">文章 <abbr title="Really Simple Syndication">RSS</abbr></a></li>
+			<li><a href="http://618119.com/comments/feed" title="全部文章中最新评论的 RSS">评论 <abbr title="Really Simple Syndication">RSS</abbr></a></li>
+			<li><a href="http://wordpress.org/" title="本站由顶级个人出版平台 WordPress中文版 驱动。">WordPress.org</a></li>
+						</ul>
+		</li>		<li id="text-1" class="widget widget_text">						<div class="textwidget"></div>
+		</li>		</ul>
+	</div>
+
+
+<script class="javascript" src="/wp-content/plugins/google-syntax-highlighter/Scripts/highlighter.js"></script>
+
+<hr />
+<div id="footer">
+<!-- If you'd like to support WordPress, having the "powered by" link somewhere on your blog is the best way; it's our only promotion or advertising. -->
+	<p>
+		lizongbo at 618119.com is proudly powered by
+		<a href="http://wordpress.org/">WordPress</a>
+		<a href="http://wpchina.org/">中文版</a>
+		<br /><a href="http://feed.feedsky.com/lizongbo">文章 (RSS)</a>
+		and <a href="http://618119.com/comments/feed">评论 (RSS)</a>.
+		<!-- 43 queries. 0.735 seconds. -->
+	</p>
+</div>
+</div>
+
+<!-- Gorgeous design by Michael Heilemann - http://binarybonsai.com/kubrick/ -->
+
+		<script type="text/javascript">
+    jQuery(document).ready(function(){
+        jQuery("p:has(textarea)").after("<p class='scp_message'><strong>NOTICE:</strong> You should type some Chinese word (like “你好”) in your comment to pass the spam-check, thanks for your patience!</p>");
+    });
+</script>		<script type="text/javascript" src="http://js.tongji.yahoo.com.cn/0/38/359/ystat.js"></script><noscript><a href="http://js.tongji.yahoo.com.cn"><img src="http://js.tongji.yahoo.com.cn/0/38/359/ystat.gif" /></a></noscript>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2810447-1");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

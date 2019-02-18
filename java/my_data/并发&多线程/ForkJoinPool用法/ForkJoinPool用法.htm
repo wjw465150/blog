@@ -1,0 +1,122 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<META HTTP-EQUIV=Content-Type CONTENT=text/html; charset=utf-8>
+<title>ForkJoinPool用法</title>
+<body>
+<div class="postbody">
+  <div class="article">
+    <p><code>ForkJoinPool</code> 是 Java SE 7 
+      新功能“分叉/结合框架”的核心类，现在可能乏人问津，但我觉得它迟早会成为主流。分叉/结合框架是一个比较特殊的线程池框架，专用于需要将一个任务不断
+      分解成子任务（分叉），再不断进行汇总得到最终结果（结合）的计算过程。比起传统的线程池类 <code>ThreadPoolExecutor</code>，<code>ForkJoinPool</code> 实现了工作窃取算法，使得空闲线程能够主动分担从别的线程分解出来的子任务，从而让所有的线程都尽可能处于饱满的工作状态，提高执行效率。</p>
+    <p><code>ForkJoinPool</code> 提供了三类方法来调度子任务：</p>
+    <dl>
+      <dt><code>execute</code> 系列</dt>
+      <dd>异步执行指定的任务。</dd>
+      <dt><code>invoke</code> 和 <code>invokeAll</code></dt>
+      <dd>执行指定的任务，等待完成，返回结果。</dd>
+      <dt><code>submit</code> 系列</dt>
+      <dd>异步执行指定的任务并立即返回一个 <code>Future</code> 对象。</dd>
+    </dl>
+    <p>子任务由 <code>ForkJoinTask</code> 的实例来代表。它是一个抽象类，JDK 为我们提供了两个实现：<code>RecursiveTask</code> 和 <code>RecursiveAction</code>，分别用于需要和不需要返回计算结果的子任务。<code>ForkJoinTask</code> 提供了三个静态的 <code>invokeAll</code> 方法来调度子任务，注意只能在 <code>ForkJoinPool</code> 执行计算的过程中调用它们。</p>
+    <p><code>ForkJoinPool</code> 和 <code>ForkJoinTask</code> 还提供了很多让人眼花缭乱的公共方法，其实它们大多数都是其内部实现去调用的，对于应用开发人员来说意义不大。</p>
+    <p>下面以统计 D 盘文件个数为例。这实际上是对一个文件树的遍历，我们需要递归地统计每个目录下的文件数量，最后汇总，非常适合用分叉/结合框架来处理：</p>
+    <div>
+      <div id="highlighter_269732" class="syntaxhighlighter codeBlock java">
+        <div class="toolbar"><span><a href="http://www.blogjava.net/shinzey/archive/2012/02/09/368312.html#" class="toolbar_item command_help help">?</a></span></div>
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tbody>
+            <tr>
+              <td class="gutter"><div class="line number1 index0 alt2">1</div>
+                <div class="line number2 index1 alt1 highlighted">2</div>
+                <div class="line number3 index2 alt2">3</div>
+                <div class="line number4 index3 alt1">4</div>
+                <div class="line number5 index4 alt2">5</div>
+                <div class="line number6 index5 alt1">6</div>
+                <div class="line number7 index6 alt2">7</div>
+                <div class="line number8 index7 alt1">8</div>
+                <div class="line number9 index8 alt2 highlighted">9</div>
+                <div class="line number10 index9 alt1 highlighted">10</div>
+                <div class="line number11 index10 alt2">11</div>
+                <div class="line number12 index11 alt1">12</div>
+                <div class="line number13 index12 alt2">13</div>
+                <div class="line number14 index13 alt1">14</div>
+                <div class="line number15 index14 alt2">15</div>
+                <div class="line number16 index15 alt1">16</div>
+                <div class="line number17 index16 alt2">17</div>
+                <div class="line number18 index17 alt1">18</div>
+                <div class="line number19 index18 alt2 highlighted">19</div>
+                <div class="line number20 index19 alt1">20</div>
+                <div class="line number21 index20 alt2">21</div>
+                <div class="line number22 index21 alt1">22</div>
+                <div class="line number23 index22 alt2">23</div>
+                <div class="line number24 index23 alt1">24</div>
+                <div class="line number25 index24 alt2">25</div>
+                <div class="line number26 index25 alt1">26</div>
+                <div class="line number27 index26 alt2">27</div>
+                <div class="line number28 index27 alt1 highlighted">28</div>
+                <div class="line number29 index28 alt2">29</div>
+                <div class="line number30 index29 alt1">30</div>
+                <div class="line number31 index30 alt2">31</div>
+                <div class="line number32 index31 alt1">32</div>
+                <div class="line number33 index32 alt2">33</div>
+                <div class="line number34 index33 alt1">34</div>
+                <div class="line number35 index34 alt2">35</div>
+                <div class="line number36 index35 alt1">36</div>
+                <div class="line number37 index36 alt2">37</div>
+                <div class="line number38 index37 alt1">38</div>
+                <div class="line number39 index38 alt2">39</div>
+                <div class="line number40 index39 alt1 highlighted">40</div></td>
+              <td class="code"><div class="container">
+                  <div class="line number1 index0 alt2"><code class="java comments">// 处理单个目录的任务</code></div>
+                  <div class="line number2 index1 alt1 highlighted"><code class="java keyword">public</code> <code class="java keyword">class</code> <code class="java plain">CountingTask </code><code class="java keyword">extends</code> <code class="java plain">RecursiveTask&lt;Integer&gt; {</code></div>
+                  <div class="line number3 index2 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">private</code> <code class="java plain">Path dir;</code></div>
+                  <div class="line number4 index3 alt1">&nbsp;</div>
+                  <div class="line number5 index4 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">public</code> <code class="java plain">CountingTask(Path dir) {</code></div>
+                  <div class="line number6 index5 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">this</code><code class="java plain">.dir = dir;</code></div>
+                  <div class="line number7 index6 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">}</code></div>
+                  <div class="line number8 index7 alt1">&nbsp;</div>
+                  <div class="line number9 index8 alt2 highlighted"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java color1">@Override</code></div>
+                  <div class="line number10 index9 alt1 highlighted"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">protected</code> <code class="java plain">Integer compute() {</code></div>
+                  <div class="line number11 index10 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">int</code> <code class="java plain">count = </code><code class="java value">0</code><code class="java plain">;</code></div>
+                  <div class="line number12 index11 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">List&lt;CountingTask&gt; subTasks = </code><code class="java keyword">new</code> <code class="java plain">ArrayList&lt;&gt;();</code></div>
+                  <div class="line number13 index12 alt2">&nbsp;</div>
+                  <div class="line number14 index13 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java comments">// 读取目录 dir 的子路径。</code></div>
+                  <div class="line number15 index14 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">try</code> <code class="java plain">(DirectoryStream&lt;Path&gt; ds = Files.newDirectoryStream(dir)) {</code></div>
+                  <div class="line number16 index15 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">for</code> <code class="java plain">(Path subPath : ds) {</code></div>
+                  <div class="line number17 index16 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">if</code> <code class="java plain">(Files.isDirectory(subPath, LinkOption.NOFOLLOW_LINKS)) {</code></div>
+                  <div class="line number18 index17 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java comments">// 对每个子目录都新建一个子任务。</code></div>
+                  <div class="line number19 index18 alt2 highlighted"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">subTasks.add(</code><code class="java keyword">new</code> <code class="java plain">CountingTask(subPath));</code></div>
+                  <div class="line number20 index19 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">} </code><code class="java keyword">else</code> <code class="java plain">{</code></div>
+                  <div class="line number21 index20 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java comments">// 遇到文件，则计数器增加 1。</code></div>
+                  <div class="line number22 index21 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">count++;</code></div>
+                  <div class="line number23 index22 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">}</code></div>
+                  <div class="line number24 index23 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">}</code></div>
+                  <div class="line number25 index24 alt2">&nbsp;</div>
+                  <div class="line number26 index25 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">if</code> <code class="java plain">(!subTasks.isEmpty()) {</code></div>
+                  <div class="line number27 index26 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java comments">// 在当前的 ForkJoinPool 上调度所有的子任务。</code></div>
+                  <div class="line number28 index27 alt1 highlighted"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">for</code> <code class="java plain">(CountingTask subTask : invokeAll(subTasks)) {</code></div>
+                  <div class="line number29 index28 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">count += subTask.join();</code></div>
+                  <div class="line number30 index29 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">}</code></div>
+                  <div class="line number31 index30 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">}</code></div>
+                  <div class="line number32 index31 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">} </code><code class="java keyword">catch</code> <code class="java plain">(IOException ex) {</code></div>
+                  <div class="line number33 index32 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">return</code> <code class="java value">0</code><code class="java plain">;</code></div>
+                  <div class="line number34 index33 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">}</code></div>
+                  <div class="line number35 index34 alt2"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java keyword">return</code> <code class="java plain">count;</code></div>
+                  <div class="line number36 index35 alt1"><code class="java spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="java plain">}</code></div>
+                  <div class="line number37 index36 alt2"><code class="java plain">}</code></div>
+                  <div class="line number38 index37 alt1">&nbsp;</div>
+                  <div class="line number39 index38 alt2"><code class="java comments">// 用一个 ForkJoinPool 实例调度“总任务”，然后敬请期待结果……</code></div>
+                  <div class="line number40 index39 alt1 highlighted"><code class="java plain">Integer count = </code><code class="java keyword">new</code> <code class="java plain">ForkJoinPool().invoke(</code><code class="java keyword">new</code> <code class="java plain">CountingTask(Paths.get(</code><code class="java string">"D:/"</code><code class="java plain">)));</code></div>
+                </div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p>在我的笔记本上，经多次运行这段代码，耗费的时间稳定在 600 豪秒左右。普通线程池（<code>Executors.newCachedThreadPool()</code>）耗时 1100 毫秒左右，足见工作窃取的优势。</p>
+    <p>结束本文前，我们来围观一个最神奇的结果：单线程算法（使用 <code>Files.walkFileTree(...)</code>）比这两个都快，平均耗时 550 毫秒！这警告我们并非引入多线程就能优化性能，并须要先经过多次测试才能下结论。</p>
+  </div>
+</div>
+</body>
+</htm>
+</html>

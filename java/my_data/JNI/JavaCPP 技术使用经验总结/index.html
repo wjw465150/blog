@@ -1,0 +1,917 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html class="dj_gecko dj_contentbox" xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-CN" lang="zh-CN"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>JavaCPP 技术使用经验总结</title>
+<link rel="schema.DC" href="http://purl.org/DC/elements/1.0/">
+<link rel="SHORTCUT ICON" href="index_files/favicon.ico">
+<meta name="DC.Rights" content="© Copyright IBM Corporation 2015">
+<meta name="Keywords" content="keyword1, keyword2, keyword3, tttjca">
+<meta name="DC.Date" scheme="iso8601" content="2015-09-10">
+<meta name="Source" content="v17 delivery:developerWorks">
+<meta name="Security" content="Public">
+<meta name="Abstract" content="本文是对 JNI 技术的一个补充方法，提出了替换 JNI、JNA 的一种开源技术。首先对 JavaCPP 技术进行简单介绍及对应于其他现有方案的介绍、对比。接下来，通过一个简单的示例让大家了解 JavaCPP 的工作原理。然后，介绍了 JavaCPP presets 子项目，最后通过若干个针对 presets 的示例来让大家了解如何使用它，本文主要提出了替换 JNI 的一种编程实现方式。">
+<meta name="Description" content="本文是对 JNI 技术的一个补充方法，提出了替换 JNI、JNA 的一种开源技术。首先对 JavaCPP 技术进行简单介绍及对应于其他现有方案的介绍、对比。接下来，通过一个简单的示例让大家了解 JavaCPP 的工作原理。然后，介绍了 JavaCPP presets 子项目，最后通过若干个针对 presets 的示例来让大家了解如何使用它，本文主要提出了替换 JNI 的一种编程实现方式。">
+<meta name="IBM.Effective" scheme="W3CDTF" content="2015-09-10">
+<meta name="Owner" content="developerWorks/China/IBM">
+<meta name="DC.Language" scheme="rfc1766" content="zh-CN">
+<meta name="IBM.SpecialPurpose" content="SP001">
+<meta name="IBM.Country" content="CN">
+<meta name="Robots" content="index,follow">
+<meta name="DC.Type" scheme="IBM_ContentClassTaxonomy" content="CT316">
+<meta name="DC.Subject" scheme="IBM_SubjectTaxonomy" content="TT300">
+<meta name="dW.ContentArea" content="1">
+<meta name="dW.Topic" content="487">
+
+<meta scheme="IBM_WTMCategory" name="IBM.WTMCategory" content="SOFDCJVACN">
+
+    <meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@developerworks">
+<meta property="og:title" content="JavaCPP 技术使用经验总结">
+<meta property="og:description" content="本文是对 JNI 技术的一个补充方法，提出了替换 JNI、JNA 的一种开源技术。首先对 JavaCPP 技术进行简单介绍及对应于其他现有方案的介绍、对比。接下来，通过一个简单的示例让大家了解 JavaCPP 的工作原理。然后，介绍了 JavaCPP presets 子项目，最后通过若干个针对 presets 的示例来让大家了解如何使用它，本文主要提出了替换 JNI 的一种编程实现方式。">
+    <meta property="og:image" content="http://www.ibm.com/developerworks/i/dw-social-201508.png">
+<link rel="canonical" href="http://www.ibm.com/developerworks/cn/java/j-lo-cpp/index.html">
+<!-- HEADER_SCRIPTS_AND_CSS_INCLUDE -->
+<link href="index_files/www.css" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/cnzh.css" rel="stylesheet" title="www" type="text/css">
+<!-- Masthead/footer -->
+<link href="index_files/dw-mfN2015-01.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/dw-article-6.css" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/dw-common-features.css" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/dw-local-site-v17-N2014-05.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+        <link href="index_files/dw-bluemix-regbar.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+<script async="" type="text/javascript" src="index_files/utag.js"></script><script type="text/javascript" src="index_files/www.js">//</script><script src="index_files/eluminate.js" type="text/javascript"></script>
+<script type="text/javascript" src="index_files/dw-www-v2.js">//</script><script src="index_files/Dialog.xd.js" charset="utf-8" type="text/javascript"></script>   
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script><script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script><!-- LEADSPACE_STYLES -->
+
+<script charset="utf-8" id="dojoIoScript2" src="index_files/cnzh-utf8.js" type="text/javascript"></script><script charset="utf-8" id="dojoIoScript3" src="index_files/gateway.js" type="text/javascript"></script><script src="index_files/move.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/TimedMoveable.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/_CssStateMixin.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/_FormMixin.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/_DialogMixin.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/DialogUnderlay.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/ContentPane.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/common.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/TooltipDialog.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/eluminate-1.js" type="text/javascript"></script><script src="index_files/Mover.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/Moveable.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/_ContentPaneResizeMixin.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/html.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/loading.xd.js" charset="utf-8" type="text/javascript"></script><script id="utag_ibm.main_694" src="index_files/utag.694.js" charset="utf-8" async="" type="text/javascript"></script><script id="utag_ibm.main_699" src="index_files/utag.699.js" charset="utf-8" async="" type="text/javascript"></script><script id="utag_ibm.main_752" src="index_files/utag.752.js" charset="utf-8" async="" type="text/javascript"></script><script id="utag_ibm.main_763" src="index_files/utag.763.js" charset="utf-8" async="" type="text/javascript"></script><script id="utag_ibm.main_797" src="index_files/utag.797.js" charset="utf-8" async="" type="text/javascript"></script><script src="index_files/common.xd-1.js" charset="utf-8" type="text/javascript"></script><script src="index_files/autoscroll.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/_LayoutWidget.xd.js" charset="utf-8" type="text/javascript"></script><script charset="utf-8" id="dojoIoScript4" src="index_files/profiling.js" type="text/javascript"></script><script id="tiqapp" src="index_files/utag.v.js" charset="utf-8" async="" type="text/javascript"></script><script charset="utf-8" id="dojoIoScript5" src="index_files/blackwhite_lists.json.js" type="text/javascript"></script><script charset="utf-8" id="dojoIoScript6" src="index_files/atrk.js" type="text/javascript"></script><script src="index_files/50200000.js" type="text/javascript" language="javascript"></script><script src="index_files/cookie-id.js" type="text/javascript" language="javascript"></script><script src="index_files/rules_50200000.js" type="text/javascript" language="javascript"></script><script src="index_files/dispatcher-v3.js" type="text/javascript" language="javascript"></script><script type="text/javascript" src="index_files/yahoo-min.js"></script><script type="text/javascript" src="index_files/cp-v3.js"></script><script type="text/javascript" src="index_files/json-min.js"></script></head>
+<body aria-busy="false" class="v17" id="ibm-com">
+
+	<div style="margin-top: 0px;" id="ibm-top" class="ibm-landing-page ibm-no-scroll"><img src="index_files/ibm_logo_print.png" id="ibm-print-masthead" alt="IBM Print" height="15" width="43">
+
+<!-- MASTHEAD_BEGIN -->		
+<div role="banner" id="ibm-masthead">
+
+    <!-- TOP ROW -->    
+	<div id="dw-masthead-top-row">
+		<ul id="ibm-mast-options-dw" role="toolbar" aria-label="Masthead navigation">
+			<li id="dw-mast-top-4" role="presentation">
+				<a href="http://www.ibm.com/developerworks/cn/" tabindex="0"><img src="index_files/dwn-dw-badge.png" alt="dW" aria-label="dW" height="22" width="43"></a>
+			</li>
+			<li id="dw-mast-top-0" role="presentation">
+				<div id="dw-mast-signin">
+					<a id="dw-mf-signin-link" class="" href="http://www.ibm.com/developerworks/dwwi/jsp/ssologin.jsp?d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F&amp;lang=zh_CN&amp;a=dwmav" title="" tabindex="2">登录</a>
+					<span class="dw-mf-signin-spacer">|</span>
+					<a id="dw-mf-reg-link" class="" href="http://www.ibm.com/developerworks/dwwi/jsp/ssoregister.jsp?d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F&amp;lang=zh_CN&amp;a=dwmav" title="" tabindex="3">注册</a>
+				</div>
+				<div id="dw-mast-auth-link" class="dw-mf-hide">
+					<a class="authenticated ibm-active" href="#" role="button" tabindex="2"></a>
+					<ul id="dw-mast-auth-menu" class="dw-mf-hide">
+						<li class="dw-mast-auth-menu-title" aria-hidden="true">developerWorks 社区</li>
+						<li>
+							<span class="dw-mast-auth-menu-arrow" aria-hidden="true">›</span><a href="http://www.ibm.com/developerworks/community/profiles/html/myProfileView.do?lang=zh" tabindex="3">我的概要信息</a>
+						</li>
+						<li>
+							<span class="dw-mast-auth-menu-arrow" aria-hidden="true">›</span><a href="http://www.ibm.com/developerworks/community/groups/service/html/mycommunities?lang=zh" tabindex="4">我的社区</a>
+						</li>
+						<li>
+							<span class="dw-mast-auth-menu-arrow" aria-hidden="true">›</span><a href="http://www.ibm.com/developerworks/community/news/?lang=zh" tabindex="5">设置</a>
+						</li>
+						<li class="dw-mast-auth-menu-divider"><hr></li>
+						<li>
+							<span class="dw-mast-auth-menu-arrow" aria-hidden="true">›</span><a id="dw-mast-signout-link" href="http://www.ibm.com/developerworks/dwwi/jsp/ssologout.jsp?d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2F&amp;a=dwmav" tabindex="6">退出</a>
+						</li>
+					</ul>				
+				</div>
+			</li>
+			<li id="dw-mast-top-1">
+				<div></div>
+			</li>
+			<li id="dw-mast-top-3" role="presentation">
+				<a href="http://www.ibm.com/cn/zh/" tabindex="1">IBM</a>
+			</li>
+		</ul>
+	</div>
+
+    <!-- BOTTOM ROW -->
+	<div id="ibm-universal-nav-dw" aria-label="Site map">
+		<ul id="ibm-unav-links-dw">
+			<li id="ibm-unav-home-dwlogo">
+				<a href="http://www.ibm.com/developerworks/cn/"><img src="index_files/dwn-dw-wordmark.png" alt="developerWorks®" height="28" width="225"></a>
+			</li>
+		</ul>
+		<ul id="ibm-menu-links-dw" class="ibm-menu-links-dw-cn" role="toolbar" aria-label="Site map">
+			<li id="dw-mast-nav-0" role="presentation"><a href="http://www.ibm.com/developerworks/cn/topics/" tabindex="0">技术主题</a></li>
+			<li id="dw-mast-nav-1" role="presentation"><a href="http://www.ibm.com/developerworks/cn/downloads/" tabindex="0">软件下载</a></li>
+			<li id="dw-mast-nav-2" role="presentation"><a href="http://www.ibm.com/developerworks/community/?lang=zh" tabindex="0">社区</a></li>
+			<li id="dw-mast-nav-3" role="presentation"><a href="https://www.ibm.com/developerworks/community/groups/service/html/communityview?communityUuid=6d7f9e5d-5f89-4767-a006-a81b8d186370&amp;lang=zh" tabindex="0">技术讲座</a></li>
+		</ul>
+		<form id="ibm-search-form" action="http://www.ibm.com/search/csass/search/" method="get" name="form1" aria-label="搜索 developerWorks" role="search">
+			<p>
+				<label for="q"><span class="ibm-access">搜索 developerWorks</span></label>
+				<input id="q" name="q" value="搜索 developerWorks" maxlength="100" type="text">
+				<input name="sn" value="dw" type="hidden">
+				<input name="lang" value="zh" type="hidden">
+				<input name="cc" value="CN" type="hidden">
+				<input name="en" value="utf" type="hidden">
+				<input name="hpp" value="20" type="hidden">
+				<input name="dws" value="cndw" type="hidden">
+				<input name="lo" value="zh" type="hidden">
+				<input id="ibm-search" class="ibm-btn-search" value="提交" type="submit">
+			</p>
+		</form>
+	</div>    
+	
+<div class="" aria-label="社交工具" role="navigation" style="display: block;" id="ibm-social-tools"><ul aria-label="Social tool list" role="toolbar"><li><a tabindex="0" role="button" dojoattrid="0" rel="print" href="#" title="打印本页面" class="ibm-share-print">打印本页面</a></li><li><a tabindex="-1" role="button" dojoattrid="1" rel="email" href="#" title="用电子邮件发送本页面" class="ibm-share-email">用电子邮件发送本页面</a></li><li></li><li></li><li><a class="ibm-share-weibo" tabindex="-1" role="button" dojoattrid="2" rel="新浪微博" title="新浪微博" href="http://service.weibo.com/share/share.php?title=JavaCPP%20%E6%8A%80%E6%9C%AF%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93&amp;url=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F&amp;language=zh_cn" onclick="">新浪微博</a></li><li><a class="ibm-share-renren" tabindex="-1" role="button" dojoattrid="3" rel="人人网" title="人人网" href="http://share.renren.com/share/buttonshare?title=JavaCPP%20%E6%8A%80%E6%9C%AF%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93&amp;link=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F" onclick="">人人网</a></li><li><a class="dwcn-tencent-link" tabindex="-1" role="button" dojoattrid="4" rel="腾讯微博" title="腾讯微博" href="http://v.t.qq.com/share/share.php?title=JavaCPP%20%E6%8A%80%E6%9C%AF%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93&amp;url=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F" onclick="">腾讯微博</a></li><li><a class="dwcn-sohu-link" tabindex="-1" role="button" dojoattrid="5" rel="搜狐微博" title="搜狐微博" href="http://t.sohu.com/third/post.jsp?title=JavaCPP%20%E6%8A%80%E6%9C%AF%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93%20&amp;link=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F" onclick="">搜狐微博</a></li><li><a class="dwcn-netease-link" tabindex="-1" role="button" dojoattrid="6" rel="网易微博" title="网易微博" href="http://t.163.com/article/user/checkLogin.do?info=JavaCPP%20%E6%8A%80%E6%9C%AF%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93%20http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F" onclick="">网易微博</a></li><li><a class="ibm-share-digg" title="Digg" href="http://digg.com/submit?phase=2&amp;url=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F&amp;title=JavaCPP%20%E6%8A%80%E6%9C%AF%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93" rel="digg" dojoattrid="7" role="button" tabindex="-1" onclick="">Digg</a></li><li><a class="ibm-share-facebook" title="Facebook" href="http://www.facebook.com/sharer.php?u=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F&amp;t=JavaCPP%20%E6%8A%80%E6%9C%AF%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93" rel="facebook" dojoattrid="8" role="button" tabindex="-1" onclick="">Facebook</a></li><li><a class="ibm-share-twitter" title="Twitter" href="http://twitter.com/?status=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F%20-%20JavaCPP%20%E6%8A%80%E6%9C%AF%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93" rel="twitter" dojoattrid="9" role="button" tabindex="-1" onclick="">Twitter</a></li><li><a class="ibm-share-delicious" title="Delicious" href="http://delicious.com/post?url=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F&amp;title=JavaCPP%20%E6%8A%80%E6%9C%AF%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93" rel="delicious" dojoattrid="10" role="button" tabindex="-1" onclick="">Delicious</a></li><li><a class="ibm-share-linkedin" title="Linked In" href="http://www.linkedin.com/shareArticle?mini=true&amp;url=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F&amp;title=JavaCPP%20%E6%8A%80%E6%9C%AF%E4%BD%BF%E7%94%A8%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93" rel="linkedin" dojoattrid="11" role="button" tabindex="-1" onclick="">Linked In</a></li></ul></div></div>
+<div id="fdiv" class="ibm-access"></div><!-- MASTHEAD_END -->
+	    
+<!-- LAYOUT -->
+<!-- LEADSPACE_BEGIN --> 
+<div role="main" id="ibm-access-cntr"><div id="ibm-leadspace-head">
+	<!-- LEADSPACE_BODY_BEGIN --> 
+	<div id="ibm-leadspace-body">
+		<!-- Navigation_Trail_BEGIN -->
+      <ul aria-label="Bread Crumbs" role="navigation" id="ibm-navigation-trail"><li><a href="http://www.ibm.com/developerworks/cn/">developerWorks 中国</a></li><li><a href="http://www.ibm.com/developerworks/cn/topics/">技术主题</a></li><li><a href="http://www.ibm.com/developerworks/cn/java/">Java technology</a></li><li><a href="http://www.ibm.com/developerworks/cn/views/java/libraryview.jsp">文档库</a></li></ul>
+		<!-- END_Navigation_Trail -->
+			<!-- Title_Subtitle -->
+			<h1>JavaCPP 技术使用经验总结</h1>
+	</div>
+	<!-- LEADSPACE_BODY_END --> 
+	<!-- SUMMARY_BEGIN -->
+	<div id="dw-summary-area" class="dw-summary-columns">
+		<div class="ibm-col-6-4">
+		<p>本文是对 JNI 技术的一个补充方法，提出了替换 JNI、JNA 的一种开源技术。首先对 JavaCPP 技术进行简单介绍及对应于其他现有方案的介绍、对比。接下来，通过一个简单的示例让大家了解 JavaCPP 的工作原理。然后，介绍了 JavaCPP presets 子项目，最后通过若干个针对 presets 的示例来让大家了解如何使用它，本文主要提出了替换 JNI 的一种编程实现方式。</p>
+		<p class="ibm-no-print ibm-ind-link">
+
+			
+			<span id="nCmts"><span>0</span><img class="dw-cmts-arrow" alt="" src="index_files/dw-cmts-arrow.png" height="7" width="7"> <a href="#icomments" class="dw-cmt-link">评论：</a></span>
+		</p>
+		</div>
+		<div class="ibm-col-6-2 dw-toc-margin">
+			<p class="dw-summary-author"><a role="button" href="#authorN10015" class="ibm-popup-link" onclick="">周 明耀</a>, 技术带头人、项目经理, HikVision</p>
+<div id="authorN10015" class="ibm-common-overlay"><div class="ibm-head"><p><a href="#close" class="ibm-common-overlay-close">关闭 [x]</a></p></div><div class="ibm-body"><div class="ibm-main"><div class="ibm-title"><!--this is where the h2 usually
+                                    goes--></div><div class="ibm-container ibm-alternate"><div class="ibm-container-body">
+<p><!--.-->
+<img class="dw-summary-bio-image-x64" alt="zmy" src="index_files/zmy.jpg" width="80">技术狂热爱好者、自由撰稿人，2004 年毕业于浙江大学，目前在国内一家著名物联网企业工作，担任大数据项目组项目经理、技术带头人，对 Java、Hadoop、开源技术、Linux 内核、MySQL 数据库等有较多研究。您可以通过 developerWorks 社区与<a href="https://www.ibm.com/developerworks/mydeveloperworks/profiles/user/zhoumingyao">周明耀</a>进行交流。</p><br><br></div></div></div></div><div class="ibm-footer"><!----></div></div>
+			<p class="dw-summary-date">2015 年 9 月 10 日</p>
+			
+
+
+			<div aria-hidden="true" class="ibm-container" id="dw-toc"><div class="ibm-container-body"><ul class="ibm-twisty"><li><a href="#toggle" class="ibm-twisty-trigger ibm-twisty-trigger-closed"><img src="index_files/c.gif" alt="+"></a><span class="ibm-twisty-head">内容</span><div style="display: none;" class="ibm-twisty-body"><ul style="font-size:0.8em" class="ibm-link-list">
+<li><a class="ibm-anchor-down-em-link" href="#2.JavaCPP%20%E7%AE%80%E4%BB%8B%7Coutline">JavaCPP 简介</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#3.JavaCPP%20%E7%A4%BA%E4%BE%8B%7Coutline">JavaCPP 示例</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#4.JavaCPP-Presents%20%E7%AE%80%E4%BB%8B%7Coutline">JavaCPP-Presents 简介</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#5.JavaCPP-Presents%20%E7%A4%BA%E4%BE%8B%7Coutline">JavaCPP-Presents 示例</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#6.JavaCPP%20%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%7Coutline">JavaCPP 性能测试</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#7.%20%E7%BB%93%E6%9D%9F%E8%AF%AD%7Coutline">结束语</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#resources">参考资料 </a></li>
+<li><a class="ibm-anchor-down-em-link" href="#icomments">评论</a></li></ul></div></li></ul></div></div>
+		</div>
+	</div>
+	<!-- SUMMARY_END -->
+</div><div id="ibm-pcon">
+
+<!-- BEGIN_IBM-CONTENT -->
+<div id="ibm-content">
+
+<!-- BEGIN_IBM-CONTENT-BODY -->
+<div id="ibm-content-body">
+
+<!-- BEGIN_IBM-CONTENT-MAIN -->
+<div id="ibm-content-main">
+
+<!-- 1_1_COLUMN_BEGIN -->
+<div class="ibm-columns">
+<div class="ibm-col-1-1"><div class="dw-article-sidebar dw-bluemix" id="dwc-exp-a"><img src="index_files/bluemix-graphic.png" alt="" height="64" width="64"><p>在 IBM Bluemix 云平台上开发并部署您的下一个应用。</p><p class="ibm-button-link-alternate dw-button-green"><a id="tutc-sbar-bmix-home-btn-ABa" href="https://developer.ibm.com/sso/bmregistration?lang=zh_CN&amp;ca=dwchina-_-bluemix-_-j-lo-cpp-_-sidebar" class="dw-button-large">开始您的试用</a></p></div>
+
+<h2 id="2.JavaCPP 简介|outline">JavaCPP 简介</h2><p>JavaCPP 是一个开源库，它提供了在 Java 中高效访问本地 C++的方法。采用 JNI 技术实现，所以支持所有 Java 实现包括 Android 系统，Avian 和 RoboVM。</p><ul class="ibm-bullet-list"><li> Android</li></ul><p>一种基于 Linux 的自由及开放源代码的操作系统，主要使用于移动设备，如智能手机和平板电脑，由 Google 公司和开放手机联盟领导及开发。</p><ul class="ibm-bullet-list"><li> Avian</li></ul><a id="OLE_LINK2"></a><p>Avian 是一个轻量级的 Java
+ 虚拟机和类库，提供了 Java 特性的一个有用的子集，适合开发跨平台、自包容的应用程序。它实现非常快速而且体积小，主要特性包括如下四点：</p><a id="OLE_LINK1"></a><ol type="1"><li> 类似于 HotSpot JVM 的 JIT 编译器，支持快速方法执行；</li><li>
+ 采用 JVM 的复制算法，即将现有的内存空间分为两快，每次只使用其中一块，在垃圾回收时将正在使用的内存中的存活对象复制到未被使用的内存块中，之后，清除正在使用的内存块中的所有对象，交换两个内存的角色，完成垃圾回收。这样可以确保内存回收过程中内存暂停服务的时间较短，并且内存的使用空间局限性较小；</li><li> JVM 内存区域里面的本地栈快速分配，没有同步开销；</li><li> 操作系统信号量方式解决了空指针问题，避免了不必要的分支。</li></ol><ul class="ibm-bullet-list"><li> RoboVM</li></ul><p>RoboVM 编译器可以将 Java 字节码翻译成 ARM 或者 x86 平台上的原生代码，应用可直接在 CPU 上运行，无需其他解释器或者虚拟机。RoboVM 同时包含一个 Java 到 Objective-C 的桥，可像其他 Java 对象一样来使用 Objective-C 对象。大多数 UIKit 已经支持，而且将会支持更多的框架。</p><p>总的来说，JavaCPP 提供了一系列的 Annotation 将 Java 代码映射到 C++代码，并使用一个可执行的 jar 包将 C++代码转化为可以从 JVM 内调用的动态链接库文件。</p><p>与其他技术相比，特性总结如下表 1 所示。</p><h5 id="2.0.1. 表 1. 类似技术介绍或特点|outline">表 1. 类似技术介绍或特点</h5><table class="ibm-data-table" border="0" cellpadding="0" cellspacing="0"><thead xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><tr><th> 技术名称 </th><th> 技术介绍 </th></tr></thead><tbody xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><tr><td> CableSwig </td><td> 用于针对 Tcl 和 Python 语言创建接口 </td></tr><tr><td> JNIGeneratorApp </td><td> 所有用于 SWT 的 C 代码都是通过它来创建的 </td></tr><tr><td> cxxwrap </td><td> 用于生成针对 C++的 Java JNI 包、HTML 文档、用户手册 </td></tr><tr><td> JNIWrapper </td><td> 商业版本，可以帮助实现 Java 和本地代码之间的无缝结合 </td></tr><tr><td> Platform Invoke </td><td> 微软发布的一个工具 </td></tr><tr><td> GlueGen </td><td> 针对 C 语言的一个工具，帮助生成 JNI 代码 </td></tr><tr><td> LWJGL Generator </td><td> JNI 代码生成器 </td></tr><tr><td> ctypes </td><td> 针对 Python 的接口代码生成器 </td></tr><tr><td> JNA </td><td> JNA（Java Native Access）提供一组 Java 工具类用于在运行期动态访问系统本地库（native
+ library：如 Window 的 dll）而不需要编写任何 Native/JNI 代码。开发人员只要在一个 Java 接口中描述目标 native
+ library 的函数与结构，JNA 将自动实现 Java 接口到 native function 的映射。</td></tr><tr><td> JNIEasy </td><td> 替换 JNA 的一种技术 </td></tr><tr><td> JNative </td><td> Windows 版本的库 (DLL)，提供了 JNI 代码生成 </td></tr><tr><td> fficxx </td><td> 针对 haskell 模型的代码生成器，主要生成 C 语言 </td></tr><tr><td> JavaCPP </td><td> 更加自然高效，它支持大部分的 C++语法特性。目前已经能成功封装 OpenCV, FFmpeg, libdc1394, PGR
+ FlyCapture, OpenKinect, videoInput, and
+ ARToolKitPlus。除此之外，它还能直接把 C/C++的头文件转化成 Java 类，能自动生成 JNI 代码，编译成本地库，开发人员无需编写繁琐的 C++、JNI 代码，从而提高开发效率。
+ </td></tr></tbody></table><div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><h2 id="3.JavaCPP 示例|outline">JavaCPP 示例</h2><p>为了调用本地方法，JavaCPP 生成了对应的 JNI 代码，并且把这些代码输入到 C++编译器，用来构建本地库。使用了 Annotations 特性的 Java 代码在运行时会自动调用 Loader.load() 方法从 Java 资源里载入本地库，这里指的资源是工程构建过程中配置好的。</p><p>我们先来演示一个例子，这是一个简单的注入/读出方法，类似于 JavaBean 的工作方式。清单 1 所示的 LegacyLibrary.h 包含了 C++类。</p><h5 id="3.0.1. 清单 1. LegacyLibrary.h|outline">清单 1.
+ LegacyLibrary.h</h5><div class="codesection"><pre class="displaycode">#include &lt;string&gt;
+
+namespace LegacyLibrary {
+ class LegacyClass {
+ public:
+ const std::string&amp; get_property() { return property; }
+ void set_property(const std::string&amp; property) { this-&gt;property = property; }
+ std::string property;
+ };
+}</pre></div><p>接下来定义一个 Java 类，驱动 JavaCPP 来完成调用 C++代码。</p><h5 id="3.0.2. 清单 2. LegacyLibrary.java|outline">清单 2.
+ LegacyLibrary.java</h5><div class="codesection"><pre class="displaycode">import org.bytedeco.javacpp.*;
+import org.bytedeco.javacpp.annotation.*;
+
+@Platform(include="LegacyLibrary.h")
+@Namespace("LegacyLibrary")
+public class LegacyLibrary {
+ public static class LegacyClass extends Pointer {
+ static { Loader.load(); }
+ public LegacyClass() { allocate(); }
+ private native void allocate();
+
+ // to call the getter and setter functions 
+ public native @StdString String get_property(); public native void set_property(String property);
+
+ // to access the member variable directly
+ public native @StdString String property(); public native void property(String property);
+ }
+
+ public static void main(String[] args) {
+ // Pointer objects allocated in Java get deallocated once they become unreachable,
+ // but C++ destructors can still be called in a timely fashion with Pointer.deallocate()
+ LegacyClass l = new LegacyClass();
+ l.set_property("Hello World!");
+ System.out.println(l.property());
+ }
+}</pre></div><p>以上两个类放在一个目录下面，接下来运行一系列编译指令，如清单 3 所示。</p><h5 id="3.0.3. 清单 3. 运行命令|outline">清单 3. 运行命令</h5><div class="codesection"><pre class="displaycode">$ javac -cp javacpp.jar LegacyLibrary.java 
+$ java -jar javacpp.jar LegacyLibrary
+$ java -cp javacpp.jar LegacyLibrary
+Hello World!</pre></div><p>我们看到清单 3 最后运行输出了一行“Hello
+ World！”，这是 LegacyLibrary 类里面定义好的，通过一个 setter 方法注入字符串，getter 方法读出字符串。</p><p>我们可以看到文件夹里面内容的变化，刚开始的时候只有.h、.java 两个文件，清单 3 所示的 3 个命令运行过后，生成了 class 文件及本地方法 (native
+ method) 对应的.so 文件。</p><h5 id="3.0.4. 清单 4. 文件夹内容变化|outline">清单 4. 文件夹内容变化</h5><div class="codesection"><pre class="displaycode">/home/zhoumingyao/javacpp-1.0-bin/javacpp-bin
+[root@node1:2 javacpp-bin]# ls -lrt
+总用量 348
+-rw-r--r-- 1 root root 30984 7 月 11 00:59 LICENSE.txt
+-rw-r--r-- 1 root root 21986 7 月 11 08:52 README.md
+-rw-r--r-- 1 root root 31955 7 月 11 08:53 CHANGELOG.md
+-rw-r--r-- 1 root root 243318 7 月 11 12:20 javacpp.jar
+-rw-r--r-- 1 root root 285 8 月 11 16:07 LegacyLibrary.h
+-rw-r--r-- 1 root root 1026 8 月 11 16:13 LegacyLibrary.java
+-rw-r--r-- 1 root root 643 8 月 11 16:13 LegacyLibrary$LegacyClass.class
+-rw-r--r-- 1 root root 794 8 月 11 16:13 LegacyLibrary.class
+drwxr-xr-x 2 root root 4096 8 月 11 16:13 linux-x86_64
+[root@node1:2 javacpp-bin]# ls -lrt linux-x86_64
+总用量 36
+-rwxr-xr-x 1 root root 35784 8 月 11 16:13 libjniLegacyLibrary.so</pre></div><div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><h2 id="4.JavaCPP-Presents 简介|outline">JavaCPP-Presents 简介</h2><p>为了方便用户使用 JavaCPP，该项目下属有一个 presets 项目，它将一些常用的项目，例如 OpenCV、FFMpeg 等，都编译好了让用户通过调用 Jar 包的方式直接使用。当然，它也允许用户通过简便的方式上传自己做的本地库文件，通过将 jar 包上传到 Maven 仓库的方式共享给其他用户。</p><p>如果我们想要使用 JavaCPP-presents，我们需要下载 presets 源代码或者已经编译好的 jar 文件。</p><p>具体下载地址：<a href="https://github.com/bytedeco/javacpp-presets">https://github.com/bytedeco/javacpp-presets</a>。</p><p>编译好的 jar 文件有很多，主要是 JavaCPP 支持的项目，如图 1 所示。</p><h5 id="4.0.1. 图 1. JavaCPP-presents binary 目录|outline">图 1.
+ JavaCPP-presents binary 目录</h5><img alt="图 1. JavaCPP-presents binary 目录" src="index_files/img001.png" width="581"><p>JavaCPP
+ Presets 模型包括了很多广泛被使用到的 C/C++类库的 Java 配置和接口类。编译器结合 C/C++的头文件，使用 org.bytedeco.javacpp.presets 包里面的配置文件来创建 Java 接口文件，这样就可以产生类似于 JNI 的库，Java 程序可以调用底层的 C/C++库。它的机制较为方便，可以被用在 Java 平台、Android 平台。</p><p>这个项目提供了两种下载方式，一种是集成了常用库的 jar 包，支持 Android、Linux Fedora、Mac OS
+ X、Windows 等操作系统，另一种是该项目的源代码，您可以自己编译适用于自己开发环境的 jar 包，当然如果您希望针对自己的 c++工程制作 jar 包，可以采用其他方式。</p><p>如果下载的是 JavaCPP-presets 源代码包，则 Centos 环境（该环境默认不被支持）需要安装 JDK、Maven、GCC，这样才能编译项目成为需要的 Jar 包。</p><p>配置 Maven 的方式如清单 5 所示。</p><h5 id="4.0.2. 清单 5. Linux 上配置 Maven|outline">清单 5.
+ Linux 上配置 Maven</h5><div class="codesection"><pre class="displaycode">1。下载 Maven 并上传到服务器，这里上传到了/root 目录下面；
+2。vi /etc/profile
+在最后两行加上代码：
+export MAVEN_HOME=/root/apache-maven-3.1.1
+export PATH=${MAVEN_HOME}/bin:${PATH}
+3。source /etc/profile
+4。[root@node1:2 bin]# mvn -v
+Apache Maven 3.1.1 (0728685237757ffbf44136acec0402957f723d9a; 2013-09-17 23:22:22+0800)
+Maven home: /root/apache-maven-3.1.1
+Java version: 1.8.0_45, vendor: Oracle Corporation
+Java home: /usr/share/jdk1.8.0_45/jre
+Default locale: zh_CN, platform encoding: UTF-8
+OS name: "linux", version: "2.6.32-504.el6.x86_64", arch: "amd64", family: "unix"</pre></div><p>如果您想要尝试完全动手编译 presets 项目，那您可以在 Maven 的 pom.xml 文件里面配置，如清单 6 所示，这样您可以下载到所有需要的代码。</p><h5 id="4.0.3. 清单 6. 下载全部代码|outline">清单 6. 下载全部代码</h5><div class="codesection"><pre class="displaycode">&lt;dependency&gt;
+ &lt;groupId&gt;org.bytedeco.javacpp-presets&lt;/groupId&gt;
+ &lt;artifactId&gt;${moduleName}&lt;/artifactId&gt;
+ &lt;version&gt;${moduleVersion}-1.0&lt;/version&gt;
+ &lt;/dependency&gt;</pre></div><p>JavaCPP-Presents 已经默认包含了一些开源库，例如 OpenCV、FFmpeg、FlyCapture、GSL、CUDA、Tesseract 等等，我们可以通过运行 Maven 命令来编译、构建.so 文件和 jar 文件，命令是$
+ mvn install --projects
+ .,opencv,ffmpeg,flycapture,libdc1394,libfreenect,videoinput,artoolkitplus,etc.</p><p>如清单 7 所示，我们编译 ffmpeg 库，我这里只截取小部分的打印输出，都是到 Maven 仓库下载 jar 包的过程输出。</p><h5 id="4.0.4. 清单 7. 编译 ffmpeg 库|outline">清单 7. 编译 ffmpeg 库</h5><div class="codesection"><pre class="displaycode">[root@localhost javacpp-presets]# mvn install --projects ffmpeg
+[INFO] Scanning for projects...
+Downloading: http://repo.maven.apache.org/maven2/org/sonatype/plugins/
+                nexus-staging-maven-plugin/1.6/nexus-staging-maven-plugin-1.6.pom
+Downloaded: http://repo.maven.apache.org/maven2/org/sonatype/plugins/
+                nexus-staging-maven-plugin/1.6/nexus-staging-maven-plugin-1.6.pom (12 KB at 0.7 KB/sec)
+Downloading: http://repo.maven.apache.org/maven2/org/sonatype/
+                nexus/maven/nexus-staging/1.6/nexus-staging-1.6.pom
+Downloaded: http://repo.maven.apache.org/maven2/org/sonatype/
+                nexus/maven/nexus-staging/1.6/nexus-staging-1.6.pom (3 KB at 3.8 KB/sec)
+Downloading: http://repo.maven.apache.org/maven2/org/sonatype/
+                nexus/maven/nexus-maven-plugins/1.6/nexus-maven-plugins-1.6.pom
+Downloaded: http://repo.maven.apache.org/maven2/org/sonatype/
+                nexus/maven/nexus-maven-plugins/1.6/nexus-maven-plugins-1.6.pom (17 KB at 7.8 KB/sec)
+Downloading: http://repo.maven.apache.org/maven2/org/sonatype/
+                buildsupport/public-parent/5/public-parent-5.pom</pre></div><div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><h2 id="5.JavaCPP-Presents 示例|outline">JavaCPP-Presents 示例</h2><p>讲解程序前，我们先来了解一下 cppbuild.sh 这个文件，这个脚本在根目录下面，它主要功能是被用来构建和创建本地 C++库。例如清单 8 所示，我们编译 ffmpeg 库，</p><h5 id="5.0.1. 清单 8. 编译 ffmpeg 库|outline">清单 8. 编译 ffmpeg 库</h5><div class="codesection"><pre class="displaycode">./cppbuild.sh -platform linux-x86_64 install ffmpeg</pre></div><p>脚本的第一个参数是-platform，值是 linux-x86_64 判断代码如清单 9 所示，如果第一个参数是-platform，那么初始化变量 PLATFORM，然后参数位移动一位到第二个参数，如果第二个参数是 install，那么初始化变量 OPERATION 为 install，如果第二个参数是 clean，初始化变量 OPERATION 为 clean。这里是 install。</p><h5 id="5.0.2. 清单 9. 判断平台|outline">清单 9. 判断平台</h5><div class="codesection"><pre class="displaycode">while [[ $# &gt; 0 ]]; do
+ case "$1" in
+ -platform)
+ shift
+ PLATFORM="$1"
+ ;;
+ install)
+ OPERATION=install
+ ;;
+ clean)
+ OPERATION=clean
+ ;;
+ *)
+ PROJECTS+=("$1")
+ ;;
+ esac
+ shift
+done</pre></div><p>确定了需要 install 操作后，程序进入实际执行阶段，如清单 10 所示。</p><h5 id="5.0.3. 清单 10. install 执行阶段|outline">清单 10.
+ install 执行阶段</h5><div class="codesection"><pre class="displaycode">case $OPERATION in
+ install)
+ if [[ ! -d $PROJECT ]]; then
+ echo "Warning: Project \"$PROJECT\" not found"
+ else
+ echo "Installing \"$PROJECT\""
+ mkdir -p $PROJECT/cppbuild
+ pushd $PROJECT/cppbuild
+ source ../cppbuild.sh
+ popd
+ fi</pre></div><p>清单 10 所示代码，创建 ffmpeg/cpubuild 目录，接下来将目录压入目录栈，在当前 bash 环境下读取并执行 ffmpeg 目录下的 cpubuild.sh 中的命令，最后将目录弹出目录栈。从这里可以看出，真实执行的是 ffmpeg 目录下面的 cpubuild.sh 命令，它的代码在这里不做展开，主要执行的是一连串的 make 命令，编译 C++代码、生成.so 文件。</p><h3 id="5.1. 示例程序 1：自己写一个简单的 FFmpeg 库|outline">示例程序 1：自己写一个简单的 FFmpeg 库</h3><p>我们这里所举例的例子是一个调用 FFmpeg 多媒体库的示例。FFmpeg 是一套可以用来记录、转换数字音频、视频，并能将其转化为流的开源计算机程序。采用 LGPL 或 GPL 许可证。它提供了录制、转换以及流化音视频的完整解决方案。</p><p>如果想要下载 FFmpeg 源代码或者库文件，可以在这里查找：<a href="http://ffmpeg.org/">http://ffmpeg.org/</a>。</p><p>如果想要查看 FFmpeg 的 API，可以在这里查找：<a href="http://bytedeco.org/javacpp-presets/ffmpeg/apidocs/">http://bytedeco.org/javacpp-presets/ffmpeg/apidocs/</a>。</p><p>运行整个程序，我们需要三个文件，大家把这三个文件放在同一个目录下面。</p><p>首先是 C 的源代码，这里只引用一小部分，剩余的可以到 github 上看，作者是 Stephen Dranger。</p><h5 id="5.0.3. 清单 11. C 源代码|outline">清单 11. C 源代码</h5><div class="codesection"><pre class="displaycode">//
+// This tutorial was written by Stephen Dranger (dranger@gmail.com).
+//
+// Code based on a tutorial by Martin Bohme (boehme@inb.uni-luebeckREMOVETHIS.de)
+// Tested on Gentoo, CVS version 5/01/07 compiled with GCC 4.1.1
+
+// A small sample program that shows how to use libavformat and libavcodec to
+// read video from a file.
+//
+// Use the Makefile to build all examples.
+//
+// Run using
+//
+// tutorial01 myvideofile.mpg
+//
+// to write the first five frames from "myvideofile.mpg" to disk in PPM
+// format.
+
+#include &lt;libavcodec/avcodec.h&gt;
+#include &lt;libavformat/avformat.h&gt;
+#include &lt;libswscale/swscale.h&gt;
+
+#include &lt;stdio.h&gt;
+
+void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame) {
+FILE *pFile;
+char szFilename[32];
+int y;
+
+// Open file
+sprintf(szFilename, "frame%d.ppm", iFrame);
+pFile=fopen(szFilename, "wb");
+if(pFile==NULL)
+return;
+
+// Write header
+fprintf(pFile, "P6\n%d %d\n255\n", width, height);
+
+// Write pixel data
+for(y=0; y&lt;height; y++)
+fwrite(pFrame-&gt;data[0]+y*pFrame-&gt;linesize[0], 1, width*3, pFile);
+
+// Close file
+fclose(pFile);
+}
+
+int main(int argc, char *argv[]) {
+AVFormatContext *pFormatCtx = NULL;
+int i, videoStream;
+AVCodecContext *pCodecCtx = NULL;
+AVCodec *pCodec = NULL;
+AVFrame *pFrame = NULL; 
+AVFrame *pFrameRGB = NULL;
+AVPacket packet;
+int frameFinished;
+int numBytes;
+uint8_t *buffer = NULL;
+
+AVDictionary *optionsDict = NULL;
+struct SwsContext *sws_ctx = NULL;</pre></div><p>接下来，需要创建一个 pom.xml 文件，这样可以利用 Maven 仓库下载我们需要的 FFmpeg 库文件。pom.xml 文件内容如清单 12 所示。</p><h5 id="5.1.2. 清单 12. pom.xml 文件|outline">清单 12. pom.xml 文件</h5><div class="codesection"><pre class="displaycode">&lt;project&gt;
+ &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+ &lt;groupId&gt;org.bytedeco.javacpp-presets.ffmpeg&lt;/groupId&gt;
+ &lt;artifactId&gt;tutorial01&lt;/artifactId&gt;
+ &lt;version&gt;1.0&lt;/version&gt;
+ &lt;dependencies&gt;
+ &lt;dependency&gt;
+ &lt;groupId&gt;org.bytedeco.javacpp-presets&lt;/groupId&gt;
+ &lt;artifactId&gt;ffmpeg&lt;/artifactId&gt;
+ &lt;version&gt;2.7.1-1.0&lt;/version&gt;
+ &lt;/dependency&gt;
+ &lt;/dependencies&gt;
+&lt;/project&gt;</pre></div><p>最后是 Java 代码的实现，在这个 Java 代码里面，它会调用 FFmpeg 的库函数进行针对视频的转换，如清单 13 所示。</p><h5 id="5.1.3. 清单 13. Java 文件源代码|outline">清单 13. Java 文件源代码</h5><div class="codesection"><pre class="displaycode">import java.io.*;
+import org.bytedeco.javacpp.*;
+import static org.bytedeco.javacpp.avcodec.*;
+import static org.bytedeco.javacpp.avformat.*;
+import static org.bytedeco.javacpp.avutil.*;
+import static org.bytedeco.javacpp.swscale.*;
+
+public class testJavaCPP {
+ static void SaveFrame(AVFrame pFrame, int width, int height, int iFrame)
+ throws IOException {
+ // Open file
+ OutputStream stream = new FileOutputStream("frame" + iFrame + ".ppm");
+
+ // Write header
+ stream.write(("P6\n" + width + " " + height + "\n255\n").getBytes());
+
+ // Write pixel data
+ BytePointer data = pFrame.data(0);
+ byte[] bytes = new byte[width * 3];
+ int l = pFrame.linesize(0);
+ for(int y = 0; y &lt; height; y++) {
+ data.position(y * l).get(bytes);
+ stream.write(bytes);
+ }
+
+ // Close file
+ stream.close();
+ }
+
+ public static void main(String[] args) throws IOException {
+ AVFormatContext pFormatCtx = new AVFormatContext(null);
+ int i, videoStream;
+ AVCodecContext pCodecCtx = null;
+ AVCodec pCodec = null;
+ AVFrame pFrame = null;
+ AVFrame pFrameRGB = null;
+ AVPacket packet = new AVPacket();
+ int[] frameFinished = new int[1];
+ int numBytes;
+ BytePointer buffer = null;
+
+ AVDictionary optionsDict = null;
+ SwsContext sws_ctx = null;
+
+ if (args.length &lt; 1) {
+ System.out.println("Please provide a movie file");
+ System.exit(-1);
+ }
+ // Register all formats and codecs
+ av_register_all();
+
+ // Open video file
+ if (avformat_open_input(pFormatCtx, args[0], null, null) != 0) {
+ System.exit(-1); // Couldn't open file
+ }
+
+ // Retrieve stream information
+ if (avformat_find_stream_info(pFormatCtx, (PointerPointer)null) &lt; 0) {
+ System.exit(-1); // Couldn't find stream information
+ }
+
+ // Dump information about file onto standard error
+ av_dump_format(pFormatCtx, 0, args[0], 0);
+
+ // Find the first video stream
+ videoStream = -1;
+ for (i = 0; i &lt; pFormatCtx.nb_streams(); i++) {
+ if (pFormatCtx.streams(i).codec().codec_type() == AVMEDIA_TYPE_VIDEO) {
+ videoStream = i;
+ break;
+ }
+ }
+ if (videoStream == -1) {
+ System.exit(-1); // Didn't find a video stream
+ }
+
+ // Get a pointer to the codec context for the video stream
+ pCodecCtx = pFormatCtx.streams(videoStream).codec();
+
+ // Find the decoder for the video stream
+ pCodec = avcodec_find_decoder(pCodecCtx.codec_id());
+ if (pCodec == null) {
+ System.err.println("Unsupported codec!");
+ System.exit(-1); // Codec not found
+ }
+ // Open codec
+ if (avcodec_open2(pCodecCtx, pCodec, optionsDict) &lt; 0) {
+ System.exit(-1); // Could not open codec
+ }
+
+ // Allocate video frame
+ pFrame = av_frame_alloc();
+
+ // Allocate an AVFrame structure
+ pFrameRGB = av_frame_alloc();
+ if(pFrameRGB == null) {
+ System.exit(-1);
+ }
+
+ // Determine required buffer size and allocate buffer
+ numBytes = avpicture_get_size(AV_PIX_FMT_RGB24,
+ pCodecCtx.width(), pCodecCtx.height());
+ buffer = new BytePointer(av_malloc(numBytes));
+
+ sws_ctx = sws_getContext(pCodecCtx.width(), pCodecCtx.height(),
+ pCodecCtx.pix_fmt(), pCodecCtx.width(), pCodecCtx.height(),
+ AV_PIX_FMT_RGB24, SWS_BILINEAR, null, null, (DoublePointer)null);
+
+ // Assign appropriate parts of buffer to image planes in pFrameRGB
+ // Note that pFrameRGB is an AVFrame, but AVFrame is a superset
+ // of AVPicture
+ avpicture_fill(new AVPicture(pFrameRGB), buffer, AV_PIX_FMT_RGB24,
+ pCodecCtx.width(), pCodecCtx.height());
+
+ // Read frames and save first five frames to disk
+ i = 0;
+ while (av_read_frame(pFormatCtx, packet) &gt;= 0) {
+ // Is this a packet from the video stream?
+ if (packet.stream_index() == videoStream) {
+ // Decode video frame
+ avcodec_decode_video2(pCodecCtx, pFrame, frameFinished, packet);
+
+ // Did we get a video frame?
+ if (frameFinished[0] != 0) {
+ // Convert the image from its native format to RGB
+ sws_scale(sws_ctx, pFrame.data(), pFrame.linesize(), 0,
+ pCodecCtx.height(), pFrameRGB.data(), pFrameRGB.linesize());
+
+ // Save the frame to disk
+ if (++i&lt;=5) {
+ SaveFrame(pFrameRGB, pCodecCtx.width(), pCodecCtx.height(), i);
+ }
+ }
+ }
+
+ // Free the packet that was allocated by av_read_frame
+ av_free_packet(packet);
+ }
+
+ // Free the RGB image
+ av_free(buffer);
+ av_free(pFrameRGB);
+
+ // Free the YUV frame
+ av_free(pFrame);
+
+ // Close the codec
+ avcodec_close(pCodecCtx);
+
+ // Close the video file
+ avformat_close_input(pFormatCtx);
+
+ System.exit(0);
+ }</pre></div><p>所需要的文件创建完毕以后，可以通过 maven 命令来编译、执行程序，如清单 14 所示。</p><h5 id="5.1.4. 清单 14. 运行命令|outline">清单 14. 运行命令</h5><div class="codesection"><pre class="displaycode">mvn package exec:java -Dexec.mainClass=testJavaCPP -Dexec.args="您的视频文件"</pre></div><h3 id="5.2. 示例程序 2：加入一个新的库|outline">示例程序 2：加入一个新的库</h3><p>从清单 10 我们知道，最终调用的是自己 C++代码文件夹里面的 cppbuild.sh 文件，所以我们如果想要增加一个新的库，势必也需要创建该文件。总的来说，我们需要注意三点：
+1. 创建一个全部小写字母组成的文件夹，这个文件夹的名称和最终生成的 JAR 包的文件名，以及 Maven 的 attifact 名称会完全一致，例如 testc++；
+2. 在这个文件夹下，创建新的工程，这个工程需要包括 cppbuild.sh 文件和 pom.xml 文件，以及属于 org.bytedeco.javacpp.presets 包的 Java 的配置文件；
+3. 上述 2 步到位后，发起一个请求，编译自己的代码，然后上传二进制库文件到 Maven 中央仓库，这样其他用户也可以调用您的库实现本地方法操作了。
+我们以 java.util.zip 包为例，里面包含了一个 zlib 库，首先需要创建 cppbuild.sh，代码里面需要下载 zlib 源代码，如清单 15 所示。</p><h5 id="5.2.1. 清单 15. zlib 的 cppbuild.sh 文件源代码|outline">清单 15.
+ zlib 的 cppbuild.sh 文件源代码</h5><div class="codesection"><pre class="displaycode">#!/bin/bash
+# This file is meant to be included by the parent cppbuild.sh script
+if [[ -z "$PLATFORM" ]]; then
+ pushd ..
+ bash cppbuild.sh "$@" zlib
+ popd
+ exit
+fi
+
+if [[ $PLATFORM == windows* ]]; then
+ ZLIB_VERSION=128
+ download http://zlib.net/zlib$ZLIB_VERSION-dll.zip zlib$ZLIB_VERSION-dll.zip
+ mkdir -p $PLATFORM
+ cd $PLATFORM
+ unzip ../zlib$ZLIB_VERSION-dll.zip -d zlib$ZLIB_VERSION-dll
+ cd zlib$ZLIB_VERSION-dll
+else
+ ZLIB_VERSION=1.2.8
+ download http://zlib.net/zlib-$ZLIB_VERSION.tar.gz zlib-$ZLIB_VERSION.tar.gz
+ mkdir -p $PLATFORM
+ cd $PLATFORM
+ tar -xzvf ../zlib-$ZLIB_VERSION.tar.gz
+ cd zlib-$ZLIB_VERSION
+fi
+
+case $PLATFORM in
+ linux-x86)
+ CC="gcc -m32 -fPIC" ./configure --prefix=.. --static
+ make -j4
+ make install
+ ;;
+ *)
+ echo "Error: Platform \"$PLATFORM\" is not supported"
+ ;;
+esac
+
+cd ../..
+pom.xml 如清单 16 所示，最终生成 zlib 的 jar 包。</pre></div><h5 id="5.2.2. 清单 16. zlib 的 pom.xml 源代码|outline">清单 16.
+ zlib 的 pom.xml 源代码</h5><div class="codesection"><pre class="displaycode">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd"&gt;
+ &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+
+ &lt;parent&gt;
+ &lt;groupId&gt;org.bytedeco&lt;/groupId&gt;
+ &lt;artifactId&gt;javacpp-presets&lt;/artifactId&gt;
+ &lt;version&gt;0.10&lt;/version&gt;
+ &lt;/parent&gt;
+
+ &lt;groupId&gt;org.bytedeco.javacpp-presets&lt;/groupId&gt;
+ &lt;artifactId&gt;zlib&lt;/artifactId&gt;
+ &lt;version&gt;1.2.8-${project.parent.version}&lt;/version&gt;
+ &lt;packaging&gt;jar&lt;/packaging&gt;
+ &lt;name&gt;JavaCPP Presets for zlib&lt;/name&gt;
+
+ &lt;dependencies&gt;
+ &lt;dependency&gt;
+ &lt;groupId&gt;org.bytedeco&lt;/groupId&gt;
+ &lt;artifactId&gt;javacpp&lt;/artifactId&gt;
+ &lt;/dependency&gt;
+ &lt;/dependencies&gt;
+
+ &lt;build&gt;
+ &lt;plugins&gt;
+ &lt;plugin&gt;
+ &lt;artifactId&gt;maven-resources-plugin&lt;/artifactId&gt;
+ &lt;/plugin&gt;
+ &lt;plugin&gt;
+ &lt;artifactId&gt;maven-compiler-plugin&lt;/artifactId&gt;
+ &lt;/plugin&gt;
+ &lt;plugin&gt;
+ &lt;groupId&gt;org.bytedeco&lt;/groupId&gt;
+ &lt;artifactId&gt;javacpp&lt;/artifactId&gt;
+ &lt;/plugin&gt;
+ &lt;plugin&gt;
+ &lt;artifactId&gt;maven-jar-plugin&lt;/artifactId&gt;
+ &lt;/plugin&gt;
+ &lt;plugin&gt;
+ &lt;artifactId&gt;maven-dependency-plugin&lt;/artifactId&gt;
+ &lt;/plugin&gt;
+ &lt;plugin&gt;
+ &lt;artifactId&gt;maven-source-plugin&lt;/artifactId&gt;
+ &lt;/plugin&gt;
+ &lt;plugin&gt;
+ &lt;artifactId&gt;maven-javadoc-plugin&lt;/artifactId&gt;
+ &lt;/plugin&gt;
+ &lt;/plugins&gt;
+ &lt;/build&gt;
+
+&lt;/project&gt;</pre></div><p>清单 17 所示是 Java 配置文件，文件需要被放在 src/main/java/org/bytedeco/javacpp/presets 目录下面。</p><h5 id="5.2.3. 清单 17. zlib 的 Java 源代码|outline">清单 17.
+ zlib 的 Java 源代码</h5><div class="codesection"><pre class="displaycode">package org.bytedeco.javacpp.presets;
+
+import org.bytedeco.javacpp.annotation.*;
+import org.bytedeco.javacpp.tools.*;
+
+@Properties(target="org.bytedeco.javacpp.zlib", value={
+                                 @Platform(include="&lt;zlib.h&gt;", link="z@.1"),
+ @Platform(value="windows", link="zdll", preload="zlib1")})
+public class zlib implements InfoMapper {
+ public void map(InfoMap infoMap) {
+ infoMap.put(new Info("ZEXTERN", "ZEXPORT", "z_const", "zlib_version").cppTypes().annotations())
+ .put(new Info("FAR").cppText("#define FAR"))
+ .put(new Info("OF").cppText("#define OF(args) args"))
+ .put(new Info("Z_ARG").cppText("#define Z_ARG(args) args"))
+ .put(new Info("Byte", "Bytef", "charf").cast().valueTypes("byte").pointerTypes("BytePointer"))
+ .put(new Info("uInt", "uIntf").cast().valueTypes("int").pointerTypes("IntPointer"))
+ .put(new Info("uLong", "uLongf", "z_crc_t", "z_off_t").cast().valueTypes(
+                                    "long").pointerTypes("CLongPointer"))
+ .put(new Info("z_off64_t").cast().valueTypes("long").pointerTypes("LongPointer"))
+ .put(new Info("voidp", "voidpc", "voidpf").valueTypes("Pointer"))
+ .put(new Info("gzFile_s").pointerTypes("gzFile"))
+ .put(new Info("gzFile").valueTypes("gzFile"))
+ .put(new Info("Z_LARGE64", "!defined(ZLIB_INTERNAL) &amp;&amp; defined(Z_WANT64)").define(false))
+ .put(new Info("inflateGetDictionary", "gzopen_w", "gzvprintf").skip());
+ }
+}</pre></div><p>在我们的父目录 javacpp-presets 里面，我们需要把 zlib 这个模块的名称加入到 pom.xml
+ 的模块列表里面，这样我们就可以像前面示例代码一样运行程序来生成.so 包和 jar 包，mvn install –projects zlib。</p><div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><h2 id="6.JavaCPP 性能测试|outline">JavaCPP 性能测试</h2><p>通过上面实验的实现，我们掌握了如何使用 JavaCpp，现在我们开始尝试针对 JavaCpp 的测试。</p><p>我们这个实验基于一个人脸算法库，该人脸算法库具备检测、建模、比对功能，网上有很多开源的人脸识别算法库，大家可以自行下载。当我们使用单线程时，本地预先加载人脸特征值数据，分别使用 C++代码和 Java 调用 JNI 库的方式，在内存中循环比对 1000 万次，比对测试结果如表 2 所示。</p><h5 id="6.0.1. 表 2. JNI 库和 C++库单线程性能比较|outline">表 2.
+ JNI 库和 C++库单线程性能比较</h5><table class="ibm-data-table" border="0" cellpadding="0" cellspacing="0"><thead xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><tr><th> 方式 </th><th> 比对次数 (万次) </th><th> 耗时/ms </th><th> 比对速率/rps（records per second）</th></tr></thead><tbody xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><tr><td> C++ </td><td> 1000 </td><td> 11055 </td><td> 904322 </td></tr><tr><td> Java 调用 JNI 库 </td><td> 1000 </td><td> 14732 </td><td> 702592 </td></tr><tr><td> Javacpp 调用算法库 </td><td> 1000 </td><td> 13066 </td><td> 765345 </td></tr></tbody></table><p>从上面的数据可以看出，直接用 C++调用算法库效率最高，其次是 JavaCPP 方式，JNI 方式耗时最长。当然，这里没有列举的 JNA 技术，它的效率会更差。这些效率差距主要在底层字节码的编译形式上的区别。</p><p>表 2 的方式是单线程方式，我们采用多线程方式再来做一次测试，测试结果如图 2 所示。我们可以看出，多线程环境下，C++和 JavaCPP 的优势更加明显，整体效率系统接近 0.95-1，JNI 方式的效率则平均在 0.81 左右。</p><h5 id="4.0.1. 图 2. JNI 库和 C++库多线程性能比较|outline">图 2. JNI 库和 C++库多线程性能比较</h5><img alt="图 2. JNI 库和 C++库多线程性能比较" src="index_files/img002.png" width="579"><div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><h2 id="7. 结束语|outline">结束语</h2><p>我们发现，采用 JavaCPP 方式在编程上较 JNI 方式简单很多，另外，效率也比 JNI 高，所以建议多采用 JavaCPP 技术。当然，如果是开源项目，也可以通过 JavaCPP
+ presets 子项目来分享自己做的库文件，让其他人快速使用。最后，通过一个有针对性的性能测试案例，读者也可以了解较 JNI 技术相比 JavaCPP 的优势所在。</p><!--CMA ID: 1014758--><!--Site ID: 10--><!--XSLT stylesheet used to transform this file: dw-document-html-7.0.xsl-->
+
+
+</div>
+</div>
+<!-- 1_1_COLUMN_END -->
+
+<!-- SPLIT_COLUMNS_BEGIN -->
+<div class="ibm-columns">
+
+<!-- 6_4_COLUMN_BEGIN -->
+<div class="ibm-col-6-4">
+
+<h2 id="resources" class="ibm-rule">参考资料 </h2><h3 class="dw-resources-category-heading">学习</h3><ul class="ibm-bullet-list"><li>参考网站 <a href="http://www.ibm.com/search/csass/search/?q=JNI&amp;sn=dw&amp;lang=zh&amp;cc=CN&amp;en=utf&amp;hpp=20&amp;dws=cndw&amp;lo=zh">IBM 开发者论坛</a> 这里发布了多篇关于 JNI 的文章。</li><li>参考文章 <a href="http://blog.csdn.net/skywalker256/article/details/4677644">较详细的介绍 JNI</a> 作者对于 JNI 技术的介绍较为深入、详细。</li><li>参考网站 <a href="https://github.com/bytedeco/javacpp-presets/tree/master/ffmpeg">FFMPEG </a>这里详细介绍了 JavaCpp Presets 对于 FFMPEG 库的封装实现方式。</li><li>参考网站<a href="https://github.com/bytedeco/javacpp"> JavaCPP
+ </a>这里是 JavaCPP 技术的分享地点。</li><li>参考网站 <a href="https://github.com/bytedeco/javacpp-presets">JavaCPP Presets</a>
+ 这里是 Presets 子项目的技术分享地点。</li><li><a href="http://www.ibm.com/developerworks/cn/java/" onmouseover="">developerWorks Java 技术专区</a>：这里有数百篇关于 Java 编程各个方面的文章。
+ </li></ul><h3 class="dw-resources-category-heading">讨论</h3><ul class="ibm-bullet-list"><li>加入 <a href="http://www.ibm.com/developerworks/cn/community/" onmouseover="">developerWorks 中文社区</a>，查看开发人员推动的博客、论坛、组和维基，并与其他 developerWorks 用户交流。</li></ul>
+
+<!-- INLINE_COMMENTS_BEGIN -->
+<h2 id="icomments" class="ibm-alternate-rule ibm-no-print">条评论</h2>
+    
+<div class="ibm-no-print" id="dw-icomments-container">	
+	<div id="threadShow"><img style="display: none;" id="imgPlHdr" src="index_files/animated-progress-38x38c.gif" alt=""><div id="cmtTog" style=""><div class="ibm-container ibm-alternate-two dw-commentbox dw-noborder"><div class="ibm-container-body dw-commentbox dw-noborder"><p id="signInSect">请 <a onclick="" href="#">登录</a> 或 <a href="http://www.ibm.com/developerworks/dwwi/jsp/ssoregister.jsp?d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fjava%2Fj-lo-cpp%2F%23icomments&amp;lang=cn&amp;a=dwmav">注册</a>  后发表评论。</p><p id="cmtHead"><label for="newCmt"><strong>添加评论:</strong></label></p><p>注意：评论中不支持 HTML 语法</p><div id="infoCmt"></div><form focus="name" enctype="multipart/form-data" method="post" action="" name="form" class="ibm-column-form ibm-styled-form"><p class="6-4-textarea"><textarea rows="5" name="newCmt" id="newCmt" class="dw-inoperable" disabled="disabled"></textarea><br></p><span class="ibm-input-group"><input value="1" name="comment_notification" id="comment_notification" disabled="disabled" type="checkbox"><label id="notifyText" class="ibm-form-note dw-btn-cancel-sec" for="comment_notification">有新评论时提醒我</label></span><span class="ibm-form-note dw-btn-cancel-sec notifySection" id="maxCharsCount">剩余 <span id="charCount">1000</span> 字符</span><p class="ibm-buttons-row"><input value="发布" name="postCmt" id="postCmt" class="ibm-btn-sec ibm-btn-small ibm-disabled" disabled="disabled" type="button"></p></form></div></div><div class="ibm-alternate-rule"><hr></div><div id="topControl" class="ibm-container ibm-alternate-two dw-comment-totals" style="display: none;"><div class="ibm-container-body"><form id="selectComments" method="get" action=""><p> <span class="dw-comment-totals-label"><strong>共有评论 (<span id="numCmts">0</span>)</strong></span><span class="dw-how-many-comments-label" style="display:none" id="dropdownCmts"><label for="howManyComments"><strong>显示：</strong></label> <select name="comments" id="howManyComments" class="dw-how-many-comments"><option selected="selected" value="recent">最新评论 </option></select><input class="ibm-btn-go" name="ibm-go" value="Go" src="index_files/short-btn.gif" alt="Go" type="image"><br></span></p></form></div></div><div id="cmtSect"><div class="comment"><div class="dw-icomment-container"><table class="dw-icomment-body" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td><p>快来添加第一条评论</p></td></tr></tbody></table></div></div></div></div><div id="bottomControl" class="ibm-container ibm-alternate-two dw-comment-totals" style="display:none"><div class="ibm-container-body"><form id="selectComments2" method="get" action=""><p> <span class="dw-comment-totals-label"><strong>共有评论 (<span id="numCmts2">0</span>)</strong></span><span class="dw-how-many-comments-label" style="display:none" id="dropdownCmts2"><label for="howManyComments2"><strong>显示：</strong></label> <select name="comments" id="howManyComments2" class="dw-how-many-comments"><option selected="selected" value="recent">最新评论 </option></select><input class="ibm-btn-go" name="ibm-go" value="Go" src="index_files/short-btn.gif" alt="Go" type="image"><br></span></p></form></div></div></div>
+</div>
+<!-- Sign in OVERLAY STARTS HERE -->
+    
+<!-- Sign in OVERLAY STARTS HERE -->
+<div class="ibm-common-overlay" id="signin_overlay">
+<div class="ibm-head">
+<p><a class="ibm-common-overlay-close" href="#" onclick="">关闭 [x]</a></p>
+</div>
+<div class="ibm-body">
+<div class="ibm-main">
+
+ <div class="ibm-title">
+<h2>developerWorks: 登录</h2>
+<div id="ibm-overlay-error-signin" class="no-display"></div>
+</div>
+<div class="ibm-container ibm-alternate ibm-buttons-last">
+<div class="ibm-container-body">
+<p class="ibm-overlay-intro">标有星（<span class="ibm-required">*</span>）号的字段是必填字段。</p> 
+<form class="ibm-column-form" id="sFormId" action="" method="post" name="sForm" onsubmit="">
+<p><label for="ibmid">IBM ID:<span class="ibm-required">*</span></label><span>
+    <input aria-required="true" name="ibm-id" id="ibmid" size="25" class="required" onkeypress="" type="text">
+    <br><a onclick="" href="#" class="ibm-forward-link">需要一个 IBM ID？</a> <br>
+    <a class="ibm-forward-link" href="http://www.ibm.com/developerworks/dwwi/jsp/WSHelp.jsp?lang=zh_CN">忘记 IBM ID？</a> 
+</span>
+</p> 
+<p><label for="password">密码：<span class="ibm-required">*</span></label><span>
+    <input name="password" id="password" size="25" value="" class="required" onkeypress="" type="password">
+    <br><a class="ibm-forward-link" href="#" onclick="">忘记密码？</a>
+    <br><a class="ibm-forward-link" href="#" onclick="">更改您的密码</a></span></p> 
+<p class="dw-perm-box">
+	<span><input id="perm" name="perm_name" type="checkbox"><label for="perm"> 保持登录。</label></span>
+</p>
+<p>单击提交则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/community/terms?lang=zh">查看条款和条件</a>。</p>
+<div class="ibm-buttons-row">
+   <p><input class="ibm-btn-arrow-pri" name="ibm-submit" value="提交" onclick="" type="submit"><span class="ibm-sep"> </span>
+<input value="取消" name="ibm-cancel" class="ibm-btn-cancel-sec" onclick="" type="button"></p>
+</div>
+</form>
+ <div class="ibm-overlay-rule"><hr></div> 
+
+<p>在您首次登录 developerWorks 时，会为您创建一份个人概要。<strong>您的个人概要中的信息（您的姓名、国家/地区，以及公司名称）是公开显示的，而且会随着您发布的任何内容一起显示，除非您选择隐藏您的公司名称。</strong>您可以随时更新您的 IBM 帐户。</p>
+<div><p class="dw-c-overlay-secure">所有提交的信息确保安全。</p></div>
+</div>
+</div>
+</div>
+</div>
+<div class="ibm-footer"></div>
+</div>
+<!-- Display name OVERLAY STARTS HERE -->
+<div class="ibm-common-overlay" id="displayname_overlay">
+<div class="ibm-head">
+<p><a class="ibm-common-overlay-close" href="#" onclick="">关闭 [x]</a></p>
+</div>
+<div class="ibm-body">
+<div class="ibm-main">
+<div class="ibm-title">
+<h2>选择您的昵称</h2><br><br>
+<div id="ibm-overlay-error-dname" class="no-display"></div>
+</div>
+<div class="ibm-container ibm-alternate ibm-buttons-last">
+<div class="ibm-container-body">
+<p class="ibm-overlay-intro">当您初次登录到 developerWorks 时，将会为您创建一份概要信息，您需要指定一个昵称。您的昵称将和您在 developerWorks 发布的内容显示在一起。</p><p><strong>昵称长度在 3 至 31 个字符之间</strong>。 
+    您的昵称在 developerWorks 社区中必须是唯一的，并且出于隐私保护的原因，不能是您的电子邮件地址。</p>
+<p class="ibm-overlay-intro">标有星（<span class="ibm-required">*</span>）号的字段是必填字段。</p> 
+<form id="dFormId" method="post" action="" name="dForm" onsubmit="" class="ibm-column-form">
+<p><label for="displayname">昵称：<span class="ibm-required">*</span></label><span>
+    <input aria-required="true" name="displayname" id="displayname" size="25" onkeypress="" type="text"></span>
+    <span class="ibm-form-note">(昵称长度在 3 至 31 个字符之间)</span>
+</p>
+<p>单击<strong>提交</strong>则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/community/terms?lang=zh">查看条款和条件</a>.</p>
+<div class="ibm-buttons-row">
+   <p><input class="ibm-btn-arrow-pri" name="ibm-submit" value="提交" onclick="" type="submit"><span class="ibm-sep"> </span>
+<input value="取消" name="ibm-cancel" class="ibm-btn-cancel-sec" onclick="" type="button"></p>
+</div>
+</form>
+<div class="ibm-overlay-rule"><hr></div>
+<div><p class="dw-c-overlay-secure">所有提交的信息确保安全。</p></div>
+</div>
+</div>
+</div>
+</div>
+<div class="ibm-footer"></div>
+</div>
+
+
+<!-- INLINE_COMMENTS_END -->
+
+</div>
+<!-- 6_4_COLUMN_END -->
+
+<!-- 6_2_COLUMN_BEGIN -->
+<div class="ibm-col-6-2">
+
+<!-- Next_Steps -->
+<!-- Dig_Deeper -->
+
+
+<!-- Promotion_Module -->
+    
+<!-- PROMOTION_MODULE_START -->
+<div class="ibm-alternate-rule"><hr></div>
+<ul class="ibm-portrait-module-list">
+<li><a role="presentation" tabindex="-1" class="" href="http://www.ibm.com/developerworks/cn/cloud/bluemix/"><img src="index_files/sm-f-bluemixrobot60.png" alt="IBM Bluemix 资源中心" height="60" width="60"></a>
+<h3><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/cloud/bluemix/">IBM Bluemix 资源中心</a></h3>
+<p>文章、教程、演示，帮助您构建、部署和管理云应用。</p></li>
+<li><a role="presentation" tabindex="-1" class="" href="http://www.ibm.com/developerworks/cn/community/"><img src="index_files/sm-f-comcommunity60.png" alt="developerWorks 中文社区" height="60" width="60"></a>
+<h3><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/community/">developerWorks 中文社区</a></h3>
+<p>立即加入来自 IBM 的专业 IT 社交网络。</p></li>
+<li><a role="presentation" tabindex="-1" class="" href="http://bluemixathon.devpost.com/"><img src="index_files/sm-f-bluemixathon60.png" alt="Bluemixathon 挑战赛" height="60" width="60"></a>
+<h3><a class="ibm-feature-link" href="http://bluemixathon.devpost.com/">Bluemixathon 挑战赛</a></h3>
+<p>为灾难恢复构建应用，赢取现金大奖。</p></li>
+</ul>
+<!-- PROMOTION_MODULE_END -->
+</div>
+<!-- 6_2_COLUMN_END -->
+
+</div>
+<!-- SPLIT_COLUMNS_END -->
+
+<!-- BOTTOM_BACK_TO_TOP -->
+<div class="ibm-columns">
+<div class="ibm-col-1-1">
+	<div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p>
+</div>
+</div>
+
+<!-- Rating_Meta_BEGIN -->
+<!--Rating_Meta_BEGIN--><div class="metavalue">static.content.url=http://www.ibm.com/developerworks/js/artrating/</div><div class="metavalue">SITE_ID=10</div><div class="metavalue">Zone=Java technology</div><div class="metavalue">ArticleID=1014758</div><div class="metavalue">ArticleTitle=JavaCPP 技术使用经验总结</div><div class="metavalue">publish-date=09102015</div><script language="javascript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script><div class="metavalue">url=http://www.ibm.com/developerworks/cn/java/j-lo-cpp/</div><!--Rating_Meta_END-->
+<!-- Rating_Meta_END -->
+
+</div>
+<!-- END_IBM_CONTENT_MAIN -->
+
+</div>
+<!-- END_IBM_CONTENT_BODY -->
+
+</div>
+<!-- END_IBM_CONTENT -->
+
+</div></div>
+<!-- LEADSPACE_END -->
+
+
+<!-- END_IBM_PCON -->
+<!-- FOOTER_BEGIN -->
+<div aria-label="页脚" id="ibm-footer"><!-- IBM footer container; disabled --></div>
+
+<div id="ibm-footer-module-dwwrapper" role="contentinfo" aria-label="developerWorks Footer">
+
+<div id="ibm-footer-module-dw">
+	<div class="dw-footer-columns">
+		<div class="dw-footer-col-6-1 dw-footer-col-6-1-cn">
+			<ul>
+				<li><a href="https://www.ibm.com/developerworks/secure/feedback.jsp?domain=dwchina" tabindex="0">帮助</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/author/" tabindex="0">联系编辑</a></li>
+				<li><a href="https://www.ibm.com/developerworks/secure/myideas2.jsp?domain=dwchina" tabindex="0">提交内容</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/rss/" tabindex="0">订阅源</a></li>
+			</ul>
+        </div>
+		<div class="dw-footer-col-6-2">
+			<ul>
+				<li><a href="http://www.ibm.com/vrm/newsletter/10104?S_TACT=105AGX52&amp;S_CMP=dwcntop" tabindex="0">在线浏览每周时事通讯</a></li>
+				<li><a class="dwcn-sina-link" href="http://weibo.com/ibmdw/" target="_blank" tabindex="0">新浪微博</a></li>
+				<li><a href="https://www.ibm.com/developerworks/community/report?lang=zh" tabindex="0">报告滥用</a></li>
+				<li><a href="https://www.ibm.com/developerworks/community/terms?lang=zh" tabindex="0">使用条款</a></li>
+				<li><a href="https://www.ibm.com/developerworks/cn/community/terms/thirdparty/" tabindex="0">第三方提示</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-3">
+			<ul>
+				<li><a href="http://www.ibm.com/privacy/cn/zh/" tabindex="0">隐私条约</a></li>
+				<li><a href="http://www.ibm.com/ibm/accessibility/cn/" tabindex="0">浏览辅助</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/academic/" tabindex="0">IBM 教育学院教育培养计划</a></li><li><a href="http://www.ibm.com/developerworks/cn/gep/">IBM 创业企业全球扶持计划</a></li><li><a href="http://www.ibm.com/partnerworld/isv/">ISV 资源 (英语)</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-4"> 
+			<ul>
+				<li><a href="http://www.ibm.com/developerworks/cn/newsletter/" tabindex="0">dW 中国每周时事通讯</a></li>
+			</ul>
+			
+		</div>
+		<div class="dw-footer-col-6-5">
+			<ul>
+				<li class="dw-footer-lang-head">选择语言：</li>
+				<li><a href="http://www.ibm.com/developerworks/" tabindex="0">English</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/" tabindex="0" lang="zh">中文</a></li>
+				<li><a href="http://www.ibm.com/developerworks/jp/" tabindex="0" lang="ja">日本語</a></li>
+				<li><a href="http://www.ibm.com/developerworks/ru/" tabindex="0" lang="ru">Русский</a></li>
+				<li><a href="http://www.ibm.com/developerworks/br/" tabindex="0" lang="pt">Português (Brasil)</a></li>
+				<li><a href="http://www.ibm.com/developerworks/ssa/" tabindex="0" lang="es">Español</a></li>
+				<li><a href="http://www.ibm.com/developerworks/vn/" tabindex="0" lang="vi">Việt</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-6">
+			<img alt="IBM®" src="index_files/dwn-ibm-logo-v17.png" height="46" width="223">
+			<img class="dw-preload" src="index_files/ibm_sprite_social_blue_ON.png" alt="" height="1" width="1">
+		</div>
+	</div>
+</div>
+
+</div><!-- FOOTER_END -->
+
+<!-- END_IBM-TOP -->
+</div>
+
+<!-- SCRIPTS_INCLUDE_BEGIN -->
+<script type="text/javascript" src="index_files/dw-comments.js">//</script>
+<script type="text/javascript" language="JavaScript"><!--
+/* Script removed by snapshot save */
+--></script>
+
+
+
+<!-- BEGIN: Use this section to set page specific variables for the Unica Page Tag -->
+<script language="JavaScript"><!--
+/* Script removed by snapshot save */
+--></script>
+<!--END --><!-- SCRIPTS_INCLUDE_END -->
+
+<div id="ibm-metrics">
+<script src="index_files/stats.js" type="text/javascript">//</script>
+</div>
+
+
+
+</body></html>

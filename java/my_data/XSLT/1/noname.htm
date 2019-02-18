@@ -1,0 +1,374 @@
+﻿<HTML xmlns="http://www.w3.org/1999/xhtml" sizcache="1" sizset="13">
+<HEAD>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>使用Java与XSLT的10条技巧</title>
+  <LINK rel=stylesheet type=text/css href="default_1.css_v=20091223" media=all>
+  <LINK rel=stylesheet type=text/css href="csdn_favbykimi.css" media=all>
+  <LINK rel="Shortcut Icon" href="1.ico">
+  <LINK title=RSS rel=alternate type=application/rss+xml href="kayz">
+</HEAD>
+
+<BODY id="defaultuser" sizcache="1" sizset="13">
+  <DIV id="csdnblog_allwrap" sizcache="1" sizset="13">
+    <DIV id="csdnblog_midwrap" sizcache="1" sizset="13">
+      <DIV id="csdnblog_content" sizcache="1" sizset="13">
+        <DIV class="gutter" sizcache="1" sizset="13">
+          <DIV class="default_contents" sizcache="1" sizset="13">
+            <DIV class="user_article" sizcache="0" sizset="7">
+              <!--StartFragment-->
+              <H1 class=title_txt>使用Java与XSLT的10条技巧</H1>
+              <DIV class="blogstory" sizcache="0" sizset="7">
+                <TABLE class=TLnNS border=0 cellSpacing=0 cellPadding=0 width=758 bgColor=#ffffe7>
+                  <TBODY>
+                    <TR align=center>
+                      <TD class=RBnS bgColor=#ddddff align=center>使用Java与XSLT的10条技巧 </TD>
+                    </TR>
+                    <TR>
+                      <TD class=RnS height=320 vAlign=top>&nbsp;&nbsp;&nbsp;&nbsp;在我的新书《Java and XSLT》中介绍了Java与XSLT的技术组合。这篇文章从书中选出了我认为非常重要的10条技巧。但实际上这有限的10条只是粗略的描述了什么是可能的。其中大多数都集中在Java与XSLT的组合上，而不是在XSLT（可扩展样式表转换）技术规范。而更详细的信息，在文章结尾处指出了一些有价值的资源。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;基本的XSL转换是非常简单的：一个或多个包含着指令的XSLT样式表，这些指令定义了如何把XML数据转换成其他格式。XSLT处理器完成实际的工作；Sun微系统的
+                        <A href="http://java.sun.com/xml/download.html">Java API for XML Processing 
+                      (JAXP)</A>为不同种类的处理器提供了一套标准的Java接口。这里有一个用JAXP的API执行XSL转换的简单例子：
+                        <BLOCKQUOTE>import javax.xml.transform.Source;
+                          <BR> import javax.xml.transform.Transformer;
+                          <BR> import javax.xml.transform.TransformerFactory;
+                          <BR> import javax.xml.transform.stream.StreamSource;
+                          <BR> import javax.xml.transform.stream.StreamResult;
+                          <BR> import java.io.*;
+                          <BR> public class Transform {
+                          <BR> &nbsp;&nbsp;/**
+                          <BR> &nbsp;&nbsp;&nbsp;* Performs an XSLT transformation, sending the results
+                          <BR> &nbsp;&nbsp;&nbsp;* to System.out.
+                          <BR> &nbsp;&nbsp;&nbsp;*/
+                          <BR> &nbsp;&nbsp;public static void main(String[] args) throws Exception {
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;if (args.length != 2) {
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.err.println("Usage: java Transform [xmlfile] [xsltfile]");
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.exit(1);
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;}
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;File xmlFile = new File(args[0]);
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;File xsltFile = new File(args[1]); &nbsp;&nbsp;&nbsp;&nbsp;// JAXP reads data using the Source interface
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;Source xmlSource = new StreamSource(xmlFile);
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;Source xsltSource = new StreamSource(xsltFile);
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;// the factory pattern supports different XSLT processors
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;TransformerFactory transFact = TransformerFactory.newInstance();
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;Transformer trans = transFact.newTransformer(xsltSource);
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;trans.transform(xmlSource, new StreamResult(System.out));
+                          <BR> &nbsp;&nbsp;}
+                          <BR> }
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;你可以点击
+                        <A href="http://java.oreilly.com/news/javaxslt_example.zip">这里</A>下载一个很小的ZIP文件，这个文件包含了这个例子以及相应的XSLT样式表和XML数据文件。其中的README文件解释了怎样编译和运行这个例子。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;这个这个例子是利用StreamSource从文件中读取数据，JAXP还能从SAX解释器或DOM树来读取XML数据。下面依次介绍我推荐的10条技巧：
+                        <BR>
+                        <BR>
+                        <STRONG>1、 
+                      尽可能使用缓存。</STRONG>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;执行XSLT转换是很耗费CPU和内存的，所以在任何时候进行可能的优化都是很有意义的。使用由XSLT驱动的Web应用，提高它的实时运行性能表现的最好方法之一就是使用各种类型的缓存技术。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;图一举例说明了一个典型的使用XSL对数据库进行转换的Web应用。
+                        <BR>
+                        <BR>
+                        <CENTER>
+                          <IMG src="1.png" width=490 height=274>
+                          <BR>
+                          <STRONG>图一、典型的XSL转换</STRONG>
+                        </CENTER>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;与动态生成的XML不同，XSLT样式表是静态存储在文件中的。由于这些文件很少被改动，就可以用JAXP的javax.xml.transform.Templates接口把它们解析好了进内存里缓存起来。下面这个程序片断解释了这个过程是怎样完成的：
+                        <BLOCKQUOTE>Source xsltSource = new StreamSource(xsltFile);
+                          <BR> TransformerFactory transFact = TransformerFactory.newInstance();
+                          <BR> Templates cachedXSLT = transFact.newTemplates(xsltSource);
+                          <BR> Transformer trans = cachedXSLT.newTransformer();
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;当XSLT样式表通过Templates接口缓存进了内存中，现在它就可以被重复用于很多不同的转换里。最重要的好处是，这样就避免了重复把XSLT解析进内存。它也给了XSLT处理器一个机会来优化转换指令，就象编译器优化软件那样。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;有人可能会想是否可以把XML数据也缓存进内存中。对于那些高度动态和个体化的应用，XML数据是随着每一个客户请求而动态生成的并随时都在变化。对于这种应用，缓存是不实际的。对于很多其它类型的应用，XML数据可能改变的不是很频繁。当数据改变不是很频繁时，相对于缓存XML数据，将转换后的结果缓存可能更有意义。这是一种最快的可行性解决方案，推荐在任何可行的情况下使用。
+                        <BR>
+                        <STRONG><BR>
+                      2、部署前做测试。</STRONG>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;在开发Web应用项目选择XML和XSLT的关键在于可以清楚的把数据、程序逻辑和表达分开。Java代码与后台数据源交互并生成XML数据，XSLT样式表把XML数据转换为XHTML（或WML，或其它），然后浏览器显示结果。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;这种结构的一个独特的，然而时常被忽略的好处是它支持自动单元测试的能力。象JUnit这样的工具鼓励程序员去写适合自动单元测试的套件。这些测试大大的减少了在系统中加入新特性时所产生的错误。考虑一下一个典型的Java+XML+XSLT网站的这些组件：
+                        <BLOCKQUOTE>
+                          <LI>用Java实现商业逻辑。由于Java代码没有和表达逻辑混在一起，就可以象其他任何Java代码一样测试它。
+                            <LI>把应用数据转换为XML。这一步是特别容易的。只要生成XML然后用一个DTD或一个XML Schema验证它就行了。
+                              <LI>把XML转换为XHTML。同样的，生成的XHTML可以用一个XHTML DTD来验证。虽然这样做不能证明信息是正确的，但是的确能保证XHTML被正确的生成而且是有效的。
+                              </LI>
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;与很多其它的Web开发技术不同，测试这些单元中的任何一个都不用将其部署到Web服务器上。这使自动单元测试更容易被实现，自动单元测试也是
+                        <A href="http://www.xprogramming.com/">极限编程（XP）</A>技术的一个关键组成部分。
+                        <BR>
+                        <BR>
+                        <STRONG>3、尽量让XSLT样式表简单。</STRONG>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;至少有两个理由要保持XSLT样式表简单。第一，XSLT并不是一个象Java那样丰富的编程语言。虽然XSLT擅于转换，但是在样式表中嵌入太多的应用逻辑会使它变得相当复杂。因为这个原因，就应该在创建XML之前用Java实现尽可能多的商业逻辑。然后再用XSLT转换XML就应该简单得多了。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;第二个保持样式表简单的理由是XSLT的语法不容易被读懂。XML标签使XSLT很容易解析和方便的做程序化的处理，但所有的那些XML标签也使得样式表不容易被读懂。有几个小技巧可以帮助程序员更容易读懂和处理XSLT样式表：
+                        <BLOCKQUOTE>
+                          <LI>使用具有语法区分功能的编辑器，如Altova的
+                            <A href="http://www.xmlspy.com/">XML Spy</A>。
+                            <LI>为每一个XSLT模板添加有区别的注释。这样就有助于打破那种在大堆被括在'&lt;'和'&gt;'的字符串里搜索时的单调。
+                              <LI>对最高层的变量和样式表参数采用一定的命名规则。
+                                <LI>把通用的方法取出来放进第二个样式表中，用&lt;xsl:import&gt;来重用代码。</LI>
+                        </BLOCKQUOTE>
+                        <STRONG>4、和XSLT一起使用CSS。</STRONG>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;这条技巧是和上一条联系在一起的，它也可以大大的减少XSLT样式表的复杂程度。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;XSLT和CSS分别执行不同的任务并相互补充。XSLT把XML转换为其他的格式，如XHTML或WML，而CSS只是定义表达的样式。作为生成的XHTML的一部分，有时XSLT也可以生成一些样式元素来使线条变模糊。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;建议写一些独立的CSS文件，来代替在XSLT样式表中嵌入大量关于字体、颜色和其它的样式元素。XSL转换产生的XHTML只是包含这些独立的CSS文件。这就使XHTML更小，同时简化了XSLT，也使得浏览器下载页面时速度更快。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;同样的技术也适用于JavaScript，应该存放一些独立的文件而不是把它们直接嵌入到转换中去。
+                        <BR>
+                        <BR>
+                        <STRONG>5、小心处理不间断空格。</STRONG>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;作者提示：作为对读者的回应，我已经重写了这条技巧，加入了我最近学到的关于不间断空格的新知识。感谢广大读者的反馈。[编者提示：我们已经在文件的尾部为附加评论加入了一个
+                        <A href="http://java.oreilly.com/cgi-bin/comments">读者反馈</A>链接。]
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;不间断空格对于XHTML来说是一个很有用的特性，它可以阻止浏览器在文字中引入换行符。它同时使得强迫两个以上连续的空格成为可能；因为浏览器总是把普通的空格（和其他的白空格字符）序列处理成一个空格。这里是一个包含不间断空格的XHTML的例子：
+                        <BLOCKQUOTE>Aidan&amp;nbsp;Burke</BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;当人们创建XHTML网页时，他们通常是象上面显示的那样在他们的源文件中插入"&amp;nbsp;"字符。所有的浏览器都会把这个字符序列翻译成一个不间断空格并正确显示。然而，当用XSLT生成XHTML时，处理的方法就不同了。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;XSLT样式表必须是格式正确的XML。因为"&amp;nbsp;"不是XML预先定义好的五个标签，它不能直接被包含在样式表中。比如，接下来的这个XSLT片就不管用：
+                        <BLOCKQUOTE>&lt;!-- won't work... --&gt;
+                          <BR> &lt;xsl:text&gt;Aidan&amp;nbsp;Burke&lt;/xsl:text&gt;
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;这种特征使XSLT程序员必须用一种略微不同的方法来使用这种特性：
+                        <BLOCKQUOTE>&lt;xsl:text&gt;Aidan&amp;#160;Burke&lt;/xsl:text&gt;</BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;结果表明，所有的案例都工作得很好。当样式表的输出方法是"html"时，像Xalan这样的处理器会自动的把字符实体"&amp;#160;"转换为序列"&amp;nbsp;"。从网络浏览器的角度来看，这看起来和其它的不间断空格没什么两样。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;这里有一个完整的XSLT样式表的例子就是这样做的
+                        <BLOCKQUOTE>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+                          <BR> &lt;xsl:stylesheet version="1.0"
+                          <BR> &nbsp;&nbsp;xmlns:xsl="http://www.w3.org/1999/XSL/Transform"&gt;
+                          <BR> &nbsp;&nbsp;&lt;xsl:output method="html" encoding="UTF-8"/&gt;
+                          <BR> &nbsp;&nbsp;&lt;xsl:template match="/"&gt;
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;&lt;xsl:text&gt;Aidan&amp;#160;Burke&lt;/xsl:text&gt;
+                          <BR> &nbsp;&nbsp;&lt;/xsl:template&gt;
+                          <BR> &lt;/xsl:stylesheet&gt;
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;当用Xalan时，这个转换的输出看起来是这样的：
+                        <BLOCKQUOTE>Aidan&amp;nbsp;Burke</BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;这很好，因为浏览器知道如何显示"&amp;nbsp;"。但很不幸，XSLT规范并没有要求XSLT处理器把"&amp;#160;"转换为"&amp;nbsp;"。你必须在遇到这个问题的任何时候，对你使用的XSLT处理器进行这项测试。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;有些程序员不喜欢必须记住"160"代表不间断空格。所以他们在XSLT样式表的DTD子集中定义这样一个实体：
+                        <BLOCKQUOTE>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+                          <BR> &lt;!DOCTYPE xsl:stylesheet [
+                          <BR> &nbsp;&nbsp;&lt;!ENTITY nbsp "&amp;#160;"&gt;
+                          <BR> ]&gt;
+                          <BR> &lt;xsl:stylesheet version="1.0" ...
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;现在，可以用"&amp;nbsp;"来代替"&amp;#160;"。因为XML解析器在XSLT处理"&amp;nbsp;"之前就把这个实体转换成了"&amp;#160;"，这也就方便了样式表的作者。提醒一句：有些XML相关的工具会在见到DOCTYPE时试着验证XSLT样式表。因为DTD子集没有包含所有XSLT元素的定义，验证就会报告错误。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;如果流行的XSLT处理器会自动把"&amp;#160;"转换为"&amp;nbsp;"，会有什么问题呢？问题就是，当样式表的输出是"xml"而不是"html"时就会出现错误。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;当XSLT输出方法是"html"时，大多数XSLT处理器修改它们的输出并提供给网络浏览器。比如，象"&lt;br /&gt;"这样的标签，是一个有效的XML，可能会被转换为"&lt;br&gt;"。这更适用于在比较老的浏览器，但却不是格式正确的XML。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;XHTML是目前被国际互联网联盟所推荐的用于书写网页的格式。因为XHTML文档必须是格式正确的XML，XSLT样式表作者很可能希望在生成XHTML时用"xml"的输出格式而不是"html"。这是一个生成XHTML的XSLT样式表的第一部分：
+                        <BLOCKQUOTE>&lt;?xml version="1.0" encoding="UTF-8"?&gt;br&gt;
+                          <BR> &lt;xsl:stylesheet version="1.0"
+                          <BR> &nbsp;&nbsp;xmlns:xsl="http://www.w3.org/1999/XSL/Transform"&gt;
+                          <BR> &nbsp;&nbsp;&lt;xsl:output method="xml"
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;doctype-public="-//W3C//DTD XHTML 1.0 Strict//EN"
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;encoding="UTF-8"/&gt;
+                          <BR> &nbsp;&nbsp;&lt;xsl:template match="/"&gt;
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;&lt;html xmlns="http://www.w3.org/1999/xhtml"&gt;
+                          <BR> ...remainder omitted
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;当输出方法是"xml"时，Xalan不会把"&amp;#160;"转换为"&amp;nbsp;"。相反，它会在结果树中插入一个160的字符码。这在有些时候会引起问题。比如，图2是运行在Windows 2000上的IE 5.5浏览器的一张截图。注意在有趣的字母"A"上有一个符号：
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;下载这个
+                        <A href="http://java.oreilly.com/news/javaxslt_example5.zip">例子</A>试一下结果。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;图2的下半部分显示了一个在大多数情况的都能正常工作的交换技术。下面介绍了它如何工作：
+                        <BLOCKQUOTE>&lt;xsl:text disable-output-escaping="yes"&gt;&amp;amp;nbsp;&lt;/xsl:text&gt;
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;disable-output-escaping="yes"使XSLT处理器在生成结果树时不再把"&amp;nbsp;"转换为字符码160。相反，它将字符序列"&amp;nbsp;"保留而不变化。这样浏览器就可以正确的显示不间断空格。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;我必须提醒你注意的是XSLT规范并没有要求XSLT处理器支持disable-output-escaping，所以任何人在使用这个技术之前，请先用特殊的工具测试一下。
+                        <BR>
+                        <CENTER>
+                          <IMG src="2.png" width=475 height=271>
+                          <BR>
+                          <STRONG>图2，用"xml"输出方法（上方）和用disable-output-escaping方法（下方）的结果对比</STRONG>
+                        </CENTER>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;下面对上面提到的这些技术做个总结：
+                        <BLOCKQUOTE>
+                          <LI>用"&amp;#160;"字符实体来代表不间断空格。因为大多数的XSLT会把这个实体转换为字符序列"&amp;nbsp;"，所以当输出方法是"html"时，这是可以正确工作的。XSLT规范并没有要求这样做，但Xalan这样做了。
+                            <LI>定义一个"&amp;nbsp;"实体并使用它。这和上一点有同样的效率，但对于样式表作者来说看起来更好一点。然而，某些工具也许会试图用不存在的DTD来验证样式表，这时可能会出现问题。
+                              <LI>用&lt;xsl:text disable-output-escaping="yes"&gt;&amp;amp;nbsp;&lt;/xsl:text&gt;作为"&amp;#160;"的第二个选择。这在输出方法是"xml"时特别有用。XSLT规范并不要求处理器支持disable-output-escaping。
+                              </LI>
+                        </BLOCKQUOTE>
+                        <STRONG>6、写XML生成器类。</STRONG>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;为了应用XSL转换，就必须要把Java对象转换成一定的XML数据。这可以用以下的几个途径来完成：
+                        <BLOCKQUOTE>1) 为每个类增加一个getXML()方法。
+                          <BR> 2) 写一个知道如何将特定对象转换为XML的XML生成器。
+                          <BR> 3) 用一个熟知的Java-to-XML API来自动的转换为XML。</BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;第一种途径看起来可能象下面这样：
+                        <BLOCKQUOTE>public class Customer {
+                          <BR> &nbsp;&nbsp;public Element getXML(Document doc) {
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;// use the DOM API to create an Element
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;// representing this object
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;...
+                          <BR> &nbsp;&nbsp;}
+                          <BR> &nbsp;&nbsp;...
+                          <BR> }
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;这种途径很容易解释和理解，但却有一个关键的设计缺点。关键的问题在于特定的XML表示方法和每个类紧紧的绑在了一起。当需要一个新的XML表示时，就必须写新的方法。这意味着当加入越来越多的XML"视图"时，类也会越变越大。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;不难想象这样的情况，就是希望对于一个对象有多于一个的XML表示。在一份显示有成百上千的客户概要报表中，只有每个客户的很少几个关键字段出现在XML数据中。而在一个客户的详细报表中，XML数据应该包含关于这个客户的所有信息。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;第二种途径把XML的生成代码分离出来放在几个工具类里。一个关于客户的XML生成器看起来可能象下面这样的：
+                        <BLOCKQUOTE>public class CustomerDOMProducer {
+                          <BR> &nbsp;&nbsp;public static Element toXML(Customer cust, Document doc) {
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;... use the DOM API to create a fragment of XML
+                          <BR> &nbsp;&nbsp;}
+                          <BR> }
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;简单的从Customer类中把XML生成代码去掉；要增加新的XML表达时就只是简单的写附加的XXXDomProducer类就行了。这样甚至可能改为用象
+                        <A href="http://www.jdom.org/">JDOM</A>这样的non-DOM APIs，也不需要对Customer代码作任何改变了。
+                        <BR> -----------------------------------------------------------------------------------------------------------------------
+                        <BR> 更多关于JDOM的信息，不要错过Brett McLaughlin最近发行的《
+                        <A href="http://www.oreilly.com/catalog/javaxml2/">Java&amp;XML, 
+                      2ndEdition</A>》。
+                        <BR> -----------------------------------------------------------------------------------------------------------------------
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;第三种途径也值得提一下，是用一种产品把Java对象转换为XML。虽然这些类型的工具对于持续和与应用程序进行数据交换方面很好，但他们在XSL转换方面可能不是很理想。这是因为生成的XML可能比手写代码方案提供的复杂得多，潜在的也就导致了更为复杂的XSLT样式表。
+                        <BR>
+                        <STRONG><BR>
+                      7、假设Cookie是被禁止的。</STRONG>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;Servlet API支持用HttpSession来跟踪会话。这使象购物车那样的技术成为可能。这个类的默认行为是依靠浏览器的cookie来鉴别每个用户，但是用户可以禁止cookie。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;当浏览器的cookie被禁止时，我们的应用就必须依靠其他某种机制来鉴别用户。URL重写就是servlet API用到的这一技术。因为各种原因，URL重写并不是自动发生的。为了在cookie被禁止时支持会话跟踪，程序员必须记住对应用程序发出的每一个URL进行编码。这可以靠给每一个超链接、表单动作、或重定向URL加上一个jsessionid=nnnnn来完成。下面的表列举了有和没有验证标记的URL：
+                        <BR>
+                        <BR>
+                        <CENTER>
+                          <TABLE class=TLnNS border=0 cellSpacing=0 cellPadding=0>
+                            <TBODY>
+                              <TR>
+                                <TD class=RBnS width=168 align=center>
+                                  <STRONG>普通URL</STRONG>
+                                </TD>
+                                <TD class=RBnS width=323 align=center>
+                                  <STRONG>编码后的URL</STRONG>
+                                </TD>
+                              </TR>
+                              <TR>
+                                <TD class=RBnS>&lt;a href="mylink"&gt;</TD>
+                                <TD class=RBnS>&lt;ahref="mylink;jsessionid=129j2fjs87l156"&gt;</TD>
+                              </TR>
+                              <TR>
+                                <TD class=RBnS>&lt;form action="mylink"&gt;</TD>
+                                <TD class=R BnS>&lt;formaction="mylink;jsessionid=129j2fjs871156"&gt;</TD>
+                              </TR>
+                            </TBODY>
+                          </TABLE>
+                        </CENTER>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;当用户点击一个编码的超链接或提交一个编码的表单时，servlet容器可以通过检查jsessionid的值来确定他或她的身份。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;在用XSLT生成XHTML时，由于验证标识是动态的而且每个用户的身份都不同，所以这个会话标识应该被嵌入到每一页中，它应该作为一个样式表的参数被传递。下面是怎样在每个XSLT样式表顶部定义这个参数的例子：
+                        <BLOCKQUOTE>&lt;xsl:stylesheet version="1.0"
+                          <BR> &nbsp;&nbsp;xmlns:xsl="http://www.w3.org/1999/XSL/Transform"&gt;
+                          <BR> &nbsp;&nbsp;&lt;!--
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;*********************************************************
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;** global.sessionID : Used for URL-rewriting to implement
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;** session tracking without cookies.
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;*********************************************************
+                          <BR> &nbsp;&nbsp; --&gt;
+                          <BR> &nbsp;&nbsp;&lt;xsl:param name="global.sessionID"/&gt;
+                          <BR> ...
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;在一个servlet端的应用程序中，Java代码用JAXP的Transformer类把这个会话标识传给XSLT处理器。它很聪明，只在cookie不起作用的情况下才这样做：
+                        <BLOCKQUOTE>protected void doGet( HttpServletRequest req, HttpServletResponse res)
+                          <BR> &nbsp;&nbsp;throws IOException, ServletException {
+                          <BR> &nbsp;&nbsp;Transformer trans = ... // obtain Transformer from JAXP
+                          <BR> &nbsp;&nbsp;HttpSession session = req.getSession(true);
+                          <BR> &nbsp;&nbsp;// allow cookieless session tracking
+                          <BR> &nbsp;&nbsp;if (!req.isRequestedSessionIdFromCookie()) {
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;String sessionID = session.getId();
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;trans.setParameter("global.sessionID", &nbsp;";jsessionid=" + sessionID);
+                          <BR> &nbsp;&nbsp;}
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;回到XSLT端的应用程序中，这个global.sessionID参数可以在生成每一页时被加到超链接和表单动作中。这个技术在《Java and XSLT》的第8章"Additional Techniques"中作了完整的讲解。
+                        <BR>
+                        <BR>
+                        <STRONG>8、把XSLT作为一个代码生成器使用。</STRONG>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;虽然XSLT通常是用来做基于Web的转换，但它并不是被局限于用作XHTML的输出。XSLT可以将XML转换为任意的文本格式，这就使它成为很多类型代码的生成器和其他开发工具的一个理想的选择。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;当用XSLT作为一个基本的代码生成器时，将它集中在重复的和高度结构化的应用上是最好的。很多跟EJB相关的应用是高度结构化和有点重复的，使的XSLT成为代码生成的一个理想的选择。
+                        <BR> -------------------------------------------------------------------------------------------------------------------------
+                        <BR> 期待O'Reilly的《Enterprise Java Beans》第三版，因为9月就会发行。
+                        <BR> -------------------------------------------------------------------------------------------------------------------------
+                        <BR>
+                        <BR>
+                        <STRONG>9、对于i18n用&lt;xsl:import&gt;</STRONG>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;图3显示了怎样将XSLT样式表模块化来支持国际化：
+                        <BR>
+                        <BR>
+                        <CENTER>
+                          <IMG src="3.png" width=361 height=279>
+                          <BR>
+                          <STRONG>图3、XSLT国际化</STRONG>
+                        </CENTER>
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;这是利用&lt;xsl:import&gt;特征的一个有趣的窍门。用&lt;xsl:import&gt;，一个样式表可以导入一个或多个其它的样式表。如果样式表"A"导入样式表"B"，样式表"A"中定义的模块和变量优先于在样式表"B"中找到的。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;特定语言的样式表看起来可能是这样的：
+                        <BLOCKQUOTE>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+                          <BR> &lt;xsl:stylesheet version="1.0"
+                          <BR> &nbsp;&nbsp;xmlns:xsl="http://www.w3.org/1999/XSL/Transform"&gt;
+                          <BR> &nbsp;&nbsp;&lt;xsl:import href="common.xslt"/&gt;
+                          <BR>
+                          <BR> &nbsp;&nbsp;&lt;xsl:variable name="lang.pageTitle"&gt;Welcome to XSLT!&lt;/xsl:variable&gt;
+                          <BR> &lt;/xsl:stylesheet&gt;
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;通用的样式表可能是这样的：
+                        <BLOCKQUOTE>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+                          <BR> &lt;xsl:stylesheet version="1.0"
+                          <BR> &nbsp;&nbsp;xmlns:xsl="http://www.w3.org/1999/XSL/Transform"&gt;
+                          <BR> &nbsp;&nbsp;&lt;xsl:output method="html" encoding="UTF-8"/&gt;
+                          <BR>
+                          <BR> &nbsp;&nbsp;&lt;xsl:template match="/"&gt;
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;&lt;html&gt;
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;head&gt;
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;&lt;xsl:value-of select="$lang.pageTitle"/&gt;&lt;/title&gt;
+                          <BR> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/head&gt;
+                          <BR> ...etc
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;就象这里显示的一样，通用的样式表里不写给用户显示的具体文本（如页面标题）。相反，它依靠在特定语言的样式表中定义的变量。用这种方式，增加新的语言支持就只是创建一个新语言的样式表。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;这非常类似于"ordinary Java"国际化，是用不同的属性文件定义语言相关的文本。
+                        <BR>
+                        <BR> 10、设立StreamSource来解析相关的URI。
+                        <BR> &nbsp;&nbsp;&nbsp;&nbsp;看一看下面的JAXP代码（被强调的是有问题的部分）：
+                        <BLOCKQUOTE>// Stream containing XML data
+                          <BR> InputStream xmlStream = ...
+                          <BR> // Stream containing XSLT stylesheet
+                          <BR> InputStream xsltStream = ...
+                          <BR>
+                          <BR>
+                          <STRONG>Source xmlSource = new StreamSource(xmlStream);<BR>
+                        Source 
+                        xsltSource = new StreamSource(xsltStream);</STRONG>
+                          <BR>
+                          <BR> TransformerFactory transFact =
+                          <BR> TransformerFactory.newInstance();
+                          <BR> Transformer trans = transFact.newTransformer(xsltSource);
+                          <BR> trans.transform(xmlSource, new StreamResult(System.out));
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;现在假设这个XSLT样式表导入了另外一个样式表，如下所示：
+                        <BLOCKQUOTE>&lt;xsl:import href="formatName.xslt"/&gt;
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;当XSLT处理器不知道到哪里去找formatName.xslt时就会引起问题。在XML数据中包含了对其他文件的引用时，同样的问题也会发生。这段代码可以通过改变StreamSource对象的构造来解决：
+                        <BLOCKQUOTE>Source xmlSource = new StreamSource(xmlStream, "file:///C:/data/xml/");
+                          <BR> Source xsltSource = new StreamSource(xsltStream, "file:///C:/data/xslt/);
+                        </BLOCKQUOTE>
+                        &nbsp;&nbsp;&nbsp;&nbsp;第二个参数提供了包含有XML和XSLT文件的URI。现在，当XSLT处理器解析XML数据和XSLT样式表中的URI引用时，就知道到哪里去寻找了。
+                        <BR>
+                        <BR>
+                        <STRONG>更多知识</STRONG>
+                        <BR> XSLT并不是一门很难的语言，虽然它工作的方式与Java大不相同。埋头写样式表可能是克服初学时的困难的最好方法。这里有一些关于XSLT的附加资源：
+                        <BR>
+                        <LI>
+                          <A href="http://java.oreilly.com/news/javaxslt_example.zip">javaxslt_example.zip</A>: 下载一个XSLT样式表、XML文件和简单的JAXP转换程序的例子。
+                          <LI>
+                            <A href="http://www.w3.org/TR/xslt">The latest XSLT specification</A> 国际互联网联盟的最新XSLT规范。
+                            <LI>
+                              <A href="http://java.sun.com/xml/xml_jaxp.html">Sun's Java API for XML 
+                        Processing (JAXP) site</A>: 为不同种类的XML解析器和XSLT处理器提供了一套标准的Java接口
+                              <LI>
+                                <A href="http://www.xmlspy.com/">Altova's XML Spy</A>: 一个支持XSL转换的XML编辑器。
+                                <LI>
+                                  <A href="http://saxon.sourceforge.net/">The SAXON XSLT processor</A>: 来自Michael Kay的XSLT处理器。
+                                  <LI>
+                                    <A href="http://xml.apache.org/">The Xalan XSLT processor</A>: 来自Apache 组织的XSLT处理
+                                  </LI>
+                      </TD>
+                    </TR>
+                  </TBODY>
+                </TABLE>
+                <P>&nbsp;</P>
+                <P>&nbsp;</P>
+              </DIV>
+              <!--EndFragment-->
+            </DIV>
+          </DIV>
+        </DIV>
+      </DIV>
+    </DIV>
+  </DIV>
+</BODY>
+
+</HTML>

@@ -1,0 +1,533 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>hbase的coprocessor使用</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H3 
+style="FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; LINE-HEIGHT: 26px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">1.起因(Why 
+HBase &nbsp;Coprocessor)</SPAN></H3>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">HBase作为列族数据库最经常被人诟病的特性包括：无法轻易建立“二级索引”，难以执行求和、<A 
+name=baidusnap2 target=_blank></A><SPAN 
+style="COLOR: black; BACKGROUND-COLOR: rgb(153,255,153)">计数</SPAN>、排序等操作。比如，在旧版本的(&lt;0.92)Hbase中，统<SPAN 
+style="COLOR: black; BACKGROUND-COLOR: rgb(153,255,153)">计数</SPAN>据表的总行数，需要使用Counter方法，执行一次MapReduce 
+Job才能得到。虽然HBase在数据存储层中集成了MapReduce，能够有效用于数据表的分布式计算。然而在很多情况下，做一些简单的相加或者聚合计算的时候，如果直接将计算过程放置在server端，能够减少通讯开销，从而获得很好的性能提升。于是，HBase在0.92之后引入了协处理器(coprocessors)，实现一些激动人心的新特性：能够轻易建立二次索引、复杂过滤器(谓词下推)以及访问控制等。</P>
+<H3 
+style="FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; LINE-HEIGHT: 26px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=t1></A>2.灵感来源( Source of Inspration)</H3>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">HBase协处理器的灵感来自于Jeff 
+Dean 09年的<A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(51,51,51) 1px dotted; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px" 
+href="http://www.scribd.com/doc/21631448/Dean-Keynote-Ladis2009" 
+target=_blank>演讲</A>( P66-67)。它根据该演讲实现了类似于bigtable的协处理器，包括以下特性:</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<UL 
+style="LIST-STYLE-TYPE: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0px 45px; PADDING-RIGHT: 0px">
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">每个表服务器的任意子表都可以运行代码 
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">客户端的高层调用接口(客户端能够直接访问数据表的行地址，多行读写会自动分片成多个并行的RPC调用) 
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">提供一个非常灵活的、可用于建立分布式服务的数据模型 
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">能够自动化扩展、负载均衡、应用请求路由</LI></UL></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">HBase的协处理器灵感来自bigtable，但是实现细节不尽相同。HBase建立了一个框架，它为用户提供类库和运行时环境，使得他们的代码能够在HBase 
+region server和master上处理。</DIV>
+<H3 
+style="FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; LINE-HEIGHT: 26px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=t2></A>3.细节剖析（Implementation)</H3>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">协处理器分两种类型，系统协处理器可以全局导入region 
+server上的所有数据表，表协处理器即是用户可以指定一张表使用协处理器。协处理器框架为了更好支持其行为的灵活性，提供了两个不同方面的插件。一个是观察者（observer），类似于关系数据库的触发器。另一个是终端(endpoint)，动态的终端有点像存储过程。</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<H4 
+style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><A 
+name=t3></A>&nbsp;3.1观察者(Observer)</H4>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; MARGIN: 10px auto">观察者的设计意图是允许用户通过插入代码来重载协处理器框架的upcall方法，而具体的事件触发的callback方法由HBase的核心代码来执行。协处理器框架处理所有的callback调用细节，协处理器自身只需要插入添加或者改变的功能。</P>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; MARGIN: 10px auto">以HBase0.92版本为例，它提供了三种观察者接口：</P>
+<UL 
+style="LIST-STYLE-TYPE: none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0px 45px; PADDING-RIGHT: 0px">
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">RegionObserver：提供客户端的数据操纵事件钩子：Get、Put、Delete、Scan等。 
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">WALObserver：提供WAL相关操作钩子。 
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">MasterObserver：提供DDL-类型的操作钩子。如创建、删除、修改数据表等。</LI></UL>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; MARGIN: 10px auto">这些接口可以同时使用在同一个地方，按照不同优先级顺序执行.用户可以任意基于协处理器实现复杂的HBase功能层。HBase有很多种事件可以触发观察者方法，这些事件与方法从HBase0.92版本起，都会集成在HBase 
+API中。不过这些API可能会由于各种原因有所改动，不同版本的接口改动比较大，具体参考<A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(51,51,51) 1px dotted; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px" 
+href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/coprocessor/package-summary.html" 
+target=_blank>Java Doc</A>。</P></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; MARGIN: 10px auto">RegionObserver工作原理，如图1所示。更多关于Observer细节请参见HBaseBook的<A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(51,51,51) 1px dotted; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px" 
+href="http://hbase.apache.org/book.html#coprocessors" 
+target=_blank>第9.6.3章节</A>。</P>
+<P style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; MARGIN: 10px auto"><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(51,51,51) 1px dotted; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px" 
+href="https://blogs.apache.org/hbase/mediaresource/60b135e5-04c6-4197-b262-e7cd08de784b" 
+target=_blank><IMG class=aligncenter 
+style="MAX-WIDTH: 100%; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px auto; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt=regionobserver.png 
+src="60b135e5-04c6-4197-b262-e7cd08de784b.png"></A></P>
+<P 
+style="PADDING-BOTTOM: 0px; TEXT-ALIGN: center; PADDING-TOP: 0px; MARGIN: 10px auto">图1&nbsp;RegionObserver工作原理</P>
+<P style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; MARGIN: 10px auto">&nbsp;</P>
+<H4 
+style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><A 
+name=t4></A>3.2终端(Endpoint)</H4>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; MARGIN: 10px auto">终端是动态RPC插件的接口，它的实现代码被安装在服务器端，从而能够通过HBase 
+RPC唤醒。客户端类库提供了非常方便的方法来调用这些动态接口，它们可以在任意时候调用一个终端，它们的实现代码会被目标region远程执行，结果会返回到终端。用户可以结合使用这些强大的插件接口，为HBase添加全新的特性。终端的使用，如下面流程所示：</P>
+<OL 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 50px; MARGIN: 0px; PADDING-RIGHT: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: decimal; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">定义一个新的protocol接口，必须继承CoprocessorProtocol. 
+  <LI 
+  style="LIST-STYLE-TYPE: decimal; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">实现终端接口，该实现会被导入region环境执行。 
+  <LI 
+  style="LIST-STYLE-TYPE: decimal; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">继承抽象类BaseEndpointCoprocessor. 
+  <LI 
+  style="LIST-STYLE-TYPE: decimal; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 23px; PADDING-RIGHT: 0px">在客户端，终端可以被两个新的HBase 
+  Client API调用 。单个region：HTableInterface.coprocessorProxy(Class&lt;T&gt; 
+  protocol, byte[] row) 。rigons区域：HTableInterface.coprocessorExec(Class&lt;T&gt; 
+  protocol, byte[] startKey, byte[] endKey, Batch.Call&lt;T,R&gt; 
+callable)</LI></OL>
+<P 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; MARGIN: 10px auto">整体的终端调用过程范例，如图2所示：</P>
+<H3 
+style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><A 
+name=t5></A><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(51,51,51) 1px dotted; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px" 
+href="https://blogs.apache.org/hbase/mediaresource/71e2816c-c109-475a-9d64-bc6b74e61443" 
+target=_blank><IMG class=aligncenter 
+style="MAX-WIDTH: 100%; BORDER-TOP: 0px; BORDER-RIGHT: 0px; BORDER-BOTTOM: 0px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px auto; BORDER-LEFT: 0px; DISPLAY: block; PADDING-RIGHT: 0px" 
+alt=rpc.png 
+src="71e2816c-c109-475a-9d64-bc6b74e61443.png"></A></H3>
+<P 
+style="PADDING-BOTTOM: 0px; TEXT-ALIGN: center; PADDING-TOP: 0px; MARGIN: 10px auto">图2&nbsp;终端调用过程范例</P></DIV>
+<H3 
+style="FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; LINE-HEIGHT: 26px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=t6></A>4.编程实践(Code Example)</H3>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">在该实例中，我们通过计算HBase表中行数的一个实例，来真实感受协处理器 
+的方便和强大。在旧版的HBase我们需要编写MapReduce代码来汇总数据表中的行数，在0.92以上的版本HBase中，只需要编写客户端的代码即可实现，非常适合用在WebService的封装上。</P>
+<H4 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; LINE-HEIGHT: 25px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=t7></A>4.1启用协处理器 Aggregation(Enable Coprocessor Aggregation)</H4>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">我们有两个方法：1.启动全局aggregation，能过操纵所有的表上的数据。通过修改hbase-site.xml这个文件来实现，只需要添加如下代码：</P>
+<DIV class=cnblogs_code 
+style="OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 5px; TEXT-ALIGN: left; PADDING-TOP: 5px; FONT: 14px/26px 'Courier New'; PADDING-LEFT: 5px; MARGIN: 5px 0px; BORDER-LEFT: rgb(204,204,204) 1px solid; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><PRE style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0px; FONT-FAMILY: 'Courier New'; WHITE-SPACE: pre-wrap; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 0px; PADDING-RIGHT: 0px"><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&lt;</SPAN><SPAN style="COLOR: rgb(128,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">property</SPAN><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&gt;</SPAN>
+   <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&lt;</SPAN><SPAN style="COLOR: rgb(128,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">name</SPAN><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&gt;</SPAN>hbase.coprocessor.user.region.classes<SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&lt;/</SPAN><SPAN style="COLOR: rgb(128,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">name</SPAN><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&gt;</SPAN>
+   <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&lt;</SPAN><SPAN style="COLOR: rgb(128,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">value</SPAN><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&gt;</SPAN>org.apache.hadoop.hbase.coprocessor.AggregateImplementation<SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&lt;/</SPAN><SPAN style="COLOR: rgb(128,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">value</SPAN><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&gt;</SPAN>
+ <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&lt;/</SPAN><SPAN style="COLOR: rgb(128,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">property</SPAN><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">&gt;</SPAN></PRE></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">2.启用表aggregation，只对特定的表生效。通过HBase 
+Shell 来实现。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">(1)disable指定表。hbase&gt; 
+disable '<SPAN 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">mytable</SPAN>'</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">(2)添加aggregation&nbsp;hbase&gt; 
+alter '<SPAN 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">mytable</SPAN>', 
+METHOD =&gt; 
+'table_att','coprocessor'=&gt;'|org.apache.hadoop.hbase.coprocessor.AggregateImplementation||'</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/25px verdana, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">(3)重启指定表&nbsp;hbase&gt; 
+enable '<SPAN 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">mytable</SPAN>'</P>
+<H4 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; FONT-VARIANT: normal; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; LINE-HEIGHT: 25px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+name=t8></A>4.2统计行数代码(Code Snippet)</H4>
+<DIV class=cnblogs_code 
+style="OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(204,204,204) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 5px; TEXT-ALIGN: left; PADDING-TOP: 5px; FONT: 14px/26px 'Courier New'; PADDING-LEFT: 5px; MARGIN: 5px 0px; BORDER-LEFT: rgb(204,204,204) 1px solid; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(245,245,245); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=cnblogs_code_toolbar 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 5px 0px 0px; PADDING-RIGHT: 0px"><SPAN 
+class=cnblogs_code_copy 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 5px"><A 
+title=复制代码 
+style="TEXT-DECORATION: none; BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px" 
+href="http://www.360doc.com/content/13/0320/09/4675893_272623864.shtml" 
+target=_blank><IMG 
+style="MAX-WIDTH: 100%; BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px" 
+alt=复制代码 
+src="http://image59.360doc.com/DownloadImg/2013/03/2009/31058971_1.gif"></A></SPAN></DIV><PRE style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0px; FONT-FAMILY: 'Courier New'; WHITE-SPACE: pre-wrap; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN-TOP: 0px; PADDING-RIGHT: 0px"><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">public</SPAN> <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">class</SPAN><SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px"> MyAggregationClient { 
+
+</SPAN><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">private</SPAN> <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">static</SPAN> <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">final</SPAN> <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">byte</SPAN>[] TABLE_NAME = Bytes.toBytes("mytable"<SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">);
+</SPAN><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">private</SPAN> <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">static</SPAN> <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">final</SPAN> <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">byte</SPAN>[] CF = Bytes.toBytes("vent"<SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">);
+</SPAN><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">public</SPAN> <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">static</SPAN> <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">void</SPAN> main(String[] args) <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">throws</SPAN><SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px"> Throwable {
+Configuration customConf </SPAN>= <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">new</SPAN><SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px"> Configuration();
+customConf.setStrings(</SPAN>"hbase.zookeeper.quorum"<SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">,
+</SPAN>"node0,node1,node2"<SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">);
+</SPAN><SPAN style="COLOR: rgb(0,128,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">//</SPAN><SPAN style="COLOR: rgb(0,128,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">提高RPC通信时长</SPAN>
+customConf.setLong("hbase.rpc.timeout", 600000<SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">);
+</SPAN><SPAN style="COLOR: rgb(0,128,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">//</SPAN><SPAN style="COLOR: rgb(0,128,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">设置Scan缓存</SPAN>
+customConf.setLong("hbase.client.scanner.caching", 1000<SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">);
+Configuration configuration </SPAN>=<SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px"> HBaseConfiguration.create(customConf);
+AggregationClient aggregationClient </SPAN>= <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">new</SPAN><SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px"> AggregationClient(
+configuration);
+Scan scan </SPAN>= <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">new</SPAN><SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px"> Scan();
+</SPAN><SPAN style="COLOR: rgb(0,128,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">//</SPAN><SPAN style="COLOR: rgb(0,128,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">指定扫描列族，唯一值</SPAN>
+<SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">scan.addFamily(CF);
+</SPAN><SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">long</SPAN> rowCount = aggregationClient.rowCount(TABLE_NAME, <SPAN style="COLOR: rgb(0,0,255); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">null</SPAN><SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px">, scan);
+System.out.println(</SPAN>"row count is " +<SPAN style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 0px"> rowCount);
+
+}
+}</SPAN></PRE>
+<DIV class=cnblogs_code_toolbar 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 5px 0px 0px; PADDING-RIGHT: 0px"><SPAN 
+class=cnblogs_code_copy 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 1.5; PADDING-RIGHT: 5px"><A 
+title=复制代码 
+style="TEXT-DECORATION: none; BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px" 
+href="http://www.360doc.com/content/13/0320/09/4675893_272623864.shtml" 
+target=_blank><IMG 
+style="MAX-WIDTH: 100%; BORDER-TOP: medium none; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px" 
+alt=复制代码 
+src="http://image59.360doc.com/DownloadImg/2013/03/2009/31058971_1.gif"></A></SPAN></DIV></DIV>
+<DIV id=post-body-7287374262212361413 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px" 
+dir=ltr>
+<H3 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; LINE-HEIGHT: 25px; PADDING-RIGHT: 0px"><A 
+name=t9></A><BR></H3>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px">以下是关于<SPAN 
+style="FONT-FAMILY: Arial; LINE-HEIGHT: 25px">Observer程序示例的</SPAN>补充：</DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px">
+<H3 
+style="COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><A 
+name=t10></A>4.编程实践(Code Example)</H3></DIV>
+<DIV style="FONT-SIZE: 16px; COLOR: rgb(68,68,68); LINE-HEIGHT: 24px"><SPAN 
+style="FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51)"><SPAN 
+style="FONT-SIZE: 14px; LINE-HEIGHT: 25px">4.3&nbsp;</SPAN></SPAN><SPAN 
+style="FONT-SIZE: 14px; FONT-FAMILY: Arial; COLOR: rgb(51,51,51); LINE-HEIGHT: 26px">RegionObserverExample 
+（此例来自《HBase: The Definitive Guide》</SPAN><SPAN style="LINE-HEIGHT: 17px"><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; LINE-HEIGHT: 19px">)</SPAN></SPAN></DIV>
+<DIV style="FONT-SIZE: 16px; COLOR: rgb(68,68,68); LINE-HEIGHT: 24px"><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 17px">//新实现的类须继承BaseRegionObserver类</SPAN></DIV>
+<DIV style="FONT-SIZE: 16px; COLOR: rgb(68,68,68); LINE-HEIGHT: 24px">
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>package 
+hbaseCoprocessor;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG><BR></STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import java.io.IOException; 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import 
+java.util.List;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import 
+org.apache.hadoop.conf.Configuration;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import 
+org.apache.hadoop.hbase.HBaseConfiguration;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import org.apache.hadoop.hbase.KeyValue; 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import org.apache.hadoop.hbase.client.Get; 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import 
+org.apache.hadoop.hbase.client.HTable;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import 
+org.apache.hadoop.hbase.client.Result;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import 
+org.apache.hadoop.hbase.coprocessor.BaseRegionObserver; 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import 
+org.apache.hadoop.hbase.coprocessor.ObserverContext; 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import 
+org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment; 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>import org.apache.hadoop.hbase.util.Bytes; 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp;&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>public class RegionObserverExample extends 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; BaseRegionObserver { 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; 
+&nbsp;&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; public static final byte[] FIXED_ROW =      
+  &nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+Bytes.toBytes("@@@GETTIME@@@");</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; public static String tablename = 
+"table";</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; public static String rowkey = 
+"rowkey";</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; @Override 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; public void preGet( 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+final ObserverContext&lt;RegionCoprocessorEnvironment&gt; e, 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+final Get get, final List&lt;KeyValue&gt; results) throws 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+IOException { &nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; //if (Bytes.equals(get.getRow(), FIXED_ROW)) { &nbsp; 
+//书中原来的功能是如果查询的row为FIXED_ROW时，在结果返回系统时间</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 17px">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; KeyValue kv = new 
+KeyValue(get.getRow(), FIXED_ROW, &nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; FIXED_ROW, 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+Bytes.toBytes(System.currentTimeMillis())); &nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; results.add(kv); &nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; //} &nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; } 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; public static void selectRow(String 
+tablename, String rowKey)</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; throws IOException 
+{</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; Configuration config = 
+HBaseConfiguration.create();</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; HTable table =new 
+HTable(config, tablename);</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; Get g =new 
+Get(rowKey.getBytes());</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; Result rs = 
+table.get(g);</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; for (KeyValue kv : 
+rs.raw()) {</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; 
+System.out.print(new String(kv.getRow()) +" ");</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; 
+System.out.print(new String(kv.getFamily()) +":");</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; 
+System.out.print(new String(kv.getQualifier()) +" 
+");</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; &nbsp; 
+System.out.println(new String(kv.getValue()));</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; 
+}</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; 
+table.close();</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; }</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 17px">&nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>public static void main(String args[]){ 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; try 
+{</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; selectRow( tablename, 
+rowkey);</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; } catch (IOException e) 
+{</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; &nbsp; 
+e.printStackTrace();</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; }</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; &nbsp; System.out.println("sucess!"); 
+&nbsp;</STRONG></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>&nbsp; } &nbsp;</STRONG></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 17px">&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 12px; FONT-FAMILY: Consolas, 'Courier New', Courier, mono, serif; COLOR: rgb(0,102,153); LINE-HEIGHT: 19px"><SPAN 
+style="LINE-HEIGHT: 17px"><STRONG>} &nbsp;</STRONG></SPAN></SPAN></DIV></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px"><SPAN 
+style="FONT-FAMILY: Arial; LINE-HEIGHT: 26px">1.编译通过后,将该类打包成jar文件(如test.jar),并copy到各regionserver的安装目录下，</SPAN></DIV>
+<DIV style="FONT-SIZE: 16px; COLOR: rgb(68,68,68); LINE-HEIGHT: 24px"><SPAN 
+style="FONT-SIZE: 14px; FONT-FAMILY: Arial; COLOR: rgb(51,51,51); LINE-HEIGHT: 26px">2 
+利用shell命令加载此coprocessor到特定表上:&nbsp;</SPAN><SPAN 
+style="FONT-FAMILY: Arial; COLOR: rgb(51,51,51)"><SPAN 
+style="FONT-SIZE: 14px; LINE-HEIGHT: 25px">alter 't1', METHOD =&gt; 'table_att', 
+'coprocessor'=&gt;'test.jar|hbaseCoprocessor.RegionObserverExample|1001|'.</SPAN></SPAN></DIV>
+<DIV style="FONT-SIZE: 16px; COLOR: rgb(68,68,68); LINE-HEIGHT: 24px"><SPAN 
+style="FONT-FAMILY: Arial; COLOR: rgb(51,51,51)"><SPAN 
+style="FONT-SIZE: 14px; LINE-HEIGHT: 25px">3 
+然后在客户端执行上面的程序，即可得到预期结果。</SPAN></SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px"><SPAN 
+style="FONT-FAMILY: Arial; LINE-HEIGHT: 26px">4 
+一个疑问，根据参考资料中说明，可以将jar文件上传到hdfs中(命令如下)，再加载到表上，但我并没有成功。</SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px"><SPAN 
+style="FONT-FAMILY: Arial; LINE-HEIGHT: 26px">&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 15px; FONT-FAMILY: Arial; COLOR: rgb(51,51,51); LINE-HEIGHT: 26px"><SPAN 
+style="FONT-SIZE: 14px; LINE-HEIGHT: 25px">alter 't1', METHOD =&gt; 'table_att', 
+'coprocessor'=&gt;'hdfs:///test.jar|hbaseCoprocessor.RegionObserverExample|1001|'.</SPAN></SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px"><SPAN 
+style="FONT-SIZE: 15px; FONT-FAMILY: Arial; COLOR: rgb(51,51,51); LINE-HEIGHT: 26px"><SPAN 
+style="FONT-SIZE: 14px; LINE-HEIGHT: 25px">ps:经过尝试，可以将路径写完整，即：</SPAN></SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px"><SPAN 
+style="FONT-FAMILY: Arial; LINE-HEIGHT: 25px">alter 't1', METHOD =&gt; 
+'table_att', 
+'coprocessor'=&gt;'hdfs://nnip:9000/test.jar|hbaseCoprocessor.RegionObserverExample|1001|'.</SPAN></DIV>
+<DIV style="FONT-SIZE: 14px; COLOR: rgb(51,51,51)"><SPAN 
+style="FONT-FAMILY: Arial; LINE-HEIGHT: 21px"><SPAN 
+style="LINE-HEIGHT: 25px">根据自己NN的配置，将上面的nnip修改即可正确运行cp.</SPAN></SPAN></DIV>
+<DIV style="FONT-SIZE: 16px; COLOR: rgb(68,68,68); LINE-HEIGHT: 24px"><SPAN 
+style="FONT-SIZE: 15px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 26px"><SPAN 
+style="FONT-SIZE: 14px; LINE-HEIGHT: 25px">5 
+删除一个coprocessor的shell命令:</SPAN></SPAN><SPAN 
+style="FONT-FAMILY: Arial; COLOR: rgb(51,51,51)"><SPAN 
+style="FONT-SIZE: 14px; LINE-HEIGHT: 25px">alter 't1', METHOD =&gt; 
+'table_att_unset',NAME =&gt; 'coprocessor$1'</SPAN></SPAN></DIV>
+<DIV style="FONT-SIZE: 16px; COLOR: rgb(68,68,68); LINE-HEIGHT: 24px"><SPAN 
+style="FONT-FAMILY: Arial; COLOR: rgb(51,51,51)"><SPAN 
+style="FONT-SIZE: 14px; LINE-HEIGHT: 25px"><BR></SPAN></SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px"><SPAN 
+style="FONT-SIZE: 15px; FONT-FAMILY: Arial; COLOR: rgb(51,51,51); LINE-HEIGHT: 26px"><SPAN 
+style="FONT-SIZE: 14px; LINE-HEIGHT: 25px">参考资料：</SPAN></SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px"><A 
+style="TEXT-DECORATION: none; COLOR: rgb(61,107,167)" 
+href="https://blogs.apache.org/hbase/entry/coprocessor_introduction" 
+target=_blank>https://blogs.apache.org/hbase/entry/coprocessor_introduction</A></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: verdana, Arial, Helvetica, sans-serif; COLOR: rgb(51,51,51); LINE-HEIGHT: 25px"><SPAN 
+style="FONT-FAMILY: Arial; LINE-HEIGHT: 25px">HBase: The Definitive 
+Guide</SPAN></DIV></DIV></DIV></body>
+</html>

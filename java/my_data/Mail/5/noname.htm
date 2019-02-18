@@ -1,0 +1,1379 @@
+﻿<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>用JAMES实现自己的邮件服务器</title>
+<body><!--StartFragment-->
+<span class="Apple-style-span" style="WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: separate; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); FONT: medium Simsun; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto; -webkit-border-horizontal-spacing: 0px; -webkit-border-vertical-spacing: 0px; -webkit-text-decorations-in-effect: none"              ><span class="Apple-style-span" style="FONT-SIZE: 12px; FONT-FAMILY: Arial, sans-serif, Helvetica, Tahoma; TEXT-ALIGN: left; LINE-HEIGHT: 18px" ><div style="MARGIN: 0in 0in 0pt"     >ames 是一个企业级的邮件服务器，它完全实现了smtp 和 pops 以及nntp 协议。同时，james服务器又是一个邮件应用程序平台。James的核心是Mailet API,而james 服务齐是一个mailet的容器。它可以让你非常容易的实现出很强大的邮件应用程序。James开源项目被广泛的应用于与邮件有关的项目中。你可以通过它来搭建自己的邮件服务器。我们可以利用Mailet API,编程接口来实现自己所需的业务。James集成了Avalon 应用程序框架以及<span style="COLOR: black" >Phoenix Avalon<span class="Apple-converted-space">&nbsp;</span></span><span style="COLOR: black" >框架容器。</span><span style="COLOR: black" >Phoenix</span><span style="COLOR: black" >为</span><span style="COLOR: black" >james<span class="Apple-converted-space">&nbsp;</span></span><span style="COLOR: black" >服务器提供了强大的支持。需要说明的是</span><span style="COLOR: black" >Avalon</span><span style="COLOR: black" >开源项目目前已经关闭。</span></div><div style="MARGIN: 0in 0in 11pt; TEXT-INDENT: 0in"     ><strong style="FONT-WEIGHT: bold" ><font size="6">&nbsp;<span class="Apple-converted-space">&nbsp;</span><a name="_Toc177547244" ><span><span><span style="FONT: 7pt 'Times New Roman'"    >&nbsp;</span></span><font size="3">快速上手</font></span></a></font></strong></div><div style="MARGIN: 0in 0in 11pt; TEXT-INDENT: 0in"     ><strong style="FONT-WEIGHT: bold" ><font size="5"><a name="_Toc177547245" ><span><font size="3">安装james</font></span></a></font></strong></div><div style="MARGIN: 0in 0in 0pt"     ><span style="COLOR: black" >&nbsp;&nbsp;<span class="Apple-converted-space">&nbsp;</span></span><span style="COLOR: black" >我这次使用的安装包是</span><span style="COLOR: black" >james 2.3.1</span><span style="COLOR: black" >。大家可以从这里下载到</span><span style="COLOR: black" ><a href="http://james.apache.org/download.cgi" style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)"   >http://james.apache.org/download.cgi</a></span></div><div style="MARGIN: 0in 0in 0pt"     ><span style="COLOR: black" >&nbsp;</span><span style="COLOR: black" >现在让我们开始我们激动人心的</span><span style="COLOR: black" >james</span><span style="COLOR: black" >之旅。首先我们将</span><span style="COLOR: black" >james-binary-2.3.1.zip</span><span style="COLOR: black" >解压缩下载到你的安装目录。我们可以把这个过程理解为安装的过程。我在这里将它解压到</span><span style="COLOR: black" >c:\.</span><span style="COLOR: black" >并且把它改名为</span><span style="COLOR: black" >james.</span><span style="COLOR: black" >这样我们的</span><span style="COLOR: black" >james</span><span style="COLOR: black" >就安装好了。目录为</span><span style="COLOR: black" >C:\james</span><span style="COLOR: black" >。很简单吧！</span></div><div style="MARGIN: 0in 0in 0pt"     >&nbsp;</div><div style="MARGIN: 0in 0in 11pt; TEXT-INDENT: 0in"     ><strong style="FONT-WEIGHT: bold" ><font size="5"><a name="_Toc177547246" ><span><font size="3">准备知识</font></span></a><font size="3"><span class="Apple-converted-space">&nbsp;</span>－ 学习一些必要的知识</font></font></strong></div><div style="MARGIN: 0in 0in 0pt 64.9pt"    ><span style="COLOR: black" >在我使用</span><span style="COLOR: black" >james</span><span style="COLOR: black" >的时候让我感觉首先理解</span><span style="COLOR: black" >james</span><span style="COLOR: black" >的应用程序结构是很重要的。否则你会在使用中感到很困惑。</span></div><div style="MARGIN: 0in 0in 0pt 64.9pt"    ><span style="COLOR: black" >它的应用程序结构是这样的：</span></div><div style="MARGIN: 0in 0in 0pt 64.9pt"    ><span style="COLOR: black" ><span style="COLOR: black" >&nbsp;James</span></span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_ _apps</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|_ _bin</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_ _conf</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_ _ext</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_ _lib</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_ _logs</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_ _tools</span></div><div style="MARGIN: 0in 0in 0pt"     ><span style="COLOR: black" >我们重点介绍一下两个文件夹</span><span style="COLOR: black" >bin<span class="Apple-converted-space">&nbsp;</span></span><span style="COLOR: black" >和</span><span style="COLOR: black" ><span class="Apple-converted-space">&nbsp;</span>apps.</span></div><div style="MARGIN: 0in 0in 0pt"     ><span style="COLOR: black" >bin</span><span style="COLOR: black" >目录中的</span><span style="COLOR: black" >run.bat</span><span style="COLOR: black" >和</span><span style="COLOR: black" >run.sh</span><span style="COLOR: black" >是</span><span style="COLOR: black" >James</span><span style="COLOR: black" >的启动程序。只要记住这个重要文件就可以。</span></div><div style="MARGIN: 0in 0in 0pt"     ><span style="COLOR: black" >启动之后控制台显示如下：</span></div><div style="MARGIN: 0in 0in 0pt"     >Using PHOENIX_HOME:&nbsp;&nbsp; C:\james<br>Using PHOENIX_TMPDIR: C:\james\temp<br>Using JAVA_HOME:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; C:\j2sdk1.4.2_02</div><div style="MARGIN: 0in 0in 0pt"     ><p style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"       >Phoenix 4.2</p><p style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"       >James Mail Server 2.3.1<br>Remote Manager Service started plain:4555<br>POP3 Service started plain:110<br>SMTP Service started plain:25<br>NNTP Service started plain:119<br>FetchMail Disabled</p></div><div style="MARGIN: 0in 0in 0pt"     ><span style="COLOR: black" >&nbsp;<span style="COLOR: black" ><span style="COLOR: black" >Apps<span class="Apple-converted-space">&nbsp;</span></span><span style="COLOR: black" >目录下有个</span><span style="COLOR: black" >james</span><span style="COLOR: black" >的子目录这个目录是它的核心。</span></span></span></div><div style="MARGIN: 0in 0in 0pt"     ><div style="MARGIN: 0in 0in 0pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; james</span></div><div style="MARGIN: 0in 0in 0pt 64.9pt"    ><span style="COLOR: black" >|_ _SAR-INF</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >|_ _conf</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >|_ _logs</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >|_ _var</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp; |_mail</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_address-error</span></div><div style="MARGIN: 0in 0in 0pt 64.9pt"    ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_error</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_indexes</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_outgoing</span></div><div style="MARGIN: 0in 0in 0pt 64.9pt"    ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_relay-denied</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_spam</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_spool</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp; |_nntp</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |_....</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; …</span></div><div style="MARGIN: 0in 0in 0pt; TEXT-INDENT: 64.9pt"     ><span style="COLOR: black" >&nbsp;&nbsp;&nbsp; |_users</span></div><div style="MARGIN: 0in 0in 0pt"     ><span style="COLOR: black" >SAR-INF<span class="Apple-converted-space">&nbsp;</span></span><span style="COLOR: black" >下有一个</span><span style="COLOR: black" >config.xml</span><span style="COLOR: black" >是</span><span style="COLOR: black">james</span><span style="COLOR: black">中的核心配置文件。</span></div>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">Logs<span class=Apple-converted-space>&nbsp;</span></span><span style="COLOR: black">包含了与</span><span style="COLOR: black">james</span><span style="COLOR: black">有关的</span><span style="COLOR: black">Log</span><span style="COLOR: black">。调试全靠它了。</span></div>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">Var<span class=Apple-converted-space>&nbsp;</span></span><span style="COLOR: black">包含了一些文件夹通过它们的名字我们大概也能猜测出它们的用途。</span><span 
+style="COLOR: black">Mail</span><span style="COLOR: black">主要用于存储邮件。</span><span style="COLOR: black">nntp</SPAN><span style="COLOR: black">主要用于新闻服务器。</SPAN><span style="COLOR: black">Users</SPAN><span style="COLOR: black">用于存储所有邮件服务器的用户。也就是邮件地址前面的东东。如：</SPAN><span 
+style="COLOR: black"><A onclick="window.open('http://mail.google.com/mail/u/0/?view=cm&amp;fs=1&amp;tf=1&amp;to=pig@sina.com的pig','Compose new message','width     =640,height=480')" style="TEXT-DECORATION: underline; COLOR: rgb(16,138,198)" href="javascript:void(0)" rel=noreferrer ><span style="COLOR: black">pig@sina.com</SPAN><span style="COLOR: black">的</SPAN><span style="COLOR: black">pig</SPAN></A></SPAN><span style="COLOR: black">就是所谓用用户。</SPAN></div>
+<div style="MARGIN: 0in 0in 0pt">&nbsp;</DIV>
+<div style="MARGIN: 0in 0in 11pt; TEXT-INDENT: 0in"><strong 
+style="FONT-WEIGHT: bold"><font size=5></FONT></STRONG><font size=5></FONT></DIV><font size=5>
+<div style="MARGIN: 0in 0in 11pt; TEXT-INDENT: 0in"><strong 
+style="FONT-WEIGHT: bold"><font size=4><font size=3>创建用户：</FONT></FONT></STRONG></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span><strong style="FONT-WEIGHT: bold">&nbsp;</STRONG>我们在</SPAN><span style="COLOR: black">James</SPAN><span style="COLOR: black">上建若干用户，用来测试收发邮件。当然如果你不用</SPAN><span style="COLOR: black">james</SPAN><span style="COLOR: black">本身的用户也可以。</SPAN><span style="COLOR: black">James</SPAN><span style="COLOR: black">以</SPAN><span style="COLOR: black">telnet<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">的方式提供了接口用来添加用户。下面我来演示一下。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">首先使用</SPAN><span style="COLOR: black">telnet</SPAN><span style="COLOR: black">来连接</SPAN><span style="COLOR: black">james</SPAN><span style="COLOR: black">的</SPAN><span style="COLOR: black">remote manager .</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">1.telnet localhost 
+4555&nbsp;</SPAN><span style="COLOR: black">回车</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">2.</SPAN><span style="COLOR: black">然后输入管理员用户名和密码（</SPAN><span style="COLOR: black">user/pwd<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">：</SPAN><span style="COLOR: black"><span class=Apple-converted-space>&nbsp;</SPAN>root/root<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">是默认设置这个可以在</SPAN><span style="COLOR: black">config.xml</SPAN><span style="COLOR: black">中修改）</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">JAMES Remote Administration Tool 
+2.3.1</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">Please enter your login and 
+password</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">Login id:</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: red">root</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">Password:</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: red">root</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">Welcome root. HELP for a list of 
+commands</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt">&nbsp;</DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">3.</SPAN><span style="COLOR: black">添加用户</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: red">adduser kakaxi kakaxi</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">User kakaxi added</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt">&nbsp;</DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: red">Adduser mingren mingren</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">User mingren added</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt">&nbsp;</DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">4.</SPAN><span style="COLOR: black">查看添加情况</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: red">listusers</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">Existing accounts 2</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">user: mingren</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">user: kakaxi</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt 64.9pt"><span 
+style="COLOR: black">得到上面的信息说明我们已经添加成功。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt">&nbsp;</DIV>
+<div style="MARGIN: 0in 0in 0pt">&nbsp;</DIV>
+<div style="MARGIN: 0in 0in 11pt; TEXT-INDENT: 0in"><strong 
+style="FONT-WEIGHT: bold"><font size=4><font size=3>发送器</FONT></FONT></STRONG></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;</SPAN><span style="COLOR: black">这个类主要用来测试我们的邮件服务器，可以不用将其打入包中。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">
+<div class=code_title>java 代码</DIV>
+<div class=dp-highlighter 
+style="WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; WIDTH: 694px; OVERFLOW-X: auto; OVERFLOW-Y: auto; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent">
+<div class=bar>
+<ol class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >package</SPAN><span style="COLOR: black" 
+  >&nbsp;com.yy.jamesstudy; &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;java.util.Date; &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;java.util.Properties; &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;javax.mail.Authenticator; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;javax.mail.Message; &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;javax.mail.PasswordAuthentication; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;javax.mail.Session; &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;javax.mail.Transport; &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;javax.mail.internet.InternetAddress; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;javax.mail.internet.MimeMessage; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >class</SPAN><span style="COLOR: black" 
+  >&nbsp;Mail&nbsp;{ &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >private</SPAN><span style="COLOR: black" 
+  >&nbsp;String&nbsp;mailServer,&nbsp;From,&nbsp;To,&nbsp;mailSubject,&nbsp;MailContent; 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >private</SPAN><span style="COLOR: black" 
+  >&nbsp;String&nbsp;username,&nbsp;password; 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >private</SPAN><span style="COLOR: black" 
+  >&nbsp;Session&nbsp;mailSession; &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >private</SPAN><span style="COLOR: black" 
+  >&nbsp;Properties&nbsp;prop; &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >private</SPAN><span style="COLOR: black" 
+  >&nbsp;Message&nbsp;message; &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=comment 
+  style="COLOR: rgb(0,130,0)" 
+  >//&nbsp;Authenticator&nbsp;auth;//认证<span 
+  class=Apple-converted-space>&nbsp;</SPAN></SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</SPAN><span style="COLOR: black" 
+  >&nbsp;Mail()&nbsp;{ &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >//&nbsp;设置邮件相关<span class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;username&nbsp;=&nbsp;</SPAN><span 
+  class=string style="COLOR: blue">"kakaxi"</SPAN><span 
+  style="COLOR: black">; &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;password&nbsp;=&nbsp;</SPAN><span 
+  class=string style="COLOR: blue">"kakaxi"</SPAN><span 
+  style="COLOR: black">; &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mailServer&nbsp;=&nbsp;</SPAN><span 
+  class=string style="COLOR: blue">"localhost"</SPAN><span 
+  style="COLOR: black">; &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;From&nbsp;=&nbsp;</SPAN><span 
+  class=string style="COLOR: blue" 
+  >"kakaxi@localhost"</SPAN><span style="COLOR: black" 
+  >; &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;To&nbsp;=&nbsp;</SPAN><span 
+  class=string style="COLOR: blue" 
+  >"mingren@localhost"</SPAN><span style="COLOR: black" 
+  >; &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mailSubject&nbsp;=&nbsp;</SPAN><span 
+  class=string style="COLOR: blue" 
+  >"Hello&nbsp;Scientist"</SPAN><span style="COLOR: black" 
+  >; &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MailContent&nbsp;=&nbsp;</SPAN><span 
+  class=string style="COLOR: blue" 
+  >"How&nbsp;are&nbsp;you&nbsp;today!"</SPAN><span 
+  style="COLOR: black">; &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >void</SPAN><span style="COLOR: black" 
+  >&nbsp;send(){ &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EmailAuthenticator&nbsp;mailauth&nbsp;=&nbsp; 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >new</SPAN><span style="COLOR: black" 
+  >&nbsp;EmailAuthenticator(username,&nbsp;password); 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >//&nbsp;设置邮件服务器<span class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prop&nbsp;=&nbsp;System.getProperties(); 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prop.put(</SPAN><span 
+  class=string style="COLOR: blue" 
+  >"mail.smtp.auth"</SPAN><span style="COLOR: black" 
+  >,&nbsp;</SPAN><span class=string style="COLOR: blue" 
+  >"true"</SPAN><span style="COLOR: black" 
+  >); &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prop.put(</SPAN><span 
+  class=string style="COLOR: blue" 
+  >"mail.smtp.host"</SPAN><span style="COLOR: black" 
+  >,&nbsp;mailServer); &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >//&nbsp;产生新的Session服务<span class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mailSession&nbsp;=&nbsp;mailSession.getDefaultInstance(prop, 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Authenticator)&nbsp;mailauth); 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message&nbsp;=&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >new</SPAN><span style="COLOR: black" 
+  >&nbsp;MimeMessage(mailSession); &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >try</SPAN><span style="COLOR: black" 
+  >&nbsp;{ &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message.setFrom(</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >new</SPAN><span style="COLOR: black" 
+  >&nbsp;InternetAddress(From));&nbsp;</SPAN><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >//&nbsp;设置发件人<span class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message.setRecipient(Message.RecipientType.TO,&nbsp; 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >new</SPAN><span style="COLOR: black" 
+  >&nbsp;InternetAddress(To));</SPAN><span class=comment 
+  style="COLOR: rgb(0,130,0)">//&nbsp;设置收件人<span 
+  class=Apple-converted-space>&nbsp;</SPAN></SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message.setSubject(mailSubject);</SPAN><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >//&nbsp;设置主题<span class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message.setContent(MailContent,&nbsp;</SPAN><span 
+  class=string style="COLOR: blue">"text/plain"</SPAN><span 
+  style="COLOR: black">);</SPAN><span class=comment 
+  style="COLOR: rgb(0,130,0)">//&nbsp;设置内容<span 
+  class=Apple-converted-space>&nbsp;</SPAN></SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message.setSentDate(</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >new</SPAN><span style="COLOR: black" 
+  >&nbsp;Date());</SPAN><span class=comment 
+  style="COLOR: rgb(0,130,0)">//&nbsp;设置日期<span 
+  class=Apple-converted-space>&nbsp;</SPAN></SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Transport&nbsp;tran&nbsp;=&nbsp;mailSession.getTransport(</SPAN><span 
+  class=string style="COLOR: blue">"smtp"</SPAN><span 
+  style="COLOR: black">); &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tran.connect(mailServer,&nbsp;username,&nbsp;password); 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tran.send(message,&nbsp;message.getAllRecipients()); 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tran.close(); 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >catch</SPAN><span style="COLOR: black" 
+  >&nbsp;(Exception&nbsp;e)&nbsp;{ &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace(); 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >static</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >void</SPAN><span style="COLOR: black" 
+  >&nbsp;main(String[]&nbsp;args)&nbsp;{ &nbsp;&nbsp;</SPAN> 
+
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mail&nbsp;mail; 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mail&nbsp;=&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >new</SPAN><span style="COLOR: black" 
+  >&nbsp;Mail(); &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(</SPAN><span 
+  class=string style="COLOR: blue" 
+  >"sending......"</SPAN><span style="COLOR: black" 
+  >); &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mail.send(); 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(</SPAN><span 
+  class=string style="COLOR: blue">"finished!"</SPAN><span 
+  style="COLOR: black">); &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black">} 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >class</SPAN><span style="COLOR: black" 
+  >&nbsp;EmailAuthenticator&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >extends</SPAN><span style="COLOR: black" 
+  >&nbsp;Authenticator&nbsp;{ &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >private</SPAN><span style="COLOR: black" 
+  >&nbsp;String&nbsp;m_username&nbsp;=&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >null</SPAN><span style="COLOR: black" 
+  >; &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >private</SPAN><span style="COLOR: black" 
+  >&nbsp;String&nbsp;m_userpass&nbsp;=&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >null</SPAN><span style="COLOR: black" 
+  >; &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >void</SPAN><span style="COLOR: black" 
+  >&nbsp;setUsername(String&nbsp;username)&nbsp;{ 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m_username&nbsp;=&nbsp;username; 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >void</SPAN><span style="COLOR: black" 
+  >&nbsp;setUserpass(String&nbsp;userpass)&nbsp;{ 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;m_userpass&nbsp;=&nbsp;userpass; 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</SPAN><span style="COLOR: black" 
+  >&nbsp;EmailAuthenticator(String&nbsp;username,&nbsp;String&nbsp;userpass)&nbsp;{ 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >super</SPAN><span style="COLOR: black" 
+  >(); &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;setUsername(username); 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;setUserpass(userpass); 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</SPAN><span style="COLOR: black" 
+  >&nbsp;PasswordAuthentication&nbsp;getPasswordAuthentication()&nbsp;{ 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >return</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >new</SPAN><span style="COLOR: black" 
+  >&nbsp;PasswordAuthentication(m_username,&nbsp;m_userpass); 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >}&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  ></SPAN></LI></OL></DIV></DIV></SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black"><span>&lt;v:shapetype id="_x0000_t75" 
+path="m@4@5l@4@11@9@11@9@5xe" o:preferrelative="t" filled="f" stroked="f" 
+coordsize="21600,21600" 
+o:spt="75"&gt;&nbsp;&lt;/v:shapetype&gt;</SPAN></SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt">&nbsp; 
+<div style="MARGIN: 0in 0in 11pt; TEXT-INDENT: 0in"><strong 
+style="FONT-WEIGHT: bold"><font size=5><font size=3>实现－Matcher 和 
+Mailet编写</FONT></FONT></STRONG></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">我先解释一下大概的流程：当</SPAN><span style="COLOR: black">james<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">接收到一个</SPAN><span style="COLOR: black">smtp</SPAN><span style="COLOR: black">请求时首先会交给</SPAN><span style="COLOR: black">matcher</SPAN><span style="COLOR: black">来进行一系列过滤动作。然后由</SPAN><span style="COLOR: black">matcher</SPAN><span style="COLOR: black">交给相应的</SPAN><span style="COLOR: black">mailet</SPAN><span style="COLOR: black">来进行处理。</SPAN><span style="COLOR: black">James</SPAN><span style="COLOR: black">就相当于一个</SPAN><span style="COLOR: black">matcher</SPAN><span style="COLOR: black">和</SPAN><span style="COLOR: black">mailet</SPAN><span style="COLOR: black">的容器。就像</SPAN><span style="COLOR: black">tomcat</SPAN><span style="COLOR: black">之于</SPAN><span style="COLOR: black">servlet</SPAN><span style="COLOR: black">。而</SPAN><span style="COLOR: black">mailet</SPAN><span style="COLOR: black">和</SPAN><span style="COLOR: black">servlet</SPAN><span style="COLOR: black">很是相似。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">我们这里要完成的功能很简单，就是当</SPAN><span style="COLOR: black">james</SPAN><span style="COLOR: black">邮件服务器接收到鸣人（人名）后把发送者和邮件正文打印到控制台。我们分析这个需求发现我们需要写一个</SPAN><span 
+style="COLOR: black">matcher</SPAN><span 
+style="COLOR: black">以及一个</SPAN><span style="COLOR: black">mailet.matcher</SPAN><span style="COLOR: black">用来过滤而</SPAN><span style="COLOR: black">mailet</SPAN><span style="COLOR: black">用来将邮件内容打印到控制台。为了简单起见，我这次只是继承了</SPAN><span 
+style="FONT-SIZE: 10pt; COLOR: black">GenericMailet<span 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><span 
+style="FONT-SIZE: 10pt; COLOR: black">和</SPAN><span 
+style="COLOR: black">GenericRecipientMatcher<span 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><span 
+style="COLOR: black">两个已经实现的</SPAN><span 
+style="COLOR: black"><span class=Apple-converted-space>&nbsp;</SPAN>mailet<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">和</SPAN><span style="COLOR: black">matcher.</SPAN><span style="COLOR: black">具体的</SPAN><span style="COLOR: black">Matcher</SPAN><span style="COLOR: black">和</SPAN><span style="COLOR: black">Mailet</SPAN><span style="COLOR: black">的使用我以后会整理成另外一篇文章。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><strong 
+style="FONT-WEIGHT: bold"></STRONG>&nbsp;</DIV>
+<div style="MARGIN: 0in 0in 0pt"><strong 
+style="FONT-WEIGHT: bold"><span style="COLOR: black">Matcher<span class=Apple-converted-space>&nbsp;</SPAN></SPAN></STRONG><strong 
+style="FONT-WEIGHT: bold"><span style="COLOR: black">的实现</SPAN></STRONG><strong style="FONT-WEIGHT: bold"><span style="COLOR: black"></SPAN></STRONG></DIV>
+<div style="MARGIN: 0in 0in 0pt">
+<div class=dp-highlighter 
+style="WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; WIDTH: 694px; OVERFLOW-X: auto; OVERFLOW-Y: auto; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent">
+<div class=bar>
+<ol class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >package</SPAN><span style="COLOR: black" 
+  >&nbsp;com.yy.jamesstudy; &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;javax.mail.MessagingException; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;org.apache.mailet.GenericRecipientMatcher; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;org.apache.mailet.MailAddress; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)">/**<span 
+  class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*&nbsp;System&nbsp;&nbsp;&nbsp;jamesstudy<span 
+  class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*&nbsp;Package&nbsp;&nbsp;com.yy.jamesstudy<span 
+  class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*&nbsp;<span class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*&nbsp;@author&nbsp;Yang&nbsp;Yang<span 
+  class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*&nbsp;Created&nbsp;on&nbsp;2007-9-14下午02:17:07<span 
+  class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*/</SPAN><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >class</SPAN><span style="COLOR: black" 
+  >&nbsp;BizMatcher&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >extends</SPAN><span style="COLOR: black" 
+  >&nbsp;GenericRecipientMatcher&nbsp;{ 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >boolean</SPAN><span style="COLOR: black" 
+  >&nbsp;matchRecipient(MailAddress&nbsp;recipient)&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >throws</SPAN><span style="COLOR: black" 
+  >&nbsp;MessagingException&nbsp;{ &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >//只接受邮件地址包含鸣人的邮件<span class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >if</SPAN><span style="COLOR: black" 
+  >&nbsp;(recipient.getUser().indexOf(</SPAN><span 
+  class=string style="COLOR: blue">"mingren"</SPAN><span 
+  style="COLOR: black">)!=-</SPAN><span class=number 
+  style="COLOR: black">1</SPAN><span style="COLOR: black" 
+  >)&nbsp;{ &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >return</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >true</SPAN><span style="COLOR: black" 
+  >; &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >return</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >false</SPAN><span style="COLOR: black" 
+  >; &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black">} 
+  &nbsp;&nbsp;</SPAN></LI></OL></DIV></DIV></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">GenericRecipientMatcher<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">是一个针对收件人进行过滤的</SPAN><span style="COLOR: black">matcher</SPAN><span style="FONT-SIZE: 10pt; COLOR: black">.</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt">&nbsp;</DIV>
+<div style="MARGIN: 0in 0in 0pt"><strong 
+style="FONT-WEIGHT: bold"><span style="COLOR: black">Mailet<span class=Apple-converted-space>&nbsp;</SPAN></SPAN></STRONG><strong 
+style="FONT-WEIGHT: bold"><span style="COLOR: black">的实现</SPAN></STRONG></DIV>
+<div class=dp-highlighter 
+style="WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; WIDTH: 694px; OVERFLOW-X: auto; OVERFLOW-Y: auto; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent">
+<div class=bar>
+<ol class=dp-j 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >package</SPAN><span style="COLOR: black" 
+  >&nbsp;com.yy.jamesstudy; &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;java.io.IOException; &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;javax.mail.MessagingException; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;javax.mail.internet.MimeMessage; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;org.apache.mailet.GenericMailet; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;org.apache.mailet.Mail; &nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >import</SPAN><span style="COLOR: black" 
+  >&nbsp;org.apache.mailet.MailAddress; 
+  &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)">/**<span 
+  class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*&nbsp;System&nbsp;&nbsp;&nbsp;jamesstudy<span 
+  class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*&nbsp;Package&nbsp;&nbsp;com.yy.jamesstudy<span 
+  class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*&nbsp;<span class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*&nbsp;@author&nbsp;&nbsp;Yang&nbsp;Yang<span 
+  class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*&nbsp;Created&nbsp;on&nbsp;2007-9-14下午02:16:31<span 
+  class=Apple-converted-space 
+  >&nbsp;</SPAN></SPAN>&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=comment style="COLOR: rgb(0,130,0)" 
+  >&nbsp;*/</SPAN><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >class</SPAN><span style="COLOR: black" 
+  >&nbsp;BizMaillet&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >extends</SPAN><span style="COLOR: black" 
+  >&nbsp;GenericMailet&nbsp;{ &nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >public</SPAN><span style="COLOR: black" 
+  >&nbsp;</SPAN><span class=keyword 
+  style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >void</SPAN><span style="COLOR: black" 
+  >&nbsp;service(Mail&nbsp;mail)&nbsp;&nbsp;{ 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MailAddress&nbsp;ma&nbsp;=&nbsp;mail.getSender(); 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(</SPAN><span 
+  class=string style="COLOR: blue">"sender:"</SPAN><span 
+  style="COLOR: black">+ma.toInternetAddress().toString()); 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >try</SPAN><span style="COLOR: black" 
+  >&nbsp;{ &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MimeMessage&nbsp;mm&nbsp;=&nbsp;mail.getMessage(); 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.out.println(</SPAN><span 
+  class=string style="COLOR: blue">"content:"</SPAN><span 
+  style="COLOR: black" 
+  >+(String)mm.getContent().toString()); &nbsp;&nbsp;</SPAN> 
+
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >catch</SPAN><span style="COLOR: black" 
+  >&nbsp;(IOException&nbsp;e)&nbsp;{ &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace(); 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;</SPAN><span 
+  class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(127,0,85)" 
+  >catch</SPAN><span style="COLOR: black" 
+  >&nbsp;(MessagingException&nbsp;e)&nbsp;{ 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace(); 
+  &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;} 
+  &nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;} &nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black">} 
+  &nbsp;&nbsp;</SPAN></LI></OL></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">GenericMailet<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">是一个</SPAN><span style="COLOR: black">mailet</SPAN><span style="COLOR: black">的基本实现。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">编译</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">我们把这两个</SPAN><span style="COLOR: black">java</SPAN><span style="COLOR: black">文件的</SPAN><span style="COLOR: black">class</SPAN><span style="COLOR: black">文件编译成一个名字为：</SPAN><span style="COLOR: black">jamesstudy.jar<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">的</SPAN><span style="COLOR: black">jar</SPAN><span style="COLOR: black">文件。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt">&nbsp;</DIV>
+<div style="MARGIN: 0in 0in 11pt; TEXT-INDENT: 0in"><strong 
+style="FONT-WEIGHT: bold"><font size=5><font size=3>发布－Matcher 和 
+Mailet以及config.xml</FONT></FONT></STRONG></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span 
+style="FONT-SIZE: 10pt; COLOR: black">&nbsp;&nbsp;&nbsp;<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">1.</SPAN><span style="COLOR: black">发布</SPAN><span style="COLOR: black">jar</SPAN><span style="COLOR: black">文件</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+我们把这个</SPAN><span style="COLOR: black">jar</SPAN><span 
+style="COLOR: black">文件发布到</SPAN><span style="COLOR: black">C:\james\apps\james\SAR-INF\lib。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black"><font color=#ff0000><span 
+style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+注意：如果没有找到相关目录，则需要先启动一遍</SPAN><span style="COLOR: black">james,</SPAN><span style="COLOR: black">相关的文件夹才会被创建。还有一点需要特别说明：</SPAN><span style="COLOR: black">lib</SPAN><span style="COLOR: black">目录是通过我们手动创建的。</SPAN></FONT></SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp; 2.</SPAN><span 
+style="COLOR: black">将</SPAN><span style="COLOR: black">Matcher<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">和</SPAN><span style="COLOR: black"><span class=Apple-converted-space>&nbsp;</SPAN>Mailet</SPAN><span style="COLOR: black">发布到</SPAN><span style="COLOR: black">config.xml</SPAN><span style="COLOR: black">中，</SPAN><span style="COLOR: black">config.xml</SPAN><span style="COLOR: black">在</SPAN><span style="COLOR: black">james\apps\james\SAR-INF\</SPAN><span style="COLOR: black">下</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1</SPAN><span 
+style="COLOR: black">）我们首先找到如下内容</SPAN><span 
+style="COLOR: black"></SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt">
+<div class=dp-highlighter 
+style="WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; WIDTH: 673px; OVERFLOW-X: auto; OVERFLOW-Y: auto; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent">
+<div class=bar>
+<ol class=dp-xml 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >mailetpackages</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >mailetpackage</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >org.apache.james.transport.mailets</SPAN><span class=tag 
+  style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">mailetpackage</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >mailetpackage</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >org.apache.james.transport.mailets.smime</SPAN><span 
+  class=tag style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">mailetpackage</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;</SPAN><span class=tag 
+  style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">mailetpackages</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;</SPAN><span class=tag 
+  style="COLOR: black">&lt;</SPAN><span class=tag-name 
+  style="COLOR: black">matcherpackages</SPAN><span 
+  class=tag style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >matcherpackage</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >org.apache.james.transport.matchers</SPAN><span class=tag 
+  style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">matcherpackage</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >matcherpackage</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >org.apache.james.transport.matchers.smime</SPAN><span 
+  class=tag style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">matcherpackage</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;</SPAN><span class=tag 
+  style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">matcherpackages</SPAN><span 
+  class=tag style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV></DIV></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2</SPAN><span 
+style="COLOR: black">）加入包声明</SPAN><span 
+style="COLOR: black"></SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt">
+<div class=dp-highlighter 
+style="WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; WIDTH: 673px; OVERFLOW-X: auto; OVERFLOW-Y: auto; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent">
+<div class=bar>
+<ol class=dp-xml 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >mailetpackages</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >mailetpackage</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >com.yy.jamesstudy</SPAN><span class=tag 
+  style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">mailetpackage</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >mailetpackage</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >org.apache.james.transport.mailets</SPAN><span class=tag 
+  style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">mailetpackage</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >mailetpackage</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >org.apache.james.transport.mailets.smime</SPAN><span 
+  class=tag style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">mailetpackage</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;</SPAN><span class=tag 
+  style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">mailetpackages</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;</SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;</SPAN><span class=tag 
+  style="COLOR: black">&lt;</SPAN><span class=tag-name 
+  style="COLOR: black">matcherpackages</SPAN><span 
+  class=tag style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >matcherpackage</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >com.yy.jamesstudy&nbsp;</SPAN><span class=tag 
+  style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">matcherpackage</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >matcherpackage</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >org.apache.james.transport.matchers</SPAN><span class=tag 
+  style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">matcherpackage</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black" 
+  >matcherpackage</SPAN><span class=tag style="COLOR: black" 
+  >&gt;</SPAN><span style="COLOR: black" 
+  >org.apache.james.transport.matchers.smime</SPAN><span 
+  class=tag style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">matcherpackage</SPAN><span class=tag 
+  style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN> 
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black" 
+  >&nbsp;&nbsp;&nbsp;</SPAN><span class=tag 
+  style="COLOR: black"><span class=tag-name 
+  style="COLOR: black">matcherpackages</SPAN><span 
+  class=tag style="COLOR: black">&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black"></SPAN>&nbsp;</DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;3</SPAN><span style="COLOR: black">）加入</SPAN><span style="COLOR: black"><span class=Apple-converted-space>&nbsp;</SPAN>Matcher<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">和</SPAN><span style="COLOR: black"><span class=Apple-converted-space>&nbsp;</SPAN>Mailet</SPAN><span style="COLOR: black">的关联关系</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">找到</SPAN><span style="COLOR: black"><span class=Apple-converted-space>&nbsp;</SPAN>&lt;processor 
+name="root"&gt;&lt;/processor&gt;<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">元素在它的下面加入</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">
+<div class=code_title>xml 代码</DIV>
+<div class=dp-highlighter 
+style="WORD-WRAP: break-word; FONT-SIZE: 12px; FONT-FAMILY: Monaco, 'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', Consolas, 'Courier New', monospace; WIDTH: 673px; OVERFLOW-X: auto; OVERFLOW-Y: auto; WORD-BREAK: break-all; PADDING-BOTTOM: 1px; PADDING-TOP: 1px; PADDING-LEFT: 1px; MARGIN-LEFT: 9px; PADDING-RIGHT: 1px; BACKGROUND-COLOR: transparent">
+<div class=bar>
+<ol class=dp-xml 
+style="LIST-STYLE-TYPE: decimal; FONT-SIZE: 1em; BORDER-TOP: rgb(209,215,220) 1px solid; BORDER-RIGHT: rgb(209,215,220) 1px solid; BORDER-BOTTOM: rgb(209,215,220) 1px solid; COLOR: rgb(43,145,175); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 0px; MARGIN: 0px 0px 1px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 1.4em; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255)">
+  <li class=alt 
+  style="FONT-SIZE: 1em; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 10px; MARGIN: 0px 0px 0px 38px; BORDER-LEFT: rgb(209,215,220) 1px solid; LINE-HEIGHT: 18px; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(250,250,250)" 
+  ><span style="COLOR: black"><span 
+  class=tag style="COLOR: black">&lt;</SPAN><span 
+  class=tag-name style="COLOR: black">mailet</SPAN><span 
+  style="COLOR: black">&nbsp;</SPAN><span class=attribute 
+  style="COLOR: black">match</SPAN><span 
+  style="COLOR: black">=</SPAN><span class=attribute-value 
+  style="COLOR: black">"BizMatcher"</SPAN><span 
+  style="COLOR: black">&nbsp;</SPAN><span class=attribute 
+  style="COLOR: black">class</SPAN><span 
+  style="COLOR: black">=</SPAN><span class=attribute-value 
+  style="COLOR: black">"BizMaillet"</SPAN><span class=tag 
+  style="COLOR: black">/&gt;</SPAN><span 
+  style="COLOR: black">&nbsp;&nbsp;</SPAN></SPAN></LI></OL></DIV></DIV></SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">Mailet</SPAN><span style="COLOR: black">元素代表了一个</SPAN><span style="COLOR: black">matcher</SPAN><span style="COLOR: black">和一个</SPAN><span style="COLOR: black">mailet</SPAN><span style="COLOR: black">的组合。</SPAN><span style="COLOR: black">Match</SPAN><span style="COLOR: black">属性：是指</SPAN><span style="COLOR: black">matcher</SPAN><span style="COLOR: black">的类名。而</SPAN><span style="COLOR: black">class<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">属性：是指</SPAN><span style="COLOR: black">mailet</SPAN><span style="COLOR: black">的类名。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt">&nbsp;最后别忘了，保存退出。并且重新启动james服务器。</DIV>
+<div style="MARGIN: 0in 0in 11pt; TEXT-INDENT: 0in"><strong 
+style="FONT-WEIGHT: bold"><font size=5><font size=3>测试－ 
+验证我们的mail应用程序</FONT></FONT></STRONG></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">我们主要通过</SPAN><span style="COLOR: black">mail</SPAN><span style="COLOR: black">类来测试我们的应用。还记得我们刚才写的那个</SPAN><span style="COLOR: black">mail</SPAN><span style="COLOR: black">类吗？！在那个类中我们初始化了相关的信息</SPAN><span style="COLOR: black">.</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+username = "kakaxi";</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+password = "kakaxi";</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+mailServer = "localhost";</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+From = "kakaxi@localhost";</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+To = "mingren@localhost";</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+mailSubject = "Hello Scientist";</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+MailContent = "How are you today!";</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">发件人是卡卡西，收件人是</SPAN><span style="COLOR: black">mingren.</SPAN><span style="COLOR: black">这两个用户我们在前面都已经创建完毕。我们用他们来测试</SPAN><span style="COLOR: black">james</SPAN><span style="COLOR: black">的邮件收发以及</SPAN><span style="COLOR: black">mailet api</SPAN><span style="COLOR: black">的应用。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">根据需求假设我们发给</SPAN><span style="COLOR: black">james<span class=Apple-converted-space>&nbsp;</SPAN></SPAN><span style="COLOR: black">服务器（这里是</SPAN><span style="COLOR: black">james</SPAN><span style="COLOR: black">的默认配置：</SPAN><span style="COLOR: black">localhost</SPAN><span style="COLOR: black">）</SPAN><span style="COLOR: black">的邮件的收件人是鸣人。那么我们就能通过</SPAN><span style="COLOR: black">matcher</SPAN><span style="COLOR: black">监测到这封邮件，并且调用相应的</SPAN><span style="COLOR: black">maile</SPAN><span style="COLOR: black">t</SPAN><span style="COLOR: black">来进行处理。由</SPAN><span style="COLOR: black">mailet</SPAN><span style="COLOR: black">打印出相应的邮件发送者和正文。</SPAN><span 
+style="FONT-SIZE: 11pt; COLOR: black">运行</SPAN><span 
+style="FONT-SIZE: 11pt; COLOR: black">Mail</SPAN><span 
+style="FONT-SIZE: 11pt; COLOR: black">类后得到</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span 
+style="FONT-SIZE: 11pt; COLOR: black">Using 
+PHOENIX_HOME:&nbsp;&nbsp; C:\james<br>Using PHOENIX_TMPDIR: 
+C:\james\temp<br>Using 
+JAVA_HOME:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; C:\j2sdk1.4.2_02</SPAN></DIV>
+<p 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">Phoenix 4.2</P>
+<p 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px">James Mail Server 2.3.1<br>Remote 
+Manager Service started plain:4555<br>POP3 Service started 
+plain:110<br>SMTP Service started plain:25<br>NNTP Service started plain:119<br>FetchMail Disabled</P>
+<p 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><br>sender:kakaxi@localhost<br>content:How are you today!</P>
+<p 
+style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px"><strong style="FONT-WEIGHT: bold"><font size=2>总结</FONT></STRONG></P><span 
+style="FONT-SIZE: 11pt; COLOR: black">
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">最终我们看到</SPAN><span style="COLOR: black">发送者和正文的信息。</SPAN><span style="COLOR: black">That’s all !&nbsp;</SPAN><span style="COLOR: black">大功告成。</SPAN></DIV>
+<div style="MARGIN: 0in 0in 0pt"><span style="COLOR: black">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><span 
+style="COLOR: black">其实</SPAN><span style="COLOR: black">james</SPAN><span style="COLOR: black">的功能是非常非常强大的，尤其是它的</SPAN><span style="COLOR: black">Mailet API</SPAN><span style="COLOR: black">能够帮助我们完成很多与邮件邮件有关的工作如过滤垃圾邮件。用它我们甚至可以搭建我们自己的企业邮件服务器。我们最近的项目中就使用到了。我们通过</SPAN><span 
+style="COLOR: black">james</SPAN><span style="COLOR: black">接收到的邮件，然后用</SPAN><span style="COLOR: black">matcher</SPAN><span style="COLOR: black">找到我们想要处理的邮件，然后通过</SPAN><span style="COLOR: black">mailet</SPAN><span style="COLOR: black">做一些业务上的处理。这篇文章涵盖的面很小。如果大家有兴趣可以研究一下</SPAN><span 
+style="COLOR: black">james</SPAN><span style="COLOR: black">项目。</SPAN><span style="COLOR: black">Config.xml</SPAN><span style="COLOR: black">实际上是最重要的文件，如果你把它研究透彻了那么就就算把</SPAN><span 
+style="COLOR: black">Mailet API</SPAN><span 
+style="COLOR: black">研究透了。以后我可能会写一篇相关的文章，在这就不多说了。希望这篇文章能够对大家有所启发！有所帮助！祝大家工作顺利！</SPAN></DIV></SPAN></SPAN></DIV></DIV></SPAN></DIV></DIV></DIV></FONT></div></span></span><!--EndFragment-->
+</body>

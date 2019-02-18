@@ -1,0 +1,352 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Java 多线程之内置锁与显示锁详解</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>Java中具有通过Synchronized实现的内置锁，和ReentrantLock实现的显示锁，这两种锁各有各的好处，算是互有补充，今天就来做一个总结。</P>
+<H2 id=articleHeader0 
+style='FONT-SIZE: 18px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 30px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>Synchronized</H2>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>内置锁获得锁和释放锁是隐式的，进入synchronized修饰的代码就获得锁，走出相应的代码就释放锁。</P><PRE class="brush: java; gutter: true; first-line: 1 hljs php" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'>synchronized(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>){ <SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">//获得锁</SPAN>
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>.append();
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>.count();
+}<SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">//释放锁</SPAN></PRE>
+<H3 id=articleHeader1 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>通信</H3>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>与Synchronized配套使用的通信方法通常有wait(),notify()。</P>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>wait()方法会立即释放当前锁，并进入等待状态，等待到相应的notify并重新获得锁过后才能继续执行；notify()不会立刻立刻释放锁，必须要等notify()所在线程执行完synchronized块中的所有代码才会释放。用如下代码来进行验证：</P><PRE class="brush: java; gutter: true; first-line: 1 hljs php" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN> void main(String[] args){
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">List</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN> = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> LinkedList();
+    Thread r = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Thread(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> ReadList(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>));
+    Thread w = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Thread(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> WriteList(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>));
+    r.start();
+    w.start();
+}
+<SPAN class=hljs-class><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">ReadList</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">implements</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Runnable</SPAN></SPAN>{
+
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">List</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>;
+
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> ReadList(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">List</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>){ this.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN> = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>; }
+
+    @Override
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> void run(){
+        System.out.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"ReadList begin at "</SPAN>+System.currentTimeMillis());
+        synchronized (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>){
+            <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">try</SPAN> {
+                Thread.sleep(<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">1000</SPAN>);
+                System.out.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"list.wait() begin at "</SPAN>+System.currentTimeMillis());
+                <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>.wait();
+                System.out.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"list.wait() end at "</SPAN>+System.currentTimeMillis());
+            } <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">catch</SPAN> (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"ReadList end at "</SPAN>+System.currentTimeMillis());
+
+    }
+}
+
+<SPAN class=hljs-class><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">WriteList</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">implements</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Runnable</SPAN></SPAN>{
+
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">List</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>;
+
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> WriteList(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">List</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>){ this.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN> = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>; }
+
+    @Override
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> void run(){
+        System.out.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"WriteList begin at "</SPAN>+System.currentTimeMillis());
+        synchronized (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>){
+            System.out.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"get lock at "</SPAN>+System.currentTimeMillis());
+            <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">list</SPAN>.notify();
+            System.out.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"list.notify() at "</SPAN>+System.currentTimeMillis());
+            <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">try</SPAN> {
+                Thread.sleep(<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">2000</SPAN>);
+            } <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">catch</SPAN> (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"get out of block at "</SPAN>+System.currentTimeMillis());
+        }
+        System.out.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"WriteList end at "</SPAN>+System.currentTimeMillis());
+
+    }
+}</PRE>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>运行结果</P><PRE class="brush: java; gutter: true; first-line: 1 hljs sql" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'>ReadList <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">begin</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">at</SPAN> <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">1493650526582</SPAN>
+WriteList <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">begin</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">at</SPAN> <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">1493650526582</SPAN>
+list.wait() <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">begin</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">at</SPAN> <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">1493650527584</SPAN>
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">get</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">at</SPAN> <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">1493650527584</SPAN>
+list.notify() <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">at</SPAN> <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">1493650527584</SPAN>
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">get</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">out</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">of</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">block</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">at</SPAN> <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">1493650529584</SPAN>
+WriteList <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">end</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">at</SPAN> <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">1493650529584</SPAN>
+list.wait() <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">end</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">at</SPAN> <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">1493650529584</SPAN>
+ReadList <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">end</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">at</SPAN> <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">1493650529584</SPAN></PRE>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>可见读线程开始运行，开始wait过后，写线程才获得锁；写线程走出同步块而不是notify过后，读线程才wait结束，亦即获得锁。所以notify不会释放锁，wait会释放锁。值得一提的是，notifyall()会通知等待队列中的所有线程。</P>
+<H3 id=articleHeader2 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>编码</H3>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>编码模式比较简单，单一，不必显示的获得锁，释放锁，能降低因粗心忘记释放锁的错误。使用模式如下：</P><PRE class="brush: java; gutter: true; first-line: 1 hljs" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">synchronized</SPAN>(object){ 
+
+}</PRE>
+<H3 id=articleHeader3 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>灵活性</H3>
+<UL 
+style='LIST-STYLE-TYPE: none; FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 16px 26px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>
+  <LI 
+  style="BACKGROUND: url(data:image/gif;base64,R0lGODlhDQAFAKIAAKOjo6GhoampqYSEhJWVlZ2dnZmZmXx8fCH5BAAAAAAALAAAAAANAAUAAAMVKLfcB6PIScsZJuttLvlgSByK4wQJADs=) no-repeat 0px 10px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 20px; MARGIN: 0px 0px 10px; PADDING-RIGHT: 0px">内置锁在进入同步块时，采取的是无限等待的策略，一旦开始等待，就既不能中断也不能取消，容易产生饥饿与死锁的问题</LI>
+  <LI 
+  style="BACKGROUND: url(data:image/gif;base64,R0lGODlhDQAFAKIAAKOjo6GhoampqYSEhJWVlZ2dnZmZmXx8fCH5BAAAAAAALAAAAAANAAUAAAMVKLfcB6PIScsZJuttLvlgSByK4wQJADs=) no-repeat 0px 10px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 20px; MARGIN: 0px 0px 10px; PADDING-RIGHT: 0px">在线程调用notify方法时，会随机选择相应对象的等待队列的一个线程将其唤醒，而不是按照FIFO的方式，如果有强烈的公平性要求，比如FIFO就无法满足</LI></UL>
+<H3 id=articleHeader4 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>性能</H3>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>Synchronized在JDK1.5及之前性能（主要指吞吐率）比较差，扩展性也不如ReentrantLock。但是JDK1.6以后，修改了管理内置锁的算法，使得Synchronized和标准的ReentrantLock性能差别不大。</P>
+<H2 id=articleHeader5 
+style='FONT-SIZE: 18px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 30px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>ReentrantLock</H2>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>ReentrantLock是显示锁，需要显示进行 
+lock 以及 unlock 操作。</P>
+<H3 id=articleHeader6 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>通信</H3>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>与ReentrantLock搭配的通行方式是Condition，如下：</P><PRE class="brush: java; gutter: true; first-line: 1 hljs cs" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> Lock <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN> = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> ReentrantLock();  
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> Condition condition = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.newCondition(); 
+condition.await();<SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">//this.wait();  </SPAN>
+condition.signal();<SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">//this.notify();  </SPAN>
+condition.signalAll();<SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">//this.notifyAll();</SPAN></PRE>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>Condition是被绑定到Lock上的，必须使用lock.newCondition()才能创建一个Condition。从上面的代码可以看出，Synchronized能实现的通信方式，Condition都可以实现，功能类似的代码写在同一行中。而Condition的优秀之处在于它可以为多个线程间建立不同的Condition，比如对象的读/写Condition，队列的空/满Condition，在JDK源码中的ArrayBlockingQueue中就使用了这个特性：</P><PRE class="brush: java; gutter: true; first-line: 1 hljs cs" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'> <SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">ArrayBlockingQueue</SPAN>(<SPAN class=hljs-params><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> capacity, boolean fair</SPAN>) </SPAN>{
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (capacity &lt;= <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>)
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throw</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> IllegalArgumentException();
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.items = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Object[capacity];
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN> = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> ReentrantLock(fair);
+    notEmpty = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.newCondition();
+    notFull =  <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.newCondition();
+}
+<SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">put</SPAN>(<SPAN class=hljs-params>E e</SPAN>) throws InterruptedException </SPAN>{
+    checkNotNull(e);
+    final ReentrantLock <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN> = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>;
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.lockInterruptibly();
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">try</SPAN> {
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">while</SPAN> (count == items.length)
+            notFull.await();
+        enqueue(e);
+    } <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">finally</SPAN> {
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.unlock();
+    }
+}
+<SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> E <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">take</SPAN>(<SPAN class=hljs-params></SPAN>) throws InterruptedException </SPAN>{
+    final ReentrantLock <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN> = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>;
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.lockInterruptibly();
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">try</SPAN> {
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">while</SPAN> (count == <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>)
+            notEmpty.await();
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> dequeue();
+    } <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">finally</SPAN> {
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.unlock();
+    }
+}
+<SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">enqueue</SPAN>(<SPAN class=hljs-params>E x</SPAN>) </SPAN>{
+    <SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">// assert lock.getHoldCount() == 1;</SPAN>
+    <SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">// assert items[putIndex] == null;</SPAN>
+    final Object[] items = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.items;
+    items[putIndex] = x;
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (++putIndex == items.length)
+        putIndex = <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>;
+    count++;
+    notEmpty.signal();
+}
+<SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> E <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">dequeue</SPAN>(<SPAN class=hljs-params></SPAN>) </SPAN>{
+    <SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">// assert lock.getHoldCount() == 1;</SPAN>
+    <SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">// assert items[takeIndex] != null;</SPAN>
+    final Object[] items = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.items;
+    @SuppressWarnings(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"unchecked"</SPAN>)
+    E x = (E) items[takeIndex];
+    items[takeIndex] = <SPAN class=hljs-literal style="COLOR: rgb(0,128,128)">null</SPAN>;
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (++takeIndex == items.length)
+        takeIndex = <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>;
+    count--;
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (itrs != <SPAN class=hljs-literal style="COLOR: rgb(0,128,128)">null</SPAN>)
+        itrs.elementDequeued();
+    notFull.signal();
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> x;
+}</PRE>
+<H3 id=articleHeader7 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>编码</H3><PRE class="brush: java; gutter: true; first-line: 1 hljs cs" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'>Lock <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN> = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> ReentrantLock();
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>();
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">try</SPAN>{
+
+}<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">finally</SPAN>{
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.unlock();
+}</PRE>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>相比于Synchronized要复杂一些，而且一定要记得在finally中释放锁而不是其他地方，这样才能保证即使出了异常也能释放锁。</P>
+<H3 id=articleHeader8 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>灵活性</H3>
+<UL 
+style='LIST-STYLE-TYPE: none; FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 16px 26px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>
+  <LI 
+  style="BACKGROUND: url(data:image/gif;base64,R0lGODlhDQAFAKIAAKOjo6GhoampqYSEhJWVlZ2dnZmZmXx8fCH5BAAAAAAALAAAAAANAAUAAAMVKLfcB6PIScsZJuttLvlgSByK4wQJADs=) no-repeat 0px 10px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 20px; MARGIN: 0px 0px 10px; PADDING-RIGHT: 0px">lock.lockInterruptibly() 
+  可以使得线程在等待锁是支持响应中断；lock.tryLock() 
+  可以使得线程在等待一段时间过后如果还未获得锁就停止等待而非一直等待。有了这两种机制就可以更好的制定获得锁的重试机制，而非盲目一直等待，可以更好的避免饥饿和死锁问题</LI>
+  <LI 
+  style="BACKGROUND: url(data:image/gif;base64,R0lGODlhDQAFAKIAAKOjo6GhoampqYSEhJWVlZ2dnZmZmXx8fCH5BAAAAAAALAAAAAANAAUAAAMVKLfcB6PIScsZJuttLvlgSByK4wQJADs=) no-repeat 0px 10px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 20px; MARGIN: 0px 0px 10px; PADDING-RIGHT: 0px">ReentrantLock可以成为公平锁（非默认的），所谓公平锁就是锁的等待队列的FIFO，不过公平锁会带来性能消耗，如果不是必须的不建议使用。这和CPU对指令进行重排序的理由是相似的，如果强行的按照代码的书写顺序来执行指令，就会浪费许多时钟周期，达不到最大利用率</LI></UL>
+<H3 id=articleHeader9 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>性能</H3>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>虽然Synchronized和标准的ReentrantLock性能差别不大，但是ReentrantLock还提供了一种非互斥的读写锁，<BR>也就是不强制每次最多只有一个线程能持有锁，它会避免“读/写”冲突，“写/写”冲突，但是不会排除“读/读”冲突，<BR>因为“读/读”并不影响数据的完整性，所以可以多个读线程同时持有锁，这样在读写比较高的情况下，性能会有很大的提升。</P>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>下面用两种锁分别实现的线程安全的linkedlist：</P><PRE class="brush: java; gutter: true; first-line: 1 hljs cs" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">RWLockList</SPAN> {<SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">//读写锁</SPAN>
+
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> List list;
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> final ReadWriteLock <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN> = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> ReentrantReadWriteLock();
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> final Lock readLock = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.readLock();
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> final Lock writeLock = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>.writeLock();
+
+    <SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">RWLockList</SPAN>(<SPAN class=hljs-params>List list</SPAN>)</SPAN>{<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.list = list;}
+
+    <SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">get</SPAN>(<SPAN class=hljs-params><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> k</SPAN>) </SPAN>{
+        readLock.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>();
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">try</SPAN> {
+            <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN>)list.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">get</SPAN>(k);
+        } <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">finally</SPAN> {
+            readLock.unlock();
+        }
+    }
+
+    <SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">put</SPAN>(<SPAN class=hljs-params><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">value</SPAN></SPAN>) </SPAN>{
+        writeLock.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">lock</SPAN>();
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">try</SPAN> {
+            list.add(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">value</SPAN>);
+        } <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">finally</SPAN> {
+            writeLock.unlock();
+        }
+    }
+}
+
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">SyncList</SPAN>  {
+
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN> List list;
+
+    <SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">SyncList</SPAN>(<SPAN class=hljs-params>List list</SPAN>)</SPAN>{<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">this</SPAN>.list = list;}
+
+    <SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> synchronized <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN>  <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">get</SPAN>(<SPAN class=hljs-params><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> k</SPAN>)</SPAN>{
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN>)list.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">get</SPAN>(k);
+    }
+
+    <SPAN class=hljs-function><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> synchronized <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">put</SPAN>(<SPAN class=hljs-params><SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">value</SPAN></SPAN>)</SPAN>{
+        list.add(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">value</SPAN>);
+    }
+
+}</PRE>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>读写锁测试代码：</P><PRE class="brush: java; gutter: true; first-line: 1 hljs cs" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'>List list = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> LinkedList();
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> i=<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>;i&lt;<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">10000</SPAN>;i++){
+    list.add(i);
+}
+RWLockList rwLockList = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> RWLockList(list);<SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">//初始化数据</SPAN>
+
+Thread writer = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Thread(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Runnable() {
+    @<SPAN class=hljs-function>Override
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">run</SPAN>(<SPAN class=hljs-params></SPAN>) </SPAN>{
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> i=<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>;i&lt;<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">10000</SPAN>;i++){
+            rwLockList.put(i);
+        }
+    }
+});
+Thread reader1 = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Thread(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Runnable() {
+    @<SPAN class=hljs-function>Override
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">run</SPAN>(<SPAN class=hljs-params></SPAN>) </SPAN>{
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> i=<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>;i&lt;<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">10000</SPAN>;i++){
+            rwLockList.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">get</SPAN>(i);
+        }
+    }
+});
+Thread reader2 = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Thread(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Runnable() {
+    @<SPAN class=hljs-function>Override
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">run</SPAN>(<SPAN class=hljs-params></SPAN>) </SPAN>{
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> i=<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>;i&lt;<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">10000</SPAN>;i++){
+            rwLockList.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">get</SPAN>(i);
+        }
+    }
+});
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">long</SPAN> begin = System.currentTimeMillis();
+writer.start();reader1.start();reader2.start();
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">try</SPAN> {
+    writer.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">join</SPAN>();
+    reader1.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">join</SPAN>();
+    reader2.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">join</SPAN>();
+} <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">catch</SPAN> (InterruptedException e) {
+    e.printStackTrace();
+}
+System.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">out</SPAN>.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"RWLockList take "</SPAN>+(System.currentTimeMillis()-begin) + <SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"ms"</SPAN>);</PRE>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>同步锁测试代码：</P><PRE class="brush: java; gutter: true; first-line: 1 hljs cs" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'>List list = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> LinkedList();
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> i=<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>;i&lt;<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">10000</SPAN>;i++){
+    list.add(i);
+}
+SyncList syncList = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> SyncList(list);<SPAN class=hljs-comment style="COLOR: rgb(153,153,136)">//初始化数据</SPAN>
+Thread writerS = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Thread(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Runnable() {
+    @<SPAN class=hljs-function>Override
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">run</SPAN>(<SPAN class=hljs-params></SPAN>) </SPAN>{
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> i=<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>;i&lt;<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">10000</SPAN>;i++){
+            syncList.put(i);
+        }
+    }
+});
+Thread reader1S = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Thread(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Runnable() {
+    @<SPAN class=hljs-function>Override
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">run</SPAN>(<SPAN class=hljs-params></SPAN>) </SPAN>{
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> i=<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>;i&lt;<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">10000</SPAN>;i++){
+            syncList.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">get</SPAN>(i);
+        }
+    }
+});
+Thread reader2S = <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Thread(<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Runnable() {
+    @<SPAN class=hljs-function>Override
+    <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN> <SPAN class=hljs-title style="FONT-WEIGHT: bold; COLOR: rgb(153,0,0)">run</SPAN>(<SPAN class=hljs-params></SPAN>) </SPAN>{
+        <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> i=<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">0</SPAN>;i&lt;<SPAN class=hljs-number style="COLOR: rgb(0,128,128)">10000</SPAN>;i++){
+            syncList.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">get</SPAN>(i);
+        }
+    }
+});
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">long</SPAN> begin1 = System.currentTimeMillis();
+writerS.start();reader1S.start();reader2S.start();
+<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">try</SPAN> {
+    writerS.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">join</SPAN>();
+    reader1S.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">join</SPAN>();
+    reader2S.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">join</SPAN>();
+} <SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">catch</SPAN> (InterruptedException e) {
+    e.printStackTrace();
+}
+System.<SPAN class=hljs-keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">out</SPAN>.println(<SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"SyncList take "</SPAN>+(System.currentTimeMillis()-begin1) + <SPAN class=hljs-string style="COLOR: rgb(221,17,68)">"ms"</SPAN>);</PRE>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>结果：</P><PRE class="brush: java; gutter: true; first-line: 1 hljs nginx" style='WORD-WRAP: break-word; BORDER-TOP: rgb(221,221,221) 1px solid; BORDER-RIGHT: rgb(221,221,221) 1px solid; BACKGROUND: rgb(251,251,251); WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-X: auto; BORDER-BOTTOM: rgb(221,221,221) 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 10px; TEXT-ALIGN: left; PADDING-TOP: 10px; FONT: 12px/20px "courier new"; PADDING-LEFT: 15px; MARGIN: 15px auto; BORDER-LEFT: rgb(221,221,221) 4px solid; ORPHANS: 2; WIDOWS: 2; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 15px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; font-stretch: normal; border-image: initial'><SPAN class=hljs-attribute style="FONT-WEIGHT: normal; COLOR: rgb(0,0,128)">RWLockList</SPAN> take <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">248ms</SPAN>
+RWLockList take <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">255ms</SPAN>
+RWLockList take <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">249ms</SPAN>
+RWLockList take <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">224ms</SPAN>
+
+SyncList take <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">351ms</SPAN>
+SyncList take <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">367ms</SPAN>
+SyncList take <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">315ms</SPAN>
+SyncList take <SPAN class=hljs-number style="COLOR: rgb(0,128,128)">323ms</SPAN></PRE>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>可见读写锁的确是优于纯碎的互斥锁</P>
+<H2 id=articleHeader10 
+style='FONT-SIZE: 18px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(238,238,238) 1px solid; TEXT-TRANSFORM: none; COLOR: rgb(34,34,34); PADDING-BOTTOM: 5px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 30px 0px 14px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>总结</H2>
+<P 
+style='FONT-SIZE: 14px; FONT-FAMILY: "microsoft yahei"; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 0px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; text-decoration-style: initial; text-decoration-color: initial'>内置锁最大优点是简洁易用，显示锁最大优点是功能丰富，所以能用内置锁就用内置锁，在内置锁功能不能满足之时在考虑显示锁。</P></body>
+</html>

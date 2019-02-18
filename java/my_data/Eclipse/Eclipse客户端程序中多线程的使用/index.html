@@ -1,0 +1,1238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+
+  <html xmlns="http://www.w3.org/1999/xhtml" lang="zh-CN" xml:lang="zh-CN"><!-- Source is http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/ -->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>Eclipse客户端程序中多线程的使用</title>
+<meta http-equiv="PICS-Label" content='(PICS-1.1 "http://www.icra.org/ratingsv02.html" l gen true r (cz 1 lz 1 nz 1 oz 1 vz 1) "http://www.rsac.org/ratingsv01.html" l gen true r (n 0 s 0 v 0 l 0) "http://www.classify.org/safesurf/" l gen true r (SS~~000 1))'/>
+<link rel="schema.DC" href="http://purl.org/DC/elements/1.0/"/>
+<link rel="SHORTCUT ICON" href="http://www.ibm.com/favicon.ico"/>
+  <meta name="Owner" content="dw@cn.ibm.com"/>
+  <meta name="DC.Language" scheme="rfc1766" content="zh-CN"/>
+  <meta name="IBM.Country" content="CN"/>
+<meta name="Security" content="Public"/>
+<meta name="IBM.SpecialPurpose" content="SP001"/>
+<meta name="IBM.PageAttributes" content="sid=1003,1004"/>
+<meta name="Source" content="v16 Template Generator"/>
+<meta name="Robots" content="index,follow"/>
+<meta name="Abstract" content="本文分析了Eclipse中多线程程序的实现，讨论了在Eclipse客户端程序开发中应用多线程的方法和要注意的问题，同时也讨论了多线程程序的一些调试和问题解决的方法。"/>
+<meta name="Description" content="本文分析了Eclipse中多线程程序的实现，讨论了在Eclipse客户端程序开发中应用多线程的方法和要注意的问题，同时也讨论了多线程程序的一些调试和问题解决的方法。"/>
+<meta name="Keywords" content="多线程,Eclipse, tttosca"/>
+<meta name="DC.Date" scheme="iso8601" content="2007-10-29"/>
+<meta name="DC.Type" scheme="IBM_ContentClassTaxonomy" content="CT316"/>
+<meta name="DC.Subject" scheme="IBM_SubjectTaxonomy" content="TT400"/>
+<meta scheme="IBM_WTMCategory" name="IBM.WTMCategory" content="SOFDCOSRCN" />
+<meta name="DC.Rights" content="© Copyright IBM Corporation 2007"/>
+<meta name="IBM.Effective" scheme="W3CDTF" content="2007-10-29"/>
+<meta name="title" content="Eclipse客户端程序中多线程的使用"/>
+
+<!-- HEADER_SCRIPTS_AND_CSS_INCLUDE -->
+<link href="index_files/all.css" media="all" rel="stylesheet" title="www" type="text/css"/>
+<link href="index_files/screen.css" media="screen,projection" rel="stylesheet" title="www" type="text/css"/>
+<link href="index_files/screen-uas.css" media="screen,projection" rel="stylesheet" title="www" type="text/css"/>
+<link href="index_files/screen-fonts.css" media="screen,projection" rel="stylesheet" title="www" type="text/css"/>
+<link href="index_files/handheld.css" media="handheld" rel="stylesheet" title="www" type="text/css"/>
+<link href="index_files/print.css" media="print" rel="stylesheet" title="www" type="text/css"/>
+<link href="index_files/overlay.css" media="screen,projection" rel="stylesheet" title="www" type="text/css"/>
+
+<!-- dW-specific CSS -->
+<link href="index_files/dw-screen.css" media="screen,projection" rel="stylesheet" title="www" type="text/css"/>
+<link href="index_files/dw-local-site.css" media="screen,projection" rel="stylesheet" title="www" type="text/css"/>
+<link href="index_files/dw-screen-comments-ratings-signin.css" media="screen,projection" rel="stylesheet" title="www" type="text/css"/>
+<link href="index_files/jquery.cluetip.css" media="screen,projection" rel="stylesheet"  title="www" type="text/css" />
+
+<!-- JPP: LOCAL URL FOR TESTING V16 DEFIANT MASTHEAD/FOOTER -->
+<link href="index_files/dw-mf2012-01.css" rel="stylesheet" title="www" type="text/css"/>
+<link href="index_files/dw-mf-cn.css" rel="stylesheet" title="www" type="text/css"/>
+<script src="index_files/ibmcommon.js" type="text/javascript">//</script>
+<script src="index_files/dynamicnav.js" type="text/javascript">//</script>
+<script language="JavaScript" src="index_files/urltactic.js" type="text/javascript"></script>
+<!-- Rating_START -->
+<script language="JavaScript" type="text/javascript">
+  // <![CDATA[
+
+ dwr = {};
+  dwr.clickhere = '点击评分';
+  dwr.starIntro = ''; 
+  dwr.stars = '星';
+  dwr.star = '星'; 
+  dwr.avgRatingOf = '平均分';
+  dwr.youRated = '您的评分是';
+  dwr.avgRating = '平均分';
+  dwr.basedOnVote = '共 {1} 个评分'; // {1} to be substitue by code
+  dwr.basedOnVotes = '共 {1} 个评分';
+  dwr.leftParen = '（'; 
+  dwr.rightParen = ' ）'; 
+  dwr.space = ' '; 
+  dwr.yourRating = '您的评分';
+dwr.avgRating2 = '总共 {1} 评分的平均分';
+dwr.avgRating3 = '平均分{1} 星';
+dwr.rateThisArticle = '为本文评分';
+dwr.votes = '{1}个评分';
+dwr.vote = '{1}个评分';
+dwr.submitErr = '错误：提交失败，请重试。';
+dwr.noRatingErr = '错误：请选择一个评分并重新提交。';
+dwr.submit = '提交';
+// ]]>
+</script>
+
+<!-- Rating_START -->
+<script language="JavaScript" src="index_files/showrating.js" type="text/javascript"></script>
+<style type="text/css">
+  .metavalue {
+  display: none;
+  }
+</style>
+<!-- Rating_END --><!-- RESERVED_HEADER_INCLUDE -->
+<script language="javascript" src="index_files/ajax1.js" type="text/javascript"></script>
+<script language="javascript" src="index_files/search_counter-maverick.js" type="text/javascript"></script>
+<script language="javascript" src="index_files/request_referer_capture-maverick.js" type="text/javascript"></script>
+<script language="JavaScript" type="text/javascript">
+ <!--
+ setDefaultQuery('dwchina');
+ //-->
+</script>
+<script language="JavaScript" type="text/javascript">
+ <!--
+ function openNewWindow(url,tar,arg){window.open(url,tar,arg);}
+ //-->
+</script>
+  <!-- Include file support -->
+  <script language="JavaScript" type="text/javascript">
+    (function($) {
+    jQuery.extend({
+    getInc: function(u,d){
+    if(u==null)return;
+    jQuery.ajax({
+    type: "GET",
+    url: u,
+    dataType: "text",
+    success: function(t) {
+    jQuery(d).html(t);
+    ibmCommon.initShowHide(jQuery(d).children()[0]);	
+    },
+    async: true
+    });
+    }
+    });
+    })(jQuery);
+  </script>
+</head>
+
+<body id="ibm-com">
+<div id="ibm-top" class="ibm-landing-page">
+
+<!-- MASTHEAD_BEGIN -->
+<!-- MASTHEAD_BEGIN -->
+<div class="ibm-access"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#ibm-content">跳转到主要内容</a></div>
+<div id="ibm-masthead-dw">
+  
+    <!-- TOP ROW -->    
+    <div id="dw-masthead-top-row">
+    	<ul id="ibm-mast-options-dw" class="cn">
+    		<li id="dw-mast-top-0"> 	
+    			<a class="dw-mf-noscript" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" title="登录（或注册）需启用 JavaScript">登录 (或注册)</a>
+    		</li>
+    		<li id="dw-mast-top-1" class="dw-mast-top-1-cn">
+    			<a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#SELECTLANG">中文</a><img class="dw-preload" src="index_files/arrow-down-active.gif" width="8" height="7" alt="" />
+    		</li>
+    		<li id="dw-mast-top-2" class="dw-mf-hide">
+    			<a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/photo.do" alt="PHOTO" class="dw-mast-profimg" width="20" height="20"/> [userid]</a>
+    		</li>
+    		<li id="dw-mast-top-3">
+    			<a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/ibm-smlogo.gif" width="44" height="16" alt="IBM®" /></a>
+    		</li>
+    	</ul>
+	</div>
+    
+    <!-- TOP ROW SLIDER -->
+    <div id="ibm-my-menu-dw">    
+        <div class="ibm-ribbon-pane-dw">
+            <div class="ibm-ribbon-section-dw">
+                <!-- Sign-in -->
+                <div class="dw-mast-columns">                
+					<div class="dw-mast-col-1-1">
+						<div id="dw-mast-sso">
+							<!--<div id="dw-mast-sso-reg">
+								<p class="dw-mast-sso-reg-cn">如果您还没有注册到 IBM 注册系统，我们为给您带来的不便表示道歉，并请您马上注册。 							
+									<a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" onclick="(function () {window.location='/developerworks/dwwi/DWAuthRouter?m=reg&amp;lang=zh&amp;d='+encodeURIComponent(location.href);})();">现在注册</a>。</p>
+							</div>-->
+							<div id="signin_error_mf" class="dw-mf-hide"></div>
+							<div id="dw-mast-sso-form">
+								<form id="sForm_mf" action="" method="post" name="sForm_name_mf" onsubmit="return false;">
+									<div id="dw-mast-sso-id" class="dw-mast-sso-id-cn">
+										<label for="ibmid_mf">IBM ID：</label>
+										<input id="ibmid_mf" type="text" value="" name="ibmid_name_mf" maxlength="100" onkeypress="handleEP(event,this.form,'mf');"/>
+									</div>
+									<div id="dw-mast-sso-pw" class="dw-mast-sso-pw-cn">
+										<label for="pw_mf">密码：</label>
+										<input id="pw_mf" type="password" value="" name="pw_name_mf" maxlength="100" onkeypress="handleEP(event,this.form,'mf');"/>
+									</div>
+									<div id="dw-mast-sso-target" class="dw-mast-sso-target-cn">
+										<p class="dw-mf-perm-box">
+											<input id="perm_mf" type="checkbox" name="perm_name_mf"/><label for="perm_mf"> 保持登录。</label>
+										</p>
+									</div>
+									<div id="dw-mast-sso-terms">
+										<p class="dw-mast-sso-terms-cn">单击提交则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/mydeveloperworks/terms?lang=zh">查看条款和条件</a>.</p>
+									</div>
+									<div>
+										<input class="dw-mf-submit-btn-cn" name="ibm_submit_name_mf" value="提交" onclick="signin('mf');return false;" type="submit" />
+									</div>
+								</form>
+							</div>
+							<div id="dw-mast-sso-update">
+								<div id="dw-mast-sso-update-id">
+									<ul>
+										<li><a class="ibm-forward-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" onclick="(function () {window.location='/developerworks/dwwi/DWAuthRouter?m=reg&amp;lang=zh_CN&amp;d='+encodeURIComponent(location.href);})();">需要一个 IBM ID？</a></li>
+										
+									<li><a class="ibm-forward-link" href="http://www.ibm.com/developerworks/dwwi/jsp/WSHelp.jsp?lang=zh_CN">忘记 IBM ID？</a></li>
+									</ul>
+								</div>
+								<div id="dw-mast-sso-update-pw">
+								<ul class="dw-mf-pwupdate">
+									<li><a class="ibm-forward-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" onclick="(function () {window.location='https://www.ibm.com/account/profile?page=forgot&amp;lang=zh_CN&amp;appname=ibm&amp;required=null&amp;d='+encodeURIComponent(getAuthUrl())+'%3Fm%3Dloginpage%26lang%3Dzh_CN%26d%3D'+encodeURIComponent(location.href);})();">忘记密码？</a></li>
+									<li><a class="ibm-forward-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" onclick="(function () {window.location='https://www.ibm.com/account/profile?page=chpw&amp;lang=zh_CN&amp;appname=ibm&amp;required=null&amp;d='+encodeURIComponent(location.href);})();">更改您的密码</a></li>
+								</ul>
+									</div>
+							</div>
+							<div id="dw-mast-sso-text">
+								<p>当您初次登录到 developerWorks 时，将会为您创建一份概要信息。<strong>您在 developerWorks 概要信息中选择公开的信息将公开显示给其他人，但您可以随时修改这些信息的显示状态。</strong>您的姓名（除非选择隐藏）和昵称将和您在 developerWorks 发布的内容一同显示。</p>
+								<p class="dw-mf-secure-cn">所有提交的信息确保安全。</p>
+							</div>
+							<div class="dw-mast-close">
+								<ul>
+									<li><div class="dw-mast-close-sign-cn"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10" border="0"/></a></div></li>
+								</ul>
+							</div>	
+						</div>
+						
+						<div id="dw-mast-dname" class="dw-mf-hide">
+							<p>当您初次登录到 developerWorks 时，将会为您创建一份概要信息，您需要指定一个昵称。您的昵称将和您在 developerWorks 发布的内容显示在一起。</p><p><strong>昵称长度在 3 至 31 个字符之间</strong>。 您的昵称在 developerWorks 社区中必须是唯一的，并且出于隐私保护的原因，不能是您的电子邮件地址。</p>
+							<div id="signin_dname_error_mf" class="dw-mf-hide"></div>
+							<div id="dw-mast-dname-form">
+								<form id="dForm_mf" action="" method="post" name="dForm_name_mf" onsubmit="return false;">
+									<div id="dw-mast-dname-mf">
+										<label for="dname_mf">昵称：</label>
+										<input id="dname_mf" name="dname_name_mf" maxlength="31" size="25" value="" type="text" onkeypress="handleEP(event,this.form,'mf');" />
+									</div>
+									<div id="dw-mast-dname-terms">
+										<p class="dw-mast-dname-terms-cn">单击<strong>提交</strong>则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/mydeveloperworks/terms?lang=zh">查看条款和条件</a>.</p>
+									</div>
+									<div>
+										<input class="dw-mf-submit-btn-cn" name="dname_submit_name_mf" value="提交" onclick="signin('mf');return false;" type="submit" />
+									</div>
+								</form>								
+							</div>
+							<div id="dw-mast-dname-secure">
+								<p class="dw-mf-secure-cn">所有提交的信息确保安全。</p>
+							</div>
+							<div class="dw-mast-close">
+								<ul>
+									<li><div class="dw-mast-close-sign-cn"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10" border="0"/></a></div></li>
+								</ul>
+							</div>	
+						</div>
+	
+						<div id="dw-mast-auth" class="dw-mf-hide">
+							<div>
+
+								<h2>My developerWorks:</h2>
+								<ul>
+									<li><a id="dw-mast-top-0-0" href="http://www.ibm.com/developerworks/mydeveloperworks/profiles/html/myProfileView.do?lang=zh">我的概要信息</a></li>
+									<li><a href="http://www.ibm.com/developerworks/mydeveloperworks/homepage?lang=zh">我的首页</a></li>
+									<li><a href="http://www.ibm.com/developerworks/mydeveloperworks/groups/service/html/mycommunities?lang=zh">我的群组</a></li>
+								</ul>     
+							</div>
+							<div id="dw-mast-notify" class="dw-mf-hide">
+								<h2>我的通知：</h2>
+								<ul>
+									<li><a id="new_notify" href="http://www.ibm.com/developerworks/mydeveloperworks/homepage?lang=zh">{[num_notify] 个新通知}([num_notify] 个新通知)</a></li>
+									<li><a id="new_invite" href="http://www.ibm.com/developerworks/mydeveloperworks/profiles/html/wc.do?action=in&requireAuth=true&widgetId=friends&lang=[lang]">{[num_invite] 个网络请求}([num_invite] 个网络请求)</a></li>  
+								</ul>
+							</div>
+							<div class="dw-mast-more">
+								<ul class="ibm-link-list">
+									<li><a class="dw-more-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" onclick="signOut(); return false;"><strong>退出</strong></a></li>
+								</ul>
+							</div>
+							<div class="dw-mast-close">
+								<ul>
+									<li><div class="dw-mast-close-sign"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10" border="0"/></a></div></li>
+								</ul>
+							</div>		
+						</div>
+						
+					</div>
+                	
+                </div>
+                <!-- Site selector --> 
+				<div class="dw-mast-columns">
+					<div class="dw-mast-col-2-1">
+						<h2>选择语言：</h2>
+						<ul>
+							<li><a id="dw-mast-top-1-0" href="http://www.ibm.com/developerworks/">English</a></li>
+							<li><a href="http://www.ibm.com/developerworks/cn/">中文</a></li>
+							<li><a href="http://www.ibm.com/developerworks/jp/">日本語</a></li>
+						    <li><a href="http://www.ibm.com/developerworks/ru/">Русский</a></li>
+						</ul>
+					</div>
+					<div class="dw-mast-col-2-2">
+						<ul>
+							<li><a href="http://www.ibm.com/developerworks/br/">Português (Brasil)</a></li>
+							<li><a href="http://www.ibm.com/developerworks/ssa/">Español</a></li>
+							<li><a href="http://www.ibm.com/developerworks/vn/">Việt</a></li>
+						</ul>
+					</div>
+					<div class="dw-mast-close">
+						<ul>
+							<li><div class="dw-mast-close-lang"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10" border="0"/></a></div></li>
+						</ul>
+                    </div>
+                </div>
+                <div class="dw-mast-columns"><!-- Authenticated --></div>
+                <!-- IBM -->
+				<div class="dw-mast-columns">
+					<div class="dw-mast-col-2-1">
+						<ul>
+							<li><a id="dw-mast-top-3-0" href="http://www.ibm.com/cn/zh/">IBM 主页</a></li>
+							<li><a href="http://www.ibm.com/solutions/cn/zh/">解决方案</a></li>
+							<li><a href="http://www.ibm.com/software/cn/">软件</a></li>
+						</ul>
+					</div>
+					<div class="dw-mast-col-2-2 dw-mast-ibm">
+						<ul>
+							<li><a href="http://www.ibm.com/support/cn/zh/">支持门户</a></li>
+							<li><a href="http://www.ibm.com/support/documentation/cn/zh/">产品文档</a></li>
+							<li><a href="http://www.ibm.com/redbooks/">Redbooks（英文）</a></li>
+						</ul>
+					</div>
+					<div class="dw-mast-close">
+						<ul>
+							<li><div class="dw-mast-close-ibm-cn"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10" border="0"/></a></div></li>
+						</ul>
+                    </div> 
+				</div>
+			</div>
+        </div>
+    </div>
+
+    <!-- BOTTOM ROW -->
+    <div id="ibm-universal-nav-dw">
+        <ul id="ibm-unav-links-dw">
+        	<li id="ibm-unav-home-dwlogo">
+        		<a href="http://www.ibm.com/developerworks/cn/"><img src="index_files/dw-wordmark.gif" width="218" height="32" alt="developerWorks®" /></a>
+        	</li>
+        </ul>
+    	<ul id="ibm-menu-links-dw" class="ibm-menu-links-dw-cn">
+    		
+    		<li id="dw-mast-nav-0"><a href="http://www.ibm.com/developerworks/cn/topics">技术主题</a></li>
+    		<li id="dw-mast-nav-1"><a
+    			href="http://www.ibm.com/developerworks/cn/downloads/">软件下载</a></li>
+    		<li id="dw-mast-nav-2"><a
+    			href="https://www.ibm.com/developerworks/community/?lang=zh">社区</a></li>
+    		<li id="dw-mast-nav-3"><a href="https://www.ibm.com/developerworks/community/groups/service/html/communityview?communityUuid=6d7f9e5d-5f89-4767-a006-a81b8d186370&amp;lang=zh">技术讲座</a></li>
+    	</ul>   
+    	<form id="ibm-search-form" action="//www.ibm.com/search/csass/search/" method="get" name="form1">
+    		<input type="hidden" name="sn" value="dw" />
+    		<input type="hidden" name="lang" value="zh" />
+    		<input type="hidden" name="cc" value="CN" />
+    		<input type="hidden" name="en" value="utf" />
+    		<input type="hidden" name="hpp" value="20" />
+    		<input type="hidden" name="dws" value="cndw" />
+    		<input type="hidden" name="lo" value="zh" />
+    		<p>
+    			<label for="q"><img alt="查询:" height="1" width="1" src="index_files/c-1.gif" /></label>
+    			<input type="text" value="搜索 developerWorks" name="q" maxlength="100" id="q"/>
+    			<input type="submit" id="ibm-search" class="ibm-btn-search ibm-btn-search-cn" name="Search" value="搜索" />
+    		</p>
+    	</form>
+    </div>
+    
+    <!-- BOTTOM ROW SLIDER -->
+    <div id="ibm-common-menu-dw">
+        <div class="ibm-ribbon-pane-dw">
+            <div class="ibm-ribbon-section-dw">
+				<!-- Technical topics category -->
+  
+            	<div class="dw-mast-columns">
+            	<div class="dw-mast-col-5-1">
+            		<h2><a id="dw-mast-nav-0-0" href="http://www.ibm.com/developerworks/cn/topics/">技术主题</a></h2>
+            		
+            		<ul>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/agile/">Agile
+            			    transformation</a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/aix/">AIX and UNIX</a></li>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/bigdata/">Big data</a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/cloud/">Cloud computing</a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/ibmi/">IBM i</a></li>
+            			
+            		</ul>     
+            	</div>
+            	<div class="dw-mast-col-5-2">
+            		
+            		<ul>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/data/">Information management</a></li>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/java/">Java technology</a></li>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/linux/">Linux</a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/lotus/">Lotus</a></li>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/mobile/">Mobile
+            		        development</a></li>
+           			
+            		</ul>
+            	</div>
+            	<div class="dw-mast-col-5-3">
+            		
+            		<ul>
+          			<li><a href="http://www.ibm.com/developerworks/cn/opensource/">Open source</a></li>
+            		    <li><a href="http://www.ibm.com/developerworks/cn/rational/">Rational</a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/webservices/">SOA and web services</a></li>
+             			<li><a href="http://www.ibm.com/developerworks/cn/web/">Web development</a></li>  
+            			<li><a href="http://www.ibm.com/developerworks/cn/websphere/">WebSphere</a></li>     
+    
+            		</ul>
+            		
+            	</div>
+            	<div class="dw-mast-col-5-4">
+            		<ul>
+           			<li><a href="http://www.ibm.com/developerworks/cn/xml/">XML</a></li>
+            		</ul>        
+            	</div>
+            	<div class="dw-mast-col-5-5">
+            		<ul>
+            			<li><a href="http://www.ibm.com/developerworks/cn/library/"><strong>文档库</strong></a></li>
+            			<li><a href="http://www.ibm.com/developerworks/cn/products/"><strong>产品 A - Z</strong></a></li>				    
+            		</ul>        
+            	</div>
+            	<div class="dw-mast-close">
+            		<ul>
+            			<li><div class="dw-mast-close-tech-cn"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10" border="0"/></a></div></li>
+            		</ul>
+            	</div>
+            </div>
+            	<!-- Evaluation software category -->
+            	<div class="dw-mast-columns">
+            		<div class="dw-mast-col-2-1">
+            			<h2><a id="dw-mast-nav-1-0" href="http://www.ibm.com/developerworks/cn/downloads">软件下载</a></h2>
+            			<ul>
+            				<li><a href="http://www.ibm.com/developerworks/cn/downloads/#data">Information management</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/cn/downloads/#lotus">Lotus</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/cn/downloads/#rational">Rational</a></li>
+            			</ul>            
+            		</div>
+            		<div class="dw-mast-col-2-2">
+            			<ul>
+            				<li><a href="http://www.ibm.com/developerworks/cn/downloads/#tivoli">Tivoli</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/cn/downloads/#websphere">WebSphere</a></li>
+            				
+            			</ul>            
+            		</div>
+            		<div class="dw-mast-close">
+            			<ul>
+            				<li><div class="dw-mast-close-eval-cn"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10" border="0"/></a></div></li>
+            			</ul>
+            		</div>
+            	</div>
+            	<!-- Community category -->
+            	<div class="dw-mast-columns">
+            		<div class="dw-mast-col-2-1">
+            			<h2><a id="dw-mast-nav-2-0" href="https://www.ibm.com/developerworks/community/?lang=zh">社区</a></h2>
+            			<ul>
+            				<li><a href="https://www.ibm.com/developerworks/community/homepage/?lang=zh">我的首页</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/community/profiles/home.do?lang=zh">概要信息</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/community/groups/service/html/allcommunities?lang=zh">群组</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/mydeveloperworks/blogs/?lang=zh">博客</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/community/bookmarks/html?lang=zh">书签</a></li>  
+            			</ul>     
+            		</div>
+            		<div class="dw-mast-col-2-2">
+            			<ul>
+            				<!--	<li><a href="">Forums</a></li> -->
+            				<li><a href="https://www.ibm.com/developerworks/mydeveloperworks/wikis/home?lang=zh">Wiki</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/community/files/app?lang=zh">文件</a></li>
+            				<li><a href="https://www.ibm.com/developerworks/community/activities/service/html/mainpage?lang=zh#dashboard,myactivities">活动</a></li>
+            				<!--	<li><a href="">Podcasts</a></li> -->    
+            			</ul>
+            		</div>
+            		<div class="dw-mast-close">
+            			<ul>
+            				<li><div class="dw-mast-close-comm-cn"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10" border="0"/></a></div></li>
+            			</ul>
+            		</div>
+            	</div>
+            	<!-- Events category -->
+            	<div class="dw-mast-columns">
+            		<div class="dw-mast-col-1-1">
+            			<h2><a id="dw-mast-nav-3-0" href="https://www.ibm.com/developerworks/community/groups/service/html/communityview?communityUuid=6d7f9e5d-5f89-4767-a006-a81b8d186370&amp;lang=zh">技术讲座</a></h2>
+            			<ul>
+            				<li><a href="https://www.ibm.com/developerworks/community/groups/service/html/communityview?communityUuid=6d7f9e5d-5f89-4767-a006-a81b8d186370&amp;lang=zh">技术讲座</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/cn/swi/">多媒体课堂</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/find/webcasts/">网络广播（英文）</a></li>
+            				<li><a href="http://www.ibm.com/developerworks/find/events/">查找活动（技术讲座，网络广播，会议等）（英文）</a></li> 
+            			</ul>            
+            		</div>
+            		<div class="dw-mast-close">
+            			<ul>
+            				<li><div class="dw-mast-close-event-cn"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10" border="0"/></a></div></li>
+            			</ul>
+            		</div>
+            	</div>
+            </div>
+        </div>
+    </div>
+	
+</div>
+<div id="fdiv" class="ibm-access"></div>
+<!-- MASTHEAD_END --><!-- MASTHEAD_END -->
+
+<div id="ibm-pcon">
+
+<!-- CONTENT_BEGIN -->
+<div id="ibm-content">
+
+<!-- Navigation_Trail_BEGIN -->
+<!-- &nbsp; -->
+      <div id="ibm-content-head"><ul id="ibm-navigation-trail"><li class="ibm-first"><a href="http://www.ibm.com/developerworks/cn/">developerWorks 中国</a></li><li><a href="http://www.ibm.com/developerworks/cn/opensource/">Open source</a></li><li><a href="http://www.ibm.com/developerworks/cn/views/opensource/libraryview.jsp">文档库</a></li></ul></div>
+<!-- Navigation_Trail_END -->
+
+<!-- dW_Summary Area_START -->
+<div id="dw-summary-article">
+
+<div class="dw-content-head">
+<h1>Eclipse客户端程序中多线程的使用</h1><p/>
+</div>
+
+<div class="ibm-container-body ibm-two-column">
+
+<div class="ibm-column ibm-first">
+<div class="author"><a class="dwauthor" rel="#authortip1" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#author1">梁 骞</a> (<a href="mailto:liangq@cn.ibm.com?subject=Eclipse客户端程序中多线程的使用">liangq@cn.ibm.com</a>), 高级软件工程师, IBM</div><div id="authortip1" class="dwauthor-onload-state ibm-no-print">梁骞, IBM 中国软件开发中心，现在从事 Workplace Managed Client 软件的开发工作，通过 <a href="mailto:liangq@cn.ibm.com">liangq@cn.ibm.com</a> 可以与他联系。</div>
+<p></p>
+  <p><strong>简介：</strong>&nbsp;本文分析了Eclipse中多线程程序的实现，讨论了在Eclipse客户端程序开发中应用多线程的方法和要注意的问题，同时也讨论了多线程程序的一些调试和问题解决的方法。</p>
+
+ 
+</div>
+
+<div class="ibm-column ibm-second">
+
+<p class="leading"><b>发布日期：</b>&nbsp;2007 年 10 月 29 日
+  
+<br /><b>级别：</b>&nbsp;中级
+    
+
+<br /><strong>访问情况 ：</strong>&nbsp;5002 次浏览
+  <br /><strong>评论：</strong>&nbsp;<span id="nCmts"><img alt="" src="//dw1.s81c.com/developerworks/i/circle-preloader.gif" height="12" width="50" /><img alt="" src="index_files/c-1.gif" height="14" width="1" /></span>
+  <!-- Rating_Area_Begin -->
+  <div id="art-rating-summary"></div>
+  <!-- Rating_Area_End -->
+  <br />
+</p>
+</div>
+
+</div>
+</div>
+<!-- dW_Summary_Area_END -->
+
+<!-- CONTENT_BODY -->
+<div id="ibm-content-body">
+
+<!-- MAIN_COLUMN_BEGIN -->
+<div id="ibm-content-main">
+
+<!-- Related_Searches_Area_And_Overlays_Begin -->
+
+<!-- MAIN_COLUMN_CONTAINER_BEGIN -->
+<div class="ibm-container">
+
+<!-- MAIN_COLUMN_CONTENT_BEGIN -->
+<p>Eclipse作为一个开发平台，使用越来越广泛，基于Eclipse Rich Client Platform开发的客户端程序也越来越多。在当今越来越复杂的应用环境中，我们的客户端程序不可避免的要同时进行多任务的处理。一个优异的客户端程序都会允许用户同时启动多个任务，从而大大提高用户的工作效率以及用户体验。本文中我们来谈谈Eclipse中实现多任务的方式。</p>
+            <p>在我们基于Eclipse的Java程序中，我们有很多种方式提供多任务的实现。熟悉Java的朋友立即会想到Java的Thread类，这是Java中使用最多的一个实现多任务的类。Eclipse平台为多任务处理提供了自己的API,那就是Job以及UIJob。Eclipse中的Job是对Java Thread的一个封装，为我们实现多任务提供了更方便的接口。以下是Job的基本用法：</p>
+            <br /><a name="listing1"><b>清单 1. Job用法示例</b></a><br /><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">
+                Job job = new Job(“Job Name”){
+protected IStatus run(IProgressMonitor monitor) {
+				
+		// 在这里添加你的任务代码
+		return Status.OK_STATUS;
+	}
+};
+job.schedule(delayTime);</pre></td></tr></table><br />
+            <p>在Eclipse中我们也会经常用到Display.asynchExec() 和Display.synchExec()来启动任务的执行。这两个方法主要为了方便我们完成界面操作的任务。以下是Display.asynchExec()的用法，Display.synchExec()和它类似。</p>
+            <br /><a name="listing1"><b>清单 2. Display.synchExec()用法示例</b></a><br /><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">
+                Display.getDefault().asyncExec(new Runnable() {
+public void run() {
+	// 在这里添加你的任务代码
+		}
+	});</pre></td></tr></table><br />
+            <p>通常，在Eclipse中我们最好使用Eclipse提供的Job接口来实现多任务，而不是使用Java的thread。为什么呢？主要有以下几个原因：</p>
+            <ul>
+                <li>Job是可重用的工作单元，一个Job我们可以很方便的让它多次执行。</li>
+                <li>Job提供了方便的接口，使得我们在处理中能够很方便的与外界交流，报告当前的执行进度</li>
+                <li>Eclipse提供了相应的机制使得程序员可以方便的介入Job的调度，例如我们可以方便的实现每次只有一个同一类型的Job在运行</li>
+                <li>Eclipse缺省提供了Job管理的程序，可以查看当前所有的Job和它们的进度，也提供UI终止、暂停、继续指定的Job</li>
+                <li>使用Job可以提高程序的性能，节省线程创建和销毁的开销。Eclipse中的Job封装了线程池的实现。当我们启动一个Job时，Eclipse不会马上新建一个Thread，它会在它的线程池中寻找是否有空闲的线程，如果有空闲线程，就会直接用空闲线程运行你的Job。一个Job终止时，它所对应的线程也不会立即终止，它会被返回到线程池中以备重复利用。这样，我们可以节省创建和销毁线程的开销</li>
+            </ul>
+            <p>下面我们从几个方面来讨论Eclipse中Job的实现和使用方面的问题。</p>
+            
+            <p><a name="N100B2"><span class="atitle">Eclipse中Job的实现</span></a></p>
+            <p>Eclipse的核心包中提供了一个JobManager类，它实现了IJobManager接口，Eclipse中Job的管理和调度都是由JobManager来实现的。
+JobManager维护有一个线程池，用来运行Job。当我们调用Job的schedule方法后，这个Job会被JobManager首先放到一个Job运行的等待队列中去。之后，JobManager会通知线程池有新的Job加入了运行等待队列。线程池会找出一个空闲的线程来运行Job，如果没有空闲线程，线程池会创建一个新的线程来运行Job。一旦Job运行完毕，运行Job的线程会返回到线程池中以备下次使用。
+从上面Job运行的过程我们可以看到，JobManager介入了一个Job运行的全过程，它了解Job什么时候开始，什么时候结束，每一时候Job的运行状态。JobManager将这些Job运行的信息以接口的方式提供给用户，同时它也提供了接口让我们可以介入Job的调度等，从而我们拥有了更加强大的控制Job的能力。
+</p>
+            <p>为了我们更方便的了解Job所处的状态，JobManager设置Job的一个状态标志位,我们可以通过Job的getState方法获得Job当前的状态值以了解其状态：
+</p><ul>
+                    <li>NONE：当一个Job刚构造的时候，Job就会处于这种状态。当一个Job执行完毕（包括被取消）后，Job的状态也会变回这种状态。</li>
+                    <li>WAITING:当我们调用了Job的shedule方法，JobManager会将Job放入等待运行的Job队列，这时Job的状态为WAITING.</li>
+                    <li>RUNNING:当一个Job开始执行，Job的状态会变为RUNNING。</li>
+                    <li>SLEEPING:当我们调用Job的sleep方法后，Job会变成这一状态。当我们调用schudule方法的时候带上延时的参数，Job的状态也会转入这一状态，在这一段延时等待的时间中，Job都处于这一状态。这是一种睡眠状态，Job在这种状态中时不能马上转入运行。我们可以调用Job的wakeup方法来将Job唤醒。这样，Job又会转入WAITING状态等待运行。</li>
+                </ul>
+            
+            <p><a name="N100D1"><span class="atitle">Eclipse中的UI线程</span></a></p>
+            <p>另外，在Eclipse的线程处理中，有一个UI线程的概念。Eclipse程序中的主线程是一个特殊的线程，程序启动后会先执行这个线程，也就是我们的main()函数所在的线程。作为桌面应用程序，我们的主线程主要负责界面的响应以及绘制界面元素，所以通常我们也叫它UI线程。</p>
+            <p>以下代码，编过SWT应用程序的读者会非常熟悉。它一般出现在main函数的结尾。下面来仔细分析一下它的详细情况。</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">//当窗口未释放时
+while (!shell.isDisposed()) {
+
+    //如果display对象事件队列中没有了等待的事件，就让该线程进入等待状态
+    if (!display.readAndDispatch())
+        display.sleep();
+
+}
+</pre></td></tr></table><br />
+            <p>上面的程序实际上就是我们UI线程的处理逻辑：当程序启动后，UI线程会读取事件等待队列，看有没有事件等待处理。如果有，它会进行相应处理，如果没有它会进入睡眠状态。如果有新的事件到来，它又会被唤醒，进行处理。UI线程所需要处理的事件包括用户的鼠标和键盘操作事件，操作系统或程序中发出的绘制事件。一般来说，处理事件的过程也就是响应用户操作的过程。</p>
+            <p>一个好的桌面应用程序需要对用户的操作作出最快的响应，也就是说我们的UI线程必须尽快的处理各种事件。从我们程序的角度来说，在UI线程中我们不能进行大量的计算或者等待，否则用户操作事件得不到及时的处理。通常，如果有大量的计算或者需要长时间等待（例如进行网络操作或者数据库操作）时，我们必须将这些长时间处理的程序单独开辟出一个线程来执行。这样虽然后台运行着程序，但也不会影响界面上的操作。</p>
+            <p>除主线程之外的所有线程都是非UI线程。
+在Eclipse程序中，我们所有对界面元素的操作都必须放到UI线程中来执行，否则会抛出Exception，所以我们要区分出UI线程和非UI线程，保证我们对UI的操作都在UI线程中执行。
+</p>
+            <p>如何判断当前线程是否UI线程:
+你可以通过调用Display.getCurrent()来知道当前线程是否是UI线程。如果Display.getCurrent()返回为空,表示当前不是UI线程。</p>
+            
+            <p><a name="N100F1"><span class="atitle">Eclipse中使用线程的几种典型情况</span></a></p>
+            <ul>
+                <li>
+                    <strong>控制Job的并发运行</strong>
+                </li>
+            </ul>
+            <p>对于某些Job，为了避免并发性问题，我们希望同时只有一个这样的Job在运行，这时我们需要控制Job的并发运行。在另一种情况下，我们也需要控制Job的并发运行：我们在程序中对于一个任务，我们有可能会启动一个Job来执行，对于少量的任务来说，这是可行的，但是如果我们预测可能会同时有大量的任务，如果每一个任务启动一个Job，我们同时启动的Job就会非常多。这些Job会侵占大量的资源，影响其他任务的执行。
+我们可以使用Job的rule来实现控制Job的并发执行。简单的我们可以通过下面的代码实现。我们先定义一个如下rule：
+</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">	private ISchedulingRule Schedule_RULE = new ISchedulingRule() {
+		public boolean contains(ISchedulingRule rule) {
+			return this.equals(rule);
+		}
+		public boolean isConflicting(ISchedulingRule rule) {
+			return this.equals(rule);
+		}
+	};
+</pre></td></tr></table><br />
+            <p>对于需要避免同时运行的Job，我们可以将它们的rule设成上面定义的rule。如：</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">	myjob1.setRule(Schedule_RULE);
+	myjob2.setRule(Schedule_RULE);
+</pre></td></tr></table><br />
+            <p>这样对于myjob1和myjob2这两个Job，它们不会再同时执行。Myjob2会等待myjob1执行完再执行。这是由Eclipse的JobManager来提供实现的。JobManager可以保证所有启动的Job中，任意两个Job的rule是没有冲突的。
+我们在上面定义的rule是最简单的。我们可以重写isConflicting函数来实现一些更加复杂的控制，比如控制同时同类型的Job最多只有指定的个数在运行。
+但是我们要注意，isConflicting方法不能过于复杂。一旦一个Job的rule与其他Job的rule有冲突，isConflicting方法会调用很多次。如果其中的计算过于复杂，会影响整体的性能。</p>
+            <ul>
+                <li>
+                    <strong>根据需要执行Job</strong>
+                </li>
+            </ul>
+            <p>由于我们有的Job有可能不是立即执行的，在有些情况下，等到该Job准备执行的时候，该Job所要执行的任务已经没有意义了。这时，我们可以使用Job的shouldSchedule（）和shouldRun（）来避免Job的运行。在我们定义一个Job时，我们可以重载shouldSchedule和shouldRun方法。在这些方法中，我们可以检查Job运行的一些先决条件，如果这些条件不满足，我们就可以返回false。JobManager在安排Job运行时，它会先调用该Job的shouldSchedule方法，如果返回为false，JobManager就不会再安排这个Job运行了。同样，JobManager在真正启动一个线程运行一个Job前，它会调用该Job的shouldRun方法，如果返回false，它不再运行这个Job。在下面的例子中，我们希望启动一个Job在十秒钟之后更新文本框中的内容。为了保证我们的Job运行时是有意义的，我们需要确保我们要更新的文本框没有被销毁，我们重载了shouldSchedule和shouldRun方法。</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">Text text = new Text(parent,SWT.NONE);
+UIJob refreshJob = new UIJob(“更新界面”){
+public IStatus runInUIThread(IProgressMonitor monitor) {
+				
+		text.setText(“新文本”);
+		return Status.OK_STATUS;
+	}
+	public boolean shouldSchedule(){
+		return !text.isDisposed();
+	}
+	public boolean shouldRun(){
+		return !text.isDisposed();
+	}
+};
+refreshJob.schedule(10000);</pre></td></tr></table><br />
+            <ul>
+                <li>
+                    <strong>在UI线程中涉及长时间处理的任务</strong>
+                </li>
+            </ul>
+            <p>我们经常碰到这样一种情况：用户操作菜单或者按钮会触发查询大量数据，数据查询完后更新表格等界面元素。用户点击菜单或者按钮所触发的处理程序一般处于UI线程，为了避免阻塞UI，我们必须把数据查询等费时的工作放到单独的Job中执行，一旦数据查询完毕，我们又必须更新界面，这时我们又需要使用UI线程进行处理。下面是处理这种情况的示例代码：</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">	button.addSelectionListener(new SelectionListener(){
+	public void widgetSelected(SelectionEvent e){
+		perform();
+	}
+	
+	public void widgetDefaultSelected(SelectionEvent e){
+		perform();
+	}
+
+	private void perform(){
+		Job job = new Job(“获取数据”){
+			protected IStatus run(IProgressMonitor monitor){
+				// 在此添加获取数据的代码
+				Display.getDefault().asyncExec(new Runnable(){
+	public void run(){
+		// 在此添加更新界面的代码
+	}
+});
+	}
+		};
+		job.schedule();
+	}
+
+	});</pre></td></tr></table><br />
+            <ul>
+                <li>
+                    <strong>延时执行Job,避免无用的Job运行</strong>
+                </li>
+            </ul>
+            <p>我们经常需要根据选中的对象刷新我们部分的界面元素。如果我们连续很快的改变选择，而每次刷新界面涉及到的区域比较大时，界面会出现闪烁。从用户的角度来说，我们很快的改变选择，希望看到的只是最后选中的结果，中间的界面刷新都是不必要的。</p>
+            <p>在Jface中，StructuredViewer提供了addPostSelectionChangedListener方法。如果我们使用这个方法监听selectionChanged事件，当用户一直按着方向键改变选中时，我们只会收到一个selectionChanged事件。这样我们可以避免过度的刷新界面。</p>
+            <p>实际上，Jface中就是通过延时执行Job来实现这一功能的。我们也可以自己实现类似功能：</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">	private final static Object UPDATE_UI_JOBFAMILY = new Object();
+tableviewer. addSelectionChangedListener (new ISelectionChangedListener (){
+
+	public void selectionChanged(SelectionChangedEvent event){
+		Job.getJobManager().cancel(UPDATE_UI_JOBFAMILY);
+		new UIJob("更新界面") {
+            		protected IStatus runInUIThread (IProgressMonitor monitor) {
+               		 	//更新界面
+                			return Status.OK_STATUS; 
+            		}
+
+			public boolean belongsTo(Object family){
+				return family== UPDATE_UI_JOBFAMILY;
+			}
+			
+        		}.schedule(500);
+	}
+});</pre></td></tr></table><br />
+            <p>首先，我们需要将界面更新的代码放到一个UIJob中，同时我们将Job延时500毫秒执行（我们可以根据需要改变延时的时间）。如果下一个selectionChanged事件很快到来，我们的调用Job.getJobManager().cancel(UPDATE_UI_JOBFAMILY)将以前未运行的Job取消，这样只有最后一个Job会真正运行。</p>
+            <ul>
+                <li>
+                    <strong>在UI线程中等待非UI线程的结束</strong>
+                </li>
+            </ul>
+            <p>有时，我们在UI线程中需要等待一个非UI线程执行完，我们才能继续执行。例如，我们在UI线程中要显示某些数据，但是这些数据又需要从数据库或者远程网络获取。于是，我们会启动一个非UI的线程去获取数据。而我们的UI线程必须要等待这个非UI线程执行完成，我们才能继续执行。当然，一种简单的实现方法是使用join。我们可以在UI线程中调用非UI线程的join方法，这样我们就可以等待它执行完了，我们再继续。但是，这会有一个问题。当我们的UI线程等待时，意味着我们的程序不会再响应界面操作，也不会刷新。这样，用户会觉得我们的程序象死了一样没有反应。这时，我们可以使用ModalContext类。你可以将你要执行的获取数据的任务用ModalContext的run方法来运行（如下）。ModalContext会将你的任务放到一个独立的非UI线程中执行，并且等待它执行完再继续执行。与join方法不同的是，ModalContext在等待时不会停止UI事件的处理。这样我们的程序就不会没有响应了。</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">try {
+   ModalContext.run(new IRunnableWithProgress(){
+    public void run(IProgressMonitor monitor) 
+	throws InvocationTargetException, InterruptedException {
+     /*需要在非UI线程中执行的代码*/
+     ModalContext.checkCanceled(monitor);
+    }    
+   }, true, new NullProgressMonitor(), Display.getCurrent());
+  } catch (InvocationTargetException e) {
+   
+  } catch (InterruptedException e) {
+     }</pre></td></tr></table><br />
+            <ul>
+                <li>
+                    <strong>针对相关联的Job统一进行处理</strong>
+                </li>
+            </ul>
+            <p>有时，我们需要对相关联的Job一起处理。例如需要同时取消这些Job，或者等待所有这些Job结束。这时我们可以使用Job Family。对于相关联的Job，我们可以将它们设置成同一个Job Family。我们需要重载Job的belongsTo方法以设置一个Job的Job Family。</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">Private Object MY_JOB_FAMILY = new Object();
+Job job = new Job(“Job Name”){
+protected IStatus run(IProgressMonitor monitor) {
+	// 在这里添加你的任务代码
+		return Status.OK_STATUS;
+	}
+	
+	public boolean belongsTo(Object family){
+		return MY_JOB_FAMILY.equals(family);
+	}
+};</pre></td></tr></table><br />
+            <p>我们可以使用JobManager的一系列方法针对Job Family进行操作：</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycode">Job.getJobManager().cancel(MY_JOB_FAMILY); //取消所有属于MY_JOB_FAMILY的所有Job
+Job.getJobManager().join(MY_JOB_FAMILY); //等待属于MY_JOB_FAMILY的所有Job结束
+Job.getJobManager().sleep(MY_JOB_FAMILY); //将所有属于MY_JOB_FAMILY的Job转入睡眠状态
+Job.getJobManager().wakeup(MY_JOB_FAMILY); //将所有属于MY_JOB_FAMILY的Job唤醒
+</pre></td></tr></table><br />
+            <p><a name="N1017A"><span class="atitle">线程死锁的调试和解决技巧</span></a></p>
+            <p>一旦我们使用了线程，我们的程序中就有可能有死锁的发生。一旦发生死锁，我们发生死锁的线程会没有响应，导致我们程序性能下降。如果我们的UI线程发生了死锁，我们的程序会没有响应，必须要重启程序。所以在我们多线程程序开发中，发现死锁的情况，解决死锁问题对提高我们程序的稳定性和性能极为重要。</p>
+            <p>如果我们发现程序运行异常（例如程序没有响应），我们首先要确定是否发生了死锁。通过下面这些步骤，我们可以确定是否死锁以及死锁的线程：</p>
+            <ul>
+                <li>在Eclipse中以Debug模式运行程序</li>
+                <li>执行响应的测试用例重现问题</li>
+                <li>在Eclipse的Debug View中选中主线程（Thread[main]），选择菜单Run-&gt;Suspend。这时Eclipse会展开主线程的函数调用栈，我们就可以看到当前主线程正在执行的操作。</li>
+                <li>通常，Eclipse在等待用户的操作，它的函数调用栈会和以下类似：<br />
+                    
+                        <br /><br /><a name="fig1"><b>图片示例</b></a><br />
+                        <img alt="图片示例" height="99" src="index_files/callstack.gif" width="428"/>
+                    <br /><br />
+                </li>
+                <li>如果主线程发生死锁，函数调用栈的最上层一般会是你自己的函数调用，你可以查看一下你当前的函数调用以确定主线程在等待什么</li>
+                <li>使用同样的方法查看其他线程，特别是那些等待UI线程的线程</li>
+            </ul>
+            <p>我们需要找出当前线程相互的等待关系，以便找出死锁的原因。我们找出死锁的线程后就可以针对不同情况进行处理：</p>
+            <ul>
+                <li>减小锁的粒度，增加并发性</li>
+                <li>调整资源请求的次序</li>
+                <li>将需要等待资源的任务放到独立的线程中执行</li>
+            </ul>
+            
+            <p><a name="N101BE"><span class="atitle">Job使用中要注意的问题</span></a></p>
+            <ul>
+                <li>不要在Job中使用Thread.sleep方法。如果你想要让Job进入睡眠状态，最好用Job的sleep方法。虽然，使用Thread.sleep和Job的sleep方法达到的效果差不多，但是它们实现的方式完全不同，对系统的影响也不一样。我们知道Eclipse中Job是由Eclipse的JobManager来管理的。如果我们调用Job的sleep方法，JobManager会将Job转入睡眠状态，与其对应的线程也会重新放入线程池等待运行其他Job。而如果我们在Job中直接调用Thread.sleep方法，它会直接使运行Job的线程进入睡眠状态，其他Job就不可能重用这个线程了。同时，虽然运行该Job的线程进入了睡眠状态，Job的状态还是Running（运行状态），我们也不能用Job的wakeup方法唤醒该Job了</li>
+
+                <li>Job的取消。一般我们会直观的认为，一旦调用Job的cancel方法，Job就会停止运行。实际上，这并不一定正确，当Job处于不同的状态时，我们调用Job的cancel方法所起的效果是不同的。当Job在WAITING状态和SLEEPING状态时，一旦我们调用cancel方法，JobManager会将Job直接从等待运行的队列中删除，Job不会再运行了，这时cancel方法会返回true。但是如果Job正在运行，cancel方法调用并不会立即终止Job的运行，它只会设定一个标志，指明这个Job已经被取消了。我们可以使用Job的run方法传入的参数IProgressMonitor monitor，这个参数的isCanceled方法会返回Job是否被取消的状态。如果需要，我们必须在我们的代码的适当位置检查Job是否被取消的标志，作出适当的响应。另外，由于调用Job的cancel方法不一定立即终止Job，如果我们需要等待被取消的Job运行完再执行，我们可以用如下代码：
+<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="code-outline"><pre class="displaycodeliquid"> if (!job.cancel())
+job.join();</pre></td></tr></table><br />
+                </li>
+                <li>Join方法的使用。由于join方法会导致一个线程等待另一个线程，一旦等待线程中拥有一个被等待线程所需要的锁，就会产生死锁。当我们的线程中需要用到同步时，这种死锁的情况非常容易出现，所以我们使用join时必须非常小心，尽量以其他方法替代。</li>
+                <li>避免过时的Job造成的错误。由于我们启动的线程并不一定是马上执行的，当我们的Job开始运行时，情况可能发生了变化。我们在Job的处理代码中要考虑到这些情况。一种典型的情况是，我们在启动一个对话框或者初始化一个ViewPart时，我们会启动一些 Job去完成一些数据读取的工作，一旦数据读取结束，我们会启动新的UI Job更新相应的UI。有时，用户在打开对话框或者View后，马上关闭了该对话框或者View。这时我们启动的线程并没有被中断，一旦在Job中再去更新UI，就会出错。在我们的代码中必须作相应的处理。所以，我们在线程中更新界面元素之前，我们必须先检查相应的控件是否已经被dispose了</li>
+            </ul>
+            <p><a name="N101D9"><span class="atitle">结束语</span></a></p>
+            <p>在我们进行基于Eclipse的客户端开发时，使用多线程可以大大的提供我们的程序并发处理能力，同时对于提高用户体验也有很好的帮助。但是，多线程程序也有其不利的一面，我们也不要滥用线程：</p>
+            <ul>
+                <li>首先，多线程程序会大大的提高我们程序的复杂度，使得我们的开发和调试更加困难</li>
+                <li>其次，过多的线程容易引发死锁、数据同步等并发问题的发生</li>
+                <li>另外，由于线程创建和销毁需要开销，程序的整体性能可能因为过多线程的使用而下降</li>
+            </ul>
+            <p>所以，我们在使用线程时一定要谨慎。本文对Eclipse线程的讨论，希望能对大家使用线程有所帮助。由于实际情况较为复杂，文中所提到的方法仅供参考，读者对于不同的实际问题需要进行具体分析，从而找出最佳的解决方案。</p>
+            
+            
+        <!-- CMA ID: 265333 --> <!-- Site ID: 10 --> <!-- XSLT stylesheet used to transform this file:  dw-article-6.0-beta.xsl -->
+<br />
+<p><a name="resources"><span class="atitle">参考资料 </span></a></p><ul><li>查看
+        <a href="http://www.ibm.com/developerworks/blogs/">developerWorks
+博客</a>的最新信息。<br /><br /></li></ul>
+<p><a name="author"><span class="atitle">关于作者</span></a></p><div class="ibm-container ibm-portrait-module ibm-alternate-two"><div class="ibm-container-body"><p><a name="author1"> </a>梁骞, IBM 中国软件开发中心，现在从事 Workplace Managed Client 软件的开发工作，通过 <a href="mailto:liangq@cn.ibm.com">liangq@cn.ibm.com</a> 可以与他联系。</p></div></div>
+<!-- MAIN_COLUMN_CONTENT_END -->
+  <!-- OVERLAYS_START -->
+  <!-- Report_Abuse_Start -->
+  <div class="ibm-common-overlay ibm-no-print" id="reportabuseoverlay">
+    <div class="ibm-head"><p><a class="ibm-common-overlay-close" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">关闭 [x]</a></p></div>
+    <div class="ibm-body">
+      <div class="ibm-main">
+        <a class="ibm-access" name="reportabuseoverlay">关于报告滥用的帮助</a>   
+        <div class="ibm-title"><h1>报告滥用</h1></div>
+        <div class="ibm-container ibm-alternate">
+          <p><strong>谢谢!</strong>  此内容已经标识给管理员注意。</p>
+          <div class="ibm-overlay-rule"><hr /></div>
+          <div class="ibm-buttons-row">
+            <input type="button" onclick="ibmCommon.Overlays.hide('reportabuseoverlay');return false;" class="ibm-btn-cancel-sec dw-btn-cancel-sec" name="ibm-cancel" value="关闭" />
+          </div>
+        </div>
+      </div> 
+    </div>
+    <div class="ibm-footer"></div>
+  </div>
+  <!-- Report_Abuse_Error_Start -->
+  <div class="ibm-common-overlay ibm-no-print" id="reportabuseoverlayerror">
+    <div class="ibm-head"><p><a class="ibm-common-overlay-close" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">关闭 [x]</a></p></div>
+    <div class="ibm-body">
+      <div class="ibm-main">
+        <a class="ibm-access" name="reportabuseoverlayerror">关于报告滥用的帮助</a>   
+        <div class="ibm-title"><h1>报告滥用</h1></div>
+        <div class="ibm-container ibm-alternate">
+          <p class="ibm-ind-error"><strong>报告滥用提交失败。  请稍后重试。</strong></p>
+          <div class="ibm-overlay-rule"><hr /></div>
+          <div class="ibm-buttons-row">
+            <input type="button" onclick="ibmCommon.Overlays.hide('reportabuseoverlayerror');return false;" class="ibm-btn-cancel-sec dw-btn-cancel-sec" name="ibm-cancel" value="关闭" />
+          </div>
+        </div>
+      </div> 
+    </div>
+    <div class="ibm-footer"></div>
+  </div>
+  <!-- Sign in OVERLAY STARTS HERE --> 
+  <div class="ibm-common-overlay" id="signin_overlay">
+    <div class="ibm-head">
+      <p><a class="ibm-common-overlay-close" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" onclick="clearForm();">关闭 [x]</a></p>
+    </div>
+    <div class="ibm-body">
+      <div class="ibm-main">
+        <div class="ibm-title ibm-subtitle">
+          <h1>developerWorks：登录</h1>
+          <div id="ibm-overlay-error-signin" class="no-display"></div>
+        </div>
+        
+        <div class="ibm-container ibm-alternate ibm-buttons-last">
+          <div class="ibm-container-body">
+
+            <form class="ibm-column-form" id="sFormId" action="" method="post" name="sForm" onsubmit="return false;">
+              <p><label for="ibmid">IBM ID：</label><span><input name="ibm-id" id="ibmid" size="25" value="" class="required" type="text" onkeypress="handleEP(event,this.form);" />
+                <br /><a class="ibm-forward-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" onclick="(function () {window.location='/developerworks/dwwi/DWAuthRouter?m=reg&amp;lang=zh_CN&amp;d='+encodeURIComponent(location.href);})();">需要一个 IBM ID？</a>
+                <br /><a class="ibm-forward-link" href="http://www.ibm.com/developerworks/dwwi/jsp/WSHelp.jsp?lang=zh_CN">忘记 IBM ID？</a></span>   
+              </p> 
+              <p><label for="password">密码：</label><span><input name="password" id="password" size="25" value="" class="required" type="password" onkeypress="handleEP(event,this.form);" /><br />
+                <a class="ibm-forward-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" onclick="(function () {window.location='https://www.ibm.com/account/profile?page=forgot&amp;lang=zh_CN&amp;appname=ibm&amp;required=null&amp;d='+encodeURIComponent(getAuthUrl())+'%3Fm%3Dloginpage%26lang%3Dzh_CN%26d%3D'+encodeURIComponent(location.href);})();">忘记密码？</a><br />
+                <a class="ibm-forward-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" onclick="(function () {window.location='https://www.ibm.com/account/profile?page=chpw&amp;lang=zh_CN&amp;appname=ibm&amp;required=null&amp;d='+encodeURIComponent(location.href);})();">更改您的密码</a></span></p> 
+
+              <p class="dw-perm-box">
+                <span><input id="perm" type="checkbox" name="perm_name"/><label for="perm"> 保持登录。</label></span>
+              </p>
+
+              <p>单击提交则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/mydeveloperworks/terms?lang=zh">使用条款</a></p>
+              <div class="ibm-buttons-row">
+                <p><input class="ibm-btn-arrow-pri" name="ibm-submit" value="提交" onclick="signin();return false;" type="submit" /><span class="ibm-sep">&nbsp;</span>
+                  <input value="取消" type="button" name="ibm-cancel" class="ibm-btn-cancel-sec" onclick="clearForm();ibmCommon.Overlays.hide('signin_overlay');return false;"/></p>
+              </div>
+            </form>
+            <div class="ibm-overlay-rule"><hr /></div>
+            <p>当您初次登录到 developerWorks 时，将会为您创建一份概要信息。<strong>您在 developerWorks 概要信息中选择公开的信息将公开显示给其他人，但您可以随时修改这些信息的显示状态。</strong>您的姓名（除非选择隐藏）和昵称将和您在 developerWorks 发布的内容一同显示。</p>
+            <div class="dw-overlay-legal"><p>所有提交的信息确保安全。</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ibm-footer"></div>
+  </div>
+  <!-- Sign in OVERLAY ENDS HERE --> 
+  
+  
+  <!-- Display name OVERLAY STARTS HERE --> 
+  <div class="ibm-common-overlay" id="displayname_overlay">
+    <div class="ibm-head">
+      <p><a class="ibm-common-overlay-close" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#" onclick="clearForm();">关闭 [x]</a></p>
+    </div>
+    <div class="ibm-body">
+      <div class="ibm-main">
+        <div class="ibm-title ibm-subtitle">
+          <h1>请选择您的昵称：</h1>
+          <div id="ibm-overlay-error-dname" class="no-display"></div>
+        </div>
+        <div class="ibm-container ibm-alternate ibm-buttons-last">
+          <div class="ibm-container-body">
+            <p class="ibm-overlay-intro">当您初次登录到 developerWorks 时，将会为您创建一份概要信息，您需要指定一个昵称。您的昵称将和您在 developerWorks 发布的内容显示在一起。</p><p><strong>昵称长度在 3 至 31 个字符之间</strong>。 您的昵称在 developerWorks 社区中必须是唯一的，并且出于隐私保护的原因，不能是您的电子邮件地址。</p>
+            <form id="dFormId" method="post" action="" name="dForm" onsubmit="return false;" class="ibm-column-form">
+              <p><label for="displayname">昵称：</label><span><input name="displayname" id="displayname" size="25" value="" type="text" onkeypress="handleEP(event,this.form);" /></span><span class="ibm-form-note">（长度在 3 至 31 个字符之间）</span>
+              </p>
+              
+              <div class="ibm-overlay-rule"><hr />
+              </div>
+              <p>单击<strong>提交</strong>则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/mydeveloperworks/terms?lang=zh">使用条款</a>.</p>
+              <div class="ibm-buttons-row">
+                <p><input class="ibm-btn-arrow-pri" name="ibm-submit" value="提交" onclick="signin();return false;" type="submit" /><span class="ibm-sep">&nbsp;</span>
+                  <input value="取消" type="button" name="ibm-cancel" class="ibm-btn-cancel-sec" onclick="clearForm();ibmCommon.Overlays.hide('displayname_overlay');return false;" /></p>
+              </div>
+            </form>
+            <div class="ibm-overlay-rule"><hr /></div>
+            <div class="dw-overlay-legal"><p>所有提交的信息确保安全。</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ibm-footer"></div>
+  </div>
+  <!-- Display name OVERLAY ENDS HERE -->
+  <!-- OVERLAYS_END -->
+  <!-- RATINGS START -->
+  <p class="ibm-no-print"><span class="atitle"><a name="iratings">为本文评分</a></span></p>
+  <input id="art-rating" name="ratinga" type="hidden" value="0"/><div id="art-rating-module"></div>
+  <script language="JavaScript" type="text/javascript">
+    // <![CDATA[
+   // widget div id and article id as args
+   window.artRating.init('art-rating-module','art-rating-summary');
+// ]]>
+  </script>
+  <!-- RATINGS END --> 
+  
+  <!-- INLINE_COMMENTS_START -->
+  <p class="ibm-no-print"><span class="atitle"><a name="icomments">评论</a></span></p>
+    <script language="JavaScript" type="text/javascript">
+      // <![CDATA[
+dwc = {};
+dwc.cmts = '条评论';
+dwc.signInPreText = '请';
+dwc.signIn = '登录';
+dwc.or = '或';
+dwc.register = '注册';
+dwc.signInPostText = '';
+dwc.leaveCmt = '后发表评论。';
+dwc.view = '查看';
+dwc.totalCmts = '共有评论';
+dwc.postYourCmt = '添加您的评论';
+dwc.show = '显示：';
+dwc.recentCmts = '最新评论';
+dwc.allCmts = '所有评论';
+dwc.tooLongCmt = '您的评论超过了 1000 字符限制';
+dwc.numCharsLeft = '剩余 <span id="charCount">{1}</span> 字符';
+dwc.reportAbuse = '报告滥用';
+dwc.notifyMsg = '有新评论时提醒我';
+dwc.htmlWarning = '注意：评论中不支持 HTML 语法'; 
+dwc.cmt = '评论：';
+dwc.addCmts = '添加评论';
+dwc.addCmt = '添加评论';
+dwc.doNotErase = '--在下方添加评论--'; 
+dwc.viewOrAddCmts = '查看或添加评论';
+dwc.reportInapprCont = '举报不良信息';
+dwc.reportInapprContLink = 'http://www.ibm.com/developerworks/forums/forum.jspa?forumID=1834';
+dwc.postingCmt = '正在发布评论……';
+dwc.noCmt = '快来添加第一条评论';
+dwc.netwkErr = '在检索评论时出错，请稍后刷新。';
+dwc.addACmt = '添加评论';
+dwc.instructCmt = '标有星号（<span class="ibm-required">*</span>）的是必填项目。';
+dwc.btnPost = '发布';
+dwc.btnPostAnon = '匿名发布';
+dwc.btnClrCmt = '清除评论';
+dwc.btnCancel = '取消';
+dwc.showRecent = '显示最新的 {1} 条评论'; // {1} is the count to be substituted
+dwc.showNext = '显示后 {1} 条评论'; // {1} is the count to be substituted
+dwc.showAllCmts = '显示所有评论';
+dwc.enterCmt = '请输入评论内容。';
+dwc.loginErr = '暂时无法验证您的登录状态，请稍后再试。';
+dwc.postErr = '暂时无法发布您的评论，请稍后再试。';
+dwc.postBy = '由 <strong>{1}</strong>  于 {2} '; // {1} is the author to be substituted; {2} is the date
+dwc.siteId = 10;
+dwc.lang = 'zh_CN';
+dwc.viperLang = 'zh';
+// ]]>
+    </script>
+    <div id="threadShow"></div>
+  <!-- INLINE_COMMENTS_END -->
+  
+
+  <p class="ibm-ind-link ibm-back-to-top"><a class="ibm-anchor-up-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#ibm-pcon">回页首</a></p>
+
+<!-- Overlays -->
+<!-- lk - pull in overlays from ww when required on cn -->
+  </div>
+<!-- MAIN_COLUMN_CONTAINER_END -->
+
+<!-- Rating_Meta_BEGIN -->
+<!--Rating_Meta_BEGIN--><div class="metavalue">static.content.url=http://www.ibm.com/developerworks/js/artrating/</div><div class="metavalue">SITE_ID=10</div><div class="metavalue">Zone=Open source</div><div class="metavalue">ArticleID=265333</div><div class="metavalue">ArticleTitle=Eclipse客户端程序中多线程的使用</div><div class="metavalue">publish-date=10292007</div><div class="metavalue">author1-email=liangq@cn.ibm.com</div><div class="metavalue">author1-email-cc=</div><script language="javascript" type="text/javascript">document.write('<div class="metavalue">url='+location.href.replace(/</g, '%3C')+'</div>');</script><!--Rating_Meta_END-->
+<!-- Rating_Meta_END -->
+
+</div>
+<!-- MAIN_COLUMN_END-->
+
+<!-- RIGHT_COLUMN_BEGIN -->
+<div id="ibm-content-sidebar">
+
+<!-- RIGHT_COLUMN_CONTENT_BEGIN --> 
+<div class="ibm-container"><h2>内容</h2><div class="ibm-container-body"><img alt="" height="1" width="1" src="index_files/c-2.gif"/><ul class="ibm-bullet-list"><li><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#N100B2">Eclipse中Job的实现</a></li><li><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#N100D1">Eclipse中的UI线程</a></li><li><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#N100F1">Eclipse中使用线程的几种典型情况</a></li><li><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#N1017A">线程死锁的调试和解决技巧</a></li><li><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#N101BE">Job使用中要注意的问题</a></li><li><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#N101D9">结束语</a></li><li><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#resources">参考资料 </a></li><li><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#author">关于作者</a></li><li><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#icomments">建议</a></li></ul></div></div>
+
+ 
+
+
+<!-- Dig_Deeper -->
+
+<!-- High_Visibility_Offer -->
+
+<!-- Special_Offers -->
+
+<!-- RIGHT_COLUMN_CONTENT_END -->
+
+</div>
+<!-- RIGHT_COLUMN_END -->
+
+<!-- CONTENT_BODY_END -->
+</div>
+
+</div>
+<!-- CONTENT_END -->
+
+ <!-- END_IBM-PCON -->
+</div>
+
+<!-- FOOTER_BEGIN -->
+<div id="ibm-footer">
+<!-- IBM footer container; disabled -->
+</div>
+
+<div id="ibm-page-tools-dw">
+	<div id="dw-footer-top-row">
+		<ul id="dw-foot-options">
+			<li id="dw-print"><a class="ibm-print-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">打印此页面</a></li>
+		</ul>
+		<ul id="ibm-foot-options-dw">
+			<li id="dw-foot-0" class="dw-foot-0-cn"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">分享此页面</a></li>
+			<li id="dw-foot-1" class="dw-foot-1-cn"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">关注 developerWorks</a></li>
+		</ul>
+	</div>       
+	
+	
+	<!-- TOP ROW SLIDER -->
+    <div id="dw-page-tools-menu">    
+        <div class="ibm-ribbon-pane-dw">
+            <div class="ibm-ribbon-section-dw">
+				<!-- Share this page -->			
+                <div class="dw-footer-columns">
+                    <div class="dw-footer-col-4-1">
+                    	<h2>分享此页面：</h2>                            
+						<ul class="ibm-link-list">
+						  <!--<li><a id="dw-foot-0-0" class="dwcn-sina-link"
+						        href="#"
+						        onClick="javascript:location.href='http://hits.sinajs.cn/A1/weiboshare.html?&amp;appkey=&amp;title='+escape(document.title)+'&amp;url='+escape(location.href)'+'&amp;pic=&ralateUid&amp;language=zh_cn;
+						        ">新浪微博</a></li> -->
+						   <li><a id="dw-foot-0-0" class="dwcn-sina-link"
+						        href="#"
+						        onClick="javascript:location.href='http://service.weibo.com/share/share.php?title='+encodeURIComponent(document.title)+'&amp;url='+escape(location.href)+'&amp;language=zh_cn'
+						        ; ">新浪微博</a></li> 
+						   <li><a class="dwcn-renren-link"
+						        href="#" onClick="javascript:location.href='http://share.renren.com/share/buttonshare?title='+encodeURIComponent(document.title)+'&amp;link='+escape(location.href);
+						        ">人人网</a></li> 
+						    <li><a class="dwcn-tencent-link"
+						        href="#" onClick="javascript:location.href='http://v.t.qq.com/share/share.php?title='+encodeURIComponent(document.title)+'&amp;url='+escape(location.href);
+						        ">腾讯微博</a></li> 
+						   				
+						</ul>
+                    </div>
+                    <div class="dw-footer-col-4-2">
+						<ul class="ibm-link-list">
+						    <li><a class="dwcn-sohu-link"
+						        href="#"
+						        onClick="javascript:location.href='http://t.sohu.com/third/post.jsp?title='+encodeURIComponent(document.title)+'&amp;link='+escape(location.href);
+						        ">搜狐微博</a></li>
+						    
+						    <li><a class="dwcn-netease-link"
+						        href="#"
+						        onClick="javascript:location.href='http://t.163.com/article/user/checkLogin.do?info='+encodeURIComponent(document.title)+ '' +escape(location.href);
+						        ">网易微博</a></li>
+						    <li><a class="ibm-facebook-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">Facebook</a></li>
+						</ul>
+                </div>
+                    <div class="dw-footer-col-4-3">
+						<ul class="ibm-link-list">
+						 <li><a class="ibm-linkedin-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">LinkedIn</a></li>   
+						 <li><a class="ibm-twitter-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">Twitter</a></li>   
+						 <li><a class="ibm-delicious-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">Delicious</a></li>
+						
+						</ul>
+                    </div>
+                   <div class="dw-footer-col-4-4">
+						<ul class="ibm-link-list">
+						 <li><a class="ibm-digg-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">Digg</a></li>   
+						 <li><a class="ibm-email-link" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#">发送此页面</a></li>
+						</ul>
+                    </div>
+                    <div class="dw-footer-close">
+						<ul>
+							<li><div class="dw-footer-close-share"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10"/></a></div></li>
+						</ul>
+                    </div>
+                </div>
+                  <!-- Follow developerWorks -->
+                <div class="dw-footer-columns">
+                    <div class="dw-footer-col-1-1 dw-footer-col-1-1-cn">
+                    	<h2>关注 developerWorks 中国网站：</h2>
+						<ul class="ibm-link-list">
+							<!--<li><a id="dw-foot-1-0" class="ibm-twitter-link" href="http://www.twitter.com/dwchina">Twitter</a></li>-->
+						    <li><a id="dw-foot-1-0" class="dwcn-sina-link"
+						        href="http://weibo.com/ibmdw/">新浪微博</a></li>
+						</ul>
+                    </div>
+                    <div class="dw-footer-close">
+						<ul>
+							<li><div class="dw-footer-close-follow-cn"><a href="http://www.ibm.com/developerworks/cn/opensource/os-cn-eclipse-multithrd/#"><img src="index_files/c-1.gif" alt="关闭 [x]" width="20" height="10"/></a></div></li>
+						</ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="ibm-footer-module-dw">
+	<div class="dw-footer-columns">
+		<div class="dw-footer-col-6-1">
+			<ul>
+				<!--<li><a href="http://www.ibm.com/developerworks/aboutdw/">About</a></li>-->
+				<li><a href="https://www.ibm.com/developerworks/secure/feedback.jsp?domain=dwchina">帮助</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/author/">联系编辑</a></li>
+				<li><a href="https://www.ibm.com/developerworks/secure/myideas2.jsp?domain=dwchina&start=true">提交内容</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/sitemap/">网站导航</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-2">
+			<ul>
+				<li><a href="http://www.ibm.com/developerworks/cn/rss/">订阅源</a></li>
+				<li><a href="http://www.ibm.com/vrm/newsletter/10104?S_TACT=105AGX52&S_CMP=dwcntop">在线浏览每周时事通讯</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-3">
+			<ul>
+				<li><a href="https://www.ibm.com/developerworks/community/report?lang=zh">报告滥用</a></li>
+				<li><a href="https://www.ibm.com/developerworks/community/terms?lang=zh">使用条款</a></li>
+				<li><a href="http://www.ibm.com/privacy/cn/zh/">隐私条约</a></li>
+				<li><a href="http://www.ibm.com/ibm/accessibility/cn/">浏览辅助</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-4-cn">
+			<ul>
+				<li><a href="http://www-900.ibm.com/cn/ai/">IBM 教育学院教育培养计划</a></li>
+				<li><a href="http://www.ibm.com/partnerworld/isv/">ISV 资源 (英语)</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-5">
+		</div>
+		<div class="dw-footer-col-6-6">
+		</div>
+	</div>
+	<!-- Language selector no-script -->
+	<noscript>
+	<div id="dw-footer-selectlang">
+		<h2><a name="SELECTLANG">选择语言：</a></h2>
+		<ul>
+			<li><a href="http://www.ibm.com/developerworks/">English</a></li>
+			<li><a href="http://www.ibm.com/developerworks/cn/">中文</a></li>
+			<li><a href="http://www.ibm.com/developerworks/jp/">日本語</a></li>
+			<li><a href="http://www.ibm.com/developerworks/ru/">Русский</a></li>
+			<li><a href="http://www.ibm.com/developerworks/br/">Português (Brasil)</a></li>
+			<li><a href="http://www.ibm.com/developerworks/ssa/">Español</a></li>
+			<li><a href="http://www.ibm.com/developerworks/vn/">Việt</a></li>
+		</ul>
+	</div>
+	</noscript>
+</div><!-- FOOTER_END -->
+
+ <!-- END_IBM-TOP -->
+</div>
+ 
+ <!-- SCRIPTS_INCLUDE_BEGIN -->
+<!-- JQuery start -->
+<script type="text/javascript" language="JavaScript" src="index_files/jquery.hoverIntent.minified.js"></script>
+<script type="text/javascript" language="JavaScript" src="index_files/jquery.cluetip.js"></script>
+<!-- xM Masthead/Footer -->
+<script src="index_files/jquery.tools.min.js" type="text/javascript">//</script>
+<script src="index_files/jquery.jscroll.js" type="text/javascript">//</script>
+<script src="index_files/dw_v16.js" type="text/javascript">//</script>
+<script src="index_files/flash-detect.js" type="text/javascript">//</script>
+<script src="index_files/dwsi.js" type="text/javascript">//</script>
+<script type="text/javascript" language="JavaScript" src="index_files/showcomments.js">//</script>
+<script language="JavaScript" type="text/javascript">
+	// <![CDATA[
+ jQuery('threadShow').showComments('95%',5,'nCmts','icomments');
+// ]]>
+</script>
+<script type="text/javascript" language="JavaScript">
+	jQuery.noConflict();     
+	// Put all your code in your document ready area
+	jQuery(document).ready(function(jQuery) {
+	// Do jQuery stuff using jQuery 
+	jQuery('a.dwauthor').cluetip({
+	local: true,
+	showTitle: false,
+	positionBy: 'bottomTop',
+	sticky: true,	
+	mouseOutClose: true,
+	closeText: '<img src="//dw1.s81c.com/developerworks/js/jquery/cluetip98/i/x.gif" alt="Close" />',
+	arrows: false,
+	dropShadow: true,
+	cluetipClass: 'dwbasic'
+	});
+
+	rBHash = {};
+	rBHash['viperLang'] = 'zh';
+	rBHash['urlLang'] = 'cn';
+
+	// si
+	initSI();
+	});
+</script>
+<!-- JQuery end -->
+<!-- Overlay js -->
+<script language="JavaScript" src="index_files/overlay.js" type="text/javascript"></script><!-- BEGIN: Use this section to set page specific variables for the Unica Page Tag -->
+<script language="JavaScript">var NTPT_PGEXTRA="ibmSkillLevel=3&ibmAdoptPhase=667&ibmRole=710&ibmCmaId=265333";</script>
+<!--END --><!-- SCRIPTS_INCLUDE_END -->
+
+<div id="ibm-metrics">
+<script src="index_files/stats.js" type="text/javascript">//</script>
+</div>
+
+</body>
+</html>

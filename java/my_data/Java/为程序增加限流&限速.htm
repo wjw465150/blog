@@ -1,0 +1,152 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>为程序增加限流&限速</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<DIV id=head 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 13px/18px Helvetica, arial, freesans, clean, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<H1 class=instapaper_title 
+style="BOX-SIZING: border-box; FONT-SIZE: 30px; MARGIN: 15px 0px; LINE-HEIGHT: 1.1">Rate 
+Limiter</H1></DIV>
+<DIV id=wiki-content 
+style="BOX-SIZING: border-box; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 13px/18px Helvetica, arial, freesans, clean, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV class=wrap style="BOX-SIZING: border-box">
+<DIV id=wiki-body class="gollum-markdown-content instapaper_body" 
+style="BOX-SIZING: border-box">
+<DIV class=markdown-body 
+style="BOX-SIZING: border-box; OVERFLOW: hidden; WORD-WRAP: break-word; FONT-SIZE: 15px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 30px; MARGIN: 0px -30px; LINE-HEIGHT: 1.7; PADDING-RIGHT: 30px">
+<H3 
+style="BOX-SIZING: border-box; CURSOR: text; FONT-SIZE: 1.5em; POSITION: relative; FONT-WEIGHT: bold; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 15px; LINE-HEIGHT: 1.7; PADDING-RIGHT: 0px"><A 
+class=anchor 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; POSITION: absolute; COLOR: rgb(65,131,196); PADDING-LEFT: 30px; MARGIN-LEFT: -30px; LEFT: 0px; DISPLAY: block; TOP: 0px; PADDING-RIGHT: 6px; BOTTOM: 0px" 
+href="https://github.com/springside/springside4/wiki/Rate-Limiter#wiki-1-overview" 
+name=wiki-1-overview></A>1. OverView</H3>
+<P style="BOX-SIZING: border-box; MARGIN: 15px 0px">做限流(Rate 
+Limiting/Throttling)的时候，除了简单的控制并发，如果要准确的控制TPS，简单的做法是维护一个单位时间内的Counter，如判断单位时间已经过去，则将Counter重置零。此做法被认为没有很好的处理单位时间的边界，比如在前一秒的最后一毫秒里和下一秒的第一毫秒都触发了最大的请求数，将目光移动一下，就看到在两毫秒内发生了两倍的TPS。</P>
+<P style="BOX-SIZING: border-box; MARGIN: 15px 0px">因此更平滑的算法如<A 
+style="BOX-SIZING: border-box; TEXT-DECORATION: none; COLOR: rgb(65,131,196)" 
+href="http://en.wikipedia.org/wiki/Leaky_bucket">Leaky 
+Bucket</A>--漏桶算法，又或者将原来单位时间内单一的Counter拆分为单位时间内的多个Buckets并滑动计算。</P>
+<H3 
+style="BOX-SIZING: border-box; CURSOR: text; FONT-SIZE: 1.5em; POSITION: relative; FONT-WEIGHT: bold; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 1em 0px 15px; LINE-HEIGHT: 1.7; PADDING-RIGHT: 0px"><A 
+class=anchor 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; POSITION: absolute; COLOR: rgb(65,131,196); PADDING-LEFT: 30px; MARGIN-LEFT: -30px; LEFT: 0px; DISPLAY: block; TOP: 0px; PADDING-RIGHT: 6px; BOTTOM: 0px" 
+href="https://github.com/springside/springside4/wiki/Rate-Limiter#wiki-2-leaky-bucket-%E4%B8%8E-token-bucket-%E7%AE%97%E6%B3%95" 
+name=wiki-2-leaky-bucket-%E4%B8%8E-token-bucket-%E7%AE%97%E6%B3%95></A>2. Leaky 
+Bucket 与 Token Bucket 算法</H3>
+<H4 
+style="BOX-SIZING: border-box; CURSOR: text; FONT-SIZE: 1.2em; POSITION: relative; FONT-WEIGHT: bold; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 1em 0px 15px; LINE-HEIGHT: 1.7; PADDING-RIGHT: 0px"><A 
+class=anchor 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; POSITION: absolute; COLOR: rgb(65,131,196); PADDING-LEFT: 30px; MARGIN-LEFT: -30px; LEFT: 0px; DISPLAY: block; TOP: 0px; PADDING-RIGHT: 6px; BOTTOM: 0px" 
+href="https://github.com/springside/springside4/wiki/Rate-Limiter#wiki-21-%E7%AE%97%E6%B3%95%E6%8F%8F%E8%BF%B0" 
+name=wiki-21-%E7%AE%97%E6%B3%95%E6%8F%8F%E8%BF%B0></A>2.1 算法描述</H4>
+<P 
+style="BOX-SIZING: border-box; MARGIN: 15px 0px">漏木桶算法简单的想象有一个木桶，有新请求就是不断的倒水进来，然后桶底下有个洞，按照固定的速率把水漏走，如果水进来的速度比漏走的快，桶可能就会满了，然后就拒绝请求。</P>
+<P 
+style="BOX-SIZING: border-box; MARGIN: 15px 0px">可见这里有两个变量，一个是桶的大小，支持流量突发增多时可以存多少的水(burst)，另一个是水桶漏洞的大小(rate)，可以简单的让burst等于rate，也可以让burst更大接收更多突发请求，伪代码如下：</P><PRE style="BOX-SIZING: border-box; OVERFLOW: auto; WORD-WRAP: normal; FONT-SIZE: 13px; BORDER-TOP: rgb(221,221,221) 1px solid; FONT-FAMILY: Consolas, 'Liberation Mono', Courier, monospace; BORDER-RIGHT: rgb(221,221,221) 1px solid; BORDER-BOTTOM: rgb(221,221,221) 1px solid; PADDING-BOTTOM: 6px; PADDING-TOP: 6px; PADDING-LEFT: 10px; MARGIN: 15px 0px; BORDER-LEFT: rgb(221,221,221) 1px solid; LINE-HEIGHT: 19px; PADDING-RIGHT: 10px; BACKGROUND-COLOR: rgb(248,248,248); border-top-left-radius: 3px; border-top-right-radius: 3px; border-bottom-right-radius: 3px; border-bottom-left-radius: 3px"><CODE style="BOX-SIZING: border-box; WORD-WRAP: normal; FONT-SIZE: 12px; BORDER-TOP: medium none; FONT-FAMILY: Consolas, 'Liberation Mono', Courier, monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; BORDER-BOTTOM: medium none; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; BORDER-LEFT: medium none; PADDING-RIGHT: 0px; BACKGROUND-COLOR: transparent; border-top-left-radius: 3px; border-top-right-radius: 3px; border-bottom-right-radius: 3px; border-bottom-left-radius: 3px">double rate;               // leak rate in calls/s
+double burst;              // bucket size in calls
+
+long refreshTime;          // time for last water refresh
+double water;              // water count at refreshTime
+
+refreshWater() {
+  long  now = getTimeOfDay();
+  water = max(0, water- (now - refreshTime)*rate); // 水随着时间流逝，不断流走，最多就流干到0.
+  refreshTime = now;
+}
+
+bool permissionGranted() {
+  refreshWater();
+  if (water &lt; burst) { // 水桶还没满，继续加1
+    water ++;
+    return true;
+  } else {
+    return false;
+  }
+}
+</CODE></PRE>
+<P style="BOX-SIZING: border-box; MARGIN: 15px 0px"><A 
+style="BOX-SIZING: border-box; TEXT-DECORATION: none; COLOR: rgb(65,131,196)" 
+href="http://en.wikipedia.org/wiki/Token_bucket">Token Bucket</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>是与<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="BOX-SIZING: border-box; TEXT-DECORATION: none; COLOR: rgb(65,131,196)" 
+href="http://en.wikipedia.org/wiki/Leaky_bucket">Leaky Bucket</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>效果一样但方向相反的算法，更加容易理解。随着时间流逝，系统会按速率 
+1/rate 
+的时间间隔(如果rate=100，则间隔是10ms)往桶里加入Token(想象和漏洞漏水相反，有个水龙头在不断的加水)，如果桶已经满了就不再加了。新请求来临时，会各自拿走一个Token，如果没有Token可拿了就拒绝服务。</P>
+<H4 
+style="BOX-SIZING: border-box; CURSOR: text; FONT-SIZE: 1.2em; POSITION: relative; FONT-WEIGHT: bold; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 1em 0px 15px; LINE-HEIGHT: 1.7; PADDING-RIGHT: 0px"><A 
+class=anchor 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; POSITION: absolute; COLOR: rgb(65,131,196); PADDING-LEFT: 30px; MARGIN-LEFT: -30px; LEFT: 0px; DISPLAY: block; TOP: 0px; PADDING-RIGHT: 6px; BOTTOM: 0px" 
+href="https://github.com/springside/springside4/wiki/Rate-Limiter#wiki-22-guava-ratelimiter" 
+name=wiki-22-guava-ratelimiter></A>2.2 Guava RateLimiter</H4>
+<P style="BOX-SIZING: border-box; MARGIN: 15px 0px">Google Guava中的<A 
+style="BOX-SIZING: border-box; TEXT-DECORATION: none; COLOR: rgb(65,131,196)" 
+href="http://docs.guava-libraries.googlecode.com/git/javadoc/com/google/common/util/concurrent/RateLimiter.html">RateLimiter</A>，实际上就实现了Token 
+Bucket的算法。Google搜索看到有些开源项目的issues，要把自己写的Limiter换成了它。</P>
+<P 
+style="BOX-SIZING: border-box; MARGIN: 15px 0px">它支持两种获取permits接口，一种是如果拿不到立刻返回false，一种会阻塞等待一段时间看能不能拿到。</P>
+<P style="BOX-SIZING: border-box; MARGIN: 15px 0px">Leacky 
+Bucket算法默认一开始水桶是空的，可以立即就接收最多burst的请求，而Token Bucket就要设置初始Token的数量。<BR 
+style="BOX-SIZING: border-box">RateLimiter有两个子类，一个是WarmingUp，一个是Bursty。</P>
+<UL 
+style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 30px; MARGIN: 15px 0px; PADDING-RIGHT: 0px">
+  <LI style="BOX-SIZING: border-box">WarmingUp，burst = 
+  warmUp时间/固定token添加间隔(即上例那个10ms)，初始token数量 = burst，有算法保证系统总是相对平滑。 
+  <LI style="BOX-SIZING: border-box">Bursty， burst =   rate或另外的参数设置，初始token数量 = 0 
+  ，当系统冷了一段时间，支持突发到burst。</LI></UL>
+<P 
+style="BOX-SIZING: border-box; MARGIN: 15px 0px">Guava以micros为时间单位，计算token的变化。</P>
+<H3 
+style="BOX-SIZING: border-box; CURSOR: text; FONT-SIZE: 1.5em; POSITION: relative; FONT-WEIGHT: bold; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 1em 0px 15px; LINE-HEIGHT: 1.7; PADDING-RIGHT: 0px"><A 
+class=anchor 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; POSITION: absolute; COLOR: rgb(65,131,196); PADDING-LEFT: 30px; MARGIN-LEFT: -30px; LEFT: 0px; DISPLAY: block; TOP: 0px; PADDING-RIGHT: 6px; BOTTOM: 0px" 
+href="https://github.com/springside/springside4/wiki/Rate-Limiter#wiki-4-%E5%A4%9A%E4%B8%AA%E6%BB%91%E5%8A%A8%E7%9A%84buckets" 
+name=wiki-4-%E5%A4%9A%E4%B8%AA%E6%BB%91%E5%8A%A8%E7%9A%84buckets></A>4. 
+多个滑动的Buckets</H3>
+<P 
+style="BOX-SIZING: border-box; MARGIN: 15px 0px">不知道这种算法的业界命名是什么，原理也很简单，将原来的1秒划分为N个bucket。每个请求到来时，计算出当前时间属于哪个bucket，bucket的counter+1，然后计算当前bucket加上前面N-1个bucket的counter总和，看看是否达到rate。</P>
+<H3 
+style="BOX-SIZING: border-box; CURSOR: text; FONT-SIZE: 1.5em; POSITION: relative; FONT-WEIGHT: bold; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 1em 0px 15px; LINE-HEIGHT: 1.7; PADDING-RIGHT: 0px"><A 
+class=anchor 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; POSITION: absolute; COLOR: rgb(65,131,196); PADDING-LEFT: 30px; MARGIN-LEFT: -30px; LEFT: 0px; DISPLAY: block; TOP: 0px; PADDING-RIGHT: 6px; BOTTOM: 0px" 
+href="https://github.com/springside/springside4/wiki/Rate-Limiter#wiki-5-%E4%B8%A4%E7%A7%8D%E7%AE%97%E6%B3%95%E6%AF%94%E8%BE%83" 
+name=wiki-5-%E4%B8%A4%E7%A7%8D%E7%AE%97%E6%B3%95%E6%AF%94%E8%BE%83></A>5. 
+两种算法比较</H3>
+<P style="BOX-SIZING: border-box; MARGIN: 15px 0px">Leaky 
+Bucket只维持一个桶内水量，每个请求过来时，一是水量加一，二是根据过去的时间减少水量。<BR 
+style="BOX-SIZING: border-box">滑动Buckets 
+维持多个桶，每个请求过来时，一是计算出当前桶，当前桶水量加一，二是获得前面多个bucket的水量合计，三是可能需要滚动桶。</P>
+<UL 
+style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 30px; MARGIN: 15px 0px; PADDING-RIGHT: 0px">
+  <LI style="BOX-SIZING: border-box">滑动Buckets比Leaky 
+  Bucket需要更多的Counter。 
+  <LI style="BOX-SIZING: border-box">滑动Buckets需要实现滑动算法，让旧桶过期回收，或置零循环重用。 
+  <LI style="BOX-SIZING: border-box">Leaky 
+  Bucket支持当系统有一段时间清闲之后，能接收一个较大的burst值，当然也可以把burst值调到和rate一样大来禁止它。</LI></UL>
+<P style="BOX-SIZING: border-box; MARGIN: 15px 0px">个人比较倾向Leaky Bucket。</P>
+<H3 
+style="BOX-SIZING: border-box; CURSOR: text; FONT-SIZE: 1.5em; POSITION: relative; FONT-WEIGHT: bold; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 1em 0px 15px; LINE-HEIGHT: 1.7; PADDING-RIGHT: 0px"><A 
+class=anchor 
+style="BOX-SIZING: border-box; CURSOR: pointer; TEXT-DECORATION: none; POSITION: absolute; COLOR: rgb(65,131,196); PADDING-LEFT: 30px; MARGIN-LEFT: -30px; LEFT: 0px; DISPLAY: block; TOP: 0px; PADDING-RIGHT: 6px; BOTTOM: 0px" 
+href="https://github.com/springside/springside4/wiki/Rate-Limiter#wiki-6-%E9%9B%86%E7%BE%A4%E8%80%8C%E9%9D%9E%E5%8D%95%E6%9C%BA%E7%9A%84rate-limiter" 
+name=wiki-6-%E9%9B%86%E7%BE%A4%E8%80%8C%E9%9D%9E%E5%8D%95%E6%9C%BA%E7%9A%84rate-limiter></A>6. 
+集群而非单机的Rate Limiter</H3>
+<P 
+style="BOX-SIZING: border-box; MARGIN: 15px 0px 0px">用上Redis或Memcached，哪种算法都不会难。但首先，你要有个Redis/Memcached。</P>
+<P 
+style="BOX-SIZING: border-box; MARGIN: 15px 0px 0px">&nbsp;</P></DIV></DIV></DIV></DIV></body>
+</html>

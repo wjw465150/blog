@@ -1,0 +1,111 @@
+﻿!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML dir=ltr xml:lang="zh-CN" 
+xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>用Xtrabackup备份MySQL</title><LINK 
+href="favicon.ico" type=image/x-icon rel="shortcut icon"><LINK 
+title=JavaEye论坛 href="Tech" type=application/rss+xml 
+rel=alternate><LINK media=screen 
+href="forum.css_1251168558" type=text/css 
+rel=stylesheet>
+<LINK media=screen 
+href="SyntaxHighlighter.css_1201588027" 
+type=text/css rel=stylesheet>
+</HEAD>
+
+<BODY>
+
+<DIV id=page>
+
+<DIV class=clearfix id=content>
+
+<DIV id=main>
+
+<TABLE id=forum_main cellSpacing=1>
+
+<TBODY id=posts>
+
+<TR id=1069728>
+
+<TD class=postcontent>
+
+<DIV class="postbody clearfix"><!--StartFragment--><H2>用Xtrabackup备份MySQL</H2>
+<P class=first>文档版本: 0.6.2, 更新时间: Wednesday, May 09 2009 9:50</P>
+<P class=first>&nbsp;</P>
+<P 
+class=first>http://liuyuanzhi.blogspot.com/2009/05/mysql-backup-with-xtrabackup-06.html</P>
+<P class=first>&nbsp;</P>
+<H3>Xtrabackup是什么</H3>
+<P class=first>Xtrabackup 
+是percona公司（mysqlperformanceblog）的开源项目，目的是实现类似innodb官方的热备份工具InnoDB Hot 
+Backup的功能。但其实Xtrabackup还提供了额外的功能（但也有没实现的功能）。 Xtrabackup中包含两个工具：</P>
+<UL>
+<LI>xtrabackup - 用于热备份innodb, xtradb表的工具，不能备份其他表。 
+<LI>innobackupex - 对xtrabackup封装的perl脚本，提供了myisam表备份的能力。 </LI></UL>
+<H3>Xtrabackup可以做什么</H3>
+<UL>
+<LI>在线(热)备份整个库的InnoDB, XtraDB表 
+<LI>在xtrabackup的上一次整库备份基础上做增量备份（innodb only） 
+<LI>以流的形式产生备份，可以直接保存到远程机器上（本机硬盘空间不足时很有用） </LI></UL>
+<H3>Xtrabackup如何工作的</H3>
+<UL>
+<LI>xtrabackup - 具体原理有待研究。。。 
+<LI>innobackupex整库备份 
+<OL>
+<LI>调用xtrabackup对innodb表空间文件（这一瞬间的映像Time1）备份，而在这个innodb表备份期间数据库是不加锁的，外部可以继续往库里增减数据（这才能叫热备份）。而在Time1和Time2这两个时间点之间的改动由一个线程不断地扫innodb 
+log获得(ChangeSet1)。 
+<LI>锁所有库。 
+<LI>以直接拷贝的方式备份frm,MYD,MYI,MRG,TRG,TRN,opt格式的文件。 
+<LI>步骤3中的数据备份完毕时(Time2)，停止扫innodb log的线程，把ChangeSet1的数据拷贝到备份中。 
+<LI>解锁所有库。 
+<LI>终止挂起，备份完毕。 </LI></OL></LI></UL>
+<H3>注意要点</H3>
+<UL>
+<LI>根据innobackupex的原理可知它不是真正的热备份，MyISAM表越少越小就越有利。要利用Xtrabackup的好处就尽量用innodb表。 
+<LI>还原备份前关闭mysql服务；还原备份后检查数据文件权限是否正确。 
+<LI>性能：备份一个数据目录总大小5.6G，其中ibdata 
+2G，总时间4分钟，锁表时间2.5分钟。如果用mysqldump做这个库的备份锁表时间是5-8倍。 </LI></UL>
+<H3>操作</H3>
+<H4>整库备份，恢复（含myisam)</H4><PRE class=src><SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8">#### </SPAN>
+<SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8">备份
+</SPAN>
+<SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8"># </SPAN>
+<SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8">为了减少备份对服务的影响，可加参数--throttle=&lt;每秒IO次数&gt; / --sleep=&lt;微秒&gt;限制IO
+</SPAN>
+innobackupex --user=root /data/backup/mysql
+
+<SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8">#### </SPAN>
+<SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8">恢复
+</SPAN>
+<SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8"># </SPAN>
+<SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8">后面的日期目录是备份时由innobackupex创建的
+</SPAN>
+innobackupex --copy-back --defaults-file=/etc/my.cnf /data/backup/mysql/2009-05-06_17-44-37
+</PRE>
+<H4>备份时打包</H4><PRE class=src><SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8">#### </SPAN>
+<SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8">备份
+</SPAN>
+innobackupex --user=root --stream=tar ./ | gzip - &gt; /data/backup/mysql/latest.tar.gz
+
+<SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8">#### </SPAN>
+<SPAN style="FONT-WEIGHT: bold; COLOR: #b8b8b8">恢复
+</SPAN>
+<SPAN style="FONT-WEIGHT: bold; COLOR: #f5deb3">cd</SPAN>
+ /data/backup/mysql
+mkdir tmp
+tar xfzi latest.tar.gz -Ctmp
+innobackupex --copy-back --defaults-file=/etc/my.cnf /data/backup/mysql/tmp
+</PRE>
+<H4>直接备份到远程机器</H4><PRE class=src>innobackupex --stream=tar ./  | ssh user@host cat <SPAN style="COLOR: #ff6347">"&gt;"</SPAN>
+  backup.tar</PRE><!--EndFragment--></DIV>
+</TD>
+</TR>
+</TBODY>
+</TABLE>
+</DIV>
+</DIV>
+</DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

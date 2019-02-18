@@ -1,0 +1,92 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>诊断Java中的内存泄露</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H1 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 24px/1.5em 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 5px; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">诊断Java中的内存泄露</H1>
+<DIV class=article_meta 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: rgb(211,211,211) 1px dashed; TEXT-TRANSFORM: none; COLOR: rgb(153,153,153); PADDING-BOTTOM: 5px; FONT: 14px/21px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV style="MARGIN-BOTTOM: 5px"><SPAN class=timestamp 
+style="MARGIN-RIGHT: 5px">时间&nbsp;2015-12-04 08:00:27<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN class=from 
+style="MARGIN-RIGHT: 5px"><I class=icon-globe 
+style="TEXT-DECORATION: ; HEIGHT: auto; FONT-FAMILY: FontAwesome; WIDTH: auto; VERTICAL-ALIGN: baseline; BACKGROUND-IMAGE: none; BACKGROUND-REPEAT: repeat; BACKGROUND-POSITION: 0px 0px; FONT-WEIGHT: normal; FONT-STYLE: normal; MARGIN-TOP: 0px; DISPLAY: inline; LINE-HEIGHT: normal; MARGIN-RIGHT: 0px; -webkit-font-smoothing: antialiased"></I><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A class="cut cut28 from" 
+style="OVERFLOW: hidden; TEXT-DECORATION: none; MAX-WIDTH: 28%; WHITE-SPACE: nowrap; TEXT-OVERFLOW: ellipsis; WORD-BREAK: keep-all; COLOR: rgb(51,51,51); DISPLAY: inline; transition: 0.25s" 
+href="http://www.tuicool.com/sites/ENVN7j" target=_blank>ImportNew<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></A></SPAN><SPAN id=dup-cnt 
+style="MARGIN-RIGHT: 5px"><A 
+style="TEXT-DECORATION: none; COLOR: rgb(51,51,51); transition: 0.25s" 
+href="http://www.tuicool.com/articles/dup?id=feaUFr" target=_blank>相似文章</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>(<I id=dup 
+style="FONT-STYLE: normal">4</I>)</SPAN></DIV>
+<DIV class=source><I style="FLOAT: left; FONT-STYLE: normal">原文</I>&nbsp;<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A class="cut cut70" 
+style="OVERFLOW: hidden; TEXT-DECORATION: none; MAX-WIDTH: 69%; WHITE-SPACE: nowrap; TEXT-OVERFLOW: ellipsis; WORD-BREAK: keep-all; COLOR: rgb(51,51,51); DISPLAY: inline-block; transition: 0.25s" 
+href="http://www.importnew.com/17153.html?utm_source=tuicool&amp;utm_medium=referral">http://www.importnew.com/17153.html</A></DIV>
+<DIV><SPAN style="MARGIN-RIGHT: 5px">主题</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; COLOR: rgb(51,51,51); transition: 0.25s" 
+href="http://www.tuicool.com/topics/11000072" target=_blank><SPAN 
+class=new-label 
+style="FONT-SIZE: 0.9em; TEXT-DECORATION: none; VERTICAL-ALIGN: baseline; WHITE-SPACE: nowrap; COLOR: rgb(120,120,120); PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; DISPLAY: inline-block; LINE-HEIGHT: 16px; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(242,242,242); MARGIN-RIGHT: 5px">Java</SPAN></A></DIV></DIV>
+<DIV id=nei class=article_body 
+style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: hidden; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 25px; PADDING-TOP: 20px; FONT: 16px/1.7em 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 5px; MIN-HEIGHT: 340px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 5px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">每次我怀疑有内存泄漏时，我都要翻箱倒柜找这些命令。所以，这里总结一下以备后用：</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">首先，我用下面的命令监视进程：</P><PRE class=perl style="WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">while</SPAN> ( <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">sleep</SPAN> <SPAN class=number style="COLOR: rgb(0,153,153)">1</SPAN> ) ; <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">do</SPAN> ps -p <SPAN class=variable style="COLOR: rgb(0,128,128)">$PID</SPAN> -o <SPAN class=variable style="COLOR: rgb(0,128,128)">%cpu</SPAN>,<SPAN class=variable style="COLOR: rgb(0,128,128)">%mem</SPAN>,rss  ; done</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">（如果有的话还有New 
+Relic）</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">如果你看到内存上升很快，可能是因为虚拟机设置。如果你没有明确指定JVM的内存设置，它将设置默认值给他们。要获得默认值，使用以下命令：</P><PRE class=ruby style="WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">java -<SPAN class=constant>XX</SPAN><SPAN class=symbol style="COLOR: rgb(153,0,115)">:+PrintFlagsFinal</SPAN> -version | grep -i <SPAN class=constant>HeapSize</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">如果这些都不符合你所希望的，那么你就需要指定JVM的内存设置。可以用下面的命令设置最小和最大堆大小：</P><PRE class=undefined style="WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">java -Xms128m -Xmx256m</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">尽管你有了合理的内存设置，也可以监控进程，但你仍然可能看到内存随时间增加。为了进一步探究原因，你可以使用下面的命令查看对象实例的直方图：</P><PRE class=bash style="WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">jmap -histo <SPAN class=variable style="COLOR: rgb(0,128,128)">$PID</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">如果仍然没有足够的信息，那么可以用以下命令进行堆转储：</P><PRE class=perl style="WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">jmap -<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">dump</SPAN>:<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">format</SPAN>=b,file=<SPAN class=regexp style="COLOR: rgb(0,153,38)">/tmp/dump</SPAN>1.hprof <SPAN class=variable style="COLOR: rgb(0,128,128)">$PID</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">通常，我会用两个堆转储，然后使用下面的jhat命令比较它们：</P><PRE class=undefined style="WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">jhat -baseline /tmp/dump1.hprof /tmp/dump2.hprof</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">这个命令会启动一个HTTP服务器，你可以用它来探索这两个堆转储之间的差值。在默认情况下，HTTP服务器启动7000端口，你可以在浏览器中访问该端口。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">如果你有防火墙，可以通过SSH访问，那么你可以通过如下命令连接该端口：</P><PRE class=ruby style="WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px">ssh -<SPAN class=constant>L</SPAN> <SPAN class=number style="COLOR: rgb(0,153,153)">7000</SPAN><SPAN class=symbol style="COLOR: rgb(153,0,115)">:localhost</SPAN><SPAN class=symbol style="COLOR: rgb(153,0,115)">:</SPAN><SPAN class=number style="COLOR: rgb(0,153,153)">7000</SPAN> <SPAN class=variable style="COLOR: rgb(0,128,128)">$HOST</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">向下滚动到第一页的底部，你会看到两个有用的链接：</P>
+<UL 
+style="LIST-STYLE-TYPE: none; FONT-SIZE: 16px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 0px">
+  <LI style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em"><A 
+  style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); FONT-STYLE: italic; transition: 0.25s" 
+  href="http://localhost:7000/histo/" rel=nofollow,noindex target=_blank>Show 
+  heap histogram</A>
+  <LI style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em"><A 
+  style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); FONT-STYLE: italic; transition: 0.25s" 
+  href="http://localhost:7000/showInstanceCounts/" rel=nofollow,noindex 
+  target=_blank>Show instance counts for all classes (excluding 
+  platform)</A></LI></UL>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">这将给你展示在不同堆转储之间所有“新”的实例，应该对你检测泄漏来自哪里有些帮助。截图如下：</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em"><IMG 
+class=alignCenter 
+style="MAX-WIDTH: 550px; BORDER-TOP: 0px; HEIGHT: auto; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; TEXT-ALIGN: center; MARGIN: 0px auto 10px; BORDER-LEFT: 0px; DISPLAY: block" 
+src="QjieYbI.png" alt=""></P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">然后你就拥有了一个神奇命令行的快速查看目录，以便于你需要诊断内存泄漏时使用（然而我总是忘记）。</P></DIV></DIV></body>
+</html>

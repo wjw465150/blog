@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Systemd 定时器教程</title>
+  </head>
+  <body>
+    <h1 style="margin: 0px 0px 5px; font-family: &quot;Helvetica Neue&quot;, Helvetica, Tahoma, Arial, STXihei, &quot;Microsoft YaHei&quot;, 微软雅黑, sans-serif; font-weight: normal; line-height: 1.5em; color: rgb(51, 51, 51); text-rendering: optimizeLegibility; font-size: 24px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;">Systemd
+      定时器教程</h1>
+    <div class="article_meta" style="color: rgb(153, 153, 153); padding-bottom: 8px; border-bottom: 1px dashed rgb(211, 211, 211); font-size: 14px; font-family: &quot;Helvetica Neue&quot;, Helvetica, Tahoma, Arial, STXihei, &quot;Microsoft YaHei&quot;, 微软雅黑, sans-serif; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;">
+      <div style="margin-bottom: 5px;"><span class="timestamp" style="margin-right: 5px;">时
+          间&nbsp;2018-03-30 08:01:16<span>&nbsp;</span></span><span class="from"
+          style="margin-right: 5px;"><i class="icon-globe" style="font-style: normal; font-family: FontAwesome; font-weight: normal; text-decoration: inherit; -webkit-font-smoothing: antialiased; display: inline; width: auto; height: auto; line-height: normal; vertical-align: baseline; background-image: none; background-position: 0px 0px; background-repeat: repeat; margin-top: 0px; margin-right: 0px;"></i><span>&nbsp;</span><a
+            class="cut cut28 from" href="https://www.tuicool.com/sites/j2eiQv" target="_blank"
+            style="color: rgb(51, 51, 51); text-decoration: none; transition: 0.25s; outline: none 0px; overflow: hidden; white-space: nowrap; word-break: keep-all; text-overflow: ellipsis; max-width: 28%; display: inline;">阮
+            一峰的网络日志<span>&nbsp;</span></a></span><span id="dup-cnt" style="margin-right: 5px;"><a
+            href="https://www.tuicool.com/articles/dup?id=zYjMZrn" target="_blank"
+            style="color: rgb(51, 51, 51); text-decoration: none; transition: 0.25s; outline: none 0px;">相
+            似文章</a><span>&nbsp;</span>(<i id="dup" style="font-style: normal;">1</i>)</span></div>
+      <div class="source"><i style="font-style: normal; float: left;">原文</i>&nbsp;<span>&nbsp;</span><a
+          class="cut cut70" href="http://www.ruanyifeng.com/blog/2018/03/systemd-timer.html?utm_source=tuicool&amp;utm_medium=referral"
+          style="color: rgb(51, 51, 51); text-decoration: none; transition: 0.25s; outline: none 0px; overflow: hidden; white-space: nowrap; word-break: keep-all; text-overflow: ellipsis; max-width: 69%; display: inline-block;">http://www.ruanyifeng.com/blog/2018/03/systemd-timer.html</a></div>
+      <div><span style="margin-right: 5px;">主题</span><span>&nbsp;</span><a href="https://www.tuicool.com/topics/11250096"
+          target="_blank" style="color: rgb(51, 51, 51); text-decoration: none; transition: 0.25s; outline: none 0px;"><span
+            class="new-label" style="display: inline-block; padding: 2px 4px; font-size: 0.9em; line-height: 16px; vertical-align: baseline; white-space: nowrap; background-color: rgb(242, 242, 242); color: rgb(120, 120, 120); text-decoration: none; margin-right: 5px;">systemd</span></a></div>
+    </div>
+    <div class="article_body" id="nei" style="padding: 20px 5px 25px; margin-bottom: 0px; overflow-x: hidden; word-wrap: break-word; word-break: break-all; min-height: 340px; font-size: 16px; line-height: 1.7em; color: rgb(51, 51, 51); font-family: &quot;Helvetica Neue&quot;, Helvetica, Tahoma, Arial, STXihei, &quot;Microsoft YaHei&quot;, 微软雅黑, sans-serif; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;">
+      <div style="font-size: 16px; line-height: 1.7em;">
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">Systemd
+          作为 Linux 的系统启动器，功能强大。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">本
+          文通过一个简单例子，介绍 Systemd 如何设置定时任务。这不仅实用，而且可以作为 Systemd 的上手教程。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;"><br>
+        </p>
+        <h2 style="margin: 0px 0px 0.5em; font-family: inherit; font-weight: bold; line-height: 1.6em; color: inherit; text-rendering: optimizeLegibility; font-size: 18px; text-indent: 1em;">一、
+          定时任务</h2>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">所
+          谓定时任务，就是未来的某个或多个时点，预定要执行的任务，比如每五分钟收一次邮件、每天半夜两点分析一下日志等等。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">Linux
+          系统通常都使用<span>&nbsp;</span><a href="https://wiki.archlinux.org/index.php/Cron_%28%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87%29"
+            rel="nofollow,noindex" target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">cron</a><span>&nbsp;</span>设
+          置定时任务，但是 Systemd 也有这个功能，而且优点显著。</p>
+        <ul style="padding: 0px; margin: 0px 0px 0.75em 25px; list-style-type: none; font-size: 16px; line-height: 1.7em;">
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;">自
+            动生成日志，配合 Systemd 的日志工具，很方便除错</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;">可
+            以设置内存和 CPU 的使用额度，比如最多使用50%的 CPU</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;">任
+            务可以拆分，依赖其他 Systemd 单元，完成非常复杂的任务</li>
+        </ul>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">下
+          面，我就来演示一个 Systemd 定时任务：每小时发送一封电子邮件。</p>
+        <h2 style="margin: 0px 0px 0.5em; font-family: inherit; font-weight: bold; line-height: 1.6em; color: inherit; text-rendering: optimizeLegibility; font-size: 18px; text-indent: 1em;">二、
+          邮件脚本</h2>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">先
+          写一个发邮件的脚本<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">mail.sh</code><span>&nbsp;</span>。</p>
+        <pre class="prettyprint hljs bash" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 1.5em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;"><span
+class="hljs-meta" style="color: rgb(31, 113, 153);">#!/usr/bin/env bash
+</span>
+<span class="hljs-built_in" style="color: rgb(57, 115, 0);">echo</span> <span class="hljs-string"
+style="color: rgb(136, 0, 0);">"This is the body"</span> | /usr/bin/mail <span class="hljs-_">-s</span> <span
+class="hljs-string" style="color: rgb(136, 0, 0);">"Subject"</span> someone@example.com</pre>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">上
+          面代码的<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">someone@example.com</code><span>&nbsp;</span>，
+          请替换成你的邮箱地址。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">然
+          后，执行这个脚本。</p>
+        <pre class="hljs ruby" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 0.75em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;">$ bash mail.sh</pre>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">执
+          行后，你应该就会收到一封邮件，标题为<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">Subject</code><span>&nbsp;</span>。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">如
+          果你的 Linux 系统不能发邮件，建议安装<span>&nbsp;</span><a href="http://tombuntu.com/index.php/2008/10/21/sending-email-from-your-system-with-ssmtp/"
+            rel="nofollow,noindex" target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">ssmtp</a><span>&nbsp;</span>或
+          者<span>&nbsp;</span><a href="https://wiki.archlinux.org/index.php/msmtp"
+            rel="nofollow,noindex" target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">msmtp</a><span>&nbsp;</span>。
+          另外，<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">mail</code><span>&nbsp;</span>命
+          令的用法，可以参考<span>&nbsp;</span><a href="https://www.binarytides.com/linux-mail-command-examples/"
+            rel="nofollow,noindex" target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">这
+            里</a><span>&nbsp;</span>。</p>
+        <h2 style="margin: 0px 0px 0.5em; font-family: inherit; font-weight: bold; line-height: 1.6em; color: inherit; text-rendering: optimizeLegibility; font-size: 18px; text-indent: 1em;">三、
+          Systemd 单元</h2>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">学
+          习 Systemd 的第一步，就是搞懂"单元"（unit）是什么。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">简
+          单说，单元就是 Systemd 的最小功能单位，是单个进程的描述。一个个小的单元互相调用和依赖，组成一个庞大的任务管理系统，这就是
+          Systemd 的基本思想。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">由
+          于 Systemd 要做的事情太多，导致单元有很多<span>&nbsp;</span><a href="https://www.digitalocean.com/community/tutorials/understanding-systemd-units-and-unit-files"
+            rel="nofollow,noindex" target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">不
+            同的种类</a><span>&nbsp;</span>，大概一共有12种。举例来说，Service 单元负责后台服务，Timer
+          单元负责定时器，Slice 单元负责资源的分配。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">每
+          个单元都有一个单元描述文件，它们分散在三个目录。</p>
+        <ul style="padding: 0px; margin: 0px 0px 0.75em 25px; list-style-type: none; font-size: 16px; line-height: 1.7em;">
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">/lib/systemd/system</code><span>&nbsp;</span>：
+            系统默认的单元文件</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">/etc/systemd/system</code><span>&nbsp;</span>：
+            用户安装的软件的单元文件</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">/usr/lib/systemd/system</code><span>&nbsp;</span>：
+            用户自己定义的单元文件</li>
+        </ul>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">下
+          面的命令可以查看所有的单元文件。</p>
+        <pre class="prettyprint hljs vim" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 1.5em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;"># 查看所有单元
+$ systemctl <span class="hljs-keyword" style="color: rgb(51, 51, 51); font-weight: 700;">list</span>-unit-<span
+class="hljs-keyword" style="color: rgb(51, 51, 51); font-weight: 700;">files</span>
+
+# 查看所有 Service 单元
+$ systemctl <span class="hljs-keyword" style="color: rgb(51, 51, 51); font-weight: 700;">list</span>-unit-<span
+class="hljs-keyword" style="color: rgb(51, 51, 51); font-weight: 700;">files</span> --<span
+class="hljs-built_in" style="color: rgb(57, 115, 0);">type</span> service
+
+# 查看所有 Timer 单元
+$ systemctl <span class="hljs-keyword" style="color: rgb(51, 51, 51); font-weight: 700;">list</span>-unit-<span
+class="hljs-keyword" style="color: rgb(51, 51, 51); font-weight: 700;">files</span> --<span
+class="hljs-built_in" style="color: rgb(57, 115, 0);">type</span> timer</pre>
+        <h2 style="margin: 0px 0px 0.5em; font-family: inherit; font-weight: bold; line-height: 1.6em; color: inherit; text-rendering: optimizeLegibility; font-size: 18px; text-indent: 1em;">四、
+          单元的管理命令</h2>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">下
+          面是常用的单元管理命令。</p>
+        <pre class="prettyprint hljs ruby" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 1.5em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;"><span
+class="hljs-comment" style="color: rgb(136, 136, 136);"># 启动单元</span>
+$ systemctl start [UnitName]
+
+<span class="hljs-comment" style="color: rgb(136, 136, 136);"># 关闭单元</span>
+$ systemctl stop [UnitName]
+
+<span class="hljs-comment" style="color: rgb(136, 136, 136);"># 重启单元</span>
+$ systemctl restart [UnitName]
+
+<span class="hljs-comment" style="color: rgb(136, 136, 136);"># 杀死单元进程</span>
+$ systemctl kill [UnitName]
+
+<span class="hljs-comment" style="color: rgb(136, 136, 136);"># 查看单元状态</span>
+$ systemctl status [UnitName]
+
+<span class="hljs-comment" style="color: rgb(136, 136, 136);"># 开机自动执行该单元</span>
+$ systemctl enable [UnitName]
+
+<span class="hljs-comment" style="color: rgb(136, 136, 136);"># 关闭开机自动执行</span>
+$ systemctl disable [UnitName]</pre>
+        <h2 style="margin: 0px 0px 0.5em; font-family: inherit; font-weight: bold; line-height: 1.6em; color: inherit; text-rendering: optimizeLegibility; font-size: 18px; text-indent: 1em;">五、
+          Service 单元</h2>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">前
+          面说过，Service 单元就是所要执行的任务，比如发送邮件就是一种 Service。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">新
+          建 Service 非常简单，就是在<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">/usr/lib/systemd/system</code><span>&nbsp;</span>目
+          录里面新建一个文件，比如<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">mytimer.service</code><span>&nbsp;</span>文
+          件，你可以写入下面的内容。</p>
+        <pre class="prettyprint hljs ini" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 1.5em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;"><span
+class="hljs-section" style="color: rgb(136, 0, 0); font-weight: bold;">[Unit]</span>
+<span class="hljs-attr">Description</span>=MyTimer
+<span class="hljs-section" style="color: rgb(136, 0, 0); font-weight: bold;">
+[Service]</span>
+<span class="hljs-attr">ExecStart</span>=/bin/bash /path/to/mail.sh</pre>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">可
+          以看到，这个 Service 单元文件分成两个部分。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;"><code
+            style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">[Unit]</code><span>&nbsp;</span>部
+          分介绍本单元的基本信息（即元数据），<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">Description</code><span>&nbsp;</span>字
+          段给出这个单元的简单介绍（名字叫做<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">MyTimer</code><span>&nbsp;</span>）。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;"><code
+            style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">[Service]</code><span>&nbsp;</span>部
+          分用来定制行为，Systemd 提供许多字段。</p>
+        <ul style="padding: 0px; margin: 0px 0px 0.75em 25px; list-style-type: none; font-size: 16px; line-height: 1.7em;">
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">ExecStart</code><span>&nbsp;</span>：<span>&nbsp;</span><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">systemctl
+              start</code><span>&nbsp;</span>所要执行的命令</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">ExecStop</code><span>&nbsp;</span>：<span>&nbsp;</span><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">systemctl
+              stop</code><span>&nbsp;</span>所要执行的命令</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">ExecReload</code><span>&nbsp;</span>：<span>&nbsp;</span><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">systemctl
+              reload</code><span>&nbsp;</span>所要执行的命令</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">ExecStartPre</code><span>&nbsp;</span>：<span>&nbsp;</span><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">ExecStart</code><span>&nbsp;</span>之
+            前自动执行的命令</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">ExecStartPost</code><span>&nbsp;</span>：<span>&nbsp;</span><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">ExecStart</code><span>&nbsp;</span>之
+            后自动执行的命令</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">ExecStopPost</code><span>&nbsp;</span>：<span>&nbsp;</span><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">ExecStop</code><span>&nbsp;</span>之
+            后自动执行的命令</li>
+        </ul>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">注
+          意，定义的时候，所有路径都要写成绝对路径，比如<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">bash</code><span>&nbsp;</span>要
+          写成<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">/bin/bash</code><span>&nbsp;</span>，
+          否则 Systemd 会找不到。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">现
+          在，启动这个 Service。</p>
+        <pre class="hljs sql" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 0.75em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;">$ sudo systemctl <span
+class="hljs-keyword" style="color: rgb(51, 51, 51); font-weight: 700;">start</span> mytimer.service</pre>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">如
+          果一切正常，你应该就会收到一封邮件。</p>
+        <h2 style="margin: 0px 0px 0.5em; font-family: inherit; font-weight: bold; line-height: 1.6em; color: inherit; text-rendering: optimizeLegibility; font-size: 18px; text-indent: 1em;">六、
+          Timer 单元</h2>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">Service
+          单元只是定义了如何执行任务，要定时执行这个 Service，还必须定义 Timer 单元。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;"><code
+            style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">/usr/lib/systemd/system</code><span>&nbsp;</span>目
+          录里面，新建一个<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">mytimer.timer</code><span>&nbsp;</span>文
+          件，写入下面的内容。</p>
+        <pre class="prettyprint hljs ini" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 1.5em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;"><span
+class="hljs-section" style="color: rgb(136, 0, 0); font-weight: bold;">[Unit]</span>
+<span class="hljs-attr">Description</span>=Runs mytimer every hour
+<span class="hljs-section" style="color: rgb(136, 0, 0); font-weight: bold;">
+[Timer]</span>
+<span class="hljs-attr">OnUnitActiveSec</span>=<span class="hljs-number" style="color: rgb(136, 0, 0);">1</span>h
+<span class="hljs-attr">Unit</span>=mytimer.service
+<span class="hljs-section" style="color: rgb(136, 0, 0); font-weight: bold;">
+[Install]</span>
+<span class="hljs-attr">WantedBy</span>=multi-user.target</pre>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">这
+          个 Timer 单元文件分成几个部分。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;"><code
+            style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">[Unit]</code><span>&nbsp;</span>部
+          分定义元数据。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;"><code
+            style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">[Timer]</code><span>&nbsp;</span>部
+          分定制定时器。Systemd 提供以下一些字段。</p>
+        <ul style="padding: 0px; margin: 0px 0px 0.75em 25px; list-style-type: none; font-size: 16px; line-height: 1.7em;">
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">OnActiveSec</code><span>&nbsp;</span>：
+            定时器生效后，多少时间开始执行任务</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">OnBootSec</code><span>&nbsp;</span>：
+            系统启动后，多少时间开始执行任务</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">OnStartupSec</code><span>&nbsp;</span>：Systemd
+            进程启动后，多少时间开始执行任务</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">OnUnitActiveSec</code><span>&nbsp;</span>：
+            该单元上次执行后，等多少时间再次执行</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">OnUnitInactiveSec</code><span>&nbsp;</span>：
+            定时器上次关闭后多少时间，再次执行</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">OnCalendar</code><span>&nbsp;</span>：
+            基于绝对时间，而不是相对时间执行</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">AccuracySec</code><span>&nbsp;</span>：
+            如果因为各种原因，任务必须推迟执行，推迟的最大秒数，默认是60秒</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">Unit</code><span>&nbsp;</span>：
+            真正要执行的任务，默认是同名的带有<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">.service</code><span>&nbsp;</span>后
+            缀的单元</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">Persistent</code><span>&nbsp;</span>：
+            如果设置了该字段，即使定时器到时没有启动，也会自动执行相应的单元</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><code
+              style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">WakeSystem</code><span>&nbsp;</span>：
+            如果系统休眠，是否自动唤醒系统</li>
+        </ul>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">上
+          面的脚本里面，<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">OnUnitActiveSec=1h</code><span>&nbsp;</span>表
+          示一小时执行一次任务。其他的写法还有<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">OnUnitActiveSec=*-*-*
+            02:00:00</code><span>&nbsp;</span>表示每天凌晨两点执行，<span>&nbsp;</span><code
+            style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">OnUnitActiveSec=Mon
+            *-*-* 02:00:00</code><span>&nbsp;</span>表示每周一凌晨两点执行，具体请参考<span>&nbsp;</span><a
+            href="https://www.freedesktop.org/software/systemd/man/systemd.time.html"
+            rel="nofollow,noindex" target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">官
+            方文档</a><span>&nbsp;</span>。</p>
+        <h2 style="margin: 0px 0px 0.5em; font-family: inherit; font-weight: bold; line-height: 1.6em; color: inherit; text-rendering: optimizeLegibility; font-size: 18px; text-indent: 1em;">七、
+          [Install] 和 target</h2>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;"><code
+            style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">mytimer.timer</code><span>&nbsp;</span>文
+          件里面，还有一个<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">[Install]</code><span>&nbsp;</span>部
+          分，定义开机自启动（<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">systemctl
+            enable</code>）和关闭开机自启动（<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">systemctl
+            disable</code><span>&nbsp;</span>）这个单元时，所要执行的命令。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">上
+          面脚本中，<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">[Install]</code><span>&nbsp;</span>部
+          分只写了一个字段，即<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">WantedBy=multi-user.target</code><span>&nbsp;</span>。
+          它的意思是，如果执行了<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">systemctl
+            enable mytimer.timer</code><span>&nbsp;</span>（只要开机，定时器自动生效），那么该定时器归
+          属于<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">multi-user.target</code><span>&nbsp;</span>。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">所
+          谓 Target 指的是一组相关进程，有点像 init 进程模式下面的启动级别。启动某个Target 的时候，属于这个 Target
+          的所有进程都会全部启动。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;"><code
+            style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">multi-user.target</code><span>&nbsp;</span>是
+          一个最常用的 Target，意为多用户模式。也就是说，当系统以多用户模式启动时，就会一起启动<span>&nbsp;</span><code
+            style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">mytimer.timer</code><span>&nbsp;</span>。
+          它背后的操作其实很简单，执行<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">systemctl
+            enable mytimer.timer</code><span>&nbsp;</span>命令时，就会在<span>&nbsp;</span><code
+            style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">multi-user.target.wants</code><span>&nbsp;</span>目
+          录里面创建一个符号链接，指向<span>&nbsp;</span><code style="padding: 2px 4px; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(51, 51, 51) !important; border-radius: 3px; background-color: rgb(247, 247, 249); border: 0px; white-space: normal; font-weight: 600; font-size: 14px;">mytimer.timer</code><span>&nbsp;</span>。</p>
+        <h2 style="margin: 0px 0px 0.5em; font-family: inherit; font-weight: bold; line-height: 1.6em; color: inherit; text-rendering: optimizeLegibility; font-size: 18px; text-indent: 1em;">八、
+          定时器的相关命令</h2>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">下
+          面，启动刚刚新建的这个定时器。</p>
+        <pre class="hljs sql" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 0.75em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;">$ sudo systemctl <span
+class="hljs-keyword" style="color: rgb(51, 51, 51); font-weight: 700;">start</span> mytimer.timer</pre>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">你
+          应该立刻就会收到邮件，然后每个小时都会收到同样邮件。</p>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">查
+          看这个定时器的状态。</p>
+        <pre class="hljs ruby" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 0.75em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;">$ systemctl status mytimer.timer</pre>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">查
+          看所有正在运行的定时器。</p>
+        <pre class="hljs ruby" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 0.75em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;">$ systemctl list-timers</pre>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">关
+          闭这个定时器。</p>
+        <pre class="hljs vbscript" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 0.75em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;">$ sudo systemctl <span
+class="hljs-keyword" style="color: rgb(51, 51, 51); font-weight: 700;">stop</span> myscript.<span
+class="hljs-built_in" style="color: rgb(57, 115, 0);">timer</span></pre>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">下
+          次开机，自动运行这个定时器。</p>
+        <pre class="hljs ruby" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 0.75em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;">$ sudo systemctl enable myscript.timer</pre>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">关
+          闭定时器的开机自启动。</p>
+        <pre class="hljs ruby" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 0.75em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;">$ sudo systemctl disable myscript.timer</pre>
+        <h2 style="margin: 0px 0px 0.5em; font-family: inherit; font-weight: bold; line-height: 1.6em; color: inherit; text-rendering: optimizeLegibility; font-size: 18px; text-indent: 1em;">九、
+          日志相关命令</h2>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">如
+          果发生问题，就需要查看日志。Systemd 的日志功能很强，提供统一的命令。</p>
+        <pre class="prettyprint hljs ruby" style="padding: 0.5em; font-family: Menlo, Monaco, Consolas, &quot;Courier New&quot;, monospace; color: rgb(68, 68, 68); border-radius: 4px; display: block; margin: 0px 0px 1.5em; font-size: 14px; line-height: 1.5em; word-break: break-all; word-wrap: break-word; white-space: pre; background-color: rgb(246, 246, 246); border: none; overflow-x: auto;"><span
+class="hljs-comment" style="color: rgb(136, 136, 136);"># 查看整个日志</span>
+$ sudo journalctl
+
+<span class="hljs-comment" style="color: rgb(136, 136, 136);"># 查看 mytimer.timer 的日志</span>
+$ sudo journalctl -u mytimer.timer
+
+<span class="hljs-comment" style="color: rgb(136, 136, 136);"># 查看 mytimer.timer 和 mytimer.service 的日志</span>
+$ sudo journalctl -u mytimer
+
+<span class="hljs-comment" style="color: rgb(136, 136, 136);"># 从结尾开始查看最新日志</span>
+$ sudo journalctl -f
+
+<span class="hljs-comment" style="color: rgb(136, 136, 136);"># 从结尾开始查看 mytimer.timer 的日志</span>
+$ journalctl -f -u timer.timer</pre>
+        <h2 style="margin: 0px 0px 0.5em; font-family: inherit; font-weight: bold; line-height: 1.6em; color: inherit; text-rendering: optimizeLegibility; font-size: 18px; text-indent: 1em;">十、
+          参考链接</h2>
+        <ul style="padding: 0px; margin: 0px 0px 0.75em 25px; list-style-type: none; font-size: 16px; line-height: 1.7em;">
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><a
+              href="https://jason.the-graham.com/2013/03/06/how-to-use-systemd-timers/"
+              rel="nofollow,noindex" target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">How
+              to Use Systemd Timers</a><span>&nbsp;</span>, by Jason Graham</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><a
+              href="https://medium.com/horrible-hacks/using-systemd-as-a-better-cron-a4023eea996d"
+              rel="nofollow,noindex" target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">Using
+              systemd as a better cron</a><span>&nbsp;</span>, by luqmaan</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><a
+              href="https://coreos.com/os/docs/latest/getting-started-with-systemd.html"
+              rel="nofollow,noindex" target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">Getting
+              started with systemd</a><span>&nbsp;</span>, by CoreOS</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><a
+              href="https://wiki.archlinux.org/index.php/Systemd/Timers" rel="nofollow,noindex"
+              target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">systemd/Timers</a><span>&nbsp;</span>,
+            by ArchWiki</li>
+          <li style="line-height: 1.7em; list-style-type: disc; font-size: 16px;"><a
+              href="https://www.digitalocean.com/community/tutorials/understanding-systemd-units-and-unit-files"
+              rel="nofollow,noindex" target="_blank" style="color: rgb(148, 148, 148); text-decoration: none; transition: 0.25s; outline: none 0px; border-bottom: 1px dashed rgb(148, 148, 148); font-style: italic; font-weight: bold;">Understanding
+              Systemd Units and Unit Files</a><span>&nbsp;</span>, by Justin
+            Ellingwood</li>
+        </ul>
+        <p style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.7em; text-indent: 1em;">（完）</p>
+      </div>
+    </div>
+  </body>
+</html>

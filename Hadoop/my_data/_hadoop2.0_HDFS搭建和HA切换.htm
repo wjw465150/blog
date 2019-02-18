@@ -1,0 +1,529 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title> hadoop2.0 HDFS搭建和HA切换</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">说到了hadoop2.0的新特性。这里详解一下搭建步骤以及原理。<BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp;首先，需要在cdh官方下载对应的源码包：<A 
+style="TEXT-DECORATION: none; FONT-WEIGHT: bold; COLOR: rgb(40,141,240); OUTLINE-WIDTH: medium; OUTLINE-STYLE: none; OUTLINE-COLOR: invert" 
+href="http://archive.cloudera.com/cdh4/cdh/4/" 
+target=_blank>http://archive.cloudera.com/cdh4/cdh/4/</A></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; 以cdh4.3.1版本为例来进行说明。</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; 1、hadoop配置文件及目录</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+&nbsp;hadoop2.0版本配置文件放在$HAOOP_HOME/etc/hadoop/下,命令行工具在$HADOOP_HOME/bin/下，启动停止脚本则被放置在$HADOOP_HOME/sbin/下</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp;<IMG title=hadoop2peizhi.png 
+style="MAX-WIDTH: 100%; BORDER-TOP: 0px; HEIGHT: auto; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; BORDER-LEFT: 0px" 
+alt="" 
+src="http://askdba.alibaba-inc.com/services/getTfsFile.do?filePath=T1ybsXFaxaXXXXXXXX.png"></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; 2、配置项</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(255,0,0)">core-site.xml</SPAN><BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; &lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp;&lt;name&gt;fs.defaultFS&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp;&lt;value&gt;hdfs://freedom&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; &lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; 这里的freedom为指定的hdfs名称，即命名空间</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp;&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&lt;name&gt;ipc.server.tcpnodelay&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;value&gt;true&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;ipc的tcp设置，不延时发送tcp请求</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp;&lt;name&gt;ipc.client.tcpnodelay&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;value&gt;true&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;&lt;description&gt;Turn on/off Nagle's algorithm for the TCP socket 
+connection on</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;the client. Setting to true disables the algorithm and may decrease 
+latency</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;with a cost of more/smaller packets.</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;&lt;/description&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;client端的tcp设置，不延时发送tcp请求</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;&nbsp;<SPAN style="COLOR: rgb(255,0,0)">hdfs-site.xml</SPAN></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.nameservices&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;freedom&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+配置命名空间，这里只配置了1个为freedom</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.ha.namenodes.freedom&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;nn1,nn2&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+命名空间下的namenode，配置2个，成为HA</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.namenode.rpc-address.freedom.nn1&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;my22***0.cm4.tbsite.net:9516&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; 第一个namenode的rpc地址配置</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.namenode.rpc-address.freedom.nn2&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;my22***1.cm4.tbsite.net:9516&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;第二个namenode的rpc地址配置</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.namenode.http-address.freedom.nn1&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;my22***0.cm4.tbsite.net:50070&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;第一个namenode的http页面地址</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.namenode.http-address.freedom.nn2&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;my22***1.cm4.tbsite.net:50070&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;第二个namenode的http页面地址</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.namenode.shared.edits.dir&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; 
+&lt;value&gt;qjournal://my22***0.cm4.tbsite.net:20022;my22***1.cm4.tbsite.net:20022;hbdb20***1.cm4.tbsite.net</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">:20022/freedom&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;journalnode的地址以及命名空间</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.journalnode.edits.dir&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;/u01/hbase/qjm/journal&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;journalnode的读写路径</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.journalnode.rpc-address&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;0.0.0.0:20022&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;journalnode的rpc地址</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.client.failover.proxy.provider.freedom&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; 
+&lt;value&gt;org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;指定hdfs client来识别freedom命名空间并在namenode切换期间识别namnode的proxy类</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.client.read.shortcircuit&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;true&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+开启本地读功能</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.domain.socket.path&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;/u01/hbase/cdh4-dn-socket/dn_socket&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;本地读需要设置一个目录，事先需要mkdir /u01/hbase/cdh3-dn-socket并且设置该目录的权限为0755</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;name&gt;dfs.client.read.shortcircuit.buffer.size&lt;/name&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &lt;value&gt;4096&lt;/value&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&lt;/property&gt;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;本地读的buffer大小，4k</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;<SPAN style="COLOR: rgb(255,0,0)">hadoop-metrics2.properties</SPAN></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="COLOR: rgb(255,0,0)">&nbsp; 
+&nbsp;</SPAN>由于hadoop2.0采用了metric2的监控框架，所以这里改写metric2的配置文件</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;*.sink.ganglia.class=org.apache.hadoop.metrics2.sink.ganglia.GangliaSink31</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;*.sink.ganglia.period=15</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;*.sink.ganglia.supportsparse=true</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;namenode.sink.ganglia.servers=172.24.***.*1:8649</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;datanode.sink.ganglia.servers=172.24.***.*1:8649</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;journalnode.sink.ganglia.servers=172.24.***.*1:8649</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; hadoop-env.sh和hadoop1.0一致</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; 3.启动集群</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; step1.启动journalnode</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; sbin/hadoop-daemons.sh --hostnames 'JN1 JN2 JN3' start jouralnode<SPAN 
+style="BACKGROUND-COLOR: rgb(248,248,248)">&nbsp;</SPAN></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;&nbsp;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; step2.在主节点namenode上执行format命令&nbsp;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; $HADOOP_HOME/bin/hdfs namenode -format [-clusterId 
+&lt;cluster_id&gt;]</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; step3.启动主节点</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;sbin/hadoop-daemon.sh start namenode</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; step4.在standby节点namenode上执行同步元数据命令</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; $HADOOP_HOME/bin/hdfs namenode -bootstrapStandby</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;&nbsp;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; step5.启动standby的namenode</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; sbin/hadoop-daemon.sh start namenode</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;step6.启动所有datanode</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;sbin/start-dfs.sh</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp;&nbsp;</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;step7.切换一台namenode到active状态</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;说明：由于集群启动时两个namenode都是处于standby状态，需要手工指定其中一台active，使用如下命令</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;bin/hdfs haadmin -transitionToActive nn1</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;到此为止，集群就能正常启动了。 &nbsp;&nbsp;<BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;4.切换namenode</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;使用bin/hdfs haadmin --transitionToActive nn2即可切换active 
+nn到nn2。这时nn1如果还存活则变成不可写状态，需要重启，重启后自动成为standby nn</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;5.如果要在hadoop2.0上搭建hbase，需要注意以下问题。</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;（1）配置方面要使用hadoop2.0的命名空间来访问hdfs</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;（2）需要根据实际情况来设置namenode的ha切换过程hbase重试时间</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp;在hbase/conf目录下加入一个hdfs-site.xml配置文件</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; &nbsp;</P><PRE style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0px; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.4em; TEXT-ALIGN: left; PADDING-TOP: 0.4em; FONT: 13px/20px Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.6em; MARGIN-TOP: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0.6em; BACKGROUND-COLOR: rgb(238,238,221); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&lt;property&gt;
+&nbsp;&nbsp;&lt;name&gt;fs.default.name&lt;/name&gt;
+&nbsp;&nbsp;&lt;value&gt;hdfs://mycluster&lt;/value&gt;&lt;/property&gt;&lt;property&gt;
+&nbsp;&nbsp;&lt;name&gt;dfs.nameservices&lt;/name&gt;
+&nbsp;&nbsp;&lt;value&gt;mycluster&lt;/value&gt;&lt;/property&gt;&lt;property&gt;
+&nbsp;&nbsp;&lt;name&gt;dfs.ha.namenodes.mycluster&lt;/name&gt;
+&nbsp;&nbsp;&lt;value&gt;nn1,nn2&lt;/value&gt;&lt;/property&gt;&lt;property&gt;
+&nbsp;&nbsp;&lt;name&gt;dfs.namenode.rpc-address.mycluster.nn1&lt;/name&gt;
+&nbsp;&nbsp;&lt;value&gt;10.232.98.77:20020&lt;/value&gt;&lt;/property&gt;&lt;property&gt;
+&nbsp;&nbsp;&lt;name&gt;dfs.namenode.rpc-address.mycluster.nn2&lt;/name&gt;
+&nbsp;&nbsp;&lt;value&gt;10.232.98.78:20020&lt;/value&gt;&lt;/property&gt;&lt;property&gt;
+&nbsp;&nbsp;&lt;name&gt;dfs.client.failover.proxy.provider.mycluster&lt;/name&gt;
+&nbsp;&nbsp;&lt;value&gt;org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider&lt;/value&gt;&lt;/property&gt;&lt;property&gt;
+&nbsp;&nbsp;&lt;name&gt;dfs.client.failover.max.attempts&lt;/name&gt;
+&nbsp;&nbsp;&lt;value&gt;15&lt;/value&gt;
+&nbsp;&nbsp;&lt;description&gt;表示客户端最大的重试次数，默认是15次&lt;/description&gt;&lt;/property&gt;&lt;property&gt;
+&nbsp;&nbsp;&lt;name&gt;dfs.client.failover.sleep.base.millis&lt;/name&gt;
+&nbsp;&nbsp;&lt;value&gt;500&lt;/value&gt;
+&nbsp;&nbsp;&lt;description&gt;表示客户端等待多少毫秒后重试，默认是500毫秒&lt;/description&gt;&lt;/property&gt;&lt;property&gt;
+&nbsp;&nbsp;&lt;name&gt;dfs.client.failover.sleep.max.millis&lt;/name&gt;
+&nbsp;&nbsp;&lt;value&gt;15000&lt;/value&gt;
+&nbsp;&nbsp;&lt;description&gt;表示重试等待的最大时间，默认是15000毫秒&lt;/description&gt;&lt;/property&gt;</PRE>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/22px sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp;</P>
+<UL class=" list-paddingleft-2" 
+style="WIDTH: 1039px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/20px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; PADDING-LEFT: 30px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI style="CLEAR: both">
+  <P 
+  style="MARGIN-BOTTOM: 5px; FONT-SIZE: 12px; MARGIN-TOP: 5px; LINE-HEIGHT: 22px">dfs.client.failover.max.attempts</P></LI></UL>
+<BLOCKQUOTE 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/20px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; PADDING-LEFT: 15px; MARGIN: 0px 0px 20px; BORDER-LEFT: rgb(238,238,238) 5px solid; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <BLOCKQUOTE 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 15px; MARGIN: 0px 0px 20px; BORDER-LEFT: rgb(238,238,238) 5px solid; PADDING-RIGHT: 0px">
+    <P 
+    style="MARGIN-BOTTOM: 0px; FONT-SIZE: 16px; MARGIN-TOP: 5px; LINE-HEIGHT: 25px">这个参数表示在failover过程中，hdfs 
+    client重试的次数，默认是重试15此</P></BLOCKQUOTE></BLOCKQUOTE>
+<UL class=" list-paddingleft-2" 
+style="WIDTH: 1039px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/20px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; PADDING-LEFT: 30px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI style="CLEAR: both">
+  <P 
+  style="MARGIN-BOTTOM: 5px; FONT-SIZE: 12px; MARGIN-TOP: 5px; LINE-HEIGHT: 22px">dfs.client.failover.sleep.base.millis</P></LI></UL>
+<BLOCKQUOTE 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/20px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; PADDING-LEFT: 15px; MARGIN: 0px 0px 20px; BORDER-LEFT: rgb(238,238,238) 5px solid; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <BLOCKQUOTE 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 15px; MARGIN: 0px 0px 20px; BORDER-LEFT: rgb(238,238,238) 5px solid; PADDING-RIGHT: 0px">
+    <P 
+    style="MARGIN-BOTTOM: 0px; FONT-SIZE: 16px; MARGIN-TOP: 5px; LINE-HEIGHT: 25px">这个参数表示每次重试等待的最小时间，默认是500ms</P></BLOCKQUOTE></BLOCKQUOTE>
+<UL class=" list-paddingleft-2" 
+style="WIDTH: 1039px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/20px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; PADDING-LEFT: 30px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI style="CLEAR: both">
+  <P 
+  style="MARGIN-BOTTOM: 5px; FONT-SIZE: 12px; MARGIN-TOP: 5px; LINE-HEIGHT: 22px">dfs.client.failover.sleep.max.millis</P></LI></UL>
+<BLOCKQUOTE 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/20px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; PADDING-LEFT: 15px; MARGIN: 0px 0px 20px; BORDER-LEFT: rgb(238,238,238) 5px solid; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <BLOCKQUOTE 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 15px; MARGIN: 0px 0px 20px; BORDER-LEFT: rgb(238,238,238) 5px solid; PADDING-RIGHT: 0px">
+    <P 
+    style="MARGIN-BOTTOM: 0px; FONT-SIZE: 16px; MARGIN-TOP: 5px; LINE-HEIGHT: 25px">这个参数表示每次重试等待的最大时间，默认是15000ms</P></BLOCKQUOTE></BLOCKQUOTE>
+<UL class=" list-paddingleft-2" 
+style="WIDTH: 1039px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 13px/20px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; PADDING-LEFT: 30px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI style="CLEAR: both">
+  <P 
+  style="MARGIN-BOTTOM: 5px; FONT-SIZE: 12px; MARGIN-TOP: 5px; LINE-HEIGHT: 22px">每次等待时间的算法</P><PRE style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0px; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; WHITE-SPACE: pre-wrap; WORD-BREAK: break-all; PADDING-BOTTOM: 0.4em; PADDING-TOP: 0.4em; PADDING-LEFT: 0.6em; MARGIN-TOP: 0px; PADDING-RIGHT: 0.6em; BACKGROUND-COLOR: rgb(238,238,221)">&nbsp;&nbsp;private&nbsp;static&nbsp;long&nbsp;calculateExponentialTime(long&nbsp;time,&nbsp;int&nbsp;retries,&nbsp;long&nbsp;cap)&nbsp;{
+&nbsp;&nbsp;&nbsp;&nbsp;long&nbsp;baseTime&nbsp;=&nbsp;Math.min(time&nbsp;*&nbsp;(1L&nbsp;&lt;&lt;&nbsp;retries),&nbsp;cap);
+&nbsp;&nbsp;&nbsp;&nbsp;return&nbsp;(long)&nbsp;(baseTime&nbsp;*&nbsp;(RANDOM.get().nextDouble()&nbsp;+&nbsp;0.5));
+&nbsp;&nbsp;}</PRE></LI></UL>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 13px/22px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">参数long 
+time对应dfs.client.failover.sleep.base.millis属性的值</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 13px/22px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">参数int 
+retries对应当前是重试第几次</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 13px/22px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">参数cap对应dfs.client.failover.sleep.max.millis属性的值</P>
+<P 
+style="MARGIN-BOTTOM: 5px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 13px/22px Verdana, Arial, 'Bitstream Vera Sans', Helvetica, sans-serif; MARGIN-TOP: 5px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">每次等待的时间是time乘上2的retries次方的值的0.5-1.5倍。但每次等待的时间不超过dfs.client.failover.sleep.max.millis属性的值。默认情况下，若重试15次，累计的等待时间为1.5min到4.5min之间。</P></body>
+</html>

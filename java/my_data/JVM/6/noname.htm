@@ -1,0 +1,695 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+<title>JVM垃圾回收和相关参数设置</title>
+<META content="text/html; charset=utf-8" http-equiv=Content-Type>
+<STYLE type=text/css>
+.error {
+	color: #FF0000;
+	font-size: 12px
+}
+</STYLE>
+<META name=GENERATOR content="MSHTML 9.00.8112.16447">
+</HEAD>
+<BODY >
+<!--StartFragment-->
+<CENTER>
+  <LINK rel=stylesheet type=text/css href="mods.css">
+  <LINK rel=stylesheet 
+type=text/css href="d6d83332408f7af81b4cffe2.css">
+  <LINK rel=stylesheet 
+type=text/css href="space.css">
+  <STYLE type=text/css>
+/*<![CDATA[*/
+
+#usrbar{padding:4px 10px 3px 0;font-size:12px;height:19px;line-height:19px;color:#000000;font-family:Arial;text-align:right;background:#ffffff;filter:alpha(opacity=65);-moz-opacity:0.5;width:auto !important;width:100%;letter-spacing:normal}
+#usrbar a,#usrbar a:link,#usrbar a:visited{color:#0000CC;text-decoration:underline}
+#ft{clear:both;height:20px;line-height:20px;color:#666666;font-size:12px;font-family:Arial;text-align:center}
+#ft a,#ft a:link,#ft a:visited{color:#7777CC;text-decoration:underline}
+#usrbar,#usrbar a,#usrbar a:link,#usrbar a:visited,#ft,#ft a,#ft a:link,#ft a:visited{letter-spacing:normal}
+/*]]>*/
+</STYLE>
+  <DIV id=usrbar><NOBR><A href="http://www.baidu.com/" target=_blank>百度首页</A> | <A 
+id=hi_index href="http://hi.baidu.com/" target=_blank>百度空间</A> | <A 
+href="http://passport.baidu.com/?login&amp;tpl=sp&amp;tpl_reg=sp&amp;u=http://hi.baidu.com%2Ffrevy%2Fblog%2Fitem%2F3ba0097b3f637dea2f73b3fd%252Ehtml">登录</A> </NOBR></DIV>
+  <DIV 
+style="Z-INDEX: 30000; POSITION: absolute; TEXT-ALIGN: right; WIDTH: 220px; FLOAT: right; HEIGHT: 90px; RIGHT: 0px; TOP: 26px" 
+id=newUserTip><A 
+style="Z-INDEX: 30001; POSITION: absolute; WIDTH: 55px; DISPLAY: block; BACKGROUND: none transparent scroll repeat 0% 0%; HEIGHT: 14px; COLOR: #4242f9 !important; FONT-SIZE: 14px; OVERFLOW: hidden; RIGHT: 120px; TEXT-DECORATION: none !important; TOP: 68px" 
+id=newUserTipShadow onclick=newUserRegLog() 
+href="http://passport.baidu.com/?reg&amp;tpl=sp&amp;return_method=get&amp;skip_ok=1&amp;u=http://hi.baidu.com/sys/reg/" 
+target=_blank>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</A>
+    <EMBED style="WIDTH: 220px; HEIGHT: 90px" id=newUserTipSwf 
+type=application/x-shockwave-flash src=guide.swf allowScriptAcess="always" 
+wmode="transparent"> 
+  </DIV>
+  <DIV style="WIDTH: 996px" id=main align=left>
+    <DIV id=header>
+      <DIV class=lc>
+        <DIV class=rc></DIV>
+      </DIV>
+      <DIV class=tit><A class=titlink title="frevy的空间 http://hi.baidu.com/frevy" 
+href="http://hi.baidu.com/frevy">源</A></DIV>
+      <DIV class=desc>网络技术，生活体验</DIV>
+      <DIV id=tabline></DIV>
+      <DIV id=tab><A href="http://hi.baidu.com/frevy">主页</A><A class=on 
+href="http://hi.baidu.com/frevy/blog">博客</A><A 
+href="http://hi.baidu.com/frevy/album">相册</A><SPAN>|</SPAN><A 
+href="http://hi.baidu.com/frevy/profile">个人档案</A> <SPAN>|</SPAN><A 
+href="http://hi.baidu.com/frevy/friends">好友</A> </DIV>
+    </DIV>
+    <DIV class=stage>
+      <DIV class=stagepad>
+        <DIV style="WIDTH: 100%">
+          <TABLE class=modth border=0 cellSpacing=0 cellPadding=0 width="100%">
+            <TBODY>
+              <TR>
+                <TD class=modtl width=7>&nbsp;</TD>
+                <TD class=modtc noWrap><DIV class=modhead><SPAN class=modtit>查看文章</SPAN></DIV></TD>
+                <TD class=modtc noWrap align=right></TD>
+                <TD class=modtr width=7>&nbsp;</TD>
+              </TR>
+            </TBODY>
+          </TABLE>
+          <DIV id=m_blog class=modbox>
+            <DIV class=tit>JVM垃圾回收和相关参数设置</DIV>
+            <DIV class=date>2008-11-24 12:04</DIV>
+            <TABLE style="TABLE-LAYOUT: fixed">
+              <TBODY>
+                <TR>
+                  <TD><DIV id=blog_text class=cnt>
+                      <DIV><EM><STRONG><FONT size=4>垃圾回收算法</FONT></STRONG></EM></DIV>
+                      <DIV></DIV>
+                      <DIV>Java虚拟机可以有两种不同方法来区别活动对象和垃圾: 引用计数(Reference 
+                        Counting)和跟踪(Tracing)</DIV>
+                      <DIV></DIV>
+                      <DIV>1. 采用Reference Counting的垃圾回收器</DIV>
+                      <DIV>对于采用Reference 
+                        Counting的垃圾回收器，系统为堆上每一个对象都维护一个计数器，当一个对象被创建并且别引用时，这个计数就被置为1。当有新的变量引用该对象，计数器进行自加运算。当一个引用超出作用范围或者被赋予新值的时候，计数器进行自减运算。引用计数为0的对象，会被作为垃圾回收。当一个对象被回收，该对象所引用的对象的引用计数都会相应减少，因而，一个对象的回收有时会引起其它对象的回收。</DIV>
+                      <DIV></DIV>
+                      <DIV>Reference 
+                        Counting方式的垃圾回收器，好处在于可以在很短的时间内运行，不会长时间的中断普通的程序运行，因而在RealTime的系统中应用较为普遍。</DIV>
+                      <DIV></DIV>
+                      <DIV>Reference 
+                        Counting方式的垃圾回收器，问题在于无法识别循环引用，比如父类对象还有子类引用的情况，即便父类和子类都已经不再能被访问到(unreachable)，引用计数也把它们清除。另外一个问题是引用计数器的加减运算会增加系统的计算开销。</DIV>
+                      <DIV></DIV>
+                      <DIV>2. 采用Tracing的垃圾回收器</DIV>
+                      <DIV>采用Tracing的垃圾回收器，遍历由根节点(root 
+                        nodes)出发的引用关系图。在遍历过程中遇到的对象，就被标记为活动。标记既可以是对应对象中的某一个标志，也可以是独立的位图中的标志。当遍历完成以后，那些没有被标记的对象，就被作为垃圾回收了。最基本Tracing算法是"Mark 
+                        and Sweep"</DIV>
+                      <DIV></DIV>
+                      <DIV>垃圾回收器的另外一个责任是清除堆上的碎片(Fragmentation)。对于Mark and 
+                        Sweep的垃圾回收器通常有两种实现方法来减少堆上的碎片: 压缩(Compacting)和拷贝(Copying)</DIV>
+                      <DIV></DIV>
+                      <DIV><EM><STRONG><FONT size=4>JVM相关参数设置</FONT></STRONG></EM></DIV>
+                      <DIV></DIV>
+                      <DIV>
+                        <DIV>-verbose:gc 会打印出每次GC执行的情况</DIV>
+                        <DIV>[GC 进行GC以前活动的对象占用空间-&gt;GC以后无法清除的对象占用空间(Heap的可用空间大小)，GC执行时间]</DIV>
+                        <DIV></DIV>
+                        <DIV>-XX:+PrintGCDetails 会打印出更加详细的信息</DIV>
+                        <DIV>[GC [DefNew: GC执行前Young 
+                          Generation活动对象占用空间-&gt;GC以后YG无法清除对象占用空间(YG可用空间), 执行时间] 
+                          执行前Heap的占用空间-&gt;执行后Heap的占用空间(Heap的可用空间), 总体执行时间]</DIV>
+                        <DIV></DIV>
+                        <DIV>-XX:+PrintGCTimeStamps 打印出每次执行GC的时刻</DIV>
+                        <DIV></DIV>
+                        <DIV>-<SPAN style="BACKGROUND: #ffff00; COLOR: #000000" 
+      id=TheWorldHiLightStyleID>XX:MinHeapFreeRatio</SPAN>=最小Heap可用空间百分比</DIV>
+                        <DIV>当可用的Heap空间少于这个百分比，则这个Generation的Heap空间就会增长，以满足这个百分比</DIV>
+                        <DIV></DIV>
+                        <DIV>-XX:MaxHeapFreeRatio=最大Heap可用空间百分比</DIV>
+                        <DIV>当可用空间百分比超出这个数值，该Generation的Heap空间会减少，以满足该百分比。</DIV>
+                        <DIV></DIV>
+                        <DIV>-Xms 最小Heap空间</DIV>
+                        <DIV></DIV>
+                        <DIV>-Xmx 最大Heap空间</DIV>
+                        <DIV></DIV>
+                        <DIV>-XX:NewRatio=n</DIV>
+                        <DIV>表示Young Generation和Tenured Generation的比例是1:n</DIV>
+                        <DIV></DIV>
+                        <DIV>-XX:NewSize=Young Generation的最小空间</DIV>
+                        <DIV></DIV>
+                        <DIV>-XX:MaxNewSize=Young Generation的最大空间</DIV>
+                        <DIV></DIV>
+                        <DIV>-XX:SurvivorRatio=n</DIV>
+                        <DIV>Survivor区域和Eden区域的比值是1:n</DIV>
+                        <DIV></DIV>
+                        <DIV>-XX:+UseParallelGC 采用Throughput Collector</DIV>
+                        <DIV></DIV>
+                        <DIV>
+                          <P>-XX:ParallelGCThreads=Throughput Collector采用的线程数</P>
+                          <P>=================================================================================</P>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal>Sun Hotspot JVM Version: 
+                            1.3.1+ <SPAN>版本进行了很多优化，也克服了</SPAN>32<SPAN>位操作系统上</SPAN>2G <SPAN>内存的限制。在设置</SPAN>JVM<SPAN>参数的时候，需要权衡</SPAN>throughput<SPAN>和</SPAN>footprint<SPAN>两个重要的考量。</SPAN></P>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal></P>
+                          <P style="MARGIN: 0in 0in 0pt" 
+      class=MsoNormal>JVM<SPAN>内存模型中分两大块，一块是</SPAN>New Generation, <SPAN>另一块是</SPAN>Old Generation. <SPAN>在</SPAN>New 
+                            Generation<SPAN>中，有一个叫</SPAN>Eden<SPAN>的空间，主要是用来存放新生的对象，还有两个</SPAN>Survivor 
+                            Spaces, <SPAN>它们用来存放每次垃圾回收后存活下来的对象。在</SPAN>Old 
+                            Generation<SPAN>中，主要存放应用程序中生命周期长的内存对象，还有个</SPAN>Permanent 
+                            Generation<SPAN>，主要用来放</SPAN>JVM<SPAN>自己的反射对象，比如类对象和方法对象等。</SPAN></P>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal></P>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal><SPAN>在</SPAN>New 
+                            Generation<SPAN>块中，垃圾回收一般用</SPAN>Copying<SPAN>的算法，速度快。每次</SPAN>GC<SPAN>的时候，存活下来的对象首先由</SPAN>Eden<SPAN>拷贝到某个</SPAN>Survivor 
+                            Space, <SPAN>当</SPAN>Survivor Space<SPAN>空间满了后</SPAN>, <SPAN>剩下的</SPAN>live<SPAN>对象就被直接拷贝到</SPAN>Old 
+                            Generation<SPAN>中去。因此，每次</SPAN>GC<SPAN>后，</SPAN>Eden<SPAN>内存块会被清空。在</SPAN>Old 
+                            Generation<SPAN>块中，垃圾回收一般用</SPAN>mark-compact<SPAN>的算法，速度慢些，但减少内存要求。</SPAN></P>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal></P>
+                          <P style="MARGIN: 0in 0in 0pt" 
+      class=MsoNormal>JVM<SPAN>参数很多，但最常见的是以下一些，具体可以参考</SPAN>JVM<SPAN>白皮书。</SPAN>NewSize, 
+                            MaxNewSize, NewRatio, and SurvivorRatio<SPAN>是用来调整</SPAN>New 
+                            Generation<SPAN>的。</SPAN>PermSize<SPAN>和</SPAN>MaxPermSize<SPAN>是用来调整</SPAN>Permanent 
+                            Generation<SPAN>的</SPAN>. <SPAN>还有一组就是比较熟悉的</SPAN> Xmx<SPAN>和</SPAN>Xms, <SPAN>它们用来控制整个</SPAN>JVM<SPAN>的</SPAN>heap size. <SPAN>一般来说我们把</SPAN>Xmx<SPAN>和</SPAN>Xms<SPAN>设置成相同数值</SPAN>,<SPAN>让</SPAN>JVM <SPAN>能够</SPAN>aggressive<SPAN>占用分配给它的内存</SPAN>. <SPAN>这样一来</SPAN>,<SPAN>我们可以有如下一个等式</SPAN>:</P>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal>Xmx = Xms = Eden + 2 x 
+                            Survivor Space + Old Generation</P>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal>TotalHeapSize = Xmx setting 
+                            + PermSize</P>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal></P>
+                          <P style="MARGIN: 0in 0in 0pt" 
+      class=MsoNormal><SPAN>关于</SPAN>JVM<SPAN>的优化</SPAN>,<SPAN>要根据具体应用程序来考量</SPAN>throughput<SPAN>和</SPAN>footprint.<SPAN>并不是</SPAN>Heap 
+                            size<SPAN>越大越好</SPAN>, <SPAN>因为</SPAN>Heap size<SPAN>大了</SPAN>, 
+                            GC<SPAN>的次数会减少</SPAN>, <SPAN>但每次运行的开销会增加。我们可以参考</SPAN><A 
+      href="http://java.sun.com/"><FONT color=#336699>http://java.sun.com</FONT></A> <SPAN>和</SPAN><A 
+      href="http://www.javaperformancetuning.com/"><FONT color=#336699>http://www.javaperformancetuning.com</FONT></A><SPAN>上的文章</SPAN>.</P>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal></P>
+                          <P style="MARGIN: 0in 0in 0pt" 
+      class=MsoNormal>===============================================================================</P>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal></P>
+                          <P><STRONG><FONT size=2>一、相关概念</FONT></STRONG></P>
+                          <P><BR>
+                          <STRONG><FONT color=#ff0000>基本回收算法</FONT></STRONG></P>
+                          <OL>
+                            <LI><STRONG>引用计数（Reference 
+                              Counting）<BR>
+                              </STRONG>比较古老的回收算法。原理是此对象有一个引用，即增加一个计数，删除一个引用则减少一个计数。垃圾回收时，只用收集计数为0的对象。此算法最致命的是无法处理循环引用的问题。
+                            <LI><STRONG>标记-清除（Mark-Sweep）<BR>
+                              </STRONG>此算法执行分两阶段。第一阶段从引用根节点开始标记所有被引用的对象，第二阶段遍历整个堆，把未标记的对象清除。此算法需要暂停整个应用，同时，会产生内存碎片。
+                            <LI><STRONG>复制（Copying）<BR>
+                              </STRONG>此算法把内存空间划为两个相等的区域，每次只使用其中一个区域。垃圾回收时，遍历当前使用区域，把正在使用中的对象复制到另外一个区域中。次算法每次只处理正在使用中的对象，因此复制成本比较小，同时复制过去以后还能进行相应的内存整理，不过出现“碎片”问题。当然，此算法的缺点也是很明显的，就是需要两倍内存空间。
+                            <LI><STRONG>标记-整理（Mark-Compact）<BR>
+                              </STRONG>此算法结合了“标记-清除”和“复制”两个算法的优点。也是分两阶段，第一阶段从根节点开始标记所有被引用对象，第二阶段遍历整个堆，把清除未标记对象并且把存活对象“压缩”到堆的其中一块，按顺序排放。此算法避免了“标记-清除”的碎片问题，同时也避免了“复制”算法的空间问题。
+                            <LI><STRONG>增量收集（Incremental 
+                              Collecting）</STRONG><BR>
+                              实施垃圾回收算法，即：在应用进行的同时进行垃圾回收。不知道什么原因JDK5.0中的收集器没有使用这种算法的。
+                            <LI><STRONG>分代（Generational 
+                              Collecting）<BR>
+                            </STRONG>基于对对象生命周期分析后得出的垃圾回收算法。把对象分为年青代、年老代、持久代，对不同生命周期的对象使用不同的算法（上述方式中的一个）进行回收。现在的垃圾回收器（从J2SE1.2开始）都是使用此算法的。 </LI>
+                          </OL>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal><BR>
+                          <STRONG><FONT color=#ff0000>分代垃圾回收详述</FONT></STRONG></P>
+                          <P><BR>
+                            如上图所示，为Java堆中的各代分布。</P>
+                          <OL>
+                            <LI><STRONG>Young（年轻代）<BR>
+                              </STRONG>年轻代分三个区。一个Eden区，两个Survivor区。大部分对象在Eden区中生成。当Eden区满时，还存活的对象将被复制到Survivor区（两个中的一个），当这个Survivor区满时，此区的存活对象将被复制到另外一个Survivor区，当这个Survivor去也满了的时候，从第一个Survivor区复制过来的并且此时还存活的对象，将被复制“年老区(Tenured)”。需要注意，Survivor的两个区是对称的，没先后关系，所以同一个区中可能同时存在从Eden复制过来 
+                              对象，和从前一个Survivor复制过来的对象，而复制到年老区的只有从第一个Survivor去过来的对象。而且，Survivor区总有一个是空的。
+                            <LI><STRONG>Tenured（年老代）<BR>
+                              </STRONG>年老代存放从年轻代存活的对象。一般来说年老代存放的都是生命期较长的对象。
+                            <LI><STRONG>Perm（持久代）<BR>
+                            </STRONG>用于存放静态文件，如今Java类、方法等。持久代对垃圾回收没有显著影响，但是有些应用可能动态生成或者调用一些class，例如Hibernate等，在这种时候需要设置一个比较大的持久代空间来存放这些运行过程中新增的类。持久代大小通过-XX:MaxPermSize=&lt;N&gt;进行设置。 </LI>
+                          </OL>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal><BR>
+                            <STRONG><FONT color=#ff0000>GC类型</FONT><BR>
+                            </STRONG>GC有两种类型：<STRONG>Scavenge GC和Full 
+                            GC</STRONG>。</P>
+                          <OL>
+                            <LI>Scavenge GC<BR>
+                              一般情况下，当新对象生成，并且在Eden申请空间失败时，就好触发Scavenge 
+                              GC，堆Eden区域进行GC，清除非存活对象，并且把尚且存活的对象移动到Survivor区。然后整理Survivor的两个区。
+                            <LI>Full GC<BR>
+                              对整个堆进行整理，包括Young、Tenured和Perm。Full GC比Scavenge 
+                              GC要慢，因此应该尽可能减少Full GC。有如下原因可能导致Full GC：
+                              <UL>
+                                <LI>Tenured被写满 </LI>
+                              </UL>
+                              <UL>
+                                <LI>Perm域被写满 </LI>
+                              </UL>
+                              <UL>
+                                <LI>System.gc()被显示调用 </LI>
+                              </UL>
+                              <UL>
+                                <LI>上一次GC之后Heap的各域分配策略动态变化 </LI>
+                              </UL>
+                            </LI>
+                          </OL>
+                          <P><BR>
+                            <STRONG><FONT color=#ff0000>分代垃圾回收过程演示</FONT></STRONG><BR>
+                            <IMG 
+      src="1.JPG_imgmax=576"><BR>
+                            <IMG src="2.JPG_imgmax=576"><BR>
+                            <IMG 
+      src="3.JPG_imgmax=576"><BR>
+                          <IMG src="4.JPG_imgmax=576"></P>
+                          <P><BR>
+                          <STRONG><FONT size=2>二、垃圾回收器</FONT></STRONG></P>
+                          <P><STRONG><FONT size=2><BR>
+                          </FONT></STRONG>目前的收集器主要有三种：<STRONG>串行收集器、并行收集器、并发收集器</STRONG>。</P>
+                          <OL>
+                            <LI><STRONG>串行收集器</STRONG><BR>
+                              <BR>
+                              使用单线程处理所有垃圾回收工作，因为无需多线程交互，所以效率比较高。但是，也无法使用多处理器的优势，所以此收集器适合单处理器机器。当然，此收集器也可以用在小数据量（<STRONG>100M</STRONG>左右）情况下的多处理器机器上。可以使用<STRONG>-XX:+UseSerialGC</STRONG>打开。
+                            <LI><STRONG>并行收集器<BR>
+                              </STRONG><IMG src="骞惰鏀堕泦鍣?JPG">
+                              <OL>
+                                <LI>对年轻代进行并行垃圾回收，因此可以减少垃圾回收时间。一般在多线程多处理器机器上使用。使用<STRONG>-XX:+UseParallelGC</STRONG>.打开。并行收集器在J2SE5.0第六6更新上引入，在Java 
+                                  SE6.0中进行了增强--可以堆年老代进行并行收集。<STRONG>如果年老代不使用并发收集的话，是使用单线程进行垃圾回收</STRONG>，因此会制约扩展能力。使用<STRONG>-XX:+UseParallelOldGC</STRONG>打开。
+                                <LI>使用<STRONG>-XX:ParallelGCThreads=&lt;N&gt;</STRONG>设置并行垃圾回收的线程数。<STRONG>此值可以设置与机器处理器数量相等</STRONG>。
+                                <LI>此收集器可以进行如下配置：
+                                  <UL>
+                                    <LI><STRONG>最大垃圾回收暂停:</STRONG>指定垃圾回收时的最长暂停时间，通过<STRONG>-XX:MaxGCPauseMillis=&lt;N&gt;</STRONG>指定。&lt;N&gt;为毫秒.如果指定了此值的话，<STRONG>堆大小和垃圾回收相关参数会进行调整以达到指定值</STRONG>。设定此值可能会减少应用的吞吐量。
+                                    <LI><STRONG>吞吐量:</STRONG>吞吐量为<STRONG>垃圾回收时间与非垃圾回收时间的比值</STRONG>，通过<STRONG>-XX:GCTimeRatio=&lt;N&gt;</STRONG>来设定，公式为<STRONG>1/（1+N）</STRONG>。例如，-XX:GCTimeRatio=19时，表示5%的时间用于垃圾回收。默认情况为99，即1%的时间用于垃圾回收。 </LI>
+                                  </UL>
+                                </LI>
+                              </OL>
+                            <LI><STRONG>并发收集器<BR>
+                              </STRONG>可以保证大部分工作都并发进行（应用不停止），垃圾回收只暂停很少的时间，此收集器适合对响应时间要求比较高的中、大规模应用。使用<STRONG>-XX:+UseConcMarkSweepGC</STRONG>打开。<BR>
+                              <OL>
+                                <LI>并发收集器主要减少年老代的暂停时间，他在应用不停止的情况下使用独立的垃圾回收线程，跟踪可达对象。在每个年老代垃圾回收周期中，在收集初期并发收集器会对整个应用进行简短的暂停，在收集中还会再暂停一次。第二次暂停会比第一次稍长，在此过程中多个线程同时进行垃圾回收工作。
+                                <LI>并发收集器使用<STRONG>处理器换来短暂的停顿时间</STRONG>。在一个N个处理器的系统上，并发收集部分使用<STRONG>K/N</STRONG>个可用处理器进行回收，一般情况下<STRONG>1&lt;=K&lt;=N/4</STRONG>。
+                                <LI>在只有<STRONG>一个处理器的主机上使用并发收集器</STRONG>，设置为<STRONG>incremental 
+                                  mode</STRONG>模式也可获得较短的停顿时间。
+                                <LI><STRONG>浮动垃圾</STRONG>：由于在应用运行的同时进行垃圾回收，所以有些垃圾可能在垃圾回收进行完成时产生，这样就造成了“Floating 
+                                  Garbage”，这些垃圾需要在下次垃圾回收周期时才能回收掉。所以，并发收集器一般需要<STRONG>20%</STRONG>的预留空间用于这些浮动垃圾。
+                                <LI><STRONG>Concurrent Mode 
+                                  Failure</STRONG>：并发收集器在应用运行时进行收集，所以需要保证堆在垃圾回收的这段时间有足够的空间供程序使用，否则，垃圾回收还未完成，堆空间先满了。这种情况下将会发生“并发模式失败”，此时整个应用将会暂停，进行垃圾回收。
+                                <LI><STRONG>启动并发收集器</STRONG>：因为并发收集在应用运行时进行收集，所以必须保证收集完成之前有足够的内存空间供程序使用，否则会出现“Concurrent 
+                                  Mode 
+                                  Failure”。通过设置<STRONG>-XX:CMSInitiatingOccupancyFraction=&lt;N&gt;</STRONG>指定还有多少剩余堆时开始执行并发收集 </LI>
+                              </OL>
+                            <LI><STRONG>小结</STRONG>
+                              <UL>
+                                <LI><STRONG>串行处理器：</STRONG><BR>
+                                  --适用情况：数据量比较小（100M左右）；单处理器下并且对响应时间无要求的应用。<BR>
+                                  --缺点：只能用于小型应用
+                                <LI><STRONG>并行处理器：</STRONG><BR>
+                                  --适用情况：“对吞吐量有高要求”，多CPU、对应用响应时间无要求的中、大型应用。举例：后台处理、科学计算。<BR>
+                                  --缺点：应用响应时间可能较长
+                                <LI><STRONG>并发处理器：<BR>
+                                </STRONG>--适用情况：“对响应时间有高要求”，多CPU、对应用响应时间有较高要求的中、大型应用。举例：Web服务器/应用服务器、电信交换、集成开发环境。 </LI>
+                              </UL>
+                            </LI>
+                          </OL>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal><BR>
+                          <STRONG><FONT size=2>三、常见配置举例</FONT></STRONG></P>
+                          <OL>
+                            <LI><STRONG>堆大小设置<BR>
+                              </STRONG>JVM 
+                              中最大堆大小有三方面限制：相关操作系统的数据模型（32-bt还是64-bit）限制；系统的可用虚拟内存限制；系统的可用物理内存限制。32位系统下，一般限制在1.5G~2G；64为操作系统对内存无限制。我在Windows 
+                              Server 2003 系统，3.5G物理内存，JDK5.0下测试，最大可设置为1478m。<BR>
+                              <CODE><STRONG><FONT face=NSimsun>典型设置：</FONT></STRONG></CODE>
+                              <UL>
+                                <LI><CODE><FONT face=NSimsun>java <STRONG>-Xmx3550m -Xms3550m 
+                                  -Xmn2g</STRONG> </FONT></CODE><FONT face=NSimsun><CODE><STRONG>-Xss128k</STRONG><BR>
+                                  </CODE><CODE><STRONG>-</STRONG></CODE></FONT><FONT face=NSimsun><CODE><STRONG>Xmx3550m</STRONG>：设置JVM最大可用内存为3550M。<BR>
+                                  </CODE><CODE><STRONG>-Xms3550m</STRONG></CODE></FONT><FONT face=NSimsun><CODE>：设置JVM促使内存为3550m。此值可以设置与-Xmx相同，以避免每次垃圾回收完成后JVM重新分配内存。<BR>
+                                  </CODE><CODE><STRONG><FONT color=#ff0000>-Xmn2g</FONT></STRONG></CODE></FONT><FONT face=NSimsun><CODE>：设置年轻代大小为2G。<STRONG><FONT color=#0000ff>整个堆大小=年轻代大小 
+                                  + 年老代大小 + 
+                                  持久代大小</FONT></STRONG>。持久代一般固定大小为64m，所以增大年轻代后，将会减小年老代大小。此值对系统性能影响较大，Sun官方推荐配置为整个堆的3/8。<BR>
+                                  </CODE><CODE><STRONG>-Xss128k</STRONG></CODE></FONT><CODE><FONT face=NSimsun>：设置每个线程的堆栈大小。JDK5.0以后每个线程堆栈大小为1M，以前每个线程堆栈大小为256K。更具应用的线程所需内存大小进行调整。在相同物理内存下，减小这个值能生成更多的线程。但是操作系统对一个进程内的线程数还是有限制的，不能无限生成，经验值在3000~5000左右。<BR>
+                                  </FONT></CODE>
+                                <LI><FONT face=NSimsun><CODE>java -Xmx3550m -Xms3550m </CODE><CODE>-Xss128k <STRONG>-XX:NewRatio=4 -XX:SurvivorRatio=4 
+                                  -XX:MaxPermSize=16m 
+                                  -XX:MaxTenuringThreshold=0</STRONG></CODE><BR>
+                                  <CODE><STRONG>-XX:NewRatio=4</STRONG></CODE></FONT><FONT face=NSimsun><CODE>:设置年轻代（包括Eden和两个Survivor区）与年老代的比值（除去持久代）。设置为4，则年轻代与年老代所占比值为1：4，年轻代占整个堆栈的1/5<BR>
+                                  </CODE><CODE><STRONG>-XX:SurvivorRatio=4</STRONG></CODE></FONT>：设置年轻代中Eden区与Survivor区的大小比值。设置为4，则两个Survivor区与一个Eden区的比值为2:4，一个Survivor区占整个年轻代的1/6<BR>
+                                  <CODE><STRONG><FONT face=NSimsun>-XX:MaxPermSize=16m</FONT></STRONG></CODE>:设置持久代大小为16m。<BR>
+                                <FONT face=NSimsun><CODE><STRONG>-XX:MaxTenuringThreshold=0</STRONG></CODE><CODE>：设置垃圾最大年龄。<STRONG><FONT color=#0000ff>如果设置为0的话，则年轻代对象不经过Survivor区，直接进入年老代</FONT></STRONG>。对于年老代比较多的应用，可以提高效率。<STRONG><FONT color=#0000ff>如果将此值设置为一个较大值，则年轻代对象会在Survivor区进行多次复制，这样可以增加对象再年轻代的存活时间</FONT></STRONG>，增加在年轻代即被回收的概论。</CODE></FONT> </LI>
+                              </UL>
+                            <LI><STRONG>回收器选择<BR>
+                              </STRONG>JVM给了三种选择：<STRONG>串行收集器、并行收集器、并发收集器</STRONG>，但是串行收集器只适用于小数据量的情况，所以这里的选择主要针对并行收集器和并发收集器。默认情况下，JDK5.0以前都是使用串行收集器，如果想使用其他收集器需要在启动时加入相应参数。JDK5.0以后，JVM会根据当前<A 
+        href="http://java.sun.com/j2se/1.5.0/docs/guide/vm/server-class.html">系统配置</A>进行判断。
+                              <OL>
+                                <LI><STRONG>吞吐量优先</STRONG>的并行收集器<BR>
+                                  如上文所述，并行收集器主要以到达一定的吞吐量为目标，适用于科学技术和后台处理等。<BR>
+                                  <STRONG>典型配置</STRONG>：
+                                  <UL>
+                                    <LI><FONT face=NSimsun><CODE>java -Xmx3800m -Xms3800m -Xmn2g 
+                                      -Xss128k <STRONG>-XX:+UseParallelGC 
+                                      -XX:ParallelGCThreads=20</STRONG><BR>
+                                      </CODE><CODE><STRONG>-XX:+UseParallelGC</STRONG></CODE></FONT><CODE><FONT face=NSimsun>：选择垃圾收集器为并行收集器。</FONT><STRONG><FONT color=#0000ff face=NSimsun>此配置仅对年轻代有效。即上述配置下，年轻代使用并发收集，而年老代仍旧使用串行收集。<BR>
+                                      </FONT></STRONG></CODE><CODE><STRONG><FONT face=NSimsun>-XX:ParallelGCThreads=20</FONT></STRONG></CODE><CODE><FONT face=NSimsun>：配置并行收集器的线程数，即：同时多少个线程一起进行垃圾回收。此值最好配置与处理器数目相等。<BR>
+                                      </FONT></CODE>
+                                    <LI><CODE><FONT face=NSimsun>java -Xmx3550m -Xms3550m -Xmn2g 
+                                      -Xss128k -XX:+UseParallelGC -XX:ParallelGCThreads=20 </FONT><STRONG><FONT face=NSimsun>-XX:+UseParallelOldGC<BR>
+                                      </FONT></STRONG></CODE><CODE><STRONG><FONT face=NSimsun>-XX:+UseParallelOldGC</FONT></STRONG></CODE><CODE><FONT face=NSimsun>：配置年老代垃圾收集方式为并行收集。JDK6.0支持对年老代并行收集。<BR>
+                                      </FONT></CODE>
+                                    <LI><CODE><FONT face=NSimsun>java -Xmx3550m -Xms3550m -Xmn2g 
+                                      -Xss128k -XX:+UseParallelGC </FONT><STRONG><FONT face=NSimsun>-XX:MaxGCPauseMillis=100<BR>
+                                      </FONT></STRONG></CODE><CODE><STRONG><FONT face=NSimsun>-XX:MaxGCPauseMillis=100</FONT></STRONG></CODE><CODE><FONT face=NSimsun><STRONG>:</STRONG>设置每次年轻代垃圾回收的最长时间，如果无法满足此时间，JVM会自动调整年轻代大小，以满足此值。<BR>
+                                      </FONT></CODE>
+                                    <LI><CODE><FONT face=NSimsun>java -Xmx3550m -Xms3550m -Xmn2g 
+                                      -Xss128k -XX:+UseParallelGC -XX:MaxGCPauseMillis=100 </FONT></CODE><STRONG>-XX:+UseAdaptiveSizePolicy<BR>
+                                      -XX:+UseAdaptiveSizePolicy</STRONG>：设置此选项后，并行收集器会自动选择年轻代区大小和相应的Survivor区比例，以达到目标系统规定的最低相应时间或者收集频率等，此值建议使用并行收集器时，一直打开。 </LI>
+                                  </UL>
+                                <LI><STRONG>响应时间优先</STRONG>的并发收集器<BR>
+                                  如上文所述，并发收集器主要是保证系统的响应时间，减少垃圾收集时的停顿时间。适用于应用服务器、电信领域等。<BR>
+                                  <STRONG>典型配置</STRONG>：
+                                  <UL>
+                                    <LI><CODE><FONT face=NSimsun>java -Xmx3550m -Xms3550m -Xmn2g 
+                                      -Xss128k -XX:ParallelGCThreads=20 </FONT><STRONG><FONT face=NSimsun>-XX:+UseConcMarkSweepGC 
+                                      -XX:+UseParNewGC<BR>
+                                      </FONT></STRONG></CODE><FONT face=NSimsun><CODE><STRONG>-XX:+UseConcMarkSweepGC</STRONG></CODE><CODE>：设置年老代为并发收集。测试中配置这个以后，</CODE><CODE>-XX:NewRatio=4的配置失效了，原因不明。所以，此时年轻代大小最好用-Xmn设置。</CODE><BR>
+                                      <CODE><STRONG>-XX:+UseParNewGC</STRONG></CODE><CODE>:</CODE><CODE>设置年轻代为并行收集。可与CMS收集同时使用。JDK5.0以上，JVM会根据系统配置自行设置，所以无需再设置此值。</CODE></FONT>
+                                    <LI><CODE><FONT face=NSimsun>java -Xmx3550m -Xms3550m -Xmn2g 
+                                      -Xss128k -XX:+UseConcMarkSweepGC </FONT></CODE><STRONG><CODE><FONT face=NSimsun>-XX:CMSFullGCsBeforeCompaction=5 </FONT></CODE>-XX:+UseCMSCompactAtFullCollection</STRONG><BR>
+                                      <CODE><FONT face=NSimsun><STRONG>-XX:CMSFullGCsBeforeCompaction</STRONG>：由于并发收集器不对内存空间进行压缩、整理，所以运行一段时间以后会产生“碎片”，使得运行效率降低。此值设置运行多少次GC以后对内存空间进行压缩、整理。<BR>
+                                    </FONT></CODE><STRONG>-XX:+UseCMSCompactAtFullCollection</STRONG>：打开对年老代的压缩。可能会影响性能，但是可以消除碎片 </LI>
+                                  </UL>
+                                </LI>
+                              </OL>
+                            <LI><STRONG>辅助信息<BR>
+                              </STRONG>JVM提供了大量命令行参数，打印信息，供调试使用。主要有以下一些：
+                              <UL>
+                                <LI><STRONG>-XX:+PrintGC<BR>
+                                  </STRONG>输出形式<STRONG>：[GC 
+                                  118250K-&gt;113543K(130112K), 0.0094143 secs] </STRONG>
+                                  <P><STRONG>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                                    [Full GC 121376K-&gt;10414K(130112K), 0.0650971 secs]</STRONG></P>
+                                <LI><STRONG>-XX:+PrintGCDetails<BR>
+                                  </STRONG>输出形式<STRONG>：[GC [DefNew: 
+                                  8614K-&gt;781K(9088K), 0.0123035 secs] 118250K-&gt;113543K(130112K), 
+                                  0.0124633 secs] </STRONG>
+                                  <P><STRONG>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                                    [GC [DefNew: 8614K-&gt;8614K(9088K), 0.0000665 secs][Tenured: 
+                                    112761K-&gt;10414K(121024K), 0.0433488 secs] 
+                                    121376K-&gt;10414K(130112K), 0.0436268 secs]</STRONG></P>
+                                <LI><STRONG>-XX:+PrintGCTimeStamps</STRONG> -XX:+PrintGC：PrintGCTimeStamps可与上面两个混合使用<BR>
+                                  输出形式：<STRONG>11.851: [GC 
+                                  98328K-&gt;93620K(130112K), 0.0082960 secs]<BR>
+                                  </STRONG>
+                                <LI><STRONG>-XX:+PrintGCApplicationConcurrentTime:</STRONG>打印每次垃圾回收前，程序未中断的执行时间。可与上面混合使用<BR>
+                                  输出形式：<STRONG>Application 
+                                  time: 0.5291524 seconds<BR>
+                                  </STRONG>
+                                <LI><STRONG>-XX:+PrintGCApplicationStoppedTime</STRONG>：打印垃圾回收期间程序暂停的时间。可与上面混合使用<BR>
+                                  输出形式：<STRONG>Total 
+                                  time for which application threads were stopped: 0.0468229 
+                                  seconds<BR>
+                                  </STRONG>
+                                <LI><STRONG>-XX:+PrintHeapAtGC</STRONG>:打印GC前后的详细堆栈信息<BR>
+                                  输出形式：<BR>
+                                  34.702: 
+                                  [GC {Heap before gc invocations=7:<BR>
+                                  def new generation&nbsp;&nbsp; 
+                                  total 55296K, used 52568K [0x1ebd0000, 0x227d0000, 
+                                  0x227d0000)<BR>
+                                  <STRONG>eden space 49152K, 99% used</STRONG> [0x1ebd0000, 0x21bce430, 0x21bd0000)<BR>
+                                  <STRONG>from space 6144K, 55% 
+                                  used</STRONG> [0x221d0000, 0x22527e10, 0x227d0000)<BR>
+                                  to&nbsp;&nbsp; 
+                                  space 6144K,&nbsp;&nbsp; 0% used [0x21bd0000, 0x21bd0000, 
+                                  0x221d0000)<BR>
+                                  tenured generation&nbsp;&nbsp; total 69632K, used 2696K 
+                                  [0x227d0000, 0x26bd0000, 0x26bd0000)<BR>
+                                  <STRONG>the space 
+                                  69632K,&nbsp;&nbsp; 3% used</STRONG> [0x227d0000, 0x22a720f8, 
+                                  0x22a72200, 0x26bd0000)<BR>
+                                  compacting perm gen total 8192K, used 2898K 
+                                  [0x26bd0000, 0x273d0000, 0x2abd0000)<BR>
+                                  &nbsp;&nbsp; the space 8192K, 
+                                  35% used [0x26bd0000, 0x26ea4ba8, 0x26ea4c00, 
+                                  0x273d0000)<BR>
+                                  &nbsp;&nbsp;&nbsp; ro space 8192K, 66% used 
+                                  [0x2abd0000, 0x2b12bcc0, 0x2b12be00, 0x2b3d0000)<BR>
+                                  &nbsp;&nbsp;&nbsp; 
+                                  rw space 12288K, 46% used [0x2b3d0000, 0x2b972060, 0x2b972200, 
+                                  0x2bfd0000)<BR>
+                                  34.735: [DefNew: 52568K-&gt;3433K(55296K), 0.0072126 
+                                  secs] 55264K-&gt;6615K(124928K)<STRONG>Heap after gc 
+                                  invocations=8:<BR>
+                                  </STRONG>def new generation&nbsp;&nbsp; total 
+                                  55296K, used 3433K [0x1ebd0000, 0x227d0000, 
+                                  0x227d0000)<BR>
+                                  <STRONG>eden space 49152K,&nbsp;&nbsp; 0% used</STRONG> [0x1ebd0000, 0x1ebd0000, 0x21bd0000)<BR>
+                                  from space 6144K, 55% used 
+                                  [0x21bd0000, 0x21f2a5e8, 0x221d0000)<BR>
+                                  to&nbsp;&nbsp; space 
+                                  6144K,&nbsp;&nbsp; 0% used [0x221d0000, 0x221d0000, 
+                                  0x227d0000)<BR>
+                                  tenured generation&nbsp;&nbsp; total 69632K, used 3182K 
+                                  [0x227d0000, 0x26bd0000, 0x26bd0000)<BR>
+                                  <STRONG>the space 
+                                  69632K,&nbsp;&nbsp; 4% used </STRONG>[0x227d0000, 0x22aeb958, 
+                                  0x22aeba00, 0x26bd0000)<BR>
+                                  compacting perm gen total 8192K, used 2898K 
+                                  [0x26bd0000, 0x273d0000, 0x2abd0000)<BR>
+                                  &nbsp;&nbsp; the space 8192K, 
+                                  35% used [0x26bd0000, 0x26ea4ba8, 0x26ea4c00, 
+                                  0x273d0000)<BR>
+                                  &nbsp;&nbsp;&nbsp; ro space 8192K, 66% used 
+                                  [0x2abd0000, 0x2b12bcc0, 0x2b12be00, 0x2b3d0000)<BR>
+                                  &nbsp;&nbsp;&nbsp; 
+                                  rw space 12288K, 46% used [0x2b3d0000, 0x2b972060, 0x2b972200, 
+                                  0x2bfd0000)<BR>
+                                  }<BR>
+                                  , 0.0757599 secs]
+                                <LI><STRONG>-Xloggc:filename</STRONG>:与上面几个配合使用，把相关日志信息记录到文件以便分析。 </LI>
+                              </UL>
+                            <LI><STRONG>常见配置汇总</STRONG>
+                              <OL>
+                                <LI>堆设置
+                                  <UL>
+                                    <LI><STRONG>-Xms</STRONG>:初始堆大小
+                                    <LI><STRONG>-Xmx</STRONG>:最大堆大小
+                                    <LI><STRONG>-XX:NewSize=n</STRONG>:设置年轻代大小
+                                    <LI><STRONG>-XX:NewRatio=n:</STRONG>设置年轻代和年老代的比值。如:为3，表示年轻代与年老代比值为1：3，年轻代占整个年轻代年老代和的1/4
+                                    <LI><STRONG>-XX:SurvivorRatio=n</STRONG>:年轻代中Eden区与两个Survivor区的比值。注意Survivor区有两个。如：3，表示Eden：Survivor=3：2，一个Survivor区占整个年轻代的1/5
+                                    <LI><STRONG>-XX:MaxPermSize=n</STRONG>:设置持久代大小 </LI>
+                                  </UL>
+                                <LI>收集器设置
+                                  <UL>
+                                    <LI><STRONG>-XX:+UseSerialGC</STRONG>:设置串行收集器
+                                    <LI><STRONG>-XX:+UseParallelGC</STRONG>:设置并行收集器
+                                    <LI><STRONG>-XX:+UseParalledlOldGC</STRONG>:设置并行年老代收集器
+                                    <LI><STRONG>-XX:+UseConcMarkSweepGC</STRONG>:设置并发收集器 </LI>
+                                  </UL>
+                                <LI>垃圾回收统计信息
+                                  <UL>
+                                    <LI><STRONG>-XX:+PrintGC</STRONG>
+                                    <LI><STRONG>-XX:+PrintGCDetails</STRONG>
+                                    <LI><STRONG>-XX:+PrintGCTimeStamps</STRONG>
+                                    <LI><STRONG>-Xloggc:filename</STRONG> </LI>
+                                  </UL>
+                                <LI>并行收集器设置
+                                  <UL>
+                                    <LI><STRONG>-XX:ParallelGCThreads=n</STRONG>:设置并行收集器收集时使用的CPU数。并行收集线程数。
+                                    <LI><STRONG>-XX:MaxGCPauseMillis=n</STRONG>:设置并行收集最大暂停时间
+                                    <LI><STRONG>-XX:GCTimeRatio=n</STRONG>:设置垃圾回收时间占程序运行时间的百分比。公式为1/(1+n) </LI>
+                                  </UL>
+                                <LI>并发收集器设置
+                                  <UL>
+                                    <LI><STRONG>-XX:+CMSIncrementalMode</STRONG>:设置为增量模式。适用于单CPU情况。
+                                    <LI><STRONG>-XX:ParallelGCThreads=n</STRONG>:设置并发收集器年轻代收集方式为并行收集时，使用的CPU数。并行收集线程数。 </LI>
+                                  </UL>
+                                </LI>
+                              </OL>
+                            </LI>
+                          </OL>
+                          <P style="MARGIN: 0in 0in 0pt" class=MsoNormal><BR>
+                          <STRONG><FONT size=2>四、调优总结</FONT></STRONG></P>
+                          <OL>
+                            <LI><STRONG>年轻代大小选择</STRONG>
+                              <UL>
+                                <LI><STRONG>响应时间优先的应用</STRONG>：<STRONG><FONT color=#0000ff>尽可能设大，直到接近系统的最低响应时间限制</FONT></STRONG>（根据实际情况选择）。在此种情况下，年轻代收集发生的频率也是最小的。同时，减少到达年老代的对象。
+                                <LI><STRONG>吞吐量优先的应用</STRONG>：尽可能的设置大，可能到达Gbit的程度。因为对响应时间没有要求，垃圾收集可以并行进行，一般适合8CPU以上的应用。 </LI>
+                              </UL>
+                            <LI><STRONG>年老代大小选择</STRONG>
+                              <UL>
+                                <LI><STRONG>响应时间优先的应用</STRONG>：年老代使用并发收集器，所以其大小需要小心设置，一般要考虑<STRONG>并发会话率</STRONG>和<STRONG>会话持续时间</STRONG>等一些参数。如果堆设置小了，可以会造成内存碎片、高回收频率以及应用暂停而使用传统的标记清除方式；如果堆大了，则需要较长的收集时间。最优化的方案，一般需要参考以下数据获得：
+                                  <UL>
+                                    <LI>并发垃圾收集信息
+                                    <LI>持久代并发收集次数
+                                    <LI>传统GC信息
+                                    <LI>花在年轻代和年老代回收上的时间比例 </LI>
+                                  </UL>
+                                  减少年轻代和年老代花费的时间，一般会提高应用的效率
+                                <LI><STRONG>吞吐量优先的应用</STRONG>：一般吞吐量优先的应用都有一个很大的年轻代和一个较小的年老代。原因是，这样可以尽可能回收掉大部分短期对象，减少中期的对象，而年老代尽存放长期存活对象。 </LI>
+                              </UL>
+                            <LI><STRONG>较小堆引起的碎片问题<BR>
+                              </STRONG>因为年老代的并发收集器使用标记、清除算法，所以不会对堆进行压缩。当收集器回收时，他会把相邻的空间进行合并，这样可以分配给较大的对象。但是，当堆空间较小时，运行一段时间以后，就会出现“碎片”，如果并发收集器找不到足够的空间，那么并发收集器将会停止，然后使用传统的标记、清除方式进行回收。如果出现“碎片”，可能需要进行如下配置：
+                              <UL>
+                                <LI><STRONG>-XX:+UseCMSCompactAtFullCollection</STRONG>：使用并发收集器时，开启对年老代的压缩。
+                                <LI><STRONG>-XX:CMSFullGCsBeforeCompaction=0</STRONG>：上面配置开启的情况下，这里设置多少次Full 
+                                  GC后，对年老代进行压缩 </LI>
+                              </UL>
+                            </LI>
+                          </OL>
+                        </DIV>
+                      </DIV>
+                  </DIV></TD>
+                </TR>
+              </TBODY>
+            </TABLE>
+            <BR>
+            <DIV class=opt><A title=查看该分类中所有文章 
+href="http://hi.baidu.com/frevy/blog/category/%BC%BC%CA%F5">类别：技术</A> | <A 
+title=将此文章添加到百度搜藏 onclick="return addToFavor();" 
+href="http://cang.baidu.com/do/add" target=_blank>添加到搜藏</A> | 浏览(<SPAN 
+id=result>126</SPAN>) | <A 
+href="http://hi.baidu.com/frevy/blog/item/3ba0097b3f637dea2f73b3fd.html#send">评论</A>&nbsp;(0)
+              <DIV style="LINE-HEIGHT: 5px; HEIGHT: 5px"></DIV>
+              <DIV id=in_nav>上一篇：<A title=MySQL修改root密码的多种方法 
+href="http://hi.baidu.com/frevy/blog/item/1c33b8d7129f712906088bc5.html">MySQL修改root密码的多种方法</A>&nbsp;&nbsp;&nbsp;&nbsp;下一篇：<A 
+title=【实用】JVM参数调优实践 
+href="http://hi.baidu.com/frevy/blog/item/74522acf060ae23eb700c8fe.html">【实用】JVM参数调优实践</A></DIV>
+            </DIV>
+            <DIV class=line></DIV>
+            <STYLE type=text/css>
+/*<![CDATA[*/
+#in_related_doc a { text-decoration:none; }
+/*]]>*/
+</STYLE>
+            <DIV id=in_related_doc>
+              <DIV class=tit>相关文章：</DIV>
+              <TABLE border=0 cellSpacing=3 cellPadding=0>
+                <TBODY>
+                  <TR>
+                    <TD width=15><A style="FONT-SIZE: 25px">?</A></TD>
+                    <TD><A title=JVM的垃圾回收机制详解和调优 
+      href="http://hi.baidu.com/windlover/blog/item/465eee1b244823fcae513373.html" 
+      target=_blank>JVM的垃圾回收机制详解和调优</A>　　　　　　　　　</TD>
+                    <TD width=15><A style="FONT-SIZE: 25px">?</A></TD>
+                    <TD><A title=了解JVM的内存管理与垃圾回收 
+      href="http://hi.baidu.com/jiaozhenqing/blog/item/f18b85d4c1063a07a08bb77e.html" 
+      target=_blank>了解JVM的内存管理与垃圾回收</A></TD>
+                  </TR>
+                  <TR>
+                    <TD width=15><A style="FONT-SIZE: 25px">?</A></TD>
+                    <TD><A title=JVM内存模型以及垃圾回收 
+      href="http://hi.baidu.com/xuwanbest/blog/item/0587d82f2c44a73d1e30892e.html" 
+      target=_blank>JVM内存模型以及垃圾回收</A>　　　　　　　　　</TD>
+                    <TD>&nbsp;</TD>
+                    <TD>&nbsp;</TD>
+                  </TR>
+                </TBODY>
+              </TABLE>
+            </DIV>
+            <DIV class=line></DIV>
+            <DIV id=in_reader>
+              <DIV class=tit>最近读者：</DIV>
+              <TABLE width="100%">
+                <TBODY>
+                  <TR>
+                    <TD width="10%" align=center><IMG border=0 src="portraitn.jpg" width=55 
+      height=55></TD>
+                    <TD width="12%" align=left><A 
+      href="http://passport.baidu.com/?login&amp;tpl=sp&amp;tpl_reg=sp&amp;u=http%3A%2F%2Fhi.baidu.com%2Ffrevy%2Fblog%2Fitem%2F3ba0097b3f637dea2f73b3fd%252Ehtml" 
+      target=_self>登录</A>后，您就出现在这里。</TD>
+                    <TD class=user vAlign=bottom width="10%" align=center><A 
+      href="http://hi.baidu.com/nkd2002" target=_blank><IMG border=0 
+      src="efb46e6b64323030321f02.jpg"></A></TD>
+                    <TD width="100%"></TD>
+                  </TR>
+                  <TR>
+                    <TD>&nbsp;</TD>
+                    <TD>&nbsp;</TD>
+                    <TD class=user vAlign=top align=center><A 
+      href="http://hi.baidu.com/nkd2002" target=_blank>nkd2002</A></TD>
+                    <TD></TD>
+                  </TR>
+                </TBODY>
+              </TABLE>
+            </DIV>
+            <DIV class=line></DIV>
+            <DIV id=in_comment><A name=comment></A>
+              <DIV class=tit>网友评论：</DIV>
+              <DIV id=page></DIV>
+            </DIV>
+            <DIV id=in_send><A name=send></A>
+              <FORM id=popFormSubmit onsubmit="return checkcmtform()" method=post name=form1 
+action=/frevy/commit>
+                <INPUT name=ct value=8 type=hidden>
+                <INPUT name=cm value=1 
+type=hidden>
+                <INPUT name=spBlogID value=3ba0097b3f637dea2f73b3fd type=hidden>
+                <INPUT id=spRefURL name=spRefURL value=/6/noname.htm 
+type=hidden>
+                <DIV class=tit>发表评论：</DIV>
+                <TABLE border=0 cellSpacing=5 cellPadding=0 width=620>
+                  <TBODY>
+                    <TR>
+                      <TD class=f14>姓　名：</TD>
+                      <TD><INPUT style="WIDTH: 220px" id=spBlogCmtor 
+      tabIndex=1 
+      name=spBlogCmtor maxLength=49>
+                        &nbsp;&nbsp; <A 
+      href="http://passport.baidu.com/?reg&amp;tpl=sp&amp;return_method=get&amp;skip_ok=1&amp;u=http://hi.baidu.com/sys/reg/" 
+      target=_blank>注册</A> | <A 
+      href="http://passport.baidu.com/?login&amp;tpl=sp&amp;tpl_reg=sp&amp;u=http%3A%2F%2Fhi.baidu.com%2Ffrevy%2Fblog%2Fitem%2F3ba0097b3f637dea2f73b3fd%252Ehtml">登录</A>
+                        <DIV style="DISPLAY: none" id=nmerror>*姓名最长为50字节</DIV></TD>
+                    </TR>
+                    <TR style="DISPLAY: none" id=1_err>
+                      <TD>&nbsp;</TD>
+                      <TD><DIV id=1_err_con class=error></DIV></TD>
+                    </TR>
+                    <TR>
+                      <TD class=f14>网址或邮箱：</TD>
+                      <TD><INPUT style="WIDTH: 360px" id=spBlogCmtURL 
+      onchange="checkeandu('spBlogCmtURL')" onfocus=hidErr(2); tabIndex=2 
+      name=spBlogCmtURL maxLength=128>
+                        (选填)</TD>
+                    </TR>
+                    <TR style="DISPLAY: none" id=2_err>
+                      <TD>&nbsp;</TD>
+                      <TD><DIV id=2_err_con class=error></DIV></TD>
+                    </TR>
+                    <TR>
+                      <TD id=reTitle class=f14 vAlign=top>内　容：</TD>
+                      <TD><TEXTAREA style="WIDTH: 520px; HEIGHT: 155px" id=spBlogCmtText onfocus=hidErr(3); tabIndex=3 name=spBlogCmtText></TEXTAREA></TD>
+                    </TR>
+                    <TR style="DISPLAY: none" id=3_err>
+                      <TD>&nbsp;</TD>
+                      <TD><DIV id=3_err_con class=error></DIV></TD>
+                    </TR>
+                    <TR id=vercode>
+                      <TD class=f14 vAlign=top>验证码：</TD>
+                      <TD vAlign=top><INPUT name=spVcode 
+      value=30357370616365363139313531393635303030303030303030303030303031323334333232393532A55CB08E09E89FA67250F0E7D7DB0FD9 
+      type=hidden>
+                        <INPUT id=spVerifyKey onfocus=f_focus() tabIndex=4 
+      name=spVerifyKey maxLength=4 size=6 autocomplete="off">
+                        <BR>
+                        <DIV style="DISPLAY: none" id=yanzheng><IMG id=verifypic width=120 
+      height=40><WBR>
+                      <A onfocus=this.blur(); title=看不清左边的字符 
+      onclick="return newverifypic();" 
+      href="http://hi.baidu.com/frevy/blog/item/3ba0097b3f637dea2f73b3fd.html#">看不清?</A> </DIV></TD>
+                    </TR>
+                    <TR>
+                      <TD class=f14 vAlign=top>&nbsp;</TD>
+                      <TD class=f14 vAlign=top><INPUT id=btn_ok tabIndex=5 name=btn_ok value=发表评论 type=submit>
+                      &nbsp;&nbsp;&nbsp;&nbsp;<A 
+      style="DISPLAY: none; COLOR: #666; FONT-SIZE: 12px" id=cancleReLink 
+      onclick="canclereply(); return false;" 
+      href="http://hi.baidu.com/frevy/blog/item/3ba0097b3f637dea2f73b3fd.html#">取消回复</A></TD>
+                    </TR>
+                  </TBODY>
+                </TABLE>
+              </FORM>
+            </DIV>
+            <BR>
+          </DIV>
+          <TABLE border=0 cellSpacing=0 cellPadding=0 width="100%" height=8>
+            <TBODY>
+              <TR>
+                <TD class=modbl width=7>&nbsp;</TD>
+                <TD class=modbc>&nbsp;</TD>
+                <TD class=modbr width=7>&nbsp;</TD>
+              </TR>
+            </TBODY>
+          </TABLE>
+        </DIV>
+      </DIV>
+    </DIV>
+  </DIV>
+  <BR>
+  <CENTER>
+    <DIV id=ft>?2009 Baidu</DIV>
+  </CENTER>
+</CENTER>
+<IMG style="DISPLAY: none" 
+src="c.gif_t=6&amp;p=3"> <!--EndFragment-->
+</BODY>
+</HTML>

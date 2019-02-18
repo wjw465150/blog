@@ -1,0 +1,121 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML xmlns="http://www.w3.org/1999/xhtml"><HEAD><title>网站架构负载均衡设计方案</title><LINK 
+href="liva.css" type=text/css rel=stylesheet>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+</HEAD>
+
+<BODY><!--StartFragment--><TABLE cellSpacing=0 cellPadding=0 width="95%" align=center border=0>
+<TBODY>
+<TR>
+<TD align=middle background=bottomline.png height=35><SPAN 
+class=mytitle>网站架构负载均衡设计方案</SPAN></TD></TR>
+<TR>
+<TD height=30>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+<TBODY>
+<TR>
+<TD width="80%" height=30>
+<DIV align=left><STRONG>当前路径：</STRONG> 【<A href="http://www.51opensource.com/dir.jsp?id=0">资源分类</A> &gt;&gt; 
+<A href="http://www.51opensource.com/dir.jsp?id=179">群组天地</A> &gt;&gt; <A href="http://www.51opensource.com/board.jsp?id=181">专业群组</A> 
+&gt;&gt; <A href="http://www.51opensource.com/group.jsp?id=181&amp;gid=2">软件架构</A>】</DIV></TD>
+<TD width="20%" height=30>
+<DIV align=right></DIV></TD></TR></TBODY></TABLE></TD>
+<TR>
+<TD background=2line.png height=30>
+<DIV align=left>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+<TBODY>
+<TR>
+<TD align=left width="30%" height=30>发 布 者：<A 
+href="http://www.51opensource.com/userinfo.jsp?id=2">liva2008</A></TD>
+<TD align=left width="25%" height=30>发布时间：2008-07-29 18:31:52</TD>
+<TD align=left width="25%" height=30>更新时间：2008-07-29 18:31:52</TD>
+<TD align=right width="10%" height=30></TD>
+<TD align=right width="10%" height=30><SPAN 
+class=mytitle>1</SPAN>楼&nbsp;</TD></TR></TBODY></TABLE></DIV></TD></TR>
+<TR>
+<TD align=middle height=30>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+<TBODY>
+<TR>
+<TD align=left bgColor=#111683 height=5></TD></TR>
+<TR>
+<TD vAlign=top bgColor=#cccccc height=300>
+<DIV style="LINE-HEIGHT: 25px" align=left>
+<P>　　某网站随着知名度的提高，用户访问量日渐增多，近段时间以来，由于访问量的激增，服务不可用的情况时有发生。在业务逻辑上，服务器之间还存在一些比较紧密地耦合性，一旦某个服务不可用，就会造成与之关联的其他服务也不可用(如数据库停止,bbs,blog等皆不可用)。针对这种状况，结合该网站的实际情况，设计了一个高可用可扩展的方案。</P>
+<P>　　<STRONG>具体情况如下:</STRONG></P>
+<P>　　基本需求:</P>
+<P>　　1、 高可用性：将停止服务时间降低到最低甚至是不间断服务</P>
+<P>　　2、 可扩展性：随着访问的增加，系统具备良好的伸缩能力</P>
+<P>　　3、 可视性：系统、服务的状态处于一个实时的监控之下</P>
+<P>　　4、 高性能高可靠性：经过优化的体系结构及合理的备份策略</P>
+<P>　　5、 安全性：结构上的安全及主机的安全策略</P>
+<P>　　基本思路</P>
+<P>　　1、对于访问频繁，用户量大的对象(bbs,blog)采用某种合理的方式负载到多个服务器上。把数据库独立出来，准备2套mysql数据库，以实现主从复制，即减轻负载，又提高了可靠性。更近一步，使用mysql 
+proxy技术，实现主从服务器的读写分离，大大提高这个系统的性能和负载能力。</P>
+<P>　　2、数据库与外部网络隔离，只允许web服务器(bbs,blog等)通过私有地址方式访问。这样就提高了数据库的安全性，同时也节省了宝贵的带宽。</P>
+<P>　　3、部署监控系统，通过监控主机存活、服务、主机资源，实时把系统的健康状态置于可视状态，对系统的运营状态心中有数。</P>
+<P>　　4、备份是想都不用想的事情，使用单独的服务器集中备份，是一个比较不错的主意。</P>
+<P>　　<STRONG>拓扑结构</STRONG></P>
+<P align=center><STRONG><IMG hspace=0 
+src="12173273709068272.jpg" align=baseline 
+border=0></STRONG></P>
+<P align=center><STRONG><IMG hspace=0 
+src="12173274246569357.jpg" align=baseline 
+border=0></STRONG></P>
+<P align=center><STRONG><IMG hspace=0 
+src="12173274668591957.jpg" align=baseline 
+border=0></STRONG></P>
+<P>　　<STRONG>技术实现</STRONG></P>
+<P>　　1、负载均衡。2台同样配置的linux服务器，内核支持lvs,配置keepalived工具，即可实现负载转发。一旦其后的真实服务器出现故障，keepalived会自动把故障机器从转发队列删除掉，等到故障修复，它又会自动把真实服务器的地址加入转发列表。由于lvs支持会话保持，因此对于bbs 
+这样的应用，一点也不用担心其登录丢失。</P>
+<P>　　2、mysql主从复制。即保证数据的安全，又提高了访问性能。我们在前端的每个web服务器上加入mysql 
+proxy这个工具，即可期待实现读写的自动分离，让写的操作发生在主数据库，让查询这类读操作发生在从数据库。</P>
+<P>　　3、nagios是一个开源的，受广泛欢迎的监控平台。它可对主机的存活、系统资源(磁盘空间、负载等)、网络服务进行实时监控。一旦探测到故障，将自动发送邮件(短信)通知故障。</P>
+<P>　　4、备份。包括web数据和数据库服务器的备份。对于web服务而言，GNU tar即可实现备份的一切愿望。简单的设置一下crontab 
+就可以让系统在我们做梦的时刻老老实实的帮我们备份了。但是，由于空间的限制，不可能一直备份下去，所以要做一个合适的策略，以不断的用新的备份去替换陈旧的备份数据;多少天合适?看磁盘容量吧。对于数据库，先mysqldump一下，再tar.完成这些工作后把备份文件传输到备份服务器集中。一个比较省事的方法是把备份服务器以NFS方式挂接到web服务器及数据库服务器。</P>
+<P>　　5、web服务器。至少包括apache和mysql 
+proxy这两个组件。Apache做bbs和blog的容器，以虚拟机方式把用户的请求转发到bbs目录或blog目录。</P>
+<P>　　6、安全措施。包含两层安全，一层是主机本身，另一层是结构(mysql从外部网络隔离)。实践证明，iptables是一个非常值得信赖的防火墙工具。在实际应用中，采取先关门后开窗的策略，大大增强系统的安全性。</P>
+<P>　　<STRONG>组件</STRONG></P>
+<P>　　一、 硬件: 负载均衡2台(dell 1950),web服务器2-3台(dell1950),数据库2台(dell 
+2950),存储NAS(5T格式化后容量),备份4u服务器(带磁盘阵列5T容量),监控服务器1台(dell1850).</P>
+<P>　　二、 软件：操作系统centos 
+5(定制安装)，负载均衡ipvsadm、keepalived,监控nagios,web服务apache+php等，数据库mysql,数据库代理mysql 
+proxy.</P>
+<P>　　<STRONG>进度安排</STRONG></P>
+<P>　　1、 lvs负载均衡配置及测试：2-3天</P>
+<P>　　2、 web服务器配置：2-3天</P>
+<P>　　3、 mysql主从服务器配置：1-3天</P>
+<P>　　4、 web数据迁移：1天</P>
+<P>　　5、 数据库数据迁移：2天</P>
+<P>　　6、 上线测试：1-2天</P>
+<P>　　7、 正式上线：2天</P>
+<P>　　通过实施该方案,网站的性能和可靠性都大大地得以提高，当然，这个方案不只适用与网站，也可以用于其它要求比较高的应用环境。</P></DIV></TD></TR>
+<TR>
+<TD align=left bgColor=#111683 height=5></TD></TR></TBODY></TABLE></TD></TR>
+<TR>
+<TD background=bottomline.png height=35>
+<DIV align=right>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" align=center border=0>
+<FORM name=navigatorForm method=post>
+<TBODY>
+<TR>
+<TD>
+<DIV align=right><STRONG><FONT color=red>1</FONT></STRONG>/<STRONG><FONT color=red>0</FONT></STRONG> <STRONG><FONT color=red>10</FONT></STRONG>/<STRONG><FONT color=red>0</FONT></STRONG> |&lt; 
+&lt;&lt; &gt;&gt; &gt;| <INPUT id=page style="FONT-SIZE: 9pt" type=hidden 
+onchange=javascript:document.navigatorForm.submit(); size=1 name=page> 
+</DIV></TD></TR></FORM></TBODY></TABLE></DIV></TD></TR></TBODY></TABLE>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+<TBODY>
+<TR>
+<TD vAlign=center width="100%" height=100>
+<P align=center>CopyRight ? 2008 吾要开源. Some Rights Reserved. Powered by <IMG 
+height=31 src="liva.png" width=40 align=absMiddle> on <IMG height=31 
+src="java.png" width=19 align=absMiddle> and <IMG height=31 
+src="mysql.png" width=61 align=absMiddle></P>
+<P align=center><IMG height=21 src="mail.png" width=152 border=0></P>
+<P align=center>鄂ICP备08007842号</P></TD></TR></TBODY></TABLE><!--EndFragment--></BODY>
+</HTML>

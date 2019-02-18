@@ -1,0 +1,509 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-CN" dir="ltr"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>一次jvm调优 -  - ITeye技术网站</title>
+    <meta name="description" content="  背景     最近在搞一些大数据智能推荐方面的开发工作，为了保证推荐的实时性，没隔10分钟会启动几个worker遍历所有数据 进行检查。     程序在预发环境运行一段时间后，偶尔会出现堆内存使用率超过80%的情况（公司监控系统默认堆内存使用率超过80%后，就会报警）。     重启后 一段时间内存使用情况是正常的，所以初步怀疑有存在内存泄露。     分析问题     1、按照内存泄露流程排查 ...">
+    <meta name="keywords" content="jvm, jmap, jstat, jstack 一次jvm调优">
+    <link rel="shortcut icon" href="urn:not-loaded:http://moon-walker.iteye.com/images/favicon.ico" type="image/x-icon">
+    <link rel="search" type="application/opensearchdescription+xml" href="http://moon-walker.iteye.com/open_search.xml" title="ITeye">
+    <link href="http://moon-walker.iteye.com/rss" rel="alternate" title="" type="application/rss+xml">
+    <link href="index_files/blog.css" media="screen" rel="stylesheet" type="text/css">
+<link href="index_files/blue.css" media="screen" rel="stylesheet" type="text/css">
+    <script src="index_files/hm.js"></script><script src="index_files/application.js" type="text/javascript"></script>    
+    <script><!--
+/* Script removed by snapshot save */
+--></script>
+
+
+      <link href="index_files/SyntaxHighlighter.css" media="screen" rel="stylesheet" type="text/css">
+  <script src="index_files/shCoreCommon.js" type="text/javascript"></script>
+<script src="index_files/hotkey.js" type="text/javascript"></script>
+  <script src="index_files/code_favorites.js" type="text/javascript"></script>
+<script src="index_files/weiboshare.js" type="text/javascript"></script>
+
+    
+  </head>
+  <body>
+    <div id="header">
+	      <div id="blog_site_nav">
+  <a href="http://www.iteye.com/" class="homepage">首页</a>
+  <a href="http://www.iteye.com/news">资讯</a>
+  <a href="http://www.iteye.com/magazines">精华</a>
+  <a href="http://www.iteye.com/forums">论坛</a>
+  <a href="http://www.iteye.com/ask">问答</a>
+  <a href="http://www.iteye.com/blogs">博客</a>
+  <a href="http://www.iteye.com/blogs/subjects">专栏</a>
+  <a href="http://www.iteye.com/groups">群组</a>
+  <a href="#" onclick="" id="msna"><u>更多</u> <small>▼</small></a>
+  <div class="quick_menu" style="display:none;">
+    <a target="_blank" href="http://job.iteye.com/iteye">知识库</a>
+    <a href="http://www.iteye.com/search">搜索</a>
+  </div>
+</div>
+
+	      <div id="user_nav">
+      <a href="http://moon-walker.iteye.com/login" class="welcome" title="登录">您还未登录 !</a>
+    <a href="http://moon-walker.iteye.com/login">登录</a>
+    <a href="http://moon-walker.iteye.com/signup" class="nobg">注册</a>
+  </div>
+
+	    
+    </div>
+
+    <div id="page">
+        <div id="branding" class="clearfix" style="overflow: hidden;background: none;padding:0 0 2px;">
+        	<ins data-revive-zoneid="184" data-revive-id="8c38e720de1c90a6f6ff52f3f89c4d57"></ins>
+        </div>
+      <div id="branding" class="clearfix">
+        <div id="blog_name">
+          <h1><a href="http://moon-walker.iteye.com/">moon-walker</a></h1>
+        </div>
+        <div id="fd"></div>
+        <div id="blog_navbar">
+          <ul>
+            <li class="blog_navbar_for"><a href="http://moon-walker.iteye.com/"><strong>博客</strong></a></li>
+            <li><a href="http://moon-walker.iteye.com/weibo">微博</a></li>
+            <li><a href="http://moon-walker.iteye.com/album">相册</a></li>
+            <li><a href="http://moon-walker.iteye.com/link">收藏</a></li>
+            <li><a href="http://moon-walker.iteye.com/blog/guest_book">留言</a></li>
+            <li><a href="http://moon-walker.iteye.com/blog/profile">关于我</a></li>
+          </ul>
+    
+          <div class="search">
+            <form action="http://moon-walker.iteye.com/blog/search" method="get">
+              <input class="search_text" id="query" name="query" style="margin-left: 10px;width: 110px;" type="text">
+              <input class="submit_search" value="" type="submit">
+            </form>
+          </div> 
+          <div id="fd"></div>         
+        </div>
+      </div>
+      
+      <div id="content" class="clearfix">
+        <div id="main">
+          
+
+
+
+          
+
+
+<div class="h-entry" style="display:none">
+  <a href="http://moon-walker.iteye.com/" class="p-author" target="_blank">moon_walker</a>
+</div>
+
+
+<div class="blog_main">
+  <div class="blog_title">
+    <h3>
+      <a href="#">一次jvm调优</a>
+      <em class="actions">      </em>
+    </h3>
+    <ul class="blog_categories"><strong>博客分类：</strong> <li><a href="http://moon-walker.iteye.com/category/372188">jvm</a></li> </ul>
+        <div class="news_tag"><a href="http://www.iteye.com/blogs/tag/jvm">jvm</a><a href="http://www.iteye.com/blogs/tag/jmap">jmap</a><a href="http://www.iteye.com/blogs/tag/jstat">jstat</a><a href="http://www.iteye.com/blogs/tag/jstack">jstack</a> </div>
+    	  
+    	
+    	
+  		
+      </div>
+
+  <div id="blog_content" class="blog_content">
+    <div class="iteye-blog-content-contain" style="font-size: 14px;">
+<p class="MsoNormal"><strong><span style="font-family: 宋体; font-size: 16px;">背景</span></strong></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">最近在搞一些大数据智能推荐方面的开发工作，为了保证推荐的实时性，没隔</span><span>10</span><span style="font-family: 宋体;">分钟会启动几个</span><span>worker</span><span style="font-family: 宋体;">遍历所有数据</span> <span style="font-family: 宋体;">进行检查。</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">程序在预发环境运行一段时间后，偶尔会出现堆内存使用率超过</span><span>80%</span><span style="font-family: 宋体;">的情况（公司监控系统默认堆内存使用率超过</span><span>80%</span><span style="font-family: 宋体;">后，就会报警）。</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">重启后</span> <span style="font-family: 宋体;">一段时间内存使用情况是正常的，所以初步怀疑有存在内存泄露。</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><strong><span style="font-family: 宋体; font-size: 16px;">分析问题</span></strong></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span>1</span><span style="font-family: 宋体;">、按照内存泄露流程排查：</span><span>ps -ef|grep java </span><span style="font-family: 宋体;">找到对应</span><span>java</span><span style="font-family: 宋体;">工程的进程号（也可以用</span><span>top</span><span style="font-family: 宋体;">）</span></p>
+<p class="MsoNormal"><span><br><img alt="" src="index_files/06e9b05e-e004-37f0-b57e-4d4175c51fa2.jpg"><br> <br></span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">进程号为</span><span>6206</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span>2</span><span style="font-family: 宋体;">、然后执行</span><span>jmap -dump:live,file=/tmp/dump.dat 6206</span><span style="font-family: 宋体;">，</span><span>dump</span><span style="font-family: 宋体;">文件有点大（几百</span><span>M</span><span style="font-family: 宋体;">），下载下来用</span> <span>eclipse Memory Analyzer </span><span style="font-family: 宋体;">进行分析（参考</span></p>
+<p class="MsoNormal"><span>http://blog.csdn.net/xb151652000/article/details/8056792</span><span style="font-family: 宋体;">）</span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">遗憾的是没有发现异常，难道不是内存泄漏？</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">3、查看</span><span>gc</span><span style="font-family: 宋体;">情况：</span><span>jstat -gcutil 6206</span></p>
+<p class="MsoNormal"><span>  S0    S1    E      O      M     CCS    YGC     YGCT    FGC    FGCT     GCT   </span></p>
+<p class="MsoNormal"><span>  0.00   8.33  11.44  76.30  98.24  95.28   9493 1170.869     2    1.964 1172.833</span></p>
+<p class="MsoNormal"><span>  0.00   8.33  11.47  76.30  98.24  95.28   9493 1170.869     2    1.964 1172.833</span></p>
+<p class="MsoNormal"><span>  0.00   8.33  11.47  76.30  98.24  95.28   9493 1170.869     2    1.964 1172.833</span></p>
+<p class="MsoNormal"><span>  0.00   8.33  11.47  76.30  98.24  95.28   9493 1170.869     2    1.964 1172.833</span></p>
+<p class="MsoNormal"><span>  0.00   8.33  11.48  76.30  98.24  95.28   9493 1170.869     2    1.964 1172.833</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">发现</span> <span style="font-family: 宋体;">年老代内存使用率占比，超过</span><span>70%</span><span style="font-family: 宋体;">。初步发现原因所在：</span><span>YGC </span><span style="font-family: 宋体;">年轻代</span><span>gc</span><span style="font-family: 宋体;">太频繁了（</span><span>9000</span><span style="font-family: 宋体;">多次，从程序启动时算起），</span><span>FGC fullgc </span><span style="font-family: 宋体;">正常总共就</span><span>2</span><span style="font-family: 宋体;">次。</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">4、再使用命令：</span><span>jmap -heap 6206</span><span style="font-family: 宋体;">看下各个分代内存大小：</span></p>
+<p class="MsoNormal"><span><br><img alt="" src="index_files/ffea7cd8-5d52-348a-8fc1-7423f1e1c0c3.jpg"><br> <br></span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">我晕，</span><span>s0 s1</span><span style="font-family: 宋体;">都自动分配的</span><span>1M</span><span style="font-family: 宋体;">。</span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">先看下</span><span>YGC</span><span style="font-family: 宋体;">流程：我们知道每次</span><span>YGC</span><span style="font-family: 宋体;">时，存活下来的对象先从</span><span>eden</span><span style="font-family: 宋体;">复制到</span><span>s0</span><span style="font-family: 宋体;">，年龄为</span><span>1</span><span style="font-family: 宋体;">，第二次</span><span>YGC</span><span style="font-family: 宋体;">还存活从</span><span>s0</span><span style="font-family: 宋体;">复制到</span><span>s1 </span><span style="font-family: 宋体;">年龄为</span><span>2</span><span style="font-family: 宋体;">，第三次</span><span>YGC </span><span style="font-family: 宋体;">从</span><span>s1</span><span style="font-family: 宋体;">复制到</span><span>s0 </span><span style="font-family: 宋体;">年龄变为</span><span>3</span><span style="font-family: 宋体;">，当到达最大年龄是再复制到年老代（最大年龄配置</span><span>-XX:MaxTenuringThreshold=4</span><span style="font-family: 宋体;">）。</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">这里</span><span>s0 s1</span><span style="font-family: 宋体;">太小了，根本放不下每次</span><span>eden</span><span style="font-family: 宋体;">中存活下来的对象，形同虚设，所以只能直接迁移到年老代，导致年老代很快打满（</span><span>YGC</span><span style="font-family: 宋体;">时，年轻代内存使用率已经</span><span>100%</span><span style="font-family: 宋体;">）。出现堆内存报警，就不足为奇了。之后就会频繁的出现</span><span>fullgc</span><span style="font-family: 宋体;">（年老代被打满），进入恶性循环。</span></p>
+<p class="MsoNormal"> </p>
+<p class="MsoNormal"><span style="font-family: 宋体;">每隔10分钟YGC次数（worker执行时）：</span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;"><br><img alt="" src="index_files/ddfa892a-0959-3bba-83f3-37584c98e633.png" title="点击查看原始大小图片" class="magplus" height="349" width="700"><br> </span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><strong><span style="font-size: 16px;">解决问题</span></strong></p>
+<p class="MsoNormal"> </p>
+<p class="MsoNormal"><span style="font-family: 宋体;">问题原因：由于我们没有指定堆内存大小，系统默认分配，并根据内存动态调整各个分代内存大小，最终导致</span><span>s0 s1</span><span style="font-family: 宋体;">区分配过小，每次</span><span>YGC</span><span style="font-family: 宋体;">都将存活的对象迁移到年老代。</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">解决办法，</span><span>jvm </span><span style="font-family: 宋体;">参数手动调整为：</span></p>
+<p class="MsoNormal"><span>-Xmx2048m -Xms2048m -Xmn1g -Xss512k -XX:SurvivorRatio=8 -XX:+UseParallelGC </span></p>
+<p class="MsoNormal"><span>-XX:MaxTenuringThreshold=4 -XX:ParallelGCThreads=43</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span>-Xmx2048m </span><span style="font-family: 宋体;">最大堆内存</span><span>2G</span><span style="font-family: 宋体;">（之前默认是</span><span>1G</span><span style="font-family: 宋体;">）</span></p>
+<p class="MsoNormal"><span>-Xms2048m </span><span style="font-family: 宋体;">初始堆内存（建议跟</span><span>-Xmx</span><span style="font-family: 宋体;">设置成一样，避免</span><span>gc</span><span style="font-family: 宋体;">后调整）</span></p>
+<p class="MsoNormal"><span>-Xmn1g  </span><span style="font-family: 宋体;">年轻代内存</span><span>1G</span></p>
+<p class="MsoNormal"><span>-Xss512k </span><span style="font-family: 宋体;">每个栈大小为</span><span>512K</span><span style="font-family: 宋体;">（设置小点，可以创建更多的线程，设置太小</span> <span style="font-family: 宋体;">会栈溢出）</span></p>
+<p class="MsoNormal"><span>-XX:SurvivorRatio=8  </span><span style="font-family: 宋体;">算法</span><span>(s0+s1)/eden=2:8</span><span style="font-family: 宋体;">，即</span><span>s0=s1=1/10 * 1G=102.4M</span></p>
+<p class="MsoNormal"><span>-XX:+UseParallelGC </span><span style="font-family: 宋体;">开启并行</span><span>gc</span><span style="font-family: 宋体;">（我们是后端服务，需要大吞吐量）</span></p>
+<p class="MsoNormal"><span>-XX:MaxTenuringThreshold=4  </span><span style="font-family: 宋体;">年轻代对象年龄为</span><span>4 </span></p>
+<p class="MsoNormal"><span>-XX:ParallelGCThreads  gc</span><span style="font-family: 宋体;">线程数，此值最好配置与处理器数目相等。</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span style="font-size: 16px;"><strong><span style="font-size: 16px;">对比</span></strong></span></p>
+<p class="MsoNormal"> </p>
+<p class="MsoNormal"><span style="font-family: 宋体;">重新启动程序，看下内存分配情况（</span><span>jmap -heap pid</span><span style="font-family: 宋体;">）：</span></p>
+<p class="MsoNormal"><span><br><img alt="" src="index_files/61af086c-2c41-3377-a745-ff63d6b30f37.jpg"><br> <br></span></p>
+<p class="MsoNormal"><span>eden = 820M</span></p>
+<p class="MsoNormal"><span>s0=102M</span></p>
+<p class="MsoNormal"><span>s1=102M</span></p>
+<p class="MsoNormal"><span>old=1024M</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span>gc</span><span style="font-family: 宋体;">效果（</span><span>jstat - gcutil pid</span><span style="font-family: 宋体;">）：</span></p>
+<p class="MsoNormal"><span>  S0   S1     E      O      M     CCS    YGC     YGCT    FGC    FGCT     GCT   </span></p>
+<p class="MsoNormal"><span> 28.51   0.00  22.69   5.31  98.04  95.71      6    1.687     2    1.353    3.040</span></p>
+<p class="MsoNormal"><span> 28.51   0.00  22.69   5.31  98.04  95.71      6    1.687     2    1.353    3.040</span></p>
+<p class="MsoNormal"><span> 28.51   0.00  22.69   5.31  98.04  95.71      6    1.687     2    1.353    3.040</span></p>
+<p class="MsoNormal"><span> 28.51   0.00  22.84   5.31  98.04  95.71      6    1.687     2    1.353    3.040</span></p>
+<p class="MsoNormal"><span> 28.51   0.00  22.84   5.31  98.04  95.71      6    1.687     2    1.353    3.040</span></p>
+<p class="MsoNormal"><span> </span></p>
+<p class="MsoNormal"><span style="font-family: 宋体;">通过长时间观察</span><span>O(</span><span style="font-family: 宋体;">年老代</span><span>) </span><span style="font-family: 宋体;">内存使用率长时间维持在</span><span> 6%</span><span style="font-family: 宋体;">左右，对象在</span><span>s0 s1</span><span style="font-family: 宋体;">区里来回复杂，基本都已经被</span><span>gc</span><span style="font-family: 宋体;">掉了。至此问题解决。</span></p>
+<p class="MsoNormal"> </p>
+<p class="MsoNormal">优化后，每隔10分钟 YGC次数：</p>
+<p class="MsoNormal"><br><img alt="" src="index_files/8e631cb5-bfec-3b19-87a8-13578a3f583e.jpg" title="点击查看原始大小图片" class="magplus" height="266" width="700"><br> </p>
+<p class="MsoNormal"> </p>
+<p class="MsoNormal"><strong><span style="font-size: 16px;"><span style="font-family: 宋体;">小结</span></span></strong></p>
+<p class="MsoNormal"> </p>
+<p><span style="font-size: 10.5pt; font-family: 宋体;">jvm </span><span style="font-size: 10.5pt; font-family: 宋体;">参数优化</span><span style="font-size: 10.5pt; font-family: 宋体;">不是千篇一律，需要根据具体的业务场景具体调整（我这里是每隔</span><span style="font-size: 10.5pt; font-family: 宋体;">10</span><span style="font-size: 10.5pt; font-family: 宋体;">分钟有一个峰值）。深刻理解每个参数具体含义和用法，反复实践才是关键。</span></p>
+<p> </p>
+<p><span style="font-size: 10.5pt; font-family: 宋体;">开发中也尽量注意代码质量，比如大数据开发中，遍历10万条数据，一定要分配次 一次少量取数据处理，取下一批数的时候让上一批数据成为垃圾。</span></p>
+<p><span style="font-size: 10.5pt; font-family: 宋体;">尽量不要增量的使用全局的MAP List,如果一定要使用，记得清理。</span></p>
+<p><span style="font-size: 10.5pt; font-family: 宋体;">线程池中使用ThreadLocal，也要注意在结束时remove。</span></p>
+<p> </p>
+</div>
+  </div>
+
+  
+  <div class="attachments">
+    
+      
+        <ul style="display:none;">
+          <li><a href="index_files/06e9b05e-e004-37f0-b57e-4d4175c51fa2.jpg" target="_blank"><img src="index_files/06e9b05e-e004-37f0-b57e-4d4175c51fa2-thumb.jpg" class="magplus" title="点击查看原始大小图片"></a></li>
+          
+          <li>大小: 10.8 KB</li>
+        </ul>
+      
+    
+      
+        <ul style="display:none;">
+          <li><a href="index_files/ffea7cd8-5d52-348a-8fc1-7423f1e1c0c3.jpg" target="_blank"><img src="index_files/ffea7cd8-5d52-348a-8fc1-7423f1e1c0c3-thumb.jpg" class="magplus" title="点击查看原始大小图片"></a></li>
+          
+          <li>大小: 36.5 KB</li>
+        </ul>
+      
+    
+      
+        <ul style="display:none;">
+          <li><a href="index_files/61af086c-2c41-3377-a745-ff63d6b30f37.jpg" target="_blank"><img src="index_files/61af086c-2c41-3377-a745-ff63d6b30f37-thumb.jpg" class="magplus" title="点击查看原始大小图片"></a></li>
+          
+          <li>大小: 62 KB</li>
+        </ul>
+      
+    
+      
+        <ul style="display:none;">
+          <li><a href="index_files/8e631cb5-bfec-3b19-87a8-13578a3f583e.jpg" target="_blank"><img src="index_files/8e631cb5-bfec-3b19-87a8-13578a3f583e-thumb.jpg" class="magplus" title="点击查看原始大小图片"></a></li>
+          
+          <li>大小: 24.5 KB</li>
+        </ul>
+      
+    
+      
+        <ul style="display:none;">
+          <li><a href="index_files/ddfa892a-0959-3bba-83f3-37584c98e633.png" target="_blank"><img src="index_files/ddfa892a-0959-3bba-83f3-37584c98e633-thumb.png" class="magplus" title="点击查看原始大小图片"></a></li>
+          
+          <li>大小: 20.4 KB</li>
+        </ul>
+      
+    
+    
+      <ul>
+        <li><a href="#" onclick="">查看图片附件</a></li>
+      </ul>
+    
+  </div>
+
+
+  
+  <ins data-revive-zoneid="201" data-revive-id="8c38e720de1c90a6f6ff52f3f89c4d57"></ins>
+  
+
+  <div id="bottoms" class="clearfix">
+    <div id="digg_bottom" class="clearfix"><div class="digged"><strong>1</strong> <br>顶</div><div class="digged"><strong>0</strong> <br>踩</div></div>
+    <div id="share_weibo">分享到：
+      <a data-type="sina" href="javascript:void(0);" title="分享到新浪微博"><img src="index_files/sina.jpg"></a>
+      <a data-type="qq" href="javascript:void(0);" title="分享到腾讯微博"><img src="index_files/tec.jpg"></a>
+    </div>
+  </div>
+
+  <div class="blog_nav">
+    <div class="pre_next">
+      
+      
+      <a href="http://moon-walker.iteye.com/blog/2354809" class="pre" title="大数据学习之--win7下搭建hadoop MapReduce开发环境">大数据学习之--win7下搭建hadoop MapReduce ...</a>
+    </div>
+  </div>
+  <div class="blog_bottom">
+    <ul>
+      <li>15 小时前</li>
+      <li>浏览 218</li>
+      <li><a href="#comments">评论(1)</a></li>
+      
+      
+      <li>分类:<a href="http://www.iteye.com/blogs/category/language">编程语言</a></li>      
+      <li class="last"><a href="http://www.iteye.com/wiki/blog/2372708" target="_blank" class="more">相关推荐</a></li>
+    </ul>    
+  </div>
+  
+		    
+		
+<div class="boutique-curr-box blog_comment">
+	  <div class="boutique-curr clearfix">
+	    <h5 class="h3titles">参考知识库</h5>
+	    
+	    <dl class="dlnewlist">
+	    
+          <dd><a target="_blank" href="http://lib.csdn.net/base/vras"><img src="index_files/1490587425183_183.jpg" alt="" height="58" width="58"></a></dd>
+          <dt>
+              <a target="_blank" href="http://lib.csdn.net/base/vras" classs="title">语音识别与合成知识库</a>
+              <span>
+                 <em>529</em>  关注 <i>|</i> <em>316</em>  收录                  
+              </span>
+          </dt>
+      
+	    </dl>
+	    
+	    <dl class="dlnewlist">
+	    
+          <dd><a target="_blank" href="http://lib.csdn.net/base/computervison"><img src="index_files/1490352585394_394.jpg" alt="" height="58" width="58"></a></dd>
+          <dt>
+              <a target="_blank" href="http://lib.csdn.net/base/computervison" classs="title">计算机视觉知识库</a>
+              <span>
+                 <em>1278</em>  关注 <i>|</i> <em>251</em>  收录                  
+              </span>
+          </dt>
+      
+	    </dl>
+	    
+	    <dl class="dlnewlist">
+	    
+          <dd><a target="_blank" href="http://lib.csdn.net/base/nlp"><img src="index_files/1490351555268_268.jpg" alt="" height="58" width="58"></a></dd>
+          <dt>
+              <a target="_blank" href="http://lib.csdn.net/base/nlp" classs="title">自然语言理解和处理知识库</a>
+              <span>
+                 <em>468</em>  关注 <i>|</i> <em>87</em>  收录                  
+              </span>
+          </dt>
+      
+	    </dl>
+	    
+	    <dl class="dlnewlist">
+	    
+          <dd><a target="_blank" href="http://lib.csdn.net/base/knowledgeengineering"><img src="index_files/1490788422140_140.jpg" alt="" height="58" width="58"></a></dd>
+          <dt>
+              <a target="_blank" href="http://lib.csdn.net/base/knowledgeengineering" classs="title">知识工程知识库</a>
+              <span>
+                 <em>151</em>  关注 <i>|</i> <em>74</em>  收录                  
+              </span>
+          </dt>
+      
+	    </dl>
+	    
+	  </div>
+</div>
+ 		
+      
+  <div class="blog_comment">
+    <h5>评论</h5>
+    <a id="comments" name="comments"></a>
+    <div id="bc2397913">
+  <div class="comment_title">
+    1 楼
+    <a href="http://mydaycoming.iteye.com/" target="_blank" title="myDayComing">myDayComing</a>
+    5 小时前  
+    
+    
+  </div>
+  <div class="comment_content">非常好，非常好的分享</div>
+</div>
+
+
+    
+    
+  </div>
+
+  <div class="blog_comment">
+    <h5>发表评论</h5>
+            <p style="text-align:center; margin-top:30px;margin-bottom:0px;"><a href="http://moon-walker.iteye.com/login" style="background-color:white;"> <img src="index_files/login_icon.png" style="vertical-align:middle; margin-right: 10px;"></a><a href="http://moon-walker.iteye.com/login">  您还没有登录,请您登录后再发表评论 </a></p>
+      </div>
+</div>
+
+
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+
+
+
+
+        </div>
+
+        <div id="local">
+          <div class="local_top"></div>
+          <div id="blog_owner">
+  <div id="blog_owner_logo"><a href="http://moon-walker.iteye.com/"><img alt="moon_walker的博客" class="logo" src="index_files/user-logo.gif" title="moon_walker的博客: " width=""></a></div>
+  <div id="blog_owner_name">moon_walker</div>
+</div>
+
+          <div id="blog_actions">
+            <ul>
+              <li>浏览: 833 次</li>
+              <li>性别: <img alt="Icon_minigender_1" src="index_files/icon_minigender_1.gif" title="男"></li>
+              <li>来自: 成都</li>
+              <li><img src="index_files/offline.gif"></li>
+              
+            </ul>
+          </div>
+          <div id="user_visits" class="clearfix">
+            <h5>最近访客 <span style="font-weight:normal;font-size:12px;padding-left:30px;"><a href="http://moon-walker.iteye.com/blog/user_visits">更多访客&gt;&gt;</a></span></h5>
+            
+              <div class="user_visit">
+                <div class="logo"><a href="http://qindongliang.iteye.com/" target="_blank"><img alt="qindongliang1922的博客" class="logo" src="index_files/62d06c35-bc7d-3234-a9ae-67c6fbe8d97f-thumb.png" title="qindongliang1922的博客: 有任何问题请关注公众号留言:  我是攻城师（woshigcs）" width="48px"></a></div>
+                <div class="left"><a href="http://qindongliang.iteye.com/" target="_blank" title="qindongliang1922">qindongliang1922</a></div>
+              </div>
+            
+              <div class="user_visit">
+                <div class="logo"><a href="http://jrc838982823.iteye.com/" target="_blank"><img alt="jrc838982823的博客" class="logo" src="index_files/user-logo-thumb.gif" title="jrc838982823的博客: " width="48px"></a></div>
+                <div class="left"><a href="http://jrc838982823.iteye.com/" target="_blank" title="jrc838982823">jrc838982823</a></div>
+              </div>
+            
+              <div class="user_visit">
+                <div class="logo"><a href="http://shao-hua.iteye.com/" target="_blank"><img alt="shao_hua的博客" class="logo" src="index_files/user-logo-thumb.gif" title="shao_hua的博客: " width="48px"></a></div>
+                <div class="left"><a href="http://shao-hua.iteye.com/" target="_blank" title="shao_hua">shao_hua</a></div>
+              </div>
+            
+              <div class="user_visit">
+                <div class="logo"><a href="http://axeon.iteye.com/" target="_blank"><img alt="axeon的博客" class="logo" src="index_files/user-logo-thumb.gif" title="axeon的博客: " width="48px"></a></div>
+                <div class="left"><a href="http://axeon.iteye.com/" target="_blank" title="axeon">axeon</a></div>
+              </div>
+            
+          </div>
+
+          
+
+                      <div id="blog_menu">
+              <h5>文章分类</h5>
+              <ul>
+                <li><a href="http://moon-walker.iteye.com/">全部博客 (6)</a></li>
+                
+                  <li><a href="http://moon-walker.iteye.com/category/365157">架构 (1)</a></li>
+                
+                  <li><a href="http://moon-walker.iteye.com/category/368541">架构 openresty lua (1)</a></li>
+                
+                  <li><a href="http://moon-walker.iteye.com/category/368563">java学习笔记 (1)</a></li>
+                
+                  <li><a href="http://moon-walker.iteye.com/category/368883">大数据 hadoop (2)</a></li>
+                
+                  <li><a href="http://moon-walker.iteye.com/category/372188">jvm (1)</a></li>
+                
+              </ul>
+            </div>
+            <div id="month_blogs">
+              <h5>社区版块</h5>
+              <ul>
+                <li><a href="http://moon-walker.iteye.com/blog/news">我的资讯</a> (0)</li>
+                <li>
+                  <a href="http://moon-walker.iteye.com/blog/post">我的论坛</a> (0)
+                </li>
+                <li><a href="http://moon-walker.iteye.com/blog/answered_problems">我的问答</a> (0)</li>
+              </ul>
+            </div>
+            <div id="month_blogs">
+              <h5>存档分类</h5>
+              <ul>
+                
+                  <li><a href="http://moon-walker.iteye.com/blog/monthblog/2017-05">2017-05</a> (1)</li>
+                
+                  <li><a href="http://moon-walker.iteye.com/blog/monthblog/2017-01">2017-01</a> (4)</li>
+                
+                  <li><a href="http://moon-walker.iteye.com/blog/monthblog/2016-10">2016-10</a> (1)</li>
+                
+                <li><a href="http://moon-walker.iteye.com/blog/monthblog_more">更多存档...</a></li>
+              </ul>
+            </div>
+            
+            
+
+            <div id="guest_books">
+              <h5>最新评论</h5>
+              <ul>
+                
+              </ul>
+            </div>
+
+            <div class="local_bottom"></div>
+          
+        </div>
+        <div style="margin-top: 10px;float: left;clear: left;">
+					<ins data-revive-zoneid="185" data-revive-id="8c38e720de1c90a6f6ff52f3f89c4d57"></ins>
+				</div>
+      </div>    
+
+      <div id="footer" class="clearfix">
+        <div id="copyright">
+          <hr>
+          声明：ITeye文章版权属于作者，受法律保护。没有作者书面许可不得转载。若作者同意转载，必须以超链接形式标明文章原始出处和作者。<br>
+          © 2003-2017 ITeye.com.   All rights reserved.  [ 京ICP证110151号  京公网安备110105010620 ]
+        </div>
+        <ins data-revive-zoneid="186" data-revive-id="8c38e720de1c90a6f6ff52f3f89c4d57"></ins>
+      </div>
+    </div>
+    <script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script><img src="index_files/stat.iteye.com.gif" height="0" width="0">
+
+<script src="index_files/tracking.js" type="text/javascript"></script>
+
+    
+    
+    <script language="javascript" type="text/javascript" src="index_files/async_new.js"></script>
+<script src="index_files/jquery-1.11.1.min.js" type="text/javascript"></script>
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+<script src="index_files/tracking-1.js" type="text/javascript"></script>
+    
+	    
+	    <script src="index_files/web-storage-cache.min.js" type="text/javascript"></script>
+	    <script src="index_files/replace.min.js" type="text/javascript"></script>
+    
+    
+  
+
+</body></html>

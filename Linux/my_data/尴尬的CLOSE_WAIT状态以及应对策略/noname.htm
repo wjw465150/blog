@@ -1,0 +1,184 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<HTML><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>尴尬的CLOSE_WAIT状态以及应对策略</title>
+<STYLE type=text/css>
+.error{color:#FF0000;font-size:12px}
+</STYLE>
+</HEAD>
+
+<BODY>
+
+<CENTER>
+
+<DIV id=main style="WIDTH: 996px" align=left>
+
+<DIV class=stage>
+
+<DIV class=stagepad>
+
+<DIV style="WIDTH: 100%">
+
+<DIV class=modbox id=m_blog><!--StartFragment--><DIV class=tit>尴尬的CLOSE_WAIT状态以及应对策略</DIV>
+<DIV class=date>2009-03-02 00:36</DIV>
+<TABLE style="TABLE-LAYOUT: fixed">
+<TBODY>
+<TR>
+<TD>
+<DIV class=cnt id=blog_text>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">摘要：本文阐述了为何</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-font-size: 12.0pt">socket</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">连接锁定在</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-font-size: 12.0pt">CLOSE_WAIT</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">状态，以及通过什么措施力求避免这种情况。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">不久前，我的Socket 
+Client程序遇到了一个非常尴尬的错误。它本来应该在一个socket长连接上持续不断地向服务器发送数据，如果socket连接断开，那么程序会自动不断地重试建立连接。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">有一天发现程序在不断尝试建立连接，但是总是失败。用netstat查看，这个程序竟然有上千个socket连接处于CLOSE_WAIT状态，以至于达到了上限，所以无法建立新的socket连接了。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">为什么会这样呢？</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">它们为什么会都处在CLOSE_WAIT状态呢？</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><STRONG>CLOSE_WAIT状态的生成原因：</STRONG></SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><STRONG><BR></STRONG>首先我们知道，如果我们的Client程序处于CLOSE_WAIT状态的话，说明套接字是被动关闭的！</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">因为如果是Server端主动断掉当前连接的话，那么双方关闭这个TCP连接共需要四个packet：</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Server ---&gt; FIN ---&gt; 
+Client</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Server &lt;--- ACK &lt;--- 
+Client</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp; 
+这时候Server端处于FIN_WAIT_2状态；而我们的程序处于CLOSE_WAIT状态。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Server &lt;--- FIN &lt;--- 
+Client</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">这时Client发送FIN给Server，Client就置为LAST_ACK状态。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Server ---&gt; ACK ---&gt; 
+Client</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">Server回应了ACK，那么Client的套接字才会真正置为CLOSED状态。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">我们的程序处于CLOSE_WAIT状态，而不是LAST_ACK状态，说明还没有发FIN给Server，那么可能是在关闭连接之前还有许多数据要发送或者其他事要做，导致没有发这个FIN 
+packet。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">原因知道了，那么为什么不发FIN包呢，难道会在关闭己方连接前有那么多事情要做吗？</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">elssann举例说，当对方调用closesocket的时候，我的程序正在调用recv中，这时候有可能对方发送的FIN包我没有收到，而是由TCP代回了一个ACK包，所以我这边套接字进入CLOSE_WAIT状态。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">所以他建议在这里判断recv函数的返回值是否已出错，是的话就主动closesocket，这样防止没有接收到FIN包。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">因为前面我们已经设置了recv超时时间为30秒，那么如果真的是超时了，这里收到的错误应该是WSAETIMEDOUT，这种情况下也可以主动关闭连接的。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">还有一个问题，为什么有数千个连接都处于这个状态呢？难道那段时间内，服务器端总是主动拆除我们的连接吗？</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">不管怎么样，我们必须防止类似情况再度发生！</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">首先，我们要保证原来的端口可以被重用，这可以通过设置SO_REUSEADDR套接字选项做到：<BR></SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">重用本地地址和端口<BR>以前我总是一个端口不行，就换一个新的使用，所以导致让数千个端口进入CLOSE_WAIT状态。如果下次还发生这种尴尬状况，我希望加一个限定，只是当前这个端口处于CLOSE_WAIT状态！</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">在调用</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">sockConnected = socket(AF_INET, 
+SOCK_STREAM, 0);</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">之后，我们要设置该套接字的选项来重用：</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">/// 允许重用本地地址和端口:</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">/// 
+这样的好处是，即使socket断了，调用前面的socket函数也不会占用另一个，而是始终就是一个端口</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">/// 
+这样防止socket始终连接不上，那么按照原来的做法，会不断地换端口。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">int nREUSEADDR = 
+1;</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">setsockopt(sockConnected,</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+SOL_SOCKET,</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+SO_REUSEADDR,</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (const 
+char*)&amp;nREUSEADDR,</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+sizeof(int));<BR></SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">教科书上是这么说的：这样，假如服务器关闭或者退出，造成本地地址和端口都处于TIME_WAIT状态，那么SO_REUSEADDR就显得非常有用。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">也许我们无法避免被冻结在CLOSE_WAIT状态永远不出现，但起码可以保证不会占用新的端口。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">其次，我们要设置SO_LINGER套接字选项：</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">从容关闭还是强行关闭？<BR>LINGER是“拖延”的意思。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">默认情况下(Win2k)，SO_DONTLINGER套接字选项的是1；SO_LINGER选项是，linger为{l_onoff：0，l_linger：0}。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">如果在发送数据的过程中(send()没有完成，还有数据没发送)而调用了closesocket()，以前我们一般采取的措施是“从容关闭”：</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">因为在退出服务或者每次重新建立socket之前，我都会先调用</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">/// 先将双向的通讯关闭</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp; shutdown(sockConnected, 
+SD_BOTH);</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp; /// 
+安全起见，每次建立Socket连接前，先把这个旧连接关闭</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">closesocket(sockConnected);</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"></SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">我们这次要这么做：</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">设置SO_LINGER为零（亦即linger结构中的l_onoff域设为非零，但l_linger为0），便不用担心closesocket调用进入“锁定”状态（等待完成），不论是否有排队数据未发送或未被确认。这种关闭方式称为“强行关闭”，因为套接字的虚电路立即被复位，尚未发出的所有数据都会丢失。在远端的recv()调用都会失败，并返回WSAECONNRESET错误。</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">在connect成功建立连接之后设置该选项：</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">linger m_sLinger;</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">m_sLinger.l_onoff = 1; // 
+(在closesocket()调用,但是还有数据没发送完毕的时候容许逗留)</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">m_sLinger.l_linger = 0; // 
+(容许逗留的时间为0秒)</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">setsockopt(sockConnected,</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+SOL_SOCKET,</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+SO_LINGER,</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (const 
+char*)&amp;m_sLinger,</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+sizeof(linger));</SPAN></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><SPAN 
+style="FONT-SIZE: 10.5pt; mso-bidi-: 12.0pt"><STRONG>总结：<BR></STRONG>也许我们避免不了CLOSE_WAIT状态冻结的再次出现，但我们会使影响降到最小，希望那个重用套接字选项能够使得下一次重新建立连接时可以把CLOSE_WAIT状态踢掉。</SPAN></SPAN></P></DIV></TD></TR></TBODY></TABLE><BR><!--EndFragment--></DIV>
+</DIV>
+</DIV>
+</DIV>
+</DIV>
+</CENTER>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

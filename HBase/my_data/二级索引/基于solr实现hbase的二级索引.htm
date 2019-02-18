@@ -1,0 +1,832 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>基于solr实现hbase的二级索引</title>
+  <meta name="GENERATOR" content="WinCHM">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+  </style>
+</head>
+<body>
+<div class="container-fluid"
+ style="margin: 0px auto; width: 980px; white-space: normal; word-spacing: 0px; text-transform: none; color: rgb(51, 51, 51); font-family: 'Helvetica Neue',Helvetica,Tahoma,Arial,STXihei,'Microsoft YaHei',微软雅黑,sans-serif; font-style: normal; font-variant: normal; font-weight: normal; font-size: 14px; line-height: 21px; font-size-adjust: none; font-stretch: normal; padding-left: 10px; min-height: 600px; letter-spacing: normal; padding-right: 10px; text-indent: 0px;">
+<div class="row-fluid" style="width: 980px; margin-top: 20px;">
+<div class="span8 contant"
+ style="padding: 15px 15px 50px; background: white none repeat scroll 0%; margin-bottom: 140px; width: 644px; -moz-background-clip: initial; -moz-background-origin: initial; -moz-background-inline-policy: initial; float: left; margin-left: 0px; min-height: 11.5em; display: block;">
+<h1
+ style="margin: 0px 0px 5px; font-size: 24px; font-family: inherit; font-weight: normal; line-height: 1.5em;">基
+于solr实现hbase的二级索引</h1>
+<div class="article_meta"
+ style="border-bottom: 1px dashed rgb(211, 211, 211); font-size: 14px; color: rgb(153, 153, 153); padding-bottom: 5px;"><span
+ class="source" style="display: block; margin-right: 15px;"></span>&nbsp;</div>
+<div id="nei" class="article_body"
+ style="padding: 20px 5px 40px; margin-bottom: 10px; font-size: 16px; min-height: 340px; line-height: 1.8em;">
+<div style="font-size: 16px; line-height: 1.8em;">
+<h2
+ style="margin: 0px 0px 0.5em; font-size: 20px; font-family: inherit; font-weight: normal; line-height: 22px; text-indent: 1em;"><span><strong
+ style="font-weight: bold; text-indent: 0px;">一、目的</strong></span></h2>
+<p
+ style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.8em; text-indent: 1em;">了
+解hbase的都知道，由于hbase基于行健有序存储，在查询时使用行健十分高效，然后想要实现关系型数据库那样可以随意组合的多条件查询、查询总记录
+数、分页等就比较麻烦了。想要实现这样的功能，我们可以采用两种方法：</p>
+<ol
+ style="margin: 0px 0px 0.75em 25px; padding: 0px; font-size: 16px; line-height: 1.8em;">
+  <li style="font-size: 16px; line-height: 1.8em;"><span>使用hbase提供的
+filter，</span> </li>
+  <li style="font-size: 16px; line-height: 1.8em;"><span>自己实现二级索引，通过二级索引
+查询多符合条件的行健，然后再查询hbase。</span></li>
+</ol>
+<p
+ style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.8em; text-indent: 1em;"><span>第
+一种方法不多说了，使用起来很方便，但是局限性也很大，hbase的filter是直接扫记录的，如果数据范围很大，会导致查询速度很慢。所以如果能先使
+用行健把记录缩小到一个较小范围，那么就比较适合，否则就不适用了。此外该方法不能解决获取总数的为。</span><span
+ class="Apple-converted-space">&nbsp;</span><br>
+<span>&nbsp; &nbsp;
+第二种是适用范围就比较广泛了，不过根据实现二级索引的方式解决的问题也不同。这里我们选择solr主要是因为solr可以很轻松实现各种查询（本来就是
+全文检索引擎）。</span><span class="Apple-converted-space">&nbsp;</span><br>
+</p>
+<h2
+ style="margin: 0px 0px 0.5em; font-size: 20px; font-family: inherit; font-weight: normal; line-height: 22px; text-indent: 1em;"><span><span><strong
+ style="font-weight: bold; text-indent: 0px;">二、实现方法</strong></span></span></h2>
+<p
+ style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.8em; text-indent: 1em;"><span>其
+实hbase结合solr实现方法还是比较简单的，重点在于一些实现细节上。将hbase记录写入solr的关键就在于hbase提供的
+Coprocessor，Coprocessor提供了两个实现：</span><span>endpoint和observer</span><span
+ class="Apple-converted-space">&nbsp;</span><span>，</span><span
+ class="Apple-converted-space">&nbsp;</span><span>endpoint相当于关系型数据库的存储过
+程，而observer则相当于</span><span class="Apple-converted-space">&nbsp;</span><span>触
+发器。说到这相信大家应该就明白了，我们要利用的就是observer。observer允许我们在记录put前后做一些处理，而我们就是通过
+postPut将记录同步写入solr（关于Coprocessor具体内容请自行查资料）。</span><span
+ class="Apple-converted-space">&nbsp;</span><br>
+</p>
+<p
+ style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.8em; text-indent: 1em;"><span>而
+写入solr这块就比较简单了，如果是单机就使用ConcurrentUpdateSolrServer，如果是集群就是用
+CloudSolrServer。不过这里需要注意的是由于CloudSolrServer不像ConcurrentUpdateSolrServer那
+样内置缓存，默认情况下hbase没写一条数据就会向solr提交一次，这样速度会非常慢（很可能hbase写完很久solr这边还在提交），因此要自己
+实现一个缓存池，根据hbase的写入速度动态调整，并批量向solr提交。</span><span
+ class="Apple-converted-space">&nbsp;</span><br>
+</p>
+<h2
+ style="margin: 0px 0px 0.5em; font-size: 20px; font-family: inherit; font-weight: normal; line-height: 22px; text-indent: 1em;"><span><span><strong
+ style="font-weight: bold; text-indent: 0px;">三、实现代码</strong></span></span></h2>
+<p
+ style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.8em; text-indent: 1em;"><span>实
+现方法弄清处置后代码就很容易写了。首先看下Coprocessor的代码：</span><span
+ class="Apple-converted-space">&nbsp;</span><br>
+</p>
+<pre class="prettyprint java"
+ style="border: 1px solid ; margin: 0px 0px 1.5em; padding: 0.3em; font-size: 14px; font-family: Monaco,Menlo,Consolas,'Courier New',monospace; color: rgb(51, 51, 51); display: block; line-height: 1.5em; background-color: rgb(246, 246, 246);"><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">package</span></span><span
+ style="color: rgb(0, 0, 0);"> com.uboxol.hbase.coprocessor;<br><br></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">import</span></span><span
+ style="color: rgb(0, 0, 0);"> com.uboxol.model.VmMoney;<br></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">import</span></span><span
+ style="color: rgb(0, 0, 0);"> com.uboxol.solr.SolrWriter;<br></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">import</span></span><span
+ style="color: rgb(0, 0, 0);"> java.io.IOException;<br><br></span><span
+ style="color: rgb(0, 128, 0);"><span class="javadoc"
+ style="color: rgb(153, 153, 136); font-style: italic;">/**</span></span><span
+ class="javadoc" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">
+ * Created with IntelliJ IDEA.
+ * User: guojing
+ * Date: 14-10-24
+ * Time: 上午11:08
+ * To change this template use File | Settings | File Templates.
+ </span><span
+ style="color: rgb(0, 128, 0);">*/</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="class"
+ style="font-weight: bold; color: rgb(68, 85, 136);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">class</span></span></span><span
+ class="class" style="font-weight: bold; color: rgb(68, 85, 136);"> <span
+ class="title" style="font-weight: bold; color: rgb(68, 85, 136);">SolrIndexCoprocessorObserver</span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">extends</span></span><span
+ style="color: rgb(0, 0, 0);"> <span class="title"
+ style="font-weight: bold; color: rgb(68, 85, 136);">BaseRegionObserver</span> {</span></span><span
+ style="color: rgb(0, 0, 0);">
+    </span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">private</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> Logger log = Logger.getLogger(SolrIndexCoprocessorObserver.<span
+ style="color: rgb(0, 0, 255);">class</span><span
+ style="color: rgb(0, 0, 0);">);<br><br>    <span class="annotation">@Override</span>
+    </span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">void</span></span> postPut(ObserverContext&lt;RegionCoprocessorEnvironment&gt; e, Put put, WALEdit edit, Durability durability) <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">throws</span></span><span
+ style="color: rgb(0, 0, 0);"> IOException {<br>        String rowKey </span>=<span
+ style="color: rgb(0, 0, 0);"> Bytes.toString(put.getRow());<br>        </span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">try</span></span><span
+ style="color: rgb(0, 0, 0);"> {<br><span class="indent">  </span>Cell cellInnerCode </span>= put.get(Bytes.toBytes(<span
+ class="string" style="color: rgb(221, 17, 68);">"data"</span>), Bytes.toBytes(<span
+ class="string" style="color: rgb(221, 17, 68);">"inner_code"</span>)).get(<span
+ class="number" style="color: rgb(0, 153, 153);">0</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span>String innerCode </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> String(CellUtil.cloneValue(cellInnerCode));<br><br><span
+ class="indent">  </span>Cell cellNodeId </span>= put.get(Bytes.toBytes(<span
+ class="string" style="color: rgb(221, 17, 68);">"data"</span>), Bytes.toBytes(<span
+ class="string" style="color: rgb(221, 17, 68);">"node_id"</span>)).get(<span
+ class="number" style="color: rgb(0, 153, 153);">0</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span>String nodeId </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> String(CellUtil.cloneValue(cellNodeId));<br><br><span
+ class="indent">  </span>Cell cellPayType </span>= put.get(Bytes.toBytes(<span
+ class="string" style="color: rgb(221, 17, 68);">"data"</span>), Bytes.toBytes(<span
+ class="string" style="color: rgb(221, 17, 68);">"pay_type"</span>)).get(<span
+ class="number" style="color: rgb(0, 153, 153);">0</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span>String payType </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> String(CellUtil.cloneValue(cellPayType));<br><br><span
+ class="indent">  </span>Cell cellCts </span>= put.get(Bytes.toBytes(<span
+ class="string" style="color: rgb(221, 17, 68);">"data"</span>), Bytes.toBytes(<span
+ class="string" style="color: rgb(221, 17, 68);">"cts"</span>)).get(<span
+ class="number" style="color: rgb(0, 153, 153);">0</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span>String cts </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> String(CellUtil.cloneValue(cellCts));<br><br><span
+ class="indent">  </span>Cell cellTraSeq </span>= put.get(Bytes.toBytes(<span
+ class="string" style="color: rgb(221, 17, 68);">"data"</span>), Bytes.toBytes(<span
+ class="string" style="color: rgb(221, 17, 68);">"tra_seq"</span>)).get(<span
+ class="number" style="color: rgb(0, 153, 153);">0</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span>String traSeq </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> String(CellUtil.cloneValue(cellTraSeq));<br><br><span
+ class="indent">  </span>cts</span>=cts.replace(<span class="string"
+ style="color: rgb(221, 17, 68);">"-"</span>,<span class="string"
+ style="color: rgb(221, 17, 68);">""</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span>cts</span>=cts.replace(<span
+ class="string" style="color: rgb(221, 17, 68);">" "</span>,<span
+ class="string" style="color: rgb(221, 17, 68);">""</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span>cts</span>=cts.replace(<span
+ class="string" style="color: rgb(221, 17, 68);">":"</span>,<span
+ class="string" style="color: rgb(221, 17, 68);">""</span><span
+ style="color: rgb(0, 0, 0);">);<br><br><span class="indent">  </span>VmMoney vm </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> VmMoney();<br><span class="indent">  </span>vm.setCts(cts);<br><span
+ class="indent">  </span>vm.setId(</span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> Integer(id));<br><span class="indent">  </span>vm.setInnerCode(innerCode);<br><span
+ class="indent">  </span>vm.setNodeId(</span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> Integer(nodeId));<br><span class="indent">  </span>vm.setPayType(</span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> Integer(payType));<br><span
+ class="indent">  </span>vm.setRowKey(rowKey);<br><span class="indent">  </span>vm.setTraSeq(traSeq);<br><br><span
+ class="indent">  </span>SolrWriter so </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> SolrWriter();<br><span class="indent">  </span>so.addDocToCache(vm);<br>        } </span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">catch</span></span><span
+ style="color: rgb(0, 0, 0);"> (Exception ex){<br><span class="indent">  </span>log.info(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"write "</span>+rowKey+<span
+ class="string" style="color: rgb(221, 17, 68);">" to solr fail:"</span>+<span
+ style="color: rgb(0, 0, 0);">ex.getMessage());<br><span class="indent">  </span>ex.printStackTrace();<br>        }<br>    }<br><br>    <span
+ class="annotation">@Override</span>
+    </span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">void</span></span> postDelete(ObserverContext&lt;RegionCoprocessorEnvironment&gt; e, Delete delete, WALEdit edit, Durability durability) <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">throws</span></span><span
+ style="color: rgb(0, 0, 0);"> IOException {<br>        String rowKey </span>=<span
+ style="color: rgb(0, 0, 0);"> Bytes.toString(delete.getRow());<br>        </span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">try</span></span><span
+ style="color: rgb(0, 0, 0);"> {<br><span class="indent">  </span>SolrWriter so </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> SolrWriter();<br><span class="indent">  </span>so.deleteDoc(rowKey);<br>        } </span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">catch</span></span><span
+ style="color: rgb(0, 0, 0);"> (Exception ex){<br><span class="indent">  </span>log.info(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"delete "</span>+rowKey+<span
+ class="string" style="color: rgb(221, 17, 68);">" from solr fail:"</span>+<span
+ style="color: rgb(0, 0, 0);">ex.getMessage());<br><span class="indent">  </span>ex.printStackTrace();<br>        }<br>    }<br>}</span></pre>
+<p
+ style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.8em; text-indent: 1em;">里
+边代码很简单，就是在hbase记录写入后和删除后调用SolrWriter进行处理。下边看下SolrWriter的实现：<span
+ class="Apple-converted-space">&nbsp;</span><br>
+</p>
+<pre class="prettyprint java"
+ style="border: 1px solid ; margin: 0px 0px 1.5em; padding: 0.3em; font-size: 14px; font-family: Monaco,Menlo,Consolas,'Courier New',monospace; color: rgb(51, 51, 51); display: block; line-height: 1.5em; background-color: rgb(246, 246, 246);"><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">package</span></span><span
+ style="color: rgb(0, 0, 0);"> com.uboxol.solr;<br><br></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">import</span></span><span
+ style="color: rgb(0, 0, 0);"> com.uboxol.model.VmMoney;<br></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">import</span></span><span
+ style="color: rgb(0, 0, 0);"> java.io.IOException;<br></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">import</span></span> java.util.*<span
+ style="color: rgb(0, 0, 0);">;<br></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">import</span></span><span
+ style="color: rgb(0, 0, 0);"> java.util.concurrent.locks.Lock;<br></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">import</span></span><span
+ style="color: rgb(0, 0, 0);"> java.util.concurrent.locks.ReentrantLock;<br><br></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="class"
+ style="font-weight: bold; color: rgb(68, 85, 136);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">class</span></span></span><span
+ class="class" style="font-weight: bold; color: rgb(68, 85, 136);"><span
+ style="color: rgb(0, 0, 0);"> <span class="title"
+ style="font-weight: bold; color: rgb(68, 85, 136);">SolrWriter</span> {</span></span><span
+ style="color: rgb(0, 0, 0);">
+<span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">private</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> Logger log = Logger.getLogger(SolrWriter.<span
+ style="color: rgb(0, 0, 255);">class</span><span
+ style="color: rgb(0, 0, 0);">);<br><br><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> String urlSolr = <span
+ class="string" style="color: rgb(221, 17, 68);">""</span>;	 <span
+ style="color: rgb(0, 128, 0);"><span class="comment"
+ style="color: rgb(153, 153, 136); font-style: italic;">//</span></span><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">solr地址</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">private</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> String defaultCollection = <span
+ class="string" style="color: rgb(221, 17, 68);">""</span>;  <span
+ style="color: rgb(0, 128, 0);"><span class="comment"
+ style="color: rgb(153, 153, 136); font-style: italic;">//</span></span><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">默认collection</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">private</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">int</span></span> zkClientTimeOut =<span
+ class="number" style="color: rgb(0, 153, 153);">0</span> ;<span
+ style="color: rgb(0, 128, 0);"><span class="comment"
+ style="color: rgb(153, 153, 136); font-style: italic;">//</span></span><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">zk客户端请求超时间</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">private</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">int</span></span> zkConnectTimeOut =<span
+ class="number" style="color: rgb(0, 153, 153);">0</span>;<span
+ style="color: rgb(0, 128, 0);"><span class="comment"
+ style="color: rgb(153, 153, 136); font-style: italic;">//</span></span><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">zk客户端连接超时间</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">private</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> CloudSolrServer solrserver = <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">null</span></span><span
+ style="color: rgb(0, 0, 0);">;<br><br><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">private</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">int</span></span> maxCacheCount = <span
+ class="number" style="color: rgb(0, 153, 153);">0</span>;   <span
+ style="color: rgb(0, 128, 0);"><span class="comment"
+ style="color: rgb(153, 153, 136); font-style: italic;">//</span></span><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">缓存大小，当达到该上限时提交</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">private</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> Vector&lt;VmMoney&gt; cache = <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">null</span></span>;   <span
+ style="color: rgb(0, 128, 0);"><span class="comment"
+ style="color: rgb(153, 153, 136); font-style: italic;">//</span></span><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">缓存</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span>  <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> Lock commitLock =<span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span> ReentrantLock();  <span
+ style="color: rgb(0, 128, 0);"><span class="comment"
+ style="color: rgb(153, 153, 136); font-style: italic;">//</span></span><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">在添加缓存或进行提交时加锁</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">private</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">int</span></span> maxCommitTime = <span
+ class="number" style="color: rgb(0, 153, 153);">60</span>; <span
+ style="color: rgb(0, 128, 0);"><span class="comment"
+ style="color: rgb(153, 153, 136); font-style: italic;">//</span></span><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">最大提交时间，s</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span><span
+ style="color: rgb(0, 0, 0);"> {<br><span class="indent">  </span><span
+ class="indent">  </span>Configuration conf </span>=<span
+ style="color: rgb(0, 0, 0);"> HBaseConfiguration.create();<br><span
+ class="indent">  </span><span class="indent">  </span>urlSolr </span>= conf.get(<span
+ class="string" style="color: rgb(221, 17, 68);">"hbase.solr.zklist"</span>, <span
+ class="string" style="color: rgb(221, 17, 68);">"192.168.12.1:2181,192.168.12.2:2181,192.168.12.3:2181"</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span><span
+ class="indent">  </span>defaultCollection </span>= conf.get(<span
+ class="string" style="color: rgb(221, 17, 68);">"hbase.solr.collection"</span>,<span
+ class="string" style="color: rgb(221, 17, 68);">"collection1"</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span><span
+ class="indent">  </span>zkClientTimeOut </span>= conf.getInt(<span
+ class="string" style="color: rgb(221, 17, 68);">"hbase.solr.zkClientTimeOut"</span>, <span
+ class="number" style="color: rgb(0, 153, 153);">10000</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span><span
+ class="indent">  </span>zkConnectTimeOut </span>= conf.getInt(<span
+ class="string" style="color: rgb(221, 17, 68);">"hbase.solr.zkConnectTimeOut"</span>, <span
+ class="number" style="color: rgb(0, 153, 153);">10000</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span><span
+ class="indent">  </span>maxCacheCount </span>= conf.getInt(<span
+ class="string" style="color: rgb(221, 17, 68);">"hbase.solr.maxCacheCount"</span>, <span
+ class="number" style="color: rgb(0, 153, 153);">10000</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span><span
+ class="indent">  </span>maxCommitTime </span>=  conf.getInt(<span
+ class="string" style="color: rgb(221, 17, 68);">"hbase.solr.maxCommitTime"</span>, <span
+ class="number" style="color: rgb(0, 153, 153);">60</span>*<span
+ class="number" style="color: rgb(0, 153, 153);">5</span><span
+ style="color: rgb(0, 0, 0);">);<br><br><span class="indent">  </span><span
+ class="indent">  </span>log.info(</span><span class="string"
+ style="color: rgb(221, 17, 68);">"solr init param"</span>+urlSolr+<span
+ class="string" style="color: rgb(221, 17, 68);">"  "</span>+defaultCollection+<span
+ class="string" style="color: rgb(221, 17, 68);">"  "</span>+zkClientTimeOut+<span
+ class="string" style="color: rgb(221, 17, 68);">"  "</span>+zkConnectTimeOut+<span
+ class="string" style="color: rgb(221, 17, 68);">"  "</span>+maxCacheCount+<span
+ class="string" style="color: rgb(221, 17, 68);">"  "</span>+<span
+ style="color: rgb(0, 0, 0);">maxCommitTime);<br><span class="indent">  </span><span
+ class="indent">  </span></span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">try</span></span><span
+ style="color: rgb(0, 0, 0);"> {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>cache</span>=<span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span> Vector&lt;VmMoney&gt;<span
+ style="color: rgb(0, 0, 0);">(maxCacheCount);<br><br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>solrserver </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> CloudSolrServer(urlSolr);<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>solrserver.setDefaultCollection(defaultCollection);<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>solrserver.setZkClientTimeout(zkClientTimeOut);<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>solrserver.setZkConnectTimeout(zkConnectTimeOut);<br><br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span></span><span style="color: rgb(0, 128, 0);"><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;">//</span></span><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">启动定时任务，第一次延迟10执行,之后每隔指定时间执行一次</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>Timer timer=<span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> Timer();<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>timer.schedule(</span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span> CommitTimer(),<span
+ class="number" style="color: rgb(0, 153, 153);">10</span>*<span
+ class="number" style="color: rgb(0, 153, 153);">1000</span>,maxCommitTime*<span
+ class="number" style="color: rgb(0, 153, 153);">1000</span><span
+ style="color: rgb(0, 0, 0);">);<br><span class="indent">  </span><span
+ class="indent">  </span>} </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">catch</span></span><span
+ style="color: rgb(0, 0, 0);"> (Exception ex){<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>ex.printStackTrace();<br><span
+ class="indent">  </span><span class="indent">  </span>}<br><br><span
+ class="indent">  </span>}<br><br><span class="indent">  </span></span><span
+ style="color: rgb(0, 128, 0);"><span class="javadoc"
+ style="color: rgb(153, 153, 136); font-style: italic;">/**</span></span><span
+ class="javadoc" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">
+<span class="indent">  </span> * 批量提交<br><span class="indent">  </span> </span><span
+ style="color: rgb(0, 128, 0);">*/</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">void</span></span> inputDoc(List&lt;VmMoney&gt; vmMoneyList) <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">throws</span></span><span
+ style="color: rgb(0, 0, 0);"> IOException, SolrServerException {<br><span
+ class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">if</span></span> (vmMoneyList == <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">null</span></span> || vmMoneyList.size() == <span
+ class="number" style="color: rgb(0, 153, 153);">0</span><span
+ style="color: rgb(0, 0, 0);">) {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">return</span></span><span
+ style="color: rgb(0, 0, 0);">;<br><span class="indent">  </span><span
+ class="indent">  </span>}<br><span class="indent">  </span><span
+ class="indent">  </span>List</span>&lt;SolrInputDocument&gt; doclist= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span> ArrayList&lt;SolrInputDocument&gt;<span
+ style="color: rgb(0, 0, 0);">(vmMoneyList.size());<br><span
+ class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">for</span></span><span
+ style="color: rgb(0, 0, 0);"> (VmMoney vm : vmMoneyList) {<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>SolrInputDocument doc </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> SolrInputDocument();<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>doc.addField(</span><span class="string"
+ style="color: rgb(221, 17, 68);">"id"</span><span
+ style="color: rgb(0, 0, 0);">, vm.getId());<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"node_id"</span><span
+ style="color: rgb(0, 0, 0);">, vm.getNodeId());<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"inner_code"</span><span
+ style="color: rgb(0, 0, 0);">, vm.getInnerCode());<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>doc.addField(</span><span class="string"
+ style="color: rgb(221, 17, 68);">"pay_type"</span><span
+ style="color: rgb(0, 0, 0);">, vm.getPayType());<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>doc.addField(</span><span class="string"
+ style="color: rgb(221, 17, 68);">"rowkey"</span><span
+ style="color: rgb(0, 0, 0);">, vm.getRowKey());<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"cts"</span><span
+ style="color: rgb(0, 0, 0);">, vm.getCts());<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"tra_seq"</span><span
+ style="color: rgb(0, 0, 0);">, vm.getTraSeq());<br><br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>doclist.add(doc);<br><span class="indent">  </span><span
+ class="indent">  </span>}<br><span class="indent">  </span><span
+ class="indent">  </span>solrserver.add(doclist);<br><span
+ class="indent">  </span>}<br><br><span class="indent">  </span></span><span
+ style="color: rgb(0, 128, 0);"><span class="javadoc"
+ style="color: rgb(153, 153, 136); font-style: italic;">/**</span></span><span
+ class="javadoc" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">
+<span class="indent">  </span> * 单条提交<br><span class="indent">  </span> </span><span
+ style="color: rgb(0, 128, 0);">*/</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">void</span></span> inputDoc(VmMoney vmMoney) <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">throws</span></span><span
+ style="color: rgb(0, 0, 0);"> IOException, SolrServerException {<br><span
+ class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">if</span></span> (vmMoney == <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">null</span></span><span
+ style="color: rgb(0, 0, 0);">) {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">return</span></span><span
+ style="color: rgb(0, 0, 0);">;<br><span class="indent">  </span><span
+ class="indent">  </span>}<br><span class="indent">  </span><span
+ class="indent">  </span>SolrInputDocument doc </span>= <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> SolrInputDocument();<br><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"id"</span><span
+ style="color: rgb(0, 0, 0);">, vmMoney.getId());<br><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"node_id"</span><span
+ style="color: rgb(0, 0, 0);">, vmMoney.getNodeId());<br><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"inner_code"</span><span
+ style="color: rgb(0, 0, 0);">, vmMoney.getInnerCode());<br><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"pay_type"</span><span
+ style="color: rgb(0, 0, 0);">, vmMoney.getPayType());<br><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"rowkey"</span><span
+ style="color: rgb(0, 0, 0);">, vmMoney.getRowKey());<br><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"cts"</span><span
+ style="color: rgb(0, 0, 0);">, vmMoney.getCts());<br><span
+ class="indent">  </span><span class="indent">  </span>doc.addField(</span><span
+ class="string" style="color: rgb(221, 17, 68);">"tra_seq"</span><span
+ style="color: rgb(0, 0, 0);">, vmMoney.getTraSeq());<br><br><span
+ class="indent">  </span><span class="indent">  </span>solrserver.add(doc);<br><br><span
+ class="indent">  </span>}<br><br><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">void</span></span> deleteDoc(List&lt;String&gt; rowkeys) <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">throws</span></span><span
+ style="color: rgb(0, 0, 0);"> IOException, SolrServerException {<br><span
+ class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">if</span></span> (rowkeys == <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">null</span></span> || rowkeys.size() == <span
+ class="number" style="color: rgb(0, 153, 153);">0</span><span
+ style="color: rgb(0, 0, 0);">) {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">return</span></span><span
+ style="color: rgb(0, 0, 0);">;<br><span class="indent">  </span><span
+ class="indent">  </span>}<br><span class="indent">  </span><span
+ class="indent">  </span>solrserver.deleteById(rowkeys);<br><span
+ class="indent">  </span>}<br><br><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">void</span></span> deleteDoc(String rowkey) <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">throws</span></span><span
+ style="color: rgb(0, 0, 0);"> IOException, SolrServerException {<br><br><span
+ class="indent">  </span><span class="indent">  </span>solrserver.deleteById(rowkey);<br><span
+ class="indent">  </span>}<br><br><span class="indent">  </span></span><span
+ style="color: rgb(0, 128, 0);"><span class="javadoc"
+ style="color: rgb(153, 153, 136); font-style: italic;">/**</span></span><span
+ class="javadoc" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">
+<span class="indent">  </span> * 添加记录到cache，如果cache达到maxCacheCount，则提交<br><span
+ class="indent">  </span> </span><span style="color: rgb(0, 128, 0);">*/</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">void</span></span><span
+ style="color: rgb(0, 0, 0);"> addDocToCache(VmMoney vmMoney) {<br><span
+ class="indent">  </span><span class="indent">  </span>commitLock.lock();<br><span
+ class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">try</span></span><span
+ style="color: rgb(0, 0, 0);"> {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>cache.add(vmMoney);<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>log.info(</span><span class="string"
+ style="color: rgb(221, 17, 68);">"cache commit maxCacheCount:"</span>+<span
+ style="color: rgb(0, 0, 0);">maxCacheCount);<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">if</span></span> (cache.size() &gt;=<span
+ style="color: rgb(0, 0, 0);"> maxCacheCount) {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>log.info(</span><span class="string"
+ style="color: rgb(221, 17, 68);">"cache commit count:"</span>+<span
+ style="color: rgb(0, 0, 0);">cache.size());<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span></span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> SolrWriter().inputDoc(cache);<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>cache.clear();<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>}<br><span class="indent">  </span><span
+ class="indent">  </span>} </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">catch</span></span><span
+ style="color: rgb(0, 0, 0);"> (Exception ex) {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>log.info(ex.getMessage());<br><span
+ class="indent">  </span><span class="indent">  </span>} </span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">finally</span></span><span
+ style="color: rgb(0, 0, 0);"> {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>commitLock.unlock();<br><span
+ class="indent">  </span><span class="indent">  </span>}<br><span
+ class="indent">  </span>}<br><br><span class="indent">  </span></span><span
+ style="color: rgb(0, 128, 0);"><span class="javadoc"
+ style="color: rgb(153, 153, 136); font-style: italic;">/**</span></span><span
+ class="javadoc" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">
+<span class="indent">  </span> * 提交定时器<br><span class="indent">  </span> </span><span
+ style="color: rgb(0, 128, 0);">*/</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">static</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="class"
+ style="font-weight: bold; color: rgb(68, 85, 136);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">class</span></span></span><span
+ class="class" style="font-weight: bold; color: rgb(68, 85, 136);"> <span
+ class="title" style="font-weight: bold; color: rgb(68, 85, 136);">CommitTimer</span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">extends</span></span><span
+ style="color: rgb(0, 0, 0);"> <span class="title"
+ style="font-weight: bold; color: rgb(68, 85, 136);">TimerTask</span> {</span></span><span
+ style="color: rgb(0, 0, 0);">
+<span class="indent">  </span><span class="indent">  </span><span
+ class="annotation">@Override</span>
+<span class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">public</span></span> <span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">void</span></span><span
+ style="color: rgb(0, 0, 0);"> run() {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>commitLock.lock();<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span></span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">try</span></span><span
+ style="color: rgb(0, 0, 0);"> {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span></span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">if</span></span> (cache.size() &gt; <span
+ class="number" style="color: rgb(0, 153, 153);">0</span>) { <span
+ style="color: rgb(0, 128, 0);"><span class="comment"
+ style="color: rgb(153, 153, 136); font-style: italic;">//</span></span><span
+ class="comment" style="color: rgb(153, 153, 136); font-style: italic;"><span
+ style="color: rgb(0, 128, 0);">大于0则提交</span></span><span
+ style="color: rgb(0, 128, 0);"></span>
+<span class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>log.info(<span class="string"
+ style="color: rgb(221, 17, 68);">"timer commit count:"</span>+<span
+ style="color: rgb(0, 0, 0);">cache.size());<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span></span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">new</span></span><span
+ style="color: rgb(0, 0, 0);"> SolrWriter().inputDoc(cache);<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>cache.clear();<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>}<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>} </span><span
+ style="color: rgb(0, 0, 255);"><span class="keyword"
+ style="font-weight: bold; color: rgb(51, 51, 51);">catch</span></span><span
+ style="color: rgb(0, 0, 0);"> (Exception ex) {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>log.info(ex.getMessage());<br><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>} </span><span style="color: rgb(0, 0, 255);"><span
+ class="keyword" style="font-weight: bold; color: rgb(51, 51, 51);">finally</span></span><span
+ style="color: rgb(0, 0, 0);"> {<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span><span
+ class="indent">  </span>commitLock.unlock();<br><span class="indent">  </span><span
+ class="indent">  </span><span class="indent">  </span>}<br><span
+ class="indent">  </span><span class="indent">  </span>}<br><span
+ class="indent">  </span>}<br>}</span></pre>
+<p
+ style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.8em; text-indent: 1em;"><span>SolrWriter
+的重点就在于addDocToCache方法和定时器CommitTimer，</span><span>addDocToCache</span><span
+ class="Apple-converted-space">&nbsp;</span><span>会在hbase每次插入数据时将记录插入缓存，
+并且判断是否达到上限，如果达到则将缓存内所用数据提交到solr，此外</span><span
+ class="Apple-converted-space">&nbsp;</span><span><span>CommitTimer
+则会每隔一段时间提交一次，以保证缓存内所有数据最终写入solr。</span><span
+ class="Apple-converted-space">&nbsp;</span><br>
+<span>&nbsp; &nbsp; 其他一些辅助代码就不贴了，可自行到github查看：</span><span
+ class="Apple-converted-space">&nbsp;</span><a
+ style="border-bottom: 1px dashed rgb(148, 148, 148); text-decoration: none; font-weight: bold; color: rgb(148, 148, 148); font-style: italic;"
+ href="https://github.com/NotBadPad/hbase-solr-coprocessor"
+ rel="nofollow,noindex" target="_blank"><span>hbase-solr-coprocessor</span></a><span>&nbsp;
+（代码仅作参考，由于业务不同不能直接运行）</span><span class="Apple-converted-space">&nbsp;</span><br>
+</span></p>
+<h2
+ style="margin: 0px 0px 0.5em; font-size: 20px; font-family: inherit; font-weight: normal; line-height: 22px; text-indent: 1em;"><span><span><span><span><strong
+ style="font-weight: bold; text-indent: 0px;">四、部署</strong></span></span></span></span></h2>
+<p
+ style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.8em; text-indent: 1em;"><span>这
+里重点说下hbase的</span><span class="Apple-converted-space">&nbsp;</span><span><span>Coprocessor
+部署的一些问题。部署步骤如下：</span><span class="Apple-converted-space">&nbsp;</span><br>
+</span></p>
+<ul
+ style="margin: 0px 0px 0.75em 25px; padding: 0px; list-style-type: none; font-size: 16px; line-height: 1.8em;">
+  <li
+ style="list-style-type: disc; font-size: 16px; line-height: 1.8em;"><span><span>将</span><span
+ class="Apple-converted-space">&nbsp;</span><span>Coprocessor代码打成jar包，拷贝
+到所有hbase的region server上，注意jdk一定要1.6，高版本可能会导致无法加载</span></span> </li>
+  <li
+ style="list-style-type: disc; font-size: 16px; line-height: 1.8em;"><span>将hbase
+的</span><span class="Apple-converted-space">&nbsp;</span><span>hbase.coprocessor.abortonerror
+设置成true，待确定</span><span class="Apple-converted-space">&nbsp;</span><span>Coprocessor</span><span
+ class="Apple-converted-space">&nbsp;</span><span>运行正常后在改为false。此步骤非必要，但
+是如果</span><span class="Apple-converted-space">&nbsp;</span><span><span>Coprocessor
+有问题会导致所有region无法启动</span></span> </li>
+  <li
+ style="list-style-type: disc; font-size: 16px; line-height: 1.8em;"><span><span>由</span><span
+ class="Apple-converted-space">&nbsp;</span><span>于我们实现的</span></span><span><span>
+    <p
+ style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.8em; text-indent: 1em;">Coprocessor
+是region级的，所以不需要启动，直接通过hbase shell即可加载：</p>
+    </span></span>
+    <pre class="prettyprint php"
+ style="border: 1px solid ; margin: 0px 0px 1.5em; padding: 0.3em; font-size: 14px; font-family: Monaco,Menlo,Consolas,'Courier New',monospace; color: rgb(51, 51, 51); display: block; line-height: 1.5em; background-color: rgb(246, 246, 246);">disable <span
+ style="color: rgb(128, 0, 0);"><span class="string"
+ style="color: rgb(221, 17, 68);">'</span></span><span class="string"
+ style="color: rgb(221, 17, 68);"><span style="color: rgb(128, 0, 0);">tablename</span><span
+ style="color: rgb(128, 0, 0);">'</span></span><span
+ style="color: rgb(128, 0, 0);"></span><span
+ style="color: rgb(0, 0, 0);">
+
+alter </span><span
+ style="color: rgb(128, 0, 0);"><span class="string"
+ style="color: rgb(221, 17, 68);">'</span></span><span class="string"
+ style="color: rgb(221, 17, 68);"><span style="color: rgb(128, 0, 0);">tablename</span><span
+ style="color: rgb(128, 0, 0);">'</span></span><span
+ style="color: rgb(128, 0, 0);"></span>,METHOD =&gt; <span
+ style="color: rgb(128, 0, 0);"><span class="string"
+ style="color: rgb(221, 17, 68);">'</span></span><span class="string"
+ style="color: rgb(221, 17, 68);"><span style="color: rgb(128, 0, 0);">table_att</span><span
+ style="color: rgb(128, 0, 0);">'</span></span><span
+ style="color: rgb(128, 0, 0);"></span>,<span
+ style="color: rgb(128, 0, 0);"><span class="string"
+ style="color: rgb(221, 17, 68);">'</span></span><span class="string"
+ style="color: rgb(221, 17, 68);"><span style="color: rgb(128, 0, 0);">coprocessor</span><span
+ style="color: rgb(128, 0, 0);">'</span></span><span
+ style="color: rgb(128, 0, 0);"></span>=&gt;<span
+ style="color: rgb(128, 0, 0);"><span class="string"
+ style="color: rgb(221, 17, 68);">'</span></span><span class="string"
+ style="color: rgb(221, 17, 68);"><span style="color: rgb(128, 0, 0);">jar包路径，本地使用file:///开头，hdfs上的则用hdfs:///开头|1001|参数，多个逗号隔开</span><span
+ style="color: rgb(128, 0, 0);">'</span></span><span
+ style="color: rgb(128, 0, 0);"></span><span
+ style="color: rgb(0, 0, 0);">  <br><br>enable </span><span
+ style="color: rgb(128, 0, 0);"><span class="string"
+ style="color: rgb(221, 17, 68);">'</span></span><span class="string"
+ style="color: rgb(221, 17, 68);"><span style="color: rgb(128, 0, 0);">tablename</span><span
+ style="color: rgb(128, 0, 0);">'</span></span><span
+ style="color: rgb(128, 0, 0);"></span></pre>
+  </li>
+</ul>
+<h2
+ style="margin: 0px 0px 0.5em; font-size: 20px; font-family: inherit; font-weight: normal; line-height: 22px; text-indent: 1em;"><span><strong
+ style="font-weight: bold; text-indent: 0px;"><span>五、总结</span></strong></span></h2>
+<p
+ style="margin: 0px 0px 0.75em; font-size: 16px; line-height: 1.8em; text-indent: 1em;">这
+次hbase+solr的部署前后花了不少时间，其实理论方面都很简单，让人感觉轻而易举，但是实际实现的过程中就会遇到不少问题，就比如写入缓存之类
+的，如果不去测试，就很容易被忽略。</p>
+</div>
+</div>
+<div class="article_social" style="margin-bottom: 10px;"><br>
+<div class="share3"
+ style="margin: 0px auto 70px; padding-left: 0px; clear: both; padding-right: 20px;"></div>
+</div>
+<br>
+<div id="kan_articles" style="margin-bottom: 10px; padding-left: 5px;">
+<div class="article-part-title"
+ style="border-bottom: 1px solid rgb(227, 227, 227); font-size: 18px; font-weight: bold; color: rgb(0, 0, 0); padding-bottom: 5px; padding-left: 5px; margin-left: 6px; margin-right: 6px;">&nbsp;</div>
+</div>
+</div>
+</div>
+<div></div>
+</div>
+</body>
+</html>

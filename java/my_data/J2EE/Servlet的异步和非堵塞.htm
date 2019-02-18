@@ -1,0 +1,219 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>学习Servlet异步和非堵塞I/O</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H3 id=h3_0 
+style='FONT-SIZE: 18px; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 500; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent'><SPAN 
+style='FONT-SIZE: 28px; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal'>学习Servlet异步和非堵塞I/O</SPAN></H3>
+<H3 
+style='FONT-SIZE: 18px; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 500; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent'>Asynchronous异步</H3>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">　　<SPAN 
+style="HEIGHT: auto; WIDTH: auto; FLOAT: none; -webkit-tap-highlight-color: transparent"><A 
+style='TEXT-DECORATION: none; BORDER-TOP: medium none; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(68,102,187); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; BORDER-LEFT: medium none; OUTLINE-COLOR: invert; -webkit-tap-highlight-color: transparent; transition: color 0.3s' 
+href="http://cpro.baidu.com/cpro/ui/uijs.php?c=news&amp;cf=1001&amp;ch=0&amp;di=128&amp;fv=13&amp;jk=3c7c124a12d6f305&amp;k=%B7%FE%CE%F1%C6%F7&amp;k0=%B7%FE%CE%F1%C6%F7&amp;kdi0=0&amp;luki=4&amp;n=10&amp;p=baidu&amp;q=banq_cpr&amp;rb=0&amp;rs=1&amp;seller_id=1&amp;sid=5f3d6124a127c3c&amp;ssp2=1&amp;stid=0&amp;t=tpclicked3_hc&amp;tu=u1683405&amp;u=http%3A%2F%2Fwww%2Ejdon%2Ecom%2Fidea%2Fjavaee7%2Fservlet21%2Ehtml&amp;urlid=0" 
+rel=nofollow target=_blank><SPAN 
+style="HEIGHT: auto; WIDTH: auto; COLOR: rgb(0,0,255); -webkit-tap-highlight-color: transparent">服务器</SPAN></A></SPAN>资源是有价值的，应谨慎使用。考虑一个servlet 
+必须等待一个JDBC连接，或等待接收JMS消息 或从文件系统读取的资源。等待一个“长期运行”过程返回会引起 线程完全阻塞。异步<BR 
+style="-webkit-tap-highlight-color: transparent">处理在在等待长时间运行的过程同时，可以使控制（或线程）返回到容器来继续执行其他<BR 
+style="-webkit-tap-highlight-color: transparent">任务。</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">@WebServlet(urlPatterns="/async",<STRONG 
+style="-webkit-tap-highlight-color: transparent">asyncSupported</STRONG>=true)<BR 
+style="-webkit-tap-highlight-color: transparent">public class MyAsyncServlet 
+extends HttpServlet {</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">｝</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">也可以在 
+web.xml定义&lt;async-supported&gt;为true。</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">也可以在 
+web.xml定义&lt;async-supported&gt;为true。</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">然后，您可以在单独的线程使用request的同步放startA方法启动异步处理<BR 
+style="-webkit-tap-highlight-color: transparent">，此方法返回AsyncContext，它代表了 
+异步请求的执行上下文。然后你就可以通过调用AsyncContext.complete完成异步 ，或者派遣到另一个请求 
+资源（隐式）。容器将在后台完成异步请求的调用。</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">假设有一个需要长时间运行的任务：</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">class 
+MyAsyncService implements Runnable {<BR 
+style="-webkit-tap-highlight-color: transparent">AsyncContext ac;<BR 
+style="-webkit-tap-highlight-color: transparent">public 
+MyAsyncService(AsyncContext ac) {<BR 
+style="-webkit-tap-highlight-color: transparent">this.ac =  ac;<BR 
+style="-webkit-tap-highlight-color: transparent">}<BR 
+style="-webkit-tap-highlight-color: transparent">@Override<BR 
+style="-webkit-tap-highlight-color: transparent">public void run() {<BR 
+style="-webkit-tap-highlight-color: transparent">//. . .<BR 
+style="-webkit-tap-highlight-color: transparent">ac.complete();<BR 
+style="-webkit-tap-highlight-color: transparent">}<BR 
+style="-webkit-tap-highlight-color: transparent">}</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">这个任务可以在servlet中被调用异步运行：</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">@Override<BR 
+style="-webkit-tap-highlight-color: transparent">protected void 
+doGet(HttpServletRequest request,<BR 
+style="-webkit-tap-highlight-color: transparent">HttpServletResponse response) 
+{<BR style="-webkit-tap-highlight-color: transparent">　　AsyncContext ac = 
+request.startAsync();<BR 
+style="-webkit-tap-highlight-color: transparent">　　ac.addListener(new 
+AsyncListener() {<BR style="-webkit-tap-highlight-color: transparent">　　　　public 
+void onComplete(AsyncEvent event)<BR 
+style="-webkit-tap-highlight-color: transparent">　　　　　　throws IOException {<BR 
+style="-webkit-tap-highlight-color: transparent">　　　　　　　//. . .<BR 
+style="-webkit-tap-highlight-color: transparent">　　}<BR 
+style="-webkit-tap-highlight-color: transparent"><BR 
+style="-webkit-tap-highlight-color: transparent">　　public void 
+onTimeout(AsyncEvent event) 　throws IOException {<BR 
+style="-webkit-tap-highlight-color: transparent">　　　　　　　　//. . .<BR 
+style="-webkit-tap-highlight-color: transparent">　　　}<BR 
+style="-webkit-tap-highlight-color: transparent">　　//. . .<BR 
+style="-webkit-tap-highlight-color: transparent">　　});</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">　　ScheduledThreadPoolExecutor 
+executor = new ScheduledThreadPoolExecutor(10);<BR 
+style="-webkit-tap-highlight-color: transparent">　　executor.execute(new 
+MyAsyncService(ac));</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">}</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">该请求被放入异步模式。 
+当请求处理完成后，AsyncListener被注册 
+侦听事件，或已超时，或导致一个错误。长期运行的服务在一个单独的线程异步调用，完成请求处理调用Context.complete。</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">&nbsp;</P><SPAN 
+id=OSC_h3_2 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent'></SPAN><SPAN 
+style='FONT-SIZE: 16px; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal'></SPAN>
+<H3 id=h3_1 
+style='FONT-SIZE: 18px; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 500; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent'>非堵塞Nonblocking 
+I/O</H3>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">　　Servlet 
+3.0中允许异步请求处理，但只允许传统 I / O，这限制了应用程序的可扩展性。</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">protected 
+void doGet(HttpServletRequest request, HttpServletResponse response)<BR 
+style="-webkit-tap-highlight-color: transparent">throws IOException, 
+ServletException {<BR 
+style="-webkit-tap-highlight-color: transparent">　　ServletInputStream input = 
+request.getInputStream();<BR 
+style="-webkit-tap-highlight-color: transparent">　　byte[] b = new byte[1024];<BR 
+style="-webkit-tap-highlight-color: transparent">　　int len = -1;<BR 
+style="-webkit-tap-highlight-color: transparent">　　while ((len = input.read(b)) 
+!= -1) {<BR style="-webkit-tap-highlight-color: transparent">　　//. . .<BR 
+style="-webkit-tap-highlight-color: transparent">　　}<BR 
+style="-webkit-tap-highlight-color: transparent">}</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">如果传入的数据流比<SPAN 
+style="HEIGHT: auto; WIDTH: auto; FLOAT: none; -webkit-tap-highlight-color: transparent"><A 
+style='TEXT-DECORATION: none; BORDER-TOP: medium none; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(68,102,187); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; BORDER-LEFT: medium none; OUTLINE-COLOR: invert; -webkit-tap-highlight-color: transparent; transition: color 0.3s' 
+href="http://cpro.baidu.com/cpro/ui/uijs.php?c=news&amp;cf=1001&amp;ch=0&amp;di=128&amp;fv=13&amp;jk=3c7c124a12d6f305&amp;k=%B7%FE%CE%F1%C6%F7&amp;k0=%B7%FE%CE%F1%C6%F7&amp;kdi0=0&amp;luki=4&amp;n=10&amp;p=baidu&amp;q=banq_cpr&amp;rb=0&amp;rs=1&amp;seller_id=1&amp;sid=5f3d6124a127c3c&amp;ssp2=1&amp;stid=0&amp;t=tpclicked3_hc&amp;tu=u1683405&amp;u=http%3A%2F%2Fwww%2Ejdon%2Ecom%2Fidea%2Fjavaee7%2Fservlet21%2Ehtml&amp;urlid=0" 
+rel=nofollow target=_blank><SPAN 
+style="HEIGHT: auto; WIDTH: auto; COLOR: rgb(0,0,255); -webkit-tap-highlight-color: transparent">服务器</SPAN></A></SPAN>更慢，那么 
+服务器线程就在等待数据。如果数据被写入，相同的可能也会发生，这限制了Web容器的可扩展性。</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent"><BR 
+style="-webkit-tap-highlight-color: transparent">　　非阻塞I / 
+O使得Web容器不仅可伸缩，也可以同时处理更多连接数量。非阻塞 I / O只能用异步请求处理的Servlet，<SPAN 
+style="HEIGHT: auto; WIDTH: auto; FLOAT: none; -webkit-tap-highlight-color: transparent"><A 
+style='TEXT-DECORATION: none; BORDER-TOP: medium none; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(68,102,187); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; BORDER-LEFT: medium none; OUTLINE-COLOR: invert; -webkit-tap-highlight-color: transparent; transition: color 0.3s' 
+href="http://cpro.baidu.com/cpro/ui/uijs.php?c=news&amp;cf=1001&amp;ch=0&amp;di=128&amp;fv=13&amp;jk=3c7c124a12d6f305&amp;k=%B9%FD%C2%CB%C6%F7&amp;k0=%B9%FD%C2%CB%C6%F7&amp;kdi0=0&amp;luki=2&amp;n=10&amp;p=baidu&amp;q=banq_cpr&amp;rb=0&amp;rs=1&amp;seller_id=1&amp;sid=5f3d6124a127c3c&amp;ssp2=1&amp;stid=0&amp;t=tpclicked3_hc&amp;tu=u1683405&amp;u=http%3A%2F%2Fwww%2Ejdon%2Ecom%2Fidea%2Fjavaee7%2Fservlet21%2Ehtml&amp;urlid=0" 
+rel=nofollow target=_blank><SPAN 
+style="HEIGHT: auto; WIDTH: auto; COLOR: rgb(0,0,255); -webkit-tap-highlight-color: transparent">过滤器</SPAN></A></SPAN>。Servlet3.1实现了非阻塞I 
+/ O，通过引入两个新的接口：ReadListener和WriteListener。这些监听者有回调方法，可以在 
+内容可被读取或可写入而不阻塞时调用。前面案例重写为：</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">AsyncContext 
+context = request.startAsync();<BR 
+style="-webkit-tap-highlight-color: transparent">ServletInputStream input = 
+request.getInputStream();<BR 
+style="-webkit-tap-highlight-color: transparent">input.setReadListener(new 
+MyReadListener(input, context));</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">ReadListener有三个回调方法：</P>
+<UL 
+style='LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); PADDING-BOTTOM: 8px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 8px; PADDING-LEFT: 15px; MARGIN: 0px 0px 0px 30px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 15px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent'>
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px; -webkit-tap-highlight-color: transparent">
+  <P 
+  style="MARGIN-BOTTOM: 16px; -webkit-tap-highlight-color: transparent">onDataAvailable回调方法是数据可以被读取时调用<BR 
+  style="-webkit-tap-highlight-color: transparent"></P>
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px; -webkit-tap-highlight-color: transparent">
+  <P 
+  style="MARGIN-BOTTOM: 16px; -webkit-tap-highlight-color: transparent">onAllDataRead回调方法是当请求数据 
+  完全读取时调用。<BR style="-webkit-tap-highlight-color: transparent"></P>
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px; -webkit-tap-highlight-color: transparent">
+  <P 
+  style="MARGIN-BOTTOM: 16px; -webkit-tap-highlight-color: transparent">OnError回调是如果有一个错误处理请求时被调用</P></LI></UL>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">@Override<BR 
+style="-webkit-tap-highlight-color: transparent">public void onDataAvailable() 
+{<BR style="-webkit-tap-highlight-color: transparent">try {<BR 
+style="-webkit-tap-highlight-color: transparent">　StringBuilder sb = new 
+StringBuilder();<BR style="-webkit-tap-highlight-color: transparent">　int len = 
+-1;<BR style="-webkit-tap-highlight-color: transparent">　byte b[] = new 
+byte[1024];<BR style="-webkit-tap-highlight-color: transparent">　while 
+(input.isReady() &amp;&amp; (len = input.read(b)) != -1) {<BR 
+style="-webkit-tap-highlight-color: transparent">　　　　String&nbsp;<SPAN 
+style="HEIGHT: auto; WIDTH: auto; FLOAT: none; -webkit-tap-highlight-color: transparent"><A 
+style='TEXT-DECORATION: none; BORDER-TOP: medium none; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; BORDER-RIGHT: medium none; BORDER-BOTTOM: medium none; COLOR: rgb(68,102,187); OUTLINE-WIDTH: 0px; OUTLINE-STYLE: none; BORDER-LEFT: medium none; OUTLINE-COLOR: invert; -webkit-tap-highlight-color: transparent; transition: color 0.3s' 
+href="http://cpro.baidu.com/cpro/ui/uijs.php?c=news&amp;cf=1001&amp;ch=0&amp;di=128&amp;fv=13&amp;jk=3c7c124a12d6f305&amp;k=data&amp;k0=data&amp;kdi0=0&amp;luki=3&amp;n=10&amp;p=baidu&amp;q=banq_cpr&amp;rb=0&amp;rs=1&amp;seller_id=1&amp;sid=5f3d6124a127c3c&amp;ssp2=1&amp;stid=0&amp;t=tpclicked3_hc&amp;tu=u1683405&amp;u=http%3A%2F%2Fwww%2Ejdon%2Ecom%2Fidea%2Fjavaee7%2Fservlet21%2Ehtml&amp;urlid=0" 
+rel=nofollow target=_blank><SPAN 
+style="HEIGHT: auto; WIDTH: auto; COLOR: rgb(0,0,255); -webkit-tap-highlight-color: transparent">data</SPAN></A></SPAN>&nbsp;= 
+new String(b, 0, len);<BR style="-webkit-tap-highlight-color: transparent">　}<BR 
+style="-webkit-tap-highlight-color: transparent">　} catch (IOException ex) {<BR 
+style="-webkit-tap-highlight-color: transparent">　　//. . .<BR 
+style="-webkit-tap-highlight-color: transparent">　}<BR 
+style="-webkit-tap-highlight-color: transparent">}<BR 
+style="-webkit-tap-highlight-color: transparent">@Override<BR 
+style="-webkit-tap-highlight-color: transparent">public void onAllDataRead() 
+{<BR style="-webkit-tap-highlight-color: transparent">　context.complete();<BR 
+style="-webkit-tap-highlight-color: transparent">}<BR 
+style="-webkit-tap-highlight-color: transparent">@Override<BR 
+style="-webkit-tap-highlight-color: transparent">public void onError(Throwable 
+t) {<BR 
+style="-webkit-tap-highlight-color: transparent">　t.printStackTrace();<BR 
+style="-webkit-tap-highlight-color: transparent">　context.complete();<BR 
+style="-webkit-tap-highlight-color: transparent">}</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">ServletInputStream.isReady方法用于检查数据可以被读取而不会阻塞，然后数据被读出。 
+context.complete在 onAllDataRead和onError方法读取数据的完成后调用。 Servle<BR 
+style="-webkit-tap-highlight-color: transparent">tInputStream.isFinished可以用来检查一个非阻塞I/ 
+O读取的状态。</P>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">WriteListener有两个回调方法：</P>
+<UL 
+style='LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; FONT-FAMILY: "Pingfang SC", STHeiti, "Lantinghei SC", "Open Sans", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", SimSun, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); PADDING-BOTTOM: 8px; FONT-STYLE: normal; TEXT-ALIGN: left; PADDING-TOP: 8px; PADDING-LEFT: 15px; MARGIN: 0px 0px 0px 30px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; PADDING-RIGHT: 15px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent'>
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px; -webkit-tap-highlight-color: transparent">
+  <P 
+  style="MARGIN-BOTTOM: 16px; -webkit-tap-highlight-color: transparent">onWritePossible是可以无堵塞写入数据被调用时<BR 
+  style="-webkit-tap-highlight-color: transparent"></P>
+  <LI 
+  style="PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 0px; -webkit-tap-highlight-color: transparent">
+  <P 
+  style="MARGIN-BOTTOM: 16px; -webkit-tap-highlight-color: transparent">onerror的是如果有错误处理响应时被调用</P></LI></UL>
+<P 
+style="MARGIN-BOTTOM: 16px; FONT-SIZE: 14px; FONT-FAMILY: 微软雅黑, 宋体; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(61,70,77); FONT-STYLE: normal; TEXT-ALIGN: left; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: 0px; LINE-HEIGHT: 25px; BACKGROUND-COLOR: rgb(248,248,248); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-tap-highlight-color: transparent">最多只有一个WriteListener可以在ServletOutputStream注册。 
+ServletOut putStream.canWrite是一种新的方法检查数据是否可以不阻塞地被写入。</P></body>
+</html>

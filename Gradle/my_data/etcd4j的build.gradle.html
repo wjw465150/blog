@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title></title>
+  </head>
+  <body>
+    <ul data-source-line="1" style="box-sizing: border-box; padding-left: 2em; margin-top: 0px !important; margin-bottom: 16px; color: rgb(36, 41, 46); font-family: -apple-system, BlinkMacSystemFont, 微软雅黑, &quot;PingFang SC&quot;, Helvetica, Tahoma, Arial, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei&quot;, SimSun, 宋体, Heiti, 黑体, sans-serif; font-size: 14px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: normal; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;">
+      <li style="box-sizing: border-box;"><strong style="box-sizing: border-box; font-weight: 600;">etcd4j的build.gradle</strong></li>
+    </ul>
+    <blockquote data-source-line="2" style="box-sizing: border-box; margin: 0px 0px 16px; padding: 0px 1em; color: rgb(106, 115, 125); border-left: 0.25em solid rgb(223, 226, 229); font-family: -apple-system, BlinkMacSystemFont, 微软雅黑, &quot;PingFang SC&quot;, Helvetica, Tahoma, Arial, &quot;Hiragino Sans GB&quot;, &quot;Microsoft YaHei&quot;, SimSun, 宋体, Heiti, 黑体, sans-serif; font-size: 14px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: normal; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;">
+      <p style="box-sizing: border-box; margin-top: 0px; margin-bottom: 0px;">很好的学习gradle的一个例子</p>
+    </blockquote>
+    <pre data-source-line="4" style="box-sizing: border-box; font-family: SFMono-Regular, Consolas, &quot;Liberation Mono&quot;, Menlo, Courier, monospace; font-size: 11.9px; margin-top: 0px; margin-bottom: 0px !important; font-style: normal; font-variant: normal; font-weight: normal; font-stretch: normal; line-height: 1.45; word-wrap: normal; padding: 16px; overflow: auto; background-color: rgb(246, 248, 250); border-radius: 3px; color: rgb(36, 41, 46); letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial;"><code
+class="hljs" style="box-sizing: border-box; display: inline; overflow: visible; padding: 0px; color: rgb(51, 51, 51); background: transparent; font-family: SFMono-Regular, Consolas, &quot;Liberation Mono&quot;, Menlo, Courier, monospace, sans-serif; font-size: 11.9px; margin: 0px; border-radius: 3px; word-break: normal; white-space: pre; border: 0px; line-height: inherit; word-wrap: normal;">plugins {
+    id 'java'
+    id 'maven'
+    id 'signing'
+    id 'osgi'
+    id "com.github.lburgazzoli.karaf" version '0.0.47'
+    id 'net.researchgate.release' version '2.6.0'
+}
+
+apply from: 'gradle/docker.gradle'
+apply from: 'gradle/versions-checker.gradle'
+
+compileJava {
+    sourceCompatibility = 1.7
+    targetCompatibility = 1.7
+}
+
+group = 'org.mousio'
+
+ext {
+    isSnapshot = version.endsWith("-SNAPSHOT")
+    isRelease  = !isSnapshot
+    isCI       = Boolean.valueOf("$System.env.CI")
+    isPR       = "false" != System.env.TRAVIS_PULL_REQUEST
+    ciTasks    = (isRelease || isPR) ? ['clean', 'test'] : ['clean', 'dockerTest', 'uploadArchives']
+
+    mavenDeployUrl = isSnapshot ?
+        'https://oss.sonatype.org/content/repositories/snapshots/' :
+        'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+
+    versions = [
+        netty   : '4.1.13.Final',
+        jackson : '2.8.9',
+        slf4j   : '1.7.25',
+        junit   : '4.12',
+        assertj : '3.8.0',
+        restito : '0.9.0',
+        logback : '1.2.3'
+    ]
+
+    osgiVersions = [
+        slf4j   : "[1.7,1.8)",
+        jackson : "[2.8,3.0)"
+    ]
+
+    if(!project.hasProperty('sonatypeUsername') &amp;&amp; !project.hasProperty('sonatypePassword')) {
+        sonatypeUsername = "$System.env.CI_DEPLOY_USERNAME"
+        sonatypePassword = "$System.env.CI_DEPLOY_PASSWORD"
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+configurations {
+    karaf {
+        extendsFrom compile
+        exclude group: 'org.slf4j'
+    }
+}
+
+dependencies {
+    compile "org.slf4j:slf4j-api:$versions.slf4j"
+    compile "io.netty:netty-codec-dns:$versions.netty"
+    compile "io.netty:netty-codec-http:$versions.netty"
+    compile "io.netty:netty-handler:$versions.netty"
+    compile "io.netty:netty-resolver-dns:$versions.netty"
+    compile "com.fasterxml.jackson.core:jackson-core:$versions.jackson"
+    compile "com.fasterxml.jackson.core:jackson-databind:$versions.jackson"
+    compile "com.fasterxml.jackson.core:jackson-annotations:$versions.jackson"
+    compile "com.fasterxml.jackson.module:jackson-module-afterburner:$versions.jackson"
+
+    testCompile "junit:junit:$versions.junit"
+    testCompile "org.slf4j:slf4j-simple:$versions.slf4j"
+    testCompile "com.xebialabs.restito:restito:$versions.restito"
+    testCompile "org.assertj:assertj-core:$versions.assertj"
+    testRuntime "ch.qos.logback:logback-classic:$versions.logback"
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    from 'build/docs/javadoc'
+    classifier = 'javadoc'
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier = 'sources'
+}
+
+artifacts {
+    archives jar
+    archives javadocJar
+    archives sourcesJar
+}
+
+test { 
+    testLogging { 
+        events "started", "passed", "skipped", "failed", "standardOut", "standardError" 
+    }
+
+    systemProperty 'java.net.preferIPv4Stack' , 'true'
+}
+
+jar {
+    baseName = "${project.name}"
+
+    manifest {
+        attributes['Bundle-Description'     ] = "${project.name}"
+        attributes['Bundle-Name'            ] = "${project.name}"
+        attributes['Bundle-SymbolicName'    ] = "${project.group}-${project.name}"
+        attributes['Bundle-Version'         ] = project.version.replaceAll('-','.')
+        attributes['Implementation-Title'   ] = project.name
+        attributes['Implementation-Version' ] = project.version
+        attributes['Implementation-Vendor'  ] = 'jurmous'
+
+        // Tweak the OSGi imports so:
+        // - slf4j do not define a specific import version
+        // - add missing imports for Jackson Afterburner
+        instruction 'Import-Package' , """
+            org.slf4j;version=\"$osgiVersions.slf4j\",
+            com.fasterxml.jackson.databind.ser;version=\"$osgiVersions.jackson\",
+            com.fasterxml.jackson.databind.deser;version=\"$osgiVersions.jackson\",
+            com.fasterxml.jackson.databind.ser.std;version=\"$osgiVersions.jackson\",
+            com.fasterxml.jackson.databind.deser.std;version=\"$osgiVersions.jackson\",
+            com.fasterxml.jackson.module.afterburner.ser;version=\"$osgiVersions.jackson\",
+            com.fasterxml.jackson.module.afterburner.deser;version=\"$osgiVersions.jackson\",
+            *
+        """
+    }
+}
+
+karaf {
+    features {
+        includeProject = true
+        feature {
+            name = 'etcd4j'
+            configurations 'karaf'
+        }
+    }
+}
+
+signing {
+    required {
+        isRelease &amp;&amp; gradle.taskGraph.hasTask("uploadArchives")
+    }
+
+    sign configurations.archives
+}
+
+// *****************************************************************************
+// Publish to Sonatype OSS
+// *****************************************************************************
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment {
+                MavenDeployment deployment -&gt; signing.signPom(deployment)
+            }
+
+            repository(url: mavenDeployUrl) {
+                authentication(userName: sonatypeUsername, password: sonatypePassword)
+            }
+
+            pom.project {
+                name 'etcd4j'
+                packaging 'jar'
+                description 'etcd4j is a Java/Netty based etcd client'
+                url 'https://github.com/jurmous/etcd4j'
+
+                scm {
+                    url 'scm:git@github.com:jurmous/etcd4j.git'
+                    connection 'scm:git@github.com:jurmous/etcd4j.git'
+                    developerConnection 'scm:git@github.com:jurmous/etcd4j.git'
+                }
+
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'jurmous'
+                        name 'Jurriaan Mous'
+                    }
+                    developer {
+                        id 'lburgazzoli'
+                        name 'Luca Burgazzoli'
+                    }
+                }
+            }
+        }
+    }
+}
+
+release {
+    tagTemplate = 'release-${version}'
+}
+
+tasks.withType(Test) {
+    reports.html.destination = file("${reporting.baseDir}/${name}")
+}
+
+task ci(dependsOn: project.ciTasks) {
+}
+
+task close(dependsOn: 'closeAndPromoteRepository') {
+}
+
+// *****************************************************************************
+//
+// *****************************************************************************
+
+afterReleaseBuild.dependsOn uploadArchives</code></pre>
+  </body>
+</html>

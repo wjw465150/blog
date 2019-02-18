@@ -1,0 +1,317 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-Type" content="text/html;charset=gb2312"><title>通过 Apache WSS4J 使用 WS-Security</title>
+<STYLE type=text/css media=all>
+      @import url("./css/maven-base.css");
+      @import url("./css/maven-theme.css");
+      @import url("./css/site.css");
+    </STYLE>
+<LINK rel=stylesheet type=text/css href="print.css" media=print></HEAD>
+
+<BODY class=composite>
+
+<DIV id=bodyColumn>
+
+<DIV id=contentBox><!--StartFragment--><DIV class=section>
+<H2><A name=Apache_WSS4J></A>Apache WSS4J</H2></DIV>
+<DIV class=section>
+<H2><A name=Axis_Deployment_Tutorial></A>Axis Deployment Tutorial</H2></DIV>
+<DIV class=section>
+<H2><A name=""></A></H2>
+<DIV class=section>
+<H3><A name=Contents></A>Contents</H3>
+<UL>
+<LI>Introduction 
+<LI>Prerequisties 
+<LI>Steps 
+<UL>
+<LI>Username Token<BR><BR></LI></UL></LI></UL></DIV></DIV>
+<DIV class=section>
+<H2><A name=""></A></H2>
+<DIV class=section>
+<H3><A name=Introduction></A>Introduction</H3>
+<DIV style="MARGIN-LEFT: 40px">WSS4J can be used for securing web services 
+deployed in virtually any application server, but it includes special support 
+for Axis. WSS4J ships with handlers that can be used in Axis-based web services 
+for an easy integration. These handlers can be added to the service deployment 
+descriptor (wsdd file) to add a WS-Security layer to the web service. This is a 
+step by step tutorial for deploying a simple service with Username 
+Token.<BR><BR></DIV><BR><BR></DIV>
+<DIV class=section>
+<H3><A name=Prerequisties></A>Prerequisties</H3>
+<DIV style="MARGIN-LEFT: 40px"><A class=externalLink 
+href="http://ws.apache.org/axis/">Axis 1.2</A> installed and configured on a <A 
+class=externalLink href="http://jakarta.apache.org/tomcat/">Tomcat Server</A> .&nbsp; 
+This tutorial was performed on a Linux machine with Tomcat 5.5.4/Java 1.5.0, 
+however, the setup should be similar on other application servers, or other 
+operating systems (like Windows) unless we stated otherwise.<BR><BR></DIV></DIV>
+<DIV class=section>
+<H3><A name=Steps></A>Steps</H3></DIV>
+<DIV class=section>
+<H3><A name=a_Installing_WSS4J></A>&nbsp;&nbsp;&nbsp; Installing WSS4J</H3>
+<DIV style="MARGIN-LEFT: 40px">
+<OL type=1>
+<LI>Download the WSS4J binaries or build it from sources<BR><BR>
+<LI>Copy the contents of the WSS4J lib directory to your Axis WEB-INF/lib 
+directory. Many jar files will already exist. Most of them will already exist 
+there but you can just overwrite them all. 
+<LI>You may need to restart Tomcat unless you have automatic deployment/class 
+loading turned on. Check the Axis Happiness Page (typically at 
+http://localhost:8080/axis), make sure that the XML Security (xmlsec.jar) is 
+listed under the "Optional Components" section. </LI></OL>
+<H4>Creating the Service</H4></DIV>
+<OL type=1>
+<OL type=1>
+<LI>This tutorial will secure the StockQuoteService which ships with Axis. 
+Unless you have one already, create a deployment descriptor (deploy.wsdd) file 
+with the following contents: </LI></OL></OL>
+<DIV style="MARGIN-LEFT: 40px">
+<OL type=1><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&lt;deployment 
+xmlns="http://xml.apache.org/axis/wsdd/" 
+xmlns:java="http://xml.apache.org/axis/wsdd/providers/java"&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&lt;service name="stock-wss-01" provider="java:RPC" 
+style="document" use="literal"&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp; &lt;parameter name="className" 
+value="samples.stock.StockQuoteService"/&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp; &lt;parameter name="allowedMethods" 
+value="getQuote"/&gt;</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp; 
+&lt;parameter name="scope" value="application"/&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&lt;/service&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&lt;/deployment&gt;<BR><BR><BR><BR></SPAN>
+<LI>deploy the service (using AxisAdmin): </LI></OL></DIV>
+<DIV style="MARGIN-LEFT: 40px">
+<OL type=1><SPAN style="COLOR: rgb(0,0,153)">java 
+org.apache.axis.client.AdminClient 
+-lhttp://localhost:8080/axis/services/AdminService 
+deploy.wsdd<BR><BR></SPAN></OL>
+<H4>Creating the Client</H4>
+<OL type=1>
+<LI>Use WSDL2Java to generate the client service bindings:<BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">java org.apache.axis.wsdl.WSDL2Java -o . 
+-Nhttp://fox:8080/axis/services/stock-wss-01 samples.stock.client 
+http://fox:8080/axis/services/stock-wss-01?wsdl</SPAN><BR><BR><BR><BR>A bunch of 
+java classes will be created under samples/stock/client, including the 
+StockQuoteServiceServiceLocator.<BR><BR><BR><BR>
+<LI>Write a simple java client that uses the generated service locator. For 
+example:<BR><BR><BR><BR><SPAN style="COLOR: rgb(0,0,153)">package 
+samples.stock.client;</SPAN><BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import java.rmi.RemoteException;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+javax.xml.rpc.ServiceException;</SPAN><BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">public class StockServiceClient 
+{</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp; public 
+StockServiceClient() {</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp; 
+}</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp; public static void 
+main(String[] args) throws ServiceException, RemoteException 
+{</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (args.length == 0) 
+{</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+System.out.println("Usage:\njava StockServiceClient 
+[symbol]");</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+return;</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+StockQuoteServiceService locator = new 
+StockQuoteServiceServiceLocator();</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; StockQuoteService service = 
+locator.getStockWss01();</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+float quote = service.getQuote(args[0]);</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.out.println("stock quote service 
+returned " + args[0] + ": " + quote);</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp; }</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">}</SPAN><BR><BR><BR><BR>
+<LI>run the client:<BR><BR><SPAN style="COLOR: rgb(0,0,153)">java 
+samples.stock.client.StockServiceClient IBM</SPAN><BR><BR><BR><BR>If all went 
+well, you should get the result:<BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)"></SPAN><SPAN style="COLOR: rgb(0,0,153)">stock quote 
+service returned IBM: 95.68</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)"><BR><BR></SPAN></LI></OL></DIV>
+<DIV style="MARGIN-LEFT: 40px">
+<H3>Username Token</H3>
+<H4>Configuring the Service<BR><BR></H4>
+<OL type=1>
+<LI>Modify the deployment descriptor you created above to look like 
+this:<BR><BR><SPAN style="COLOR: rgb(0,0,153)">&lt;deployment 
+xmlns="http://xml.apache.org/axis/wsdd/" 
+xmlns:java="http://xml.apache.org/axis/wsdd/providers/java"&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&lt;service name="stock-wss-01" provider="java:RPC" 
+style="document" use="literal"&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153); FONT-WEIGHT: bold">&nbsp; 
+&lt;requestFlow&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153); FONT-WEIGHT: bold">&nbsp;&nbsp; &lt;handler 
+type="java:org.apache.ws.axis.security.WSDoAllReceiver"&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153); FONT-WEIGHT: bold">&nbsp;&nbsp;&nbsp; &lt;parameter 
+name="passwordCallbackClass" value="PWCallback"/&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153); FONT-WEIGHT: bold">&nbsp;&nbsp;&nbsp; &lt;parameter name="action" 
+value="UsernameToken"/&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153); FONT-WEIGHT: bold"></SPAN><SPAN 
+style="COLOR: rgb(0,0,153); FONT-WEIGHT: bold">&nbsp;&nbsp; 
+&lt;/handler&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153); FONT-WEIGHT: bold">&nbsp; 
+&lt;/requestFlow&gt;</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp; 
+&lt;parameter name="className" 
+value="samples.stock.StockQuoteService"/&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp; &lt;parameter name="allowedMethods" 
+value="getQuote"/&gt;</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp; 
+&lt;parameter name="scope" value="application"/&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&lt;/service&gt;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&lt;/deployment&gt;<BR><BR><BR><BR></SPAN>WSDoAllReceiver 
+is an Axis handler that can be located in wss4j.jar. This is the standard way to 
+deploy an Axis handler. For more details please refer to the Axis handler for 
+WSS4J documentation.<BR><BR><BR><BR>
+<LI>Create a class named PWCallback.java and compile it into your Axis 
+WEB-INF/classes directory. In this example I used the default package for 
+simplicity, but you might need to use the fully qualified class name (be 
+consistent with the deployment descriptor).<BR><BR><BR><BR>The following code 
+snippet shows a simple password callback class:<BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import java.io.IOException;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+javax.security.auth.callback.Callback;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+javax.security.auth.callback.CallbackHandler;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+javax.security.auth.callback.UnsupportedCallbackException;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+org.apache.ws.security.WSPasswordCallback;</SPAN><BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">public class PWCallback implements CallbackHandler 
+{</SPAN><SPAN style="COLOR: rgb(0,0,153)"></SPAN><SPAN 
+style="COLOR: rgb(0,0,153)"></SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp; &nbsp; 
+public void handle(Callback[] callbacks)</SPAN><SPAN 
+style="COLOR: rgb(0,0,153)"> throws IOException, UnsupportedCallbackException 
+{</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i = 0; i &lt; 
+callbacks.length; i++) {</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (callbacks[i] instanceof 
+WSPasswordCallback) {</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; WSPasswordCallback pc = 
+(WSPasswordCallback)callbacks[i];<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // set the password 
+given a username<BR><BR></SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <SPAN 
+style="COLOR: rgb(0,0,153)">if ("wss4j".equals(pc.getIdentifier())) 
+{</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+pc.setPassword("security");</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)"></SPAN><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+} else {</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; throw 
+new UnsupportedCallbackException(</SPAN><SPAN 
+style="COLOR: rgb(0,0,153)">callbacks[i], "Unrecognized 
+Callback");</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp; }</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">}</SPAN><BR><BR><SPAN 
+style="FONT-WEIGHT: bold"></SPAN><BR><BR><BR><BR><BR><BR>
+<LI>Redeploy the service. Your service should now be expecting a WSS Username 
+Token in in the incoming requests, and clients should send the username "wss4j" 
+and password "security" to get through.<BR><BR></LI></OL>
+<H4>Configuring the Client</H4>
+<OL type=1>
+<LI>run the client we created again:<BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">java samples.stock.client.StockServiceClient 
+IBM</SPAN><BR><BR><BR><BR>You should now get an error:<BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">Exception in thread "main" 
+AxisFault</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;faultCode: 
+{http://schemas.xmlsoap.org/soap/envelope/}Server.generalException</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;faultSubcode:</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;faultString: WSDoAllReceiver: Request does not 
+contain required Security header</SPAN><BR><BR><BR><BR>This is because your 
+client is not configured to send a Username Token yet, so the service is 
+rejecting the request.<BR><BR><BR><BR>
+<LI>Create a deployment descriptor file (client_deploy.wsdd) for the 
+client:<BR><BR><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&lt;deployment 
+xmlns="http://xml.apache.org/axis/wsdd/" 
+xmlns:java="http://xml.apache.org/axis/wsdd/providers/java"&gt;<BR><BR>&nbsp;&lt;transport 
+name="http" pivot="java:org.apache.axis.transport.http.HTTPSender"/&gt;<BR><BR>&nbsp; 
+&lt;globalConfiguration &gt;<BR><BR>&nbsp;&nbsp; &lt;requestFlow &gt;<BR><BR>&nbsp;&nbsp;&nbsp; 
+&lt;handler type="java:org.apache.ws.axis.security.WSDoAllSender" 
+&gt;<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp; &lt;parameter name="action" 
+value="UsernameToken"/&gt;<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp; &lt;parameter name="user" 
+value="wss4j"/&gt;<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp; &lt;parameter name="passwordCallbackClass" 
+value="samples.stock.client.PWCallback"/&gt;<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp; &lt;parameter 
+name="passwordType" value="PasswordDigest"/&gt;<BR><BR>&nbsp;&nbsp;&nbsp; 
+&lt;/handler&gt;<BR><BR>&nbsp;&nbsp; &lt;/requestFlow &gt;<BR><BR>&nbsp; 
+&lt;/globalConfiguration &gt;<BR><BR>&lt;/deployment&gt;</SPAN><SPAN 
+style="COLOR: rgb(0,0,153)"></SPAN><BR><BR><BR><BR>
+<LI>Create the <SPAN 
+style="COLOR: rgb(0,0,153)">samples.stock.client.PWCallback</SPAN> 
+class:<BR><BR><BR><BR><SPAN style="COLOR: rgb(0,0,153)">package 
+samples.stock.client;</SPAN><BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import java.io.IOException;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+javax.security.auth.callback.Callback;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+javax.security.auth.callback.CallbackHandler;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+javax.security.auth.callback.UnsupportedCallbackException;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+org.apache.ws.security.WSPasswordCallback;</SPAN><BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">/**</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;* PWCallback for the Client</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;*/</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">public class PWCallback implements CallbackHandler 
+{</SPAN><BR><BR><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp; 
+/**</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp; * @see 
+javax.security.auth.callback.CallbackHandler#handle(javax.security.auth.callback.Callback[])</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp; */</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp; public void handle(Callback[] callbacks) throws 
+IOException,</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+UnsupportedCallbackException {</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for (int i = 0; i &lt; callbacks.length; 
+i++) {</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if 
+(callbacks[i] instanceof WSPasswordCallback) {</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; WSPasswordCallback pc = 
+(WSPasswordCallback)callbacks[i];</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // set the password given a 
+username</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if 
+("wss4j".equals(pc.getIdentifier())) {</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+pc.setPassword("security");</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } else {</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; throw new 
+UnsupportedCallbackException(callbacks[i], "Unrecognized 
+Callback");</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}</SPAN><BR><BR><SPAN style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">&nbsp;&nbsp;&nbsp; }</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">}</SPAN><BR><BR><BR><BR>
+<LI>Define the system property axis.ClientConfigFile for your 
+client:<BR><BR><BR><BR><SPAN style="COLOR: rgb(0,0,153)">java 
+-Daxis.ClientConfigFile=client_deploy.wsdd -classpath $AXISCLASSPATH 
+samples.stock.client.StockServiceClient</SPAN><BR><BR><BR><BR>Make sure that 
+your classpath includes the jar files under WEB-INF/lib.<BR><BR><BR><BR>Another 
+way to do this is to specify the wsdd file in your StockServiceClient to the 
+service locator programmatically:<BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">...</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+org.apache.axis.EngineConfiguration;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+org.apache.axis.configuration.FileProvider;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">...</SPAN><BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">EngineConfiguration config = new 
+FileProvider("client_deploy.wsdd");</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">StockQuoteServiceService locator = new 
+StockQuoteServiceServiceLocator(config);</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">...</SPAN><BR><BR><BR><BR>
+<LI>Run the client, you should get no errors:<BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">stock quote service returned IBM: 
+95.7</SPAN><BR><BR><BR><BR>Your client is now sending a Username Token in the 
+wsse request header with the username "wss4j" (see client_deploy.wsdd) and 
+password "security" (see the PWCallback implementation).<BR><BR><BR><BR>Another 
+way to do this is to have the client application set the username and 
+CallbackHandler implementation programmatically instead of 
+client_deploy.wsdd:<BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">...</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">import 
+org.apache.axis.client.Stub;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">...</SPAN><BR><BR><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">Remote remote = 
+locator.getPort(StockQuoteService.class);</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">Stub axisPort = (Stub)remote;</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">axisPort._setProperty(UsernameToken.PASSWORD_TYPE, 
+WSConstants.PASSWORD_DIGEST);</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">axisPort._setProperty(WSHandlerConstants.USER, 
+"wss4j");</SPAN><BR><BR><SPAN 
+style="COLOR: rgb(0,0,153)">axisPort._setProperty(WSHandlerConstants.PW_CALLBACK_REF, 
+pwCallback);</SPAN><BR><BR><BR><BR>where "pwCallback" is a reference to a 
+PWCallback implementation. See the Axis handler for WSS4J documentation for more 
+details on this.<BR><BR><BR><BR>
+<LI>Try modifying your client's PWCallback to return the wrong password, or send 
+the wrong username. The service should reject your requests. </LI></OL><BR></DIV></DIV></DIV><!--EndFragment--></DIV>
+</DIV>
+</BODY>

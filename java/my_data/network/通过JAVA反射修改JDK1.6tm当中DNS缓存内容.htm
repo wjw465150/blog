@@ -1,0 +1,164 @@
+<html>
+<title>通过JAVA反射修改JDK1.6*当中DNS缓存内容</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<body>
+<!--StartFragment-->
+<h3 class="article-title" style="margin-top: 0px; margin-right: 0px; margin-bottom: 6px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; font-size: 20px; font-weight: bold; color: rgb(32, 120, 169); font-family: 微软雅黑, Verdana, Arial, Helvetica, sans-serif; font-style: normal; font-variant: normal; letter-spacing: normal; line-height: 19px; orphans: 2; text-align: -webkit-auto; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); ">通过JAVA反射修改JDK1.6*当中DNS缓存内容</h3>
+<div class="article-info" style="margin-top: 10px; margin-right: 0px; margin-bottom: 10px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; color: rgb(153, 153, 153); font-size: 12px; font-family: 微软雅黑, Verdana, Arial, Helvetica, sans-serif; font-style: normal; font-variant: normal; font-weight: normal; letter-spacing: normal; line-height: 19px; orphans: 2; text-align: -webkit-auto; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); "><span style="margin-right: 10px; "><a href="http://www.taobaotest.com/users/qa/blogs?uid=263" style="color: rgb(19, 85, 135); text-decoration: none; cursor: pointer; text-shadow: white 1px 1px 0px; ">yunshuai</a></span><span class="Apple-converted-space">&nbsp;</span><span style="margin-right: 10px; ">发表于：2012-05-28</span><span class="Apple-converted-space">&nbsp;</span><span style="margin-right: 10px; ">浏览：499次</span><span class="Apple-converted-space">&nbsp;</span><span style="margin-right: 10px; ">评论：<a href="file:///Z:/blogs/qa?bid=15523%23reply-comment" style="color: rgb(19, 85, 135); text-decoration: none; cursor: pointer; text-shadow: white 1px 1px 0px; ">0次</a></span><span class="Apple-converted-space">&nbsp;</span><span style="margin-right: 10px; ">所属分类：<span class="Apple-converted-space">&nbsp;</span><a href="http://www.taobaotest.com/categories/qa/blogs?cid=74" title="性能测试" style="color: rgb(19, 85, 135); text-decoration: none; cursor: pointer; text-shadow: white 1px 1px 0px; ">性能测试</a><span class="Apple-converted-space">&nbsp;</span><a href="http://www.taobaotest.com/categories/qa/blogs?cid=248" title="测试工具" style="color: rgb(19, 85, 135); text-decoration: none; cursor: pointer; text-shadow: white 1px 1px 0px; ">测试工具</a></span></div>
+<div class="article-body cssbase" style="margin-top: 13px; margin-right: 0px; margin-bottom: 13px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; line-height: 1.8em; vertical-align: top; color: rgb(51, 51, 51); font-family: 微软雅黑, Verdana, Arial, Helvetica, sans-serif; font-size: 13px; font-style: normal; font-variant: normal; font-weight: normal; letter-spacing: normal; orphans: 2; text-align: -webkit-auto; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px; background-color: rgb(255, 255, 255); ">为了实现性能压测时的域名动态绑定功能，尝试通过java反射修改JDK1.6×当中的DNS缓存，感谢在此过程中林轩同学的大力帮助。
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  网上也存在着修改DNS缓存的方法，但是都是基于jdk1.5的，无法应用。另外，大部分都是修改的缓存过期时间，而没有真正去尝试修改dns 的cache内容，所以尝试了很多种方法，并且查看了jdk的源代码，终于实现了修改dns缓存内容和时间，如下，欢迎大家一起探讨
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  修改缓存时间可以采用修改java security manage文件和增加jvm参数的方法，以下是在代码中动态修改dns的缓存时间：
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  public boolean addressCache(Map&lt;String, String&gt; addressMap)&nbsp;{
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  // 以下内容修改缓存失效时间,单位秒(-1,永久缓存;0,不缓存;其它&gt;0的值为缓存的秒数)
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  Class&lt;?&gt; iacp = sun.net.InetAddressCachePolicy.class;
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  Field cachePolicyFiled = null;
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  Field setEnable = null;
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  try {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  cachePolicyFiled = iacp.getDeclaredField("cachePolicy");
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  setEnable = iacp.getDeclaredField("set");
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (NoSuchFieldException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Get cachePolicyFiled or setEnable failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  }
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  cachePolicyFiled.setAccessible(true);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  setEnable.setAccessible(true);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  try {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  cachePolicyFiled.set(null, -1);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  setEnable.set(null, true);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (IllegalArgumentException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Set cachePolicyFiled and setEnable failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (IllegalAccessException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Access cachePolicyFiled and setEnable failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  }
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  // 以下内容修改DNS的缓存数据，实现域名动态绑定
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  Class&lt;?&gt; inetAddressClass = java.net.InetAddress.class;
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  Field cacheField = null;
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  Object addressCache = null;
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  InetAddress ia = null;
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  try {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  cacheField = inetAddressClass.getDeclaredField("addressCache");
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (SecurityException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Get addressCache security failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (NoSuchFieldException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Get addressCache field failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  }
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  cacheField.setAccessible(true);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  try {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  addressCache = cacheField.get(inetAddressClass);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (IllegalArgumentException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Get cacheField IllegalArgument failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (IllegalAccessException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Get cacheField Access failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  }
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  Class&lt;?&gt; cacheClazz = addressCache.getClass();
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  Method m_put = cacheClazz.getMethod("put", new Class&lt;?&gt;[] {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  String.class, Object.class });
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  m_put.setAccessible(true);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  try {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  for (String domain : addressMap.keySet()) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  ia = Inet4Address.getByName(addressMap.get(domain));
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  m_put.invoke(addressCache, new Object[] { domain,
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  new InetAddress[] { ia } });
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  }
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (IllegalArgumentException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Put addressCache IllegalArgument failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (IllegalAccessException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Put addressCache IllegalAccess failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (InvocationTargetException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Put addressCache InvocationTarget failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  } catch (UnknownHostException e) {
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  logger.error("Put addressCache UnknownHost failed!", e);
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  }
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  // 修改缓存数据结束
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  return true;
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  }
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  在性能压测时，采用JAVA的DNS缓存有以下好处
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  1.无需关心dns解析时间，dns解析消耗0毫秒，几乎无消耗，这样使得压测更加关注服务器响应，压测更充分
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  2.可以动态修改DNS缓存，无需修改hosts文件和http链接等不灵活的方式。
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  <div class="qa-gap" style="margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; display: block; clear: both; height: 10px; line-height: 1px; "></div>
+  3.一个jvm进程可以对应一套域名绑定，相互之间不影响，可以实现多场景，多域名绑定的需求压测。</div>
+<!--EndFragment-->
+</body>
+</htm>

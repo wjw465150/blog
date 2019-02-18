@@ -1,0 +1,401 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML lang=zh-CN xml:lang="zh-CN" xmlns="http://www.w3.org/1999/xhtml" 
+sizcache="2" sizset="0">
+<META HTTP-EQUIV=Content-Type CONTENT=text/html; charset=UTF-8>
+
+<HEAD sizcache="0" sizset="0"><title>解决分区卸载问题-识别正在使用挂载的文件系统的进程</title><!-- s-header-meta  for china --><LINK 
+href="http://purl.org/DC/elements/1.0/" rel=schema.DC><LINK 
+href="favicon.ico" rel="SHORTCUT ICON"><!-- 5.8 0421 egd: Added IBM.Special.Purpose meta tag and the meta tag to suppress the WI login in the masthead --><!-- STYLESHEETS/SCRIPTS --><!-- for tables --><LINK 
+media=screen,print 
+href="table.css" 
+type=text/css rel=stylesheet><!-- end for tables -->
+<SCRIPT language=JavaScript 
+src="dwcss14.js" 
+type=text/javascript></SCRIPT>
+<LINK 
+href="ie6v14.css" 
+type=text/css rel=stylesheet><LINK 
+href="main.css" 
+type=text/css rel=stylesheet><LINK media=all 
+href="screen.css" 
+type=text/css rel=stylesheet><LINK media=print 
+href="print.css" 
+type=text/css rel=stylesheet>
+<SCRIPT 
+src="ibmcommon.js" 
+type=text/javascript>//</SCRIPT>
+
+<SCRIPT language=JavaScript 
+src="detection.js" 
+type=text/javascript></SCRIPT>
+<LINK media=screen href="ie2_screen.css" 
+type=text/css rel=stylesheet>
+<SCRIPT language=JavaScript 
+src="dropdown.js" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT language=JavaScript 
+src="grabtitle.js" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT language=JavaScript 
+src="emailfriend2.js" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT language=JavaScript src="urltactic.js" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT language=JavaScript type=text/javascript>
+ <!--
+ setDefaultQuery('dwchina');
+ //-->
+</SCRIPT>
+<!--START RESERVED FOR FUTURE USE INCLUDE FILES-->
+<SCRIPT language=javascript 
+src="ajax1.js" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT language=javascript 
+src="searchcount.js" 
+type=text/javascript></SCRIPT>
+<!--END RESERVED FOR FUTURE USE INCLUDE FILES-->
+<SCRIPT language=JavaScript type=text/javascript>var emailAbstract = "为了干净地关闭或热交换 UNIX 或类 UNIX 系统上的存储硬件，必须能够卸载使用此设备上的存储的所有文件系统。但是，如果正在使用文件系统中的文件或目录，就无法卸载它。lsof 和 fuser 命令可以帮助您识别并终止那些正在使用存储设备上的文件或从存储设备执行的进程。使用这些命令有助于寻找那些阻止存储设备卸载的进程，减少麻烦，让您能够继续处理更重要的系统管理任务。"; </SCRIPT>
+</HEAD>
+
+<BODY sizset="0" sizcache="2">
+
+<TABLE id=v14-body-table cellSpacing=0 cellPadding=0 width="100%" border="0" 
+sizset="10" sizcache="2">
+
+<TBODY sizset="11" sizcache="2">
+
+<TR vAlign="top" sizset="11" sizcache="2">
+
+<TD width="100%" sizset="26" sizcache="2">
+
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="29" 
+sizcache="2">
+
+<TBODY sizset="30" sizcache="2">
+
+<TR vAlign="top" sizset="30" sizcache="2">
+
+<TD width="100%" sizset="30" sizcache="2"><!--StartFragment--><BLOCKQUOTE>为了干净地关闭或热交换 UNIX? 或类 UNIX 
+系统上的存储硬件，必须能够卸载使用此设备上的存储的所有文件系统。但是，如果正在使用文件系统中的文件或目录，就无法卸载它。<CODE>lsof</CODE> 和 
+<CODE>fuser</CODE> 
+命令可以帮助您识别并终止那些正在使用存储设备上的文件或从存储设备执行的进程。使用这些命令有助于寻找那些阻止存储设备卸载的进程，减少麻烦，让您能够继续处理更重要的系统管理任务。 
+</BLOCKQUOTE><!--START RESERVED FOR FUTURE USE INCLUDE FILES--><!-- include java script once we verify teams wants to use this and it will work on dbcs and cyrillic characters --><!--END RESERVED FOR FUTURE USE INCLUDE FILES-->
+<P>所有计算机操作系统都在引导时检查它们挂载的文件系统是否是一致的，也就是说，确认它们的内部数据结构和映射到的相关存储没有错误。UNIX、Linux? 
+和其他类 UNIX 操作系统采用一种聪明的方法检查文件系统的一致性（通常使用 <CODE>fast</CODE> 
+命令）。当这些系统挂载文件系统时，它们在文件系统头中设置一个值，把文件系统标为 
+<CODE>DIRTY</CODE>，这意味着它正在使用，在向它写入更新时可能暂时处于不一致的状态。在系统关闭期间卸载文件系统时，把它们标为 
+<CODE>CLEAN</CODE>。在重新引导系统时，只需要检查仍然标为 <CODE>DIRTY</CODE> 的文件系统的一致性。 </P>
+<P>在系统关闭过程中，会自动地卸载文件系统，这通常在终止所有非系统进程之后进行。但是，卸载文件系统仍然可能失败并显示以下消息： </P>
+<TABLE cellSpacing=0 cellPadding=0 width="50%" border="0" sizset="36" 
+sizcache="2">
+<TBODY sizset="36" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>$ sudo umount /mnt/NAS
+umount: /mnt/NAS: device is busy
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P>在这里，<CODE>busy</CODE> 
+意味着一个进程正在写这个文件系统或者进程是从它运行的。在这两种情况下，都无法卸载文件系统，这是计算机系统的基本规则之一。如果不采用这个规则，可以在进程正在写文件系统包含的文件时卸载文件系统，就会让文件处于不一致的状态，而文件系统本身标为 
+<CODE>CLEAN</CODE>。 </P>
+<P><CODE>umount</CODE> 命令的标准 Linux 版本包含一个延迟卸载选项 
+<CODE>-l</CODE>，它有助于卸载正在使用的文件系统。这个命令需要 Linux 内核 2.4.11 或更高版本，目前这通常没问题。执行 
+<CODE>umount -l /name/of/file system</CODE> 
+可以让指定的文件系统与系统的目录层次结构脱离，让新进程不能使用这个文件系统，然后当正在访问它的所有进程都终止时卸载它。这很方便，但是当需要马上卸载文件系统时它并不合适。 
+</P>
+<P>如果需要马上卸载文件系统，而文件系统报告忙碌，还有其他办法。如果您是系统的惟一用户，那么只需终止阻止文件系统卸载的进程。这需要查看所有窗口，寻找并终止正在写这个分区或使用它作为当前工作目录的暂停的进程或后台进程。但是，在有许多本地用户和远程用户的多用户系统上，这种方法是不实际的。幸运的是，开放源码社区提供了一些命令，可以轻松地识别并终止这些进程。 
+</P>
+<P><A name=lsof_intro><SPAN class=atitle>用 <CODE>lsof</CODE> 寻找打开的文件 
+</SPAN></A></P>
+<P><CODE>lsof</CODE> (list open files) 命令列出特定的文件系统、目录或设备上所有打开的文件以及与它们相关联的进程。在大多数 
+UNIX 和类 UNIX 系统上都可以使用 <CODE>lsof</CODE> 命令，包括 IBM? AIX?、Berkeley Software 
+Distribution (BSD?)、Hewlett Packard UNIX (HP-UX?)、Linux 和 Solaris?。关于获取适合自己系统的 
+<CODE>lsof</CODE> 的信息请参见 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#resources" cmImpressionSent="1">参考资料</A>。 
+</P>
+<P>在默认情况下，<CODE>lsof</CODE> 
+命令列出当前打开的所有文件、共享库和目录，并提供尽可能多的相关信息。即使在负载很轻的系统上，这个命令的输出也非常长，因此通常通过命令行参数指定一个目录名，或者使用管道筛选它的输出。例如，假设希望卸载挂载在 
+/opt2 目录上的文件系统。为了查看与 /opt2 目录相关联的所有进程，应该执行 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list1" 
+cmImpressionSent="1">清单 1</A> 所示的命令。 </P><BR><A name=list1><B>清单 1. 
+与一个挂载的文件系统相关联的进程</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="37" 
+sizcache="2">
+<TBODY sizset="37" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>				
+$ lsof /opt2
+COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+bash    23334  wvh  cwd    DIR   8,17     4096    2 /opt2
+more    23402  wvh  cwd    DIR   8,17     4096    2 /opt2
+more    23402  wvh    3r   REG   8,17    10095  264 /opt2/resume.txt
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P>需要终止所有这些进程，然后才能卸载 /opt2 分区。因为这个列表中的进程都不能写任何文件，所以可以使用 <CODE>kill</CODE> 
+命令并指定第二列中列出的进程 ID (PID) 以终止它们，然后就可以顺利地卸载分区。注意，PID 23402 与最后两行相关联 — 第一行表示 
+<CODE>more</CODE> 命令以 /opt2 作为当前工作目录 (<CODE>cwd</CODE>)，第二行表示 <CODE>more</CODE> 
+命令打开了 /opt2/resume.txt 文件。 </P>
+<P>但是，假设 <CODE>lsof</CODE> 命令的输出像 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list2" cmImpressionSent="1">清单 2</A> 
+这样。 </P><BR><A name=list2><B>清单 2. 与一个挂载的文件系统相关联的另一组进程</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="38" 
+sizcache="2">
+<TBODY sizset="38" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>				
+$ lsof /opt2
+COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+bash    23334  wvh  cwd    DIR   8,17     4096    2 /opt2
+more    23402  wvh  cwd    DIR   8,17     4096    2 /opt2
+more    23402  wvh    3r   REG   8,17    10095  264 /opt2/resume.txt
+bash    21343  djf  cwd    DIR   8,17     4096    2 /opt2
+emacs   21405  djf  cwd    DIR   8,17     4096    2 /opt2
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P>前三个与 /opt2 目录相关联的命令与前面一样，但是后两个命令是由另一个用户运行的。其中的 <CODE>emacs</CODE> 
+命令用于编辑文件，所以可以让 <CODE>USER</CODE> 列中列出的用户保存文件并退出，然后终止这个进程。 </P><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="39" 
+sizcache="2">
+<TBODY sizset="39" sizcache="1">
+<TR>
+<TD><IMG alt="" src="blue_rule.gif" width="100%" 
+height=1><BR><IMG border=0 alt="" src="c.gif" width=8 
+height=6></TD></TR></TBODY></TABLE>
+<TABLE class=no-print cellSpacing=0 cellPadding=0 align="right" sizset="40" 
+sizcache="2">
+<TBODY sizset="41" sizcache="2">
+<TR align="right" sizset="41" sizcache="2">
+<TD sizset="41" sizcache="2"><IMG alt="" src="c.gif" width="100%" 
+height=4><BR>
+<TABLE cellSpacing=0 cellPadding=0 border="0" sizset="41" sizcache="2">
+<TBODY sizset="41" sizcache="1">
+<TR>
+<TD vAlign=middle><IMG border=0 alt="" 
+src="u_bold.gif" width=16 height=16><BR></TD>
+<TD vAlign=top align=right><A class=fbox href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#main" 
+cmImpressionSent="1"><B>回页首</B></A></TD></TR></TBODY></TABLE></TD></TR></TBODY></TABLE><BR><BR>
+<P><A name=N100FB><SPAN class=atitle>定制 <CODE>lsof</CODE> 的输出 </SPAN></A></P>
+<P>前一节演示了如何识别本地设备上打开的文件和目录，对于挂载的远程文件系统也很容易获得相同的信息。 </P>
+<P>为了让本文中的示例保持一致，所有命令和输出示例都引用 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list3" cmImpressionSent="1">清单 3</A> 
+所示的系统中的分区。 </P><BR><A name=list3><B>清单 3. 本文使用的文件系统</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="42" 
+sizcache="2">
+<TBODY sizset="42" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>				
+$ df
+Filesystem           1K-blocks      Used Available Use% Mounted on
+/dev/sda1            230528596 201462232  17356188  93% /
+/dev/sdb1            240362656  12533532 215619324   6% /opt2
+//nas.vonhagen.org/writing  
+                     100790048  75945920 197241926  80% /mnt/NAS
+192.168.6.166:/mnt/disk1
+                     714854640 386972432 291569696  58% /mnt/yellowmachine
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P>如 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list3" cmImpressionSent="1">清单 3</A> 所示，/mnt/NAS 是一个名为 writing 的 
+Samba 共享的挂载点，这个共享位于设备 nas.vonhagen.org 上。在 <CODE>lsof</CODE> 
+命令中作为参数指定这个挂载点的名称，就会产生与 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list2" cmImpressionSent="1">清单 2</A> 
+相似的输出，但是输出只针对这个设备和目录，见 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list4" cmImpressionSent="1">清单 4</A>。 
+</P><BR><A name=list4><B>清单 4. 与远程文件系统相关联的进程</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="43" 
+sizcache="2">
+<TBODY sizset="43" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>				
+$ lsof /mnt/NAS
+COMMAND   PID     USER   FD   TYPE DEVICE SIZE    NODE NAME
+bash    23236 wvh  cwd  DIR   0,27 4096 6406145 /mnt/NAS/writing \
+   (nas.vonhagen.org:/writing)
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P><CODE>lsof</CODE> 命令还提供其他选项，可以把输出限制为只报告在特定类型的设备上打开的文件和目录。例如，如 <A 
+href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list3" cmImpressionSent="1">清单 3</A> 所示，/mnt/yellowmachine 目录是 
+192.168.6.166 设备上的 /mnt/disk1 目录的 Network File System (NFS) 挂载点。可以在 
+<CODE>lsof</CODE> 命令中作为参数指定这个设备的挂载点名称，见 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list5" cmImpressionSent="1">清单 
+5</A>。 </P><BR><A name=list5><B>清单 5. 与远程 NFS 文件系统相关联的进程</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="44" 
+sizcache="2">
+<TBODY sizset="44" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>				
+$ lsof /mnt/yellowmachine
+COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+bash    23334  wvh  cwd    DIR   0,23     4096    2 /mnt/yellowmachine \
+   (192.168.6.166:/mnt/disk1)
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P>也可以使用 <CODE>lsof</CODE> 命令的 <CODE>-N</CODE> 选项只列出挂载的 NFS 设备上正在使用的文件和目录，见 <A 
+href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list6" cmImpressionSent="1">清单 6</A>。 </P><BR><A name=list6><B>清单 6. 
+与挂载的所有 NFS 分区相关联的进程</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="45" 
+sizcache="2">
+<TBODY sizset="45" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>				
+$ lsof -N
+COMMAND     PID USER   FD   TYPE DEVICE SIZE/OFF   NODE NAME
+bash      23334  wvh  cwd    DIR   0,23     4096      2 /mnt/yellowmachine
+  (192.168.6.166:/mnt/disk1)
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P><CODE>lsof</CODE> 
+命令还有许多选项，可以帮助您识别不同类型的文件系统上打开的文件和目录、打开了网络套接字的进程、正在使用特定的库的进程等等。<CODE>lsof</CODE> 
+命令的缺点是，必须联系用户并要求他们终止某些进程，或者自己手工终止它们。<CODE>fuser</CODE> 
+命令更复杂，但是更强大，在作为根用户运行时可以替您执行许多进程终止工作。 </P><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="46" 
+sizcache="2">
+<TBODY sizset="46" sizcache="1">
+<TR>
+<TD><IMG alt="" src="blue_rule.gif" width="100%" 
+height=1><BR><IMG border=0 alt="" src="c.gif" width=8 
+height=6></TD></TR></TBODY></TABLE>
+<TABLE class=no-print cellSpacing=0 cellPadding=0 align="right" sizset="47" 
+sizcache="2">
+<TBODY sizset="48" sizcache="2">
+<TR align="right" sizset="48" sizcache="2">
+<TD sizset="48" sizcache="2"><IMG alt="" src="c.gif" width="100%" 
+height=4><BR>
+<TABLE cellSpacing=0 cellPadding=0 border="0" sizset="48" sizcache="2">
+<TBODY sizset="48" sizcache="1">
+<TR>
+<TD vAlign=middle><IMG border=0 alt="" 
+src="u_bold.gif" width=16 height=16><BR></TD>
+<TD vAlign=top align=right><A class=fbox href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#main" 
+cmImpressionSent="1"><B>回页首</B></A></TD></TR></TBODY></TABLE></TD></TR></TBODY></TABLE><BR><BR>
+<P><A name=N10178><SPAN class=atitle>用 <CODE>fuser</CODE> 寻找用户进程 </SPAN></A></P>
+<P><CODE>fuser</CODE> (find user processes) 
+命令也是一个开放源码应用程序，可以帮助您识别阻止文件系统卸载的进程。<CODE>fuser</CODE> 
+命令寻找与作为命令行参数指定的文件、目录或文件系统相关联的进程。本文主要关注对文件系统挂载点使用 <CODE>fuser</CODE>。关于 
+<CODE>fuser</CODE> 命令的更多信息，请参见它的在线参考信息。<CODE>fuser</CODE> 命令要求系统支持 /proc 
+文件系统。因此，在所有 Linux 发行版和 FreeBSD 系统上都可以使用它。关于获得 <CODE>fuser</CODE> 命令的源代码的方法请参见 <A 
+href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#resources" cmImpressionSent="1">参考资料</A>。 </P>
+<P>与 <CODE>lsof</CODE> 命令一样，作为命令行参数提供文件系统挂载点名称是使用 <CODE>fuser</CODE> 
+命令识别阻止文件系统卸载的进程的最简单方法： </P>
+<TABLE cellSpacing=0 cellPadding=0 width="50%" border="0" sizset="49" 
+sizcache="2">
+<TBODY sizset="49" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>$ fuser /mnt/yellowmachine
+/mnt/yellowmachine:  23334c 23697c
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P><CODE>fuser</CODE> 命令的输出指出正在使用指定挂载点的进程的 PID。每个 PID 后面有一个字母，它表示与 PID 
+相关联的进程以什么方式使用指定的挂载点。最常见的字母是前面示例所示的 <CODE>c</CODE>，这表示指定的进程使用此文件系统上的一个目录作为当前工作目录。 
+</P>
+<P>但是，<CODE>fuser</CODE> 命令的默认输出不便于最终用户使用，即使按 Linux 标准来看也是如此。<CODE>fuser</CODE> 
+命令提供一个 <CODE>-v</CODE> 选项，它在 <CODE>fuser</CODE> 命令的输出中增加一些与标准 <CODE>ps</CODE> 
+命令相似的输出，见 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list7" cmImpressionSent="1">清单 7</A>。 </P><BR><A 
+name=list7><B>清单 7. 挂载的 NFS 文件系统上的用户进程</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="50" 
+sizcache="2">
+<TBODY sizset="50" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>				
+$ fuser -v /mnt/yellowmachine
+                     USER        PID ACCESS COMMAND
+/mnt/yellowmachine:  wvh       23334 ..c.. bash
+                     wvh       23697 ..c.. emacs
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P>这更方便，因为它至少指出了进程是什么程序。在通过 <CODE>fuser</CODE> 命令获得 PID 信息之后，可以在终止进程之前结合使用标准的 
+<CODE>ps</CODE> 和 <CODE>egrep</CODE> 命令了解尽可能详细的相关信息，见 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list8" 
+cmImpressionSent="1">清单 8</A>。 </P><BR><A name=list8><B>清单 8. 
+在系统上搜索特定的进程</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="51" 
+sizcache="2">
+<TBODY sizset="51" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>				
+# ps alxww |egrep '23334|23697'
+4 1000 23334 23332 20 0 18148  2076 wait   Ss pts/13  0:00 -bash
+0 1000 23697 23334 20 0 75964 12352 poll_s S+ pts/13  0:00 emacs -nw file2.txt
+0    0 23703 23665 20 0  6060   632 -      R+ pts/16  0:00 egrep
+23334|23697
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P>然后，可以使用标准的 <CODE>kill</CODE> 命令手工终止指定的进程，或者像下一节中解释的，使用 <CODE>fuser</CODE> 
+命令的一些高级功能自动地终止它们。 </P><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="52" 
+sizcache="2">
+<TBODY sizset="52" sizcache="1">
+<TR>
+<TD><IMG alt="" src="blue_rule.gif" width="100%" 
+height=1><BR><IMG border=0 alt="" src="c.gif" width=8 
+height=6></TD></TR></TBODY></TABLE>
+<TABLE class=no-print cellSpacing=0 cellPadding=0 align="right" sizset="53" 
+sizcache="2">
+<TBODY sizset="54" sizcache="2">
+<TR align="right" sizset="54" sizcache="2">
+<TD sizset="54" sizcache="2"><IMG alt="" src="c.gif" width="100%" 
+height=4><BR>
+<TABLE cellSpacing=0 cellPadding=0 border="0" sizset="54" sizcache="2">
+<TBODY sizset="54" sizcache="1">
+<TR>
+<TD vAlign=middle><IMG border=0 alt="" 
+src="u_bold.gif" width=16 height=16><BR></TD>
+<TD vAlign=top align=right><A class=fbox href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#main" 
+cmImpressionSent="1"><B>回页首</B></A></TD></TR></TBODY></TABLE></TD></TR></TBODY></TABLE><BR><BR>
+<P><A name=N10206><SPAN class=atitle>用 <CODE>fuser</CODE> 终止进程 </SPAN></A></P>
+<P>在通过参数指定挂载点时，<CODE>fuser</CODE> 命令的 <CODE>-k</CODE> 选项会自动地终止找到的进程。当然，必须作为根用户执行 
+<CODE>fuser</CODE> 命令，才能终止属于其他用户的进程，见 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list9" cmImpressionSent="1">清单 
+9</A>。 </P><BR><A name=list9><B>清单 9. 终止与挂载的 NFS 文件系统相关联的进程</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="55" 
+sizcache="2">
+<TBODY sizset="55" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>				
+# fuser -k /mnt/yellowmachine
+/mnt/yellowmachine:  23334c 23697c
+Could not kill process 23697: No such process
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P>在这里，第二个进程 (emacs) 是第一个进程 (bash shell) 的子进程，因此在 <CODE>fuser</CODE> 
+命令杀死第一个进程时它就会终止。 </P>
+<P>如果希望指定底层物理设备名，而不是它包含的文件系统的挂载点，那么还必须指定 <CODE>-m</CODE> 选项，见 <A href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#list10" 
+cmImpressionSent="1">清单 10</A>。 </P><BR><A name=list10><B>清单 10. 
+挂载点和设备的进程列表</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="56" 
+sizcache="2">
+<TBODY sizset="56" sizcache="1">
+<TR>
+<TD class=code-outline><PRE class=displaycode>				
+# fuser -v /opt2
+                     USER        PID ACCESS COMMAND
+/opt2:               wvh       23712 ..c.. bash
+                     wvh       23753 ..c.. emacs
+# fuser -v /dev/sdb1
+# fuser -vm /dev/sdb1
+                     USER        PID ACCESS COMMAND
+/dev/sdb1:           wvh       23712 ..c.. bash
+                     wvh       23753 ..c.. emacs
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P>第一个命令返回的输出符合预期，因为它引用文件系统的挂载点。第二个命令表明，不能使用标准的 <CODE>fuser</CODE> 
+选项直接查询底层设备。第三个命令说明，<CODE>-m</CODE> 选项允许直接指定设备。可以在第一个和第三个命令中添加 <CODE>-k</CODE> 
+选项，从而终止与 /dev/sdb1 设备上的文件系统相关联的进程。 </P><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border="0" sizset="57" 
+sizcache="2">
+<TBODY sizset="57" sizcache="1">
+<TR>
+<TD><IMG alt="" src="blue_rule.gif" width="100%" 
+height=1><BR><IMG border=0 alt="" src="c.gif" width=8 
+height=6></TD></TR></TBODY></TABLE>
+<TABLE class=no-print cellSpacing=0 cellPadding=0 align="right" sizset="58" 
+sizcache="2">
+<TBODY sizset="59" sizcache="2">
+<TR align="right" sizset="59" sizcache="2">
+<TD sizset="59" sizcache="2"><IMG alt="" src="c.gif" width="100%" 
+height=4><BR>
+<TABLE cellSpacing=0 cellPadding=0 border="0" sizset="59" sizcache="2">
+<TBODY sizset="59" sizcache="1">
+<TR>
+<TD vAlign=middle><IMG border=0 alt="" 
+src="u_bold.gif" width=16 height=16><BR></TD>
+<TD vAlign=top align=right><A class=fbox href="http://www.ibm.com/developerworks/cn/aix/library/au-unmount_partitions/#main" 
+cmImpressionSent="1"><B>回页首</B></A></TD></TR></TBODY></TABLE></TD></TR></TBODY></TABLE><BR><BR>
+<P><A name=N10257><SPAN class=atitle>结束语 </SPAN></A></P>
+<P>有时候，为了应对一些紧急情况或者删除挂载的 CD-ROM 或 DVD 等设备，Linux 或 UNIX 
+系统管理员需要卸载分区。在由于设备忙系统不允许删除它的情况下，检查系统上的所有进程是一个很烦人、很缓慢的过程。<CODE>lsof</CODE> 和 
+<CODE>fuser</CODE> 命令有助于识别阻止文件系统卸载的进程。如果情况非常紧急，<CODE>fuser</CODE> 命令甚至可以替您终止它们。 </P><!--EndFragment--></TD>
+</TR>
+</TBODY>
+</TABLE>
+</TD>
+</TR>
+</TBODY>
+</TABLE>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

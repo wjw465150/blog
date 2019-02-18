@@ -1,0 +1,373 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<HTML><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>TCP连接的状态转换图深度剖析</title>
+<STYLE type=text/css>
+.error{color:#FF0000;font-size:12px}
+</STYLE>
+</HEAD>
+
+<BODY>
+
+<CENTER>
+
+<DIV id=main style="WIDTH: 996px" align=left>
+
+<DIV class=stage>
+
+<DIV class=stagepad>
+
+<DIV style="WIDTH: 100%">
+
+<DIV class=modbox id=m_blog><!--StartFragment--><DIV class=tit>TCP连接的状态转换图深度剖析</DIV>
+<DIV class=date>2008-12-23 14:45</DIV>
+<TABLE style="TABLE-LAYOUT: fixed">
+<TBODY>
+<TR>
+<TD>
+<DIV class=cnt id=blog_text>
+<P><SPAN style="FONT-SIZE: 10.5pt">这</SPAN><SPAN style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">个</FONT></SPAN><SPAN style="FONT-SIZE: 10.5pt">图</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">n</SPAN><SPAN style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">多人都知道，</FONT></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">它</SPAN><SPAN style="FONT-SIZE: 10.5pt">对</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">排除和定位网</FONT></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">络或系统</SPAN><SPAN style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">故障</FONT></SPAN><SPAN style="FONT-SIZE: 10.5pt">时</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">大有帮助，但是怎</FONT></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">样</SPAN><SPAN style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">牢牢地</FONT></SPAN><SPAN style="FONT-SIZE: 10.5pt">将</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">这张图</SPAN><SPAN style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">刻在</FONT></SPAN><SPAN style="FONT-SIZE: 10.5pt">脑</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">中呢？那</FONT></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">么</SPAN><SPAN style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">你就一定要</FONT></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">对这张图</SPAN><SPAN style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">的</FONT></SPAN><SPAN style="FONT-SIZE: 10.5pt">每</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"><FONT face="MS Pゴシック">一个状</FONT></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">态，及转换的过程有深刻地认识，不能只停留在一知半解之中。下面对这张图的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">11</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">种状态详细解释一下，以便加强记忆！不过在这之前，先回顾一下</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">TCP</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">建立连接的三次握手过程，以及关闭连接的四次握手过程。</SPAN></P><SPAN 
+style="FONT-SIZE: 10.5pt">
+<P><SPAN style="FONT-SIZE: 10.5pt">1</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">、建立连接协议（三次握手）</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"><BR></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">（</SPAN><SPAN style="FONT-SIZE: 10.5pt">1</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">）客户端发送一个带</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">标志的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">TCP</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文到服务器。这是三次握手过程中的报文</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">1</SPAN><SPAN style="FONT-SIZE: 10.5pt">。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt"><SPAN></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">（</SPAN><SPAN style="FONT-SIZE: 10.5pt">2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">） 服务器端回应客户端的，这是三次握手中的第</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">个报文，这个报文同时带</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">标志和</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">标志。因此它表示对刚才客户端</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文的回应；同时又标志</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">给客户端，询问客户端是否准备好进行数据通讯。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt"></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">（</SPAN><SPAN style="FONT-SIZE: 10.5pt">3</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">） 客户必须再次回应服务段一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，这是报文段</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">3</SPAN><SPAN style="FONT-SIZE: 10.5pt">。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">、连接终止协议（四次握手）</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"><BR></SPAN><SPAN style="FONT-SIZE: 10.5pt">　 
+　由于</SPAN><SPAN style="FONT-SIZE: 10.5pt">TCP</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">连接是全双工的，因此每个方向都必须单独进行关闭。这原则是当一方完成它的数据发送任务后就能发送一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">来终止这个方向的连接。收到一个</SPAN><SPAN style="FONT-SIZE: 10.5pt"> 
+FIN</SPAN><SPAN style="FONT-SIZE: 10.5pt">只意味着这一方向上没有数据流动，一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">TCP</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">连接在收到一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">后仍能发送数据。首先进行关闭的一方将执行主动关闭，而另一方执行被动关闭。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">　（</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">1</SPAN><SPAN style="FONT-SIZE: 10.5pt">）</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"> TCP</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">客户端发送一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">，用来关闭客户到服务器的数据传送（报文段</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">4</SPAN><SPAN style="FONT-SIZE: 10.5pt">）。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"><BR></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">　（</SPAN><SPAN style="FONT-SIZE: 10.5pt">2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">） 服务器收到这个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">，它发回一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">，确认序号为收到的序号加</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">1</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">（报文段</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">5</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">）。和</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">一样，一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">将占用一个序号。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"><BR></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">　（</SPAN><SPAN style="FONT-SIZE: 10.5pt">3</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">） 服务器关闭客户端的连接，发送一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">给客户端（报文段</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">6</SPAN><SPAN style="FONT-SIZE: 10.5pt">）。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"><BR></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">　（</SPAN><SPAN style="FONT-SIZE: 10.5pt">4</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">） 客户段发回</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文确认，并将确认序号设置为收到序号加</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">1</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">（报文段</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">7</SPAN><SPAN style="FONT-SIZE: 10.5pt">）。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">CLOSED: </SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">这个没什么好说的了，表示初始状态。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">LISTEN: </SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">这个也是非常容易理解的一个状态，表示服务器端的某个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">处于监听状态，可以接受连接了。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">SYN_RCVD: </SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">这个状态表示接受到了</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，在正常情况下，这个状态是服务器端的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">在建立</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">TCP</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">连接时的三次握手会话过程中的一个中间状态，很短暂，基本上用</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">netstat</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">你是很难看到这种状态的，除非你特意写了一个客户端测试程序，故意将三次</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">TCP</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">握手过程中最后一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文不予发送。因此这种状态时，当收到客户端的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文后，它会进入到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ESTABLISHED</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态。</SPAN><SPAN style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">SYN_SENT: </SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">这个状态与</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN_RCVD</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">遥想呼应，当客户端</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">执行</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">CONNECT</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">连接时，它首先发送</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，因此也随即它会进入到了</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN_SENT</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态，并等待服务端的发送三次握手中的第</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">个报文。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN_SENT</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态表示客户端已发送</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文。</SPAN><SPAN style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">ESTABLISHED</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">：这个容易理解了，表示连接已经建立了。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">FIN_WAIT_1: </SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">这个状态要好好解释一下，其实</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN_WAIT_1</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">和</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN_WAIT_2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态的真正含义都是表示等待对方的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文。而这两种状态的区别是：</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN_WAIT_1</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态实际上是当</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">在</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ESTABLISHED</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态时，它想主动关闭连接，向对方发送了</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，此时该</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">即进入到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN_WAIT_1</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态。而当对方回应</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文后，则进入到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN_WAIT_2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态，当然在实际的正常情况下，无论对方何种情况下，都应该马上回应</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，所以</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN_WAIT_1</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态一般是比较难见到的，而</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN_WAIT_2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态还有时常常可以用</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">netstat</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">看到。</SPAN><SPAN style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">FIN_WAIT_2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">：上面已经详细解释了这种状态，实际上</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN_WAIT_2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态下的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">，表示半连接，也即有一方要求</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">close</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">连接，但另外还告诉对方，我暂时还有点数据需要传送给你，稍后再关闭连接。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">TIME_WAIT: </SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">表示收到了对方的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，并发送出了</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，就等</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">2MSL</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">后即可回到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">CLOSED</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">可用状态了。如果</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN_WAIT_1</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态下，收到了对方同时带</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">标志和</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">标志的报文时，可以直接进入到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">TIME_WAIT</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态，而无须经过</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN_WAIT_2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态。</SPAN><SPAN style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">CLOSING: </SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">这种状态比较特殊，实际情况中应该是很少见，属于一种比较罕见的例外状态。正常情况下，当你发送</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文后，按理来说是应该先收到（或同时收到）对方的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，再收到对方的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文。但是</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">CLOSING</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态表示你发送</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文后，并没有收到对方的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，反而却也收到了对方的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文。什么情况下会出现此种情况呢？其实细想一下，也不难得出结论：那就是如果双方几乎在同时</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">close</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">的话，那么就出现了双方同时发送</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文的情况，也即会出现</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">CLOSING</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态，表示双方都正在关闭</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">连接。</SPAN><SPAN style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">CLOSE_WAIT: </SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">这种状态的含义其实是表示在等待关闭。怎么理解呢？当对方</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">close</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">后发送</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文给自己，你系统毫无疑问地会回应一个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文给对方，此时则进入到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">CLOSE_WAIT</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态。接下来呢，实际上你真正需要考虑的事情是察看你是否还有数据发送给对方，如果没有的话，那么你也就可以</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">close</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">这个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">，发送</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文给对方，也即关闭连接。所以你在</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">CLOSE_WAIT</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态下，需要完成的事情是等待你去关闭连接。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">LAST_ACK: </SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">这个状态还是比较容易好理解的，它是被动关闭一方在发送</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文后，最后等待对方的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文。当收到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文后，也即可以进入到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">CLOSED</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">可用状态了。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">最后有</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">2</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">个问题的回答，我自己分析后的结论（不一定保证</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">100%</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">正确）</SPAN><SPAN style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P style="MARGIN-LEFT: 18pt; TEXT-INDENT: -18pt"><SPAN 
+style="FONT-SIZE: 10.5pt"><SPAN>1、<SPAN 
+style="FONT: 7pt Times New Roman; font-size-adjust: none; font-stretch: normal"> 
+</SPAN></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">为什么建立连接协议是三次握手，而关闭连接却是四次握手呢？</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">这是因为服务端的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">LISTEN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态下的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">当收到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文的建连请求后，它可以把</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">和</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">（</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">起应答作用，而</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">起同步作用）放在一个报文里来发送。但关闭连接时，当收到对方的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文通知时，它仅仅表示对方没有数据发送给你了；但未必你所有的数据都全部发送给对方了，所以你可以未必会马上会关闭</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET,</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">也即你可能还需要发送一些数据给对方之后，再发送</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文给对方来表示你同意现在可以关闭连接了，所以它这里的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文和</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文多数情况下都是分开发送的。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P style="MARGIN-LEFT: 18pt; TEXT-INDENT: -18pt"><SPAN 
+style="FONT-SIZE: 10.5pt"><SPAN>2、<SPAN 
+style="FONT: 7pt Times New Roman; font-size-adjust: none; font-stretch: normal"> 
+</SPAN></SPAN></SPAN><SPAN style="FONT-SIZE: 10.5pt">为什么</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">TIME_WAIT</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态还需要等</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">2MSL</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">后才能返回到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">CLOSED</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态？</SPAN><SPAN style="FONT-SIZE: 10.5pt"></SPAN></P>
+<P><SPAN style="FONT-SIZE: 10.5pt">这是因为：虽然双方都同意关闭连接了，而且握手的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">4</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">个报文也都协调和发送完毕，按理可以直接回到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">CLOSED</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态（就好比从</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SYN_SEND</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ESTABLISH</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态那样）；但是因为我们必须要假想网络是不可靠的，你无法保证你最后发送的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文会一定被对方收到，因此对方处于</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">LAST_ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态下的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">SOCKET</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">可能会因为超时未收到</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，而重发</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">FIN</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，所以这个</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">TIME_WAIT</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">状态的作用就是用来重发可能丢失的</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">ACK</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt">报文，并保证于此。</SPAN></P></SPAN></DIV></TD></TR></TBODY></TABLE><BR><!--EndFragment--></DIV>
+</DIV>
+</DIV>
+</DIV>
+</DIV>
+</CENTER>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

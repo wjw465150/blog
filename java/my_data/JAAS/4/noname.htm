@@ -1,0 +1,338 @@
+﻿<html>
+<head>
+  <title>JAAS简介</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body>
+  <ul style="direction:ltr;unicode-bidi:embed;">
+    <p style="font-weight:bold;font-family:Verdana;font-size:10 pt;color:navy">48_3 &nbsp;使用JAAS用户认证</p>
+    <p style="font-weight:bold;font-family:Verdana;font-size:10 pt;
+ color:navy">48_3_1 &nbsp;JAAS简介</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">Java安全框架最初集中在保护用户运行潜在的不可信任代码，是基于代码的来源（URL）和谁创建的代码（certificate）来给移动代码进行授权。Java 2 SDK 1.3引入了JAAS（ Java Authentication and Authorization Service）,增加了基于用户的访问控制能力，即根据谁在运行代码来进行授权。JAAS已经整合进了Java 2 SDK 1.4，作为标准的用户认证与授权模型。
+    </p>
+    <p style="font-style:italic;font-family:Verdana;font-size:10 pt;
+ color:black">JAAS用户认证框架</p>
+    <p><img src="clip_image001.jpg" width=518 height=226></p>
+    <p style="font-family:Verdana;font-size:10 pt"><span style="color:black">JAAS认证被实现为可插入的方式，允许应用程序同底层的具体认证技术保持独立，新增或者更新认证方法并不需要更改应用程序本身。应用程序通过实例化</span><a href="http://java.sun.com/j2se/1.4.2/docs/api/javax/security/auth/login/LoginContext.html">LoginContext</a>
+      <span
+      style="color:black">对象开始认证过程，引用配置文件中的具体认证方法，即</span><a href="http://java.sun.com/j2se/1.4.2/docs/api/javax/security/auth/spi/LoginModule.html">LoginModule</a><span style="color:black">对象，来执行认证。</span></p>
+    <p style="font-style:italic;font-family:Verdana;font-size:10 pt;
+ color:black">JAAS：可插入式认证</p>
+    <p><img src="clip_image002.jpg" width=550 height=376></p>
+    <p style="font-family:Verdana;font-size:10 pt"><span style="color:black">一旦执行代码的用户通过了认证，JAAS授权组件将和核心Java访问控制模型一起工作，来保护对敏感资源的访问。从J2SDK
+    1.4开始，访问控制不仅基于代码的来源和签名者（</span><a href="http://java.sun.com/j2se/1.4.2/docs/api/java/security/CodeSource.html">CodeSource</a><span style="color:black">），而且还要检查谁在运行代码。执行代码的用户被表现为</span><a href="http://java.sun.com/j2se/1.4.2/docs/api/javax/security/auth/Subject.html">Subject</a>
+      <span
+      style="color:black">对象，如果LoginModule认证成功，Subject对象被更新为相应的</span><a href="http://java.sun.com/j2se/1.4.2/docs/api/java/security/Principal.html">Principals</a><span style="color:black">和credentials。</span></p>
+    <p style="font-weight:bold;font-family:Verdana;font-size:10 pt;
+ color:navy">48_3_1_1 &nbsp;一个简单的例子</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">本节通过一个简单的例子介绍JAAS开发的基本步骤。本节中的范例位于Apusic应用服务器安装目录中的docs/samples/jaas/simple目录。有关范例的内容、编译、部署与运行，可参考docs/samples/jaas/simple目录下的readme.txt文件。</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">范例程序的代码分为两部分，一部分为主程序，执行用户认证过程，源程序如下：</p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">package samples;
+      <br>
+      <br> import javax.security.auth.Subject;
+      <br> import javax.security.auth.login.LoginContext;
+      <br> import javax.security.auth.login.LoginException;
+      <br> import com.sun.security.auth.callback.TextCallbackHandler;
+      <br>
+      <br> public class CountFiles {
+      <br>
+      <br> &nbsp;&nbsp;&nbsp; static LoginContext lc = null;
+      <br> &nbsp;&nbsp;&nbsp; public static void main(String[] args) {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //使用配置文件中名字为“CountFiles”的条目
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; try {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lc = new LoginContext(&quot;CountFiles&quot;,
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; new
+      TextCallbackHandler());
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } catch (LoginException le) {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; le.printStackTrace();
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.exit(-1);
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
+      <br>
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; try {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lc.login();
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //如果没有异常抛出，则表示认证成功
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } catch (Exception e) {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.out.println(&quot;Login failed: &quot; + e);
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.exit(-1);
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
+      <br>
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //以认证用户的身份执行代码
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Object o = Subject.doAs(lc.getSubject(), new CountFilesAction());
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.out.println(&quot;User &quot; + lc.getSubject( ) + &quot; found &quot; + o + &quot; files.&quot;);
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.exit(0);
+      <br> &nbsp;&nbsp;&nbsp; }
+      <br> }
+      <br>
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">可以看出，主程序包含了三个重要的步骤：首先构造一个LoginContext对象，然后使用这个对象进行登录，最后，把用户作为doAs方法一个参数。</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">另一部分表示用户想要执行的具体操作，源程序如下：</p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">package samples;
+      <br>
+      <br> import java.io.File;
+      <br> import java.security.PrivilegedAction;
+      <br>
+      <br> class CountFilesAction implements PrivilegedAction {
+      <br> &nbsp;&nbsp;&nbsp; public Object run() {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; File f = new File(&quot;.&quot;);
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; File[] files = f.listFiles();
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return new Integer(files.length);
+      <br> &nbsp;&nbsp;&nbsp; }
+      <br> }
+    </p>
+    <p style="font-weight:bold;font-family:Verdana;font-size:10 pt;
+ color:navy">48_3_1_2 &nbsp;JAAS核心类和接口</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">JAAS相关的核心类和接口分为三类，公共、认证和授权。</p>
+    <ul type=disc style="direction:ltr;unicode-bidi:embed;
+  ">
+      <li style="vertical-align:middle;color:black"><span style="font-family:Verdana;font-size:10 pt">公共类：Subject,，Principal，Credential </span></li>
+      <li style="vertical-align:middle;color:black"><span style="font-family:Verdana;font-size:10 pt">认证类和接口：LoginContext，LoginModule，CallbackHandler，Callback </span></li>
+      <li style="vertical-align:middle;color:black"><span style="font-family:Verdana;font-size:10 pt">授权类 ：Policy，AuthPermission，PrivateCredentialPermission </span></li>
+    </ul>
+    <p style="font-family:Verdana;font-size:10 pt"><span style="color:black">详细的描述请参考《</span><a href="http://java.sun.com/j2se/1.4.2/docs/guide/security/jaas/JAASRefGuide.html">JAAS
+    Reference Guide</a><span style="color:black">》。</span></p>
+    <p style="font-weight:bold;font-family:Verdana;font-size:10 pt;
+ color:navy">48_3_1_3 &nbsp;配置LoginModules</p>
+    <p style="font-family:Verdana;font-size:10 pt"><span style="color:black">JAAS认证被实现为一种可插入的方式，系统管理员可以通过配置文件为每一个应用程序配置LoginModuls来决定应用程序使用的认证技术。配置信息可以保存在文件或数据库中，通过</span><a href="http://java.sun.com/j2se/1.4.2/docs/api/javax/security/auth/login/Configuration.html">javax.security.auth.login.Configuration</a>
+      <span
+      style="color:black">对象进行读取。javax.security.auth.login.Configuration为抽象类，JDK提供了可实例化的子类</span><a href="http://java.sun.com/j2se/1.4.2/docs/guide/security/jaas/spec/com/sun/security/auth/login/ConfigFile.html">com.sun.security.auth.login.ConfigFile</a>
+        <span
+        style="color:black">，从文件中读取配置信息。配置文件中包含一个或多个条目，每一个条目指明了特定应用程序使用的认证方法。条目的结构如下：</span>
+    </p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">&lt;name used by application to refer to this entry&gt; {
+      <br> &nbsp;&nbsp;&nbsp; &lt;LoginModule&gt; &lt;flag&gt; &lt;LoginModule options&gt;;
+      <br> &nbsp;&nbsp;&nbsp; &lt;optional additional LoginModules, flags and options&gt;;
+      <br> &nbsp;&nbsp;&nbsp; };</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">可以看出，每一个条目由名字和一个或多个LoginModule组成。范例程序使用的配置文件login.conf内容如下：</p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">CountFiles {
+      <br> &nbsp;&nbsp;&nbsp; com.apusic.security.auth.login.ClientPasswordLoginModule required;
+      <br> };
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt"><span style="color:black">详细的描述信息可以参考</span><a href="http://java.sun.com/j2se/1.4.2/docs/api/javax/security/auth/login/Configuration.html">Configuration</a><span style="color:black">。</span></p>
+    <p style="font-weight:bold;font-family:Verdana;font-size:10 pt;
+ color:navy">48_3_1_4 &nbsp;编写Policy文件</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">JAAS授权扩展了现有的Java安全体系结构，在给代码授权时可以包括一个多个Principal域，指出Principal代表的用户执行特定的代码时，具有分配的权限。因此，授权声明的基本形式为：</p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">grant &lt;signer(s) field&gt;, &lt;codeBase URL&gt;
+      <br> &nbsp; &lt;Principal field(s)&gt; {
+      <br> &nbsp;&nbsp;&nbsp; permission perm_class_name &quot;target_name&quot;, &quot;action&quot;;
+      <br> &nbsp;&nbsp;&nbsp; ....
+      <br> &nbsp;&nbsp;&nbsp; permission perm_class_name &quot;target_name&quot;, &quot;action&quot;;
+      <br> &nbsp; };</p>
+    <p style="font-family:Verdana;font-size:10 pt"><span style="color:black">缺省的策略文件实现和策略文件语法请参考《</span><a href="http://java.sun.com/j2se/1.4.2/docs/guide/security/PolicyFiles.html">Default
+    Policy Implementation and Policy File Syntax</a><span style="color:black">》。范例程序使用的策略文件policy.jaas内容如下：</span></p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">grant codeBase &quot;
+      <a href="file://./build">file:./build</a>&quot; {
+      <br> &nbsp; permission java.security.AllPermission;
+      <br> };
+      <br>
+      <br> grant codeBase &quot;<a href="file://$%7bapusic.home%7d/lib/apusic.jar">file:/${apusic.home}/lib/apusic.jar</a>&quot; {
+      <br> &nbsp; permission java.security.AllPermission;
+      <br> };
+      <br>
+      <br> grant codeBase &quot;<a href="file://./build/actions">file:./build/actions</a>&quot; Principal com.apusic.security.PrincipalImpl &quot;admin&quot; {
+      <br> &nbsp; permission java.io.FilePermission &quot;&lt;&lt;ALL FILES&gt;&gt;&quot;, &quot;read&quot;;
+      <br> };
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">可以看出，给主程序和apusic.jar授予了所有权限；当执行具体操作的用户为“admin”时，授予了读取所有文件的权限。</p>
+    <p style="font-weight:bold;font-family:Verdana;font-size:10 pt;
+ color:navy">48_3_1_5 &nbsp;运行范例程序</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">范例程序提供了ant的build.xml脚本，请用户自己下载并安装ant。运行范例程序的步骤为：</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">1. 首先启动Apusic应用服务器， 范例程序将登录服务器。 </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">2. 编译、运行程序。在simple目录下执行ant命令，会编译源程序CountFiles.java到build目录下，编译源程序CountFilesAction.java到build/actions目录下。然后会自动运行程序，相当于在命令行敲入下面的java命令： </p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">java -classpath %APUSIC_HOME%/lib/apusic.jar;./build;./build/actions
+      <br> &nbsp;&nbsp;&nbsp;&nbsp; -Djava.security.manager
+      <br> &nbsp;&nbsp;&nbsp;&nbsp; -Djava.security.policy==policy.jaas
+      <br> &nbsp;&nbsp;&nbsp;&nbsp; -Djava.security.auth.login.config==login.conf
+      <br> &nbsp;&nbsp;&nbsp;&nbsp; -Dapusic.home=%APUSIC_HOME% samples.CountFiles
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">根据提示输入服务器，用户名和口令。 如果用“admin”登录，程序将正常运行结束，若使用其他用户名登录，将抛出访问控制异常。 </p>
+    <p style="font-weight:bold;font-family:Verdana;font-size:10 pt;
+ color:navy">48_3_2 &nbsp;JAAS和Apusic</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">Apusic应用服务器提供了使用JAAS接口进行用户认证的方法，而访问控制授权则由Apusic自己的安全管理器进行管理。这样Apusic提供了两种用户认证方式，即传统的JNDI认证和新型的JAAS认证，对于Web应用则提供标准的HTTP认证。</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">Apusic提供的LoginModule有：</p>
+    <ul type=disc style="direction:ltr;unicode-bidi:embed;
+  ">
+      <li style="vertical-align:middle;color:black"><span style="font-family:Verdana;font-size:10 pt">com.apusic.security.auth.login.ClientPasswordLoginModule：标准的用户口令认证。 </span></li>
+      <li style="vertical-align:middle;color:black"><span style="font-family:Verdana;font-size:10 pt">com.apusic.security.auth.login.ClientKrb5LoginModule：Kerberos支持的用户认证。 </span></li>
+      <li style="vertical-align:middle;color:black"><span style="font-family:Verdana;font-size:10 pt">com.apusic.security.auth.login.ServerLoginModule：服务器端LoginModule，把当前线程关联的安全上下文中的principal和credentials直接存放在Subject中。 </span></li>
+    </ul>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">一般的，开发者使用ClientPasswordLoginModule和ClientKrb5LoginModule从客户端登录服务器。使用JAAS可以同时使用多个身份登录服务器，也可以同时登录到多个服务器，然后通过Subject.doAs方法以不同的身份调用需要授权的服务器操作。当使用JNDI认证时也可以同时等录到多个服务器，但每个服务器上只能有一个活动用户身份。</p>
+    <div style="direction:ltr">
+      <table border=0 cellpadding=0 cellspacing=0 bordercolor="#A3A3A3" valign=top>
+        <tr>
+          <td>&nbsp;</td>
+          <td>
+            <p style="font-weight:bold;font-family:SimSun;font-size:10 pt;
+   color:black">注意</p>
+          </td>
+        </tr>
+        <tr>
+          <td>&nbsp;</td>
+          <td>
+            <p style="font-family:Verdana;font-size:10 pt;color:black">JAAS认证与JNDI认证不能同时使用，当使用JAAS认证之后，在Subject.doAs块中创建InitialContext时不能指定Context.PROVIDER_URL, Context.SECURITY_PRINCIPAL, Context.SECURITY_CREDENTIALS属性，即使使用这些属性创建了InitialContext也仍然使用JAAS认证的用户身份进行调用。
+              </p>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">Apusic还提供了CallbackHandler，开发者可以根据需要进行选择：</p>
+    <ul type=disc style="direction:ltr;unicode-bidi:embed;
+  ">
+      <li style="vertical-align:middle;color:black"><span style="font-family:Verdana;font-size:10 pt">com.apusic.security.auth.callback.TextCallbackHandler：命令行方式的登录提示 </span></li>
+      <li style="vertical-align:middle;color:black"><span style="font-family:Verdana;font-size:10 pt">com.apusic.security.auth.callback.DialogCallbackHandler：Swing对话框窗口方式的登录提示 </span></li>
+      <li style="vertical-align:middle;color:black"><span style="font-family:Verdana;font-size:10 pt">com.apusic.security.auth.callback.DefaultCallbackHandler：在程序中通过构造函数传入登录信息 </span></li>
+    </ul>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">当应用运行在客户端容器中时，JAAS认证由客户端容器自动完成，开发者可以在application-client.xml中指定callback-handler。如果未指定callback-handler，容器会根据客户端的环境选择TextCallbackHandler或DialogCallbackHandler。</p>
+    <p style="font-weight:bold;font-family:Verdana;font-size:10 pt;
+ color:navy">48_3_3 &nbsp;Apusic JAAS开发</p>
+    <p style="font-family:Verdana;font-size:10 pt"><span style="color:black">一般，开发者使用JAAS认证从客户端登录到服务器。在应用客户端中使用JAAS认证，需要把执行的操作(例如调用服务器上部署的EJB）包装在PrivilegedAction中。由于Apusic只把JAAS作为认证用户使用，所以只需要配置LoginModules。策略文件（</span><a href="http://java.sun.com/j2se/1.4.2/docs/guide/security/PolicyFiles.html">Policy</a>
+      <span
+      style="color:black">）作为访问控制授权语义，在这里不需要使用。本节通过一个范例程序的开发，介绍使用Apusic JAAS的基本步骤。</span>
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">本节中的范例位于Apusic应用服务器安装目录中的docs/samples/jaas/client目录。有关范例的内容、编译、部署与运行，可参考docs/samples/jaas/client目录下的readme.txt文件。</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">1. 开发客户端主程序，包含JAAS认证过程： </p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">package samples;
+      <br>
+      <br> import javax.security.auth.Subject;
+      <br> import javax.security.auth.login.LoginContext;
+      <br> import javax.security.auth.login.LoginException;
+      <br> import com.apusic.security.auth.callback.DialogCallbackHandler;
+      <br>
+      <br> public class Client {
+      <br>
+      <br> &nbsp;&nbsp;&nbsp; static LoginContext lc = null;
+      <br> &nbsp;&nbsp;&nbsp; public static void main(String[] args) {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //使用配置文件中名字为“client”的条目
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; try {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lc = new LoginContext(&quot;client&quot;,new DialogCallbackHandler());
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } catch (LoginException le) {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; le.printStackTrace();
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.exit(-1);
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; try {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; lc.login();
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //如果没有异常抛出，则表示认证成功
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } catch (Exception e) {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.out.println(&quot;Login failed: &quot; + e);
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.exit(-1);
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; String name;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if ( args != null &amp;&amp; args.length &gt;0 )
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; name = args[0];
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }else{
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; name = &quot;apusic&quot;;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //以认证用户的身份执行代码
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Object o = Subject.doAs(lc.getSubject(), new SampleAction(name) );
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; System.out.println(o);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <br> &nbsp;&nbsp;&nbsp; }
+      <br> }
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">2. 客户执行的操作包装在PrivilegedAction子类的run方法中。在这个例子中客户端将调用EJB。 </p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">package samples;
+      <br>
+      <br> import java.security.PrivilegedAction;
+      <br> import javax.naming.Context;
+      <br> import javax.naming.InitialContext;
+      <br> import javax.rmi.PortableRemoteObject;
+      <br>
+      <br> import samples.ejb.Hello;
+      <br> import samples.ejb.HelloHome;
+      <br>
+      <br> public class SampleAction implements PrivilegedAction {
+      <br> &nbsp;&nbsp;&nbsp; private String name;
+      <br> &nbsp;&nbsp;&nbsp; public SampleAction(String name){
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; this.name = name;
+      <br> &nbsp;&nbsp;&nbsp; }
+      <br> &nbsp;&nbsp;&nbsp; public Object run() {
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Object obj = null;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; try{
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Context ic = new InitialContext();
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Object objref = ic.lookup(&quot;ejb/HelloJAAS&quot;);
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; HelloHome home = (HelloHome) PortableRemoteObject.narrow(objref, HelloHome.class);
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Hello hello = home.create();
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; obj = hello.sayHello(name) ;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }catch(Exception e){
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; e.printStackTrace();
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return obj;
+      <br> &nbsp;&nbsp;&nbsp; }
+      <br> }
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">3. 开发EJB模块。本例中的EJB只实现了一个商业方法sayHello， </p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">public java.lang.String sayHello(java.lang.String name) {
+      <br> &nbsp;&nbsp;&nbsp; return &quot;hello, &quot; + name;
+      <br> }
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">在部署文件ejb-jar.xml中定义了两个角色：employee和manager，并且定义了方法访问许可，即只允许角色manager访问商业方法sayHello： </p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">...
+      <br> &lt;security-role&gt;
+      <br> &nbsp;&nbsp;&nbsp; &lt;role-name&gt;employee&lt;/role-name&gt;
+      <br> &lt;/security-role&gt;
+      <br> &lt;security-role&gt;
+      <br> &nbsp;&nbsp;&nbsp; &lt;role-name&gt;manager&lt;/role-name&gt;
+      <br> &lt;/security-role&gt;
+      <br> &lt;method-permission&gt;
+      <br> &nbsp;&nbsp;&nbsp; &lt;role-name&gt;manager&lt;/role-name&gt;
+      <br> &nbsp;&nbsp;&nbsp; &lt;method&gt;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;ejb-name&gt;Hello&lt;/ejb-name&gt;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;method-intf&gt;Remote&lt;/method-intf&gt;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;method-name&gt;sayHello&lt;/method-name&gt;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;method-params&gt;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;method-param&gt;java.lang.String&lt;/method-param&gt;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/method-params&gt;
+      <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/method&gt;
+      <br> &lt;/method-permission&gt;
+      <br> ...
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt"><span style="color:black">4. 编译、打包和部署EJB模块。具体过程可以参考 </span><a href="http://infocenter.apusic.com/help/topic/aas/v6/package_deploy_ejb.html">第&nbsp;49.3&nbsp;节
+    “打包和部署EJB模块”</a><span style="color:black">。在apusic的部署描述文件apusic-application.xml中将ejb-jar.xml中定义的角色映射为服务器用户：</span></p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">&lt;security-role&gt;
+      <br> &nbsp;&nbsp;&nbsp; &lt;role-name&gt;manager&lt;/role-name&gt;
+      <br> &nbsp;&nbsp;&nbsp; &lt;principal&gt;admin&lt;/principal&gt;
+      <br> &lt;/security-role&gt;
+      <br> &lt;security-role&gt;
+      <br> &nbsp;&nbsp;&nbsp; &lt;role-name&gt;employee&lt;/role-name&gt;
+      <br> &nbsp;&nbsp;&nbsp; &lt;principal&gt;j2ee&lt;/principal&gt;
+      <br> &lt;/security-role&gt;
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">最后使用ejbgen工具生成客户端运行需要的类库appclient.jar。 </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">5. 配置LoginModules。客户端使用JAAS认证需要读取配置文件来配置LoginModules，本范例的配置文件login.conf内容为： </p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">client {
+      <br> &nbsp;&nbsp;&nbsp; com.apusic.security.auth.login.ClientPasswordLoginModule required;
+      <br> };
+    </p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">在运行客户端时通过-Djava.security.auth.login.config==login.conf将配置文件传入客户端主程序。如果Apusic配置了Kerberos支持，可以使用ClientKrb5LoginModule</p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">client {
+      <br> &nbsp;&nbsp;&nbsp; com.apusic.security.auth.login.ClientKrb5LoginModule&nbsp; required url=&quot;<a href="http://localhost:6888/">http://localhost:6888</a>&quot;;
+      <br> };
+    </p>
+    <div style="direction:ltr">
+      <table border=0 cellpadding=0 cellspacing=0 bordercolor="#A3A3A3" valign=top>
+        <tr>
+          <td>&nbsp;</td>
+          <td>
+            <p style="font-weight:bold;font-family:SimSun;font-size:10 pt;
+   color:black">注意</p>
+          </td>
+        </tr>
+        <tr>
+          <td>&nbsp;</td>
+          <td>
+            <p style="font-family:Verdana;font-size:10 pt;color:black">如果程序运行在客户端容器中，配置文件中LoginModule的名字必须为“client”。客户端容器会自动使用名字为“client”的LoginModule进行JAAS认证。</p>
+            <p style="font-family:Verdana;font-size:10 pt"><span style="color:black">如果使用</span><a href="http://infocenter.apusic.com/help/topic/aas/v6/apclient.html">apclient</a><span style="color:black">启动客户端容器，可以指定url参数，格式为：iiop://user:password@host:port，则不会弹出登录窗口。apclient使用$APUSIC_HOME/config/</span>
+              <a
+              href="http://infocenter.apusic.com/help/topic/aas/v6/clientauth_cfg.html">clientauth.cfg</a><span style="color:black">作为登录配置文件。</span></p>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">6. 运行客户端。范例程序提供了ant脚本build.xml，可以自动编译、打包、部署EJB模块和运行客户端程序。运行客户端等价的命令行命令为： </p>
+    <p style="font-family:&quot;Courier New&quot;;font-size:9 pt">java -classpath %apusic_home%/lib/apusic.jar;./build/client;appclient.jar
+      <br> &nbsp;&nbsp;&nbsp;&nbsp; -Djava.security.auth.login.config==login.conf
+      <br> &nbsp;&nbsp;&nbsp;&nbsp; samples.Client apusic</p>
+    <p style="font-family:Verdana;font-size:10 pt;color:black">当客户端运行时，会弹出windows对话框，提示输入服务器、用户名和口令。如果使用“admin”登录，客户端将正常调用EJB的sayHello方法。如果使用其他用户登录，客户端将抛出访问控制异常：java.rmi.AccessException: 用户 "xxx" 没有权限访问EJB的业务方法。 </p>
+  </ul>
+</body>
+
+</html>

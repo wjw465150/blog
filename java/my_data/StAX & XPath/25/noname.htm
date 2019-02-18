@@ -1,0 +1,187 @@
+﻿<!-- saved from url=https://www.ibm.com/developerworks/cn/xml/x-xpathjava/ -->
+<script>
+window.onerror = new Function("return(false);")
+</script><!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML lang=zh-CN xml:lang="zh-CN" 
+xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>java处理XPath的一个实例</title><!-- s-header-meta  for china --><LINK 
+href="http://purl.org/DC/elements/1.0/" rel=schema.DC><LINK 
+href="favicon.ico" rel="SHORTCUT ICON"><!-- 5.8 0421 egd: Added IBM.Special.Purpose meta tag and the meta tag to suppress the WI login in the masthead --><!-- STYLESHEETS/SCRIPTS --><!-- for tables --><LINK 
+media=screen,print href="table.css" type=text/css 
+rel=stylesheet><!-- end for tables -->
+<SCRIPT language=JavaScript src="dwcss14.js" 
+type=text/javascript></SCRIPT>
+<LINK href="ie6v14.css" type=text/css rel=stylesheet><LINK 
+href="main.css" type=text/css rel=stylesheet><LINK 
+media=all href="screen.css" type=text/css 
+rel=stylesheet><LINK media=print href="print.css" 
+type=text/css rel=stylesheet>
+<SCRIPT language=JavaScript src="detection.js" 
+type=text/javascript></SCRIPT>
+<LINK media=screen href="ie2_screen.css" 
+type=text/css rel=stylesheet>
+<SCRIPT language=JavaScript src="dropdown.js" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT language=JavaScript src="grabtitle.js" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT language=JavaScript src="emailfriend2.js" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT language=JavaScript src="urltactic.js" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT language=JavaScript type=text/javascript>
+ <!--
+ setDefaultQuery('dwchina');
+ //-->
+</SCRIPT>
+<!--START RESERVED FOR FUTURE USE INCLUDE FILES-->
+<SCRIPT language=javascript src="ajax1.js" 
+type=text/javascript></SCRIPT>
+
+<SCRIPT language=javascript src="searchcount.js" 
+type=text/javascript></SCRIPT>
+<!--END RESERVED FOR FUTURE USE INCLUDE FILES-->
+<SCRIPT language=JavaScript type=text/javascript>var emailAbstract = "XPath 使在 XML 文档中选择元素、属性和文本变得很容易。学习如何从 Java 编程评估 XPaths，并使用返回的节点。"; </SCRIPT>
+</HEAD>
+
+<BODY>
+
+<TABLE id=v14-body-table cellSpacing=0 cellPadding=0 width="100%" border=0>
+
+<TBODY>
+
+<TR vAlign=top>
+
+<TD width="100%">
+
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+
+<TBODY>
+
+<TR vAlign=top>
+
+<TD width="100%"><!--StartFragment--><P><A name=N103B5><SPAN class=atitle>处理计算结果</SPAN></A></P>
+<P>获得了 XPath 
+计算的结果之后，就可以对结果进行处理了……无论怎么处理都行。例如，您可以只是在结果中进行迭代并将它们打印出来。当然，您可以进行更加复杂的处理。</P>
+<P><A name=N103BE><SPAN class=smalltitle>结果节点上的一个非常简单的迭代</SPAN></A></P>
+<P>实际上，<CODE>NodeList</CODE> 的每个成员都是一个 DOM 
+<CODE>Node</CODE>（<CODE>org.w3c.dom.Node</CODE>），并且您可以找到每个节点的名称和类型，甚至关于节点的任何内容。清单 
+12 展示了 <CODE>XPathEvaluator</CODE> 类的一个非常基本的附加功能，它传入一个 XPath 
+以进行计算，获得结果并将其打印出来。</P><BR><A name=c12><B>清单 12. 完成 XPathEvaluator 程序</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+<TBODY>
+<TR>
+<TD class=code-outline><PRE class=displaycode>                
+package ibm.dw.xpath;
+
+import java.io.IOException;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+
+public class XPathEvaluator {
+
+  private Document domTree = null;
+
+  public XPathEvaluator(String xmlFilename) throws IOException {
+    try {
+      // Convert filename into a DOM tree
+      DocumentBuilderFactory domFactory =
+        DocumentBuilderFactory.newInstance();
+      domFactory.setNamespaceAware(true);
+      DocumentBuilder builder = domFactory.newDocumentBuilder();
+      this.domTree = builder.parse(xmlFilename);
+    } catch (SAXException e) {
+      throw new IOException("Error in document parsing: " + e.getMessage());
+    } catch (ParserConfigurationException e) {
+      throw new IOException("Error in configuring parser: " + e.getMessage());
+    }
+  }
+
+  public NodeList evaluateXPath(String xpathString) throws IOException {
+    try {
+      XPathFactory factory = XPathFactory.newInstance();
+      XPath xpath = factory.newXPath();
+      return (NodeList)xpath.evaluate(
+        xpathString, domTree, XPathConstants.NODESET);
+    } catch (XPathExpressionException e) {
+      throw new IOException("Error evaluating XPath: " + e.getMessage());
+    }
+  }
+
+  public static void main(String[] args) {
+    try {
+      if (args.length != 1) {
+        System.err.println("Usage: java ibm.dw.xpath.XPathEvaluator " +
+          "[XML filename]");
+        System.exit(1);
+      }
+      XPathEvaluator evaluator = new XPathEvaluator(args[0]);
+      <SPAN class=boldcode>String xpathString = "//target[@name='init']/property[" +
+                           "starts-with(@name, 'parser')]";
+      NodeList results = evaluator.evaluateXPath(xpathString);
+      for (int i=0; i&lt;results.getLength(); i++) {
+        Node node = results.item(i);
+        System.out.print("Result: ");
+        switch (node.getNodeType()) {
+          case Node.ELEMENT_NODE: System.out.println("Element node named " +
+                                    node.getNodeName());
+                                  break;
+          case Node.ATTRIBUTE_NODE: System.out.println(
+                                     "Attribute node named " +
+                                       node.getNodeName() + " with value '" +
+                                       node.getNodeValue() + "'");
+                                  break;
+          case Node.TEXT_NODE:    System.out.println("Text: '" +
+                                    node.getNodeValue() + "'");
+                                  break;
+          default: System.out.println(node);
+        }
+      }</SPAN>
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+}
+</PRE></TD></TR></TBODY></TABLE><BR>
+<P>如果您阅读了关于 XPath 的两部分教程，那么您将会在选择一些属性时感受到 XPath 的强大功能。如果还没有示例文件 
+<I>xerces-build.xml</I>，那么您应该下载（参见 <A href="https://www.ibm.com/developerworks/cn/xml/x-xpathjava/#resources"  
+cmImpressionSent="1">参考资料</A>）并运行此示例，如清单 13 所示。</P><BR><A name=c13><B>清单 13. 运行 
+XPathEvaluator 程序</B></A><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+<TBODY>
+<TR>
+<TD class=code-outline><PRE class=displaycode>                
+[bdm0509:~/java_xpath] java ibm.dw.xpath.XPathEvaluator xerces-build.xml 
+Result: Element node named property
+Result: Element node named property
+Result: Element node named property
+Result: Element node named property
+Result: Element node named property
+Result: Element node named property
+</PRE></TD></TR></TBODY></TABLE><BR><!--EndFragment--></TD>
+</TR>
+</TBODY>
+</TABLE>
+</TD>
+</TR>
+</TBODY>
+</TABLE>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

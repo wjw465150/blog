@@ -1,0 +1,176 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>使用dm-crypt加密Linux上的分区</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: 宋体, Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto"><A 
+name=highlevel><SPAN class=smalltitle 
+style="FONT-SIZE: 1.2em; FONT-WEIGHT: bold"><FONT size=3>在 Red Hat 和 SUSE 上使用 
+dm-crypt 加密存储单元</FONT></SPAN></A></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">我们看看加密附加到一个在 
+SmartCloud Enterprise 上运行的 Linux 虚拟机的持久存储单元的步骤。dm-crypt 支持 Linux 支持的所有文件系统，包括 
+RAW 类型，但不包括网络文件系统。支持的 dm-crypt 密码列表可在 /proc/ciphers 下找到。最好使用高级加密标准 (AES)。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">Red 
+Hat Enterprise Linux 和 SUSE Linux Enterprise Server 上的步骤相同。在 SmartCloud 
+Enterprise 控制台上配置实例时，会附加存储单元。默认的挂载点为 /data。</P>
+<OL 
+style="MARGIN-BOTTOM: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 5px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 0.76em Simsun; MARGIN-TOP: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">
+  <LI 
+  style="MARGIN-BOTTOM: 0px; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 3px; PADDING-TOP: 5px; MARGIN-TOP: 0px; PADDING-RIGHT: 5px">大多数命令都需要 
+  root 用户特权，所以启动一个 root shell。
+  <TABLE style="FONT-SIZE: 0.8em" cellSpacing=0 cellPadding=0 width="100%" 
+  summary=这一表格包含代码清单。 border=0>
+    
+    <TR>
+      <TD class=code-outline 
+      style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycodeliquid style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; BACKGROUND-COLOR: rgb(247,247,247)">$ sudo sh
+</PRE></TD></TR></TABLE><BR>
+  <LI 
+  style="MARGIN-BOTTOM: 0px; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 3px; PADDING-TOP: 5px; MARGIN-TOP: 0px; PADDING-RIGHT: 5px">安装 
+  dm-crypt 实用程序。该实用程序应已包含在基本映像中。
+  <TABLE style="FONT-SIZE: 0.8em" cellSpacing=0 cellPadding=0 width="100%" 
+  summary=这一表格包含代码清单。 border=0>
+    
+    <TR>
+      <TD class=code-outline 
+      style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycodeliquid style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; BACKGROUND-COLOR: rgb(247,247,247)">$ sudo sh	
+$ yum install cryptsetup cryptsetup-luks
+</PRE></TD></TR></TABLE><BR>
+  <LI 
+  style="MARGIN-BOTTOM: 0px; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 3px; PADDING-TOP: 5px; MARGIN-TOP: 0px; PADDING-RIGHT: 5px">您需要知道希望加密的存储单元的名称。要找到它，可查看您在 
+  /data 挂载点或在创建实例时指定的自定义挂载点上挂载的分区的 /etc/fstab 文件。在我们的示例中，存储单元的名称为 /dev/vdc1。
+  <TABLE style="FONT-SIZE: 0.8em" cellSpacing=0 cellPadding=0 width="100%" 
+  summary=这一表格包含代码清单。 border=0>
+    
+    <TR>
+      <TD class=code-outline 
+      style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycodeliquid style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; BACKGROUND-COLOR: rgb(247,247,247)">$ cat /etc/fstab
+/dev/vdc1    /data    ext3    defaults    0 0
+</PRE></TD></TR></TABLE><BR>
+  <LI 
+  style="MARGIN-BOTTOM: 0px; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 3px; PADDING-TOP: 5px; MARGIN-TOP: 0px; PADDING-RIGHT: 5px">准备用于加密的附加存储单元。我们建议在加密之前对驱动器执行安全擦除，然后必须卸载存储单元。请注意，许多高度隐私的组织没有遵循这种安全删除方法；在使用存储设备时应考虑好备用方法。
+  <TABLE style="FONT-SIZE: 0.8em" cellSpacing=0 cellPadding=0 width="100%" 
+  summary=这一表格包含代码清单。 border=0>
+    
+    <TR>
+      <TD class=code-outline 
+      style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycodeliquid style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; BACKGROUND-COLOR: rgb(247,247,247)">$ cat /dev/urandom &gt; /dev/vdc1
+$ umount /data
+$ chmod 000 /data
+</PRE></TD></TR></TABLE><BR>
+  <LI 
+  style="MARGIN-BOTTOM: 0px; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 3px; PADDING-TOP: 5px; MARGIN-TOP: 0px; PADDING-RIGHT: 5px">使用 
+  ecryptfs 包所提供的<SPAN class=Apple-converted-space>&nbsp;</SPAN><CODE 
+  style="FONT-SIZE: small !important; FONT-FAMILY: monospace">cryptsetup</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>命令来初始化存储设备上的 Linux Unified Key Setup 
+  (LUKS) 格式。系统会提示您输入一个密码，必须牢记这个密码。请注意，LUK S 格式将会销毁目标上的所有数据。
+  <TABLE style="FONT-SIZE: 0.8em" cellSpacing=0 cellPadding=0 width="100%" 
+  summary=这一表格包含代码清单。 border=0>
+    
+    <TR>
+      <TD class=code-outline 
+      style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycodeliquid style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; BACKGROUND-COLOR: rgb(247,247,247)">$ /sbin/cryptsetup luksFormat /dev/vdc1
+
+WARNING!
+========
+This will overwrite data on /dev/vdc1 irrevocably.
+
+Are you sure? (Type uppercase yes): YES
+Enter LUKS passphrase:
+Verify passphrase:
+Command successful.
+</PRE></TD></TR></TABLE><BR>
+  <LI 
+  style="MARGIN-BOTTOM: 0px; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 3px; PADDING-TOP: 5px; MARGIN-TOP: 0px; PADDING-RIGHT: 5px">使用<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><CODE 
+  style="FONT-SIZE: small !important; FONT-FAMILY: monospace">cryptsetup</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>命令打开加密的存储设备。<CODE 
+  style="FONT-SIZE: small !important; FONT-FAMILY: monospace">luksOpen</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>后的第一个参数是加密的存储单元的名称。第二个参数是您希望分配给打开的设备的名称。您会被提示输入在第 
+  4 步中指定的密码。
+  <TABLE style="FONT-SIZE: 0.8em" cellSpacing=0 cellPadding=0 width="100%" 
+  summary=这一表格包含代码清单。 border=0>
+    
+    <TR>
+      <TD class=code-outline 
+      style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycodeliquid style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; BACKGROUND-COLOR: rgb(247,247,247)">$ /sbin/cryptsetup luksOpen /dev/vdc1 crypt-vdc1
+Enter LUKS passphrase for /dev/vdc1:
+key slot 0 unlocked.
+Command successful.
+</PRE></TD></TR></TABLE><BR>
+  <LI 
+  style="MARGIN-BOTTOM: 0px; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 3px; PADDING-TOP: 5px; MARGIN-TOP: 0px; PADDING-RIGHT: 5px">格式化文件系统，使其便于使用。您需要引用在第 
+  5 步中指定的名称。
+  <TABLE style="FONT-SIZE: 0.8em" cellSpacing=0 cellPadding=0 width="100%" 
+  summary=这一表格包含代码清单。 border=0>
+    
+    <TR>
+      <TD class=code-outline 
+      style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycodeliquid style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; BACKGROUND-COLOR: rgb(247,247,247)">$ /sbin/mkfs.ext3 /dev/mapper/crypt-vdc1
+</PRE></TD></TR></TABLE><BR>
+  <LI 
+  style="MARGIN-BOTTOM: 0px; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 3px; PADDING-TOP: 5px; MARGIN-TOP: 0px; PADDING-RIGHT: 5px">挂载新加密的存储单元并安全地存储您的静态数据。在本例中，将它挂载到原始挂载点 
+  /data。
+  <TABLE style="FONT-SIZE: 0.8em" cellSpacing=0 cellPadding=0 width="100%" 
+  summary=这一表格包含代码清单。 border=0>
+    
+    <TR>
+      <TD class=code-outline 
+      style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycodeliquid style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; BACKGROUND-COLOR: rgb(247,247,247)">$ mount /dev/mapper/crypt-vdc1 /data
+</PRE></TD></TR></TABLE><BR>
+  <LI 
+  style="MARGIN-BOTTOM: 0px; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 3px; PADDING-TOP: 5px; MARGIN-TOP: 0px; PADDING-RIGHT: 5px">请记住，在不使用加密的数据时，要卸载存储单元并关闭加密的设备。
+  <TABLE style="FONT-SIZE: 0.8em" cellSpacing=0 cellPadding=0 width="100%" 
+  summary=这一表格包含代码清单。 border=0>
+    
+    <TR>
+      <TD class=code-outline 
+      style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycodeliquid style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; BACKGROUND-COLOR: rgb(247,247,247)">$ umount /data
+$ /sbin/cryptsetup luksClose crypt-vdc1
+</PRE></TD></TR></TABLE><BR>
+  <P 
+  style="FONT-SIZE: 1em; FONT-FAMILY: arial, nsimsun, sans-serif; PADDING-BOTTOM: 0px; PADDING-TOP: 0.3em; PADDING-LEFT: 0px; MARGIN: 0px; PADDING-RIGHT: 5px">可使用<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><CODE 
+  style="FONT-SIZE: small !important; FONT-FAMILY: monospace">luksOpen</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><CODE 
+  style="FONT-SIZE: small !important; FONT-FAMILY: monospace">mount</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>命令再次打开并挂载它。</P></LI></OL>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">如果希望删除您的存储设备所附加到的实例，然后将存储设备重新附加到一个新实例，该怎么做？您可以使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">luksOpen</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>和<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style="FONT-SIZE: small !important; FONT-FAMILY: monospace">mount</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>命令，使用相同的设备名称 (/dev/vdc1) 
+按上述方法挂载加密的设备。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0.7em; TEXT-ALIGN: left; PADDING-TOP: 0.3em; FONT: 0.76em arial, nsimsun, sans-serif; PADDING-LEFT: 5px; MARGIN: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 5px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto">要删除加密的分区并将存储设备还原为原始状态，可在它打开并挂载后运行以下命令：</P>
+<TABLE 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 0.8em Simsun; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; -webkit-text-size-adjust: auto" 
+cellSpacing=0 cellPadding=0 width="100%" summary=这一表格包含代码清单。 border=0>
+  
+  <TR>
+    <TD class=code-outline 
+    style="BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: arial, nsimsun, sans-serif; BORDER-RIGHT: rgb(204,204,204) 1px solid; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 5px; PADDING-TOP: 2px; PADDING-LEFT: 2px; BORDER-LEFT: rgb(204,204,204) 1px solid; PADDING-RIGHT: 2px; BACKGROUND-COLOR: rgb(247,247,247)"><PRE class=displaycode style="OVERFLOW: auto; MARGIN-BOTTOM: 0px; FONT-SIZE: 11px; FONT-FAMILY: 'Andale Mono', 'Lucida Console', Monaco, Liberation, fixed, monospace; WIDTH: 694px; COLOR: rgb(0,0,0); MARGIN-TOP: 0px; BACKGROUND-COLOR: rgb(247,247,247)">$ /sbin/cryptsetup remove crypt-vdc1
+$ /sbin/mkfs.ext3 /dev/vdc1
+</PRE></TD></TR></TABLE>
+<P><BR 
+class=Apple-interchange-newline>&nbsp;</P></body>
+</html>

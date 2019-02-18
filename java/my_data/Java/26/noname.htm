@@ -1,0 +1,1125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!-- saved from url=(0065)http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml -->
+<html xmlns:fo="http://www.w3.org/1999/XSL/Format">
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=GBK" />
+<TITLE>实现非阻塞套接字的一种简单方法</TITLE>
+<META content=实现非阻塞套接字的一种简单方法 name=TITLE>
+<META content=Java name=zone>
+<!-- Java technology-->
+<META 
+content="NIO, kenneth ballard, jsse, IO, I/O, input, output, blocking, non-blocking, nonblocking, ssl, secure sockets layer, jdk 1.4, socket, emulation, 输入, 输出, 阻塞, 非阻塞, 安全套接字层, 套接字, 模拟" 
+name=KEYWORDS>
+<META 
+content="尽管 SSL 阻塞操作与非阻塞方式相比提供了更好的 I/O 错误通知，但是非阻塞操作允许调用的线程继续运行。本文中，作者同时就客户端和服务器端描述了如何使用 Java Secure Socket Extensions （JSSE） 和 Java NIO （新 I/O）库创建非阻塞的安全连接。" 
+name=ABSTRACT>
+<META 
+content="尽管 SSL 阻塞操作与非阻塞方式相比提供了更好的 I/O 错误通知，但是非阻塞操作允许调用的线程继续运行。本文中，作者同时就客户端和服务器端描述了如何使用 Java Secure Socket Extensions （JSSE） 和 Java NIO （新 I/O）库创建非阻塞的安全连接。" 
+name=DESCRIPTION>
+<META scheme=iso8601 content=2003-10-24 name=DC.DATE>
+<META content=2003-10-24 name=LASTUPDATE>
+<!--- common meta part for all zones -->
+<META http-equiv=Content-Type content="text/html; charset=gb2312">
+<META content=papers_html name=dWCategory>
+<META content=/developerWorks/cn/cncontent.nsf/cn_dW_feedback name=OWNER>
+<META content=V11 name=source>
+<META content=GB2312 name=charset>
+<META scheme=rfc1766 content=zh-cn name=DC.LANGUAGE>
+<META content=cn name=IBM.COUNTRY>
+<META content=Public name=SECURITY>
+<META content=text/xhtml name=FORMAT>
+<META content="Copyright (c) 2002 by IBM Corporation" name=COPYRIGHT>
+<META content=index,follow name=ROBOTS>
+<META name=DOCUMENTCOUNTRYCODE value="cn">
+<META name=DOCUMENTLANGUAGECODE value="zh">
+<META http-equiv=PICS-Label 
+content='(PICS-1.1 "http://www.rsac.org/ratingsv01.html" l gen true comment "RSACi North America Server" by "webmaster@mail.software.ibm.com" for "http://www.ibm.com/software" on "1997.08.13T17:59-0800" r (n 0 s 0 v 0 l 0))'>
+<META http-equiv=Expires content=0>
+<SCRIPT language=JavaScript src="style.js" 
+type=text/javascript></SCRIPT>
+<META content="MSHTML 6.00.2800.1170" name=GENERATOR>
+</HEAD>
+<BODY bgColor=#ffffff leftMargin=2 topMargin=2 marginwidth="2" marginheight="2">
+<!-- MASTHEAD-->
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+    <TBODY>
+  
+  <TR>
+    <TD class=tbgc width=160><A 
+      href="http://www-900.ibm.com/developerWorks/cn/cgi-bin/click.cgi?url=www.ibm.com/cn/&amp;origin=dwheader"><IMG 
+      height=47 alt=IBM src="ibm-logo.gif" width=160 
+      border=0></A></TD>
+    <TD class=tbg width=70><FONT color=#99ccff size=2><B>China</B></FONT><A 
+      href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#main"><IMG 
+      height=1 alt="Skip to main content" src="c.gif" 
+      width=70 border=0></A></TD>
+    <TD class=tbgc vAlign=top align=right width="100%"><TABLE cellSpacing=0 cellPadding=0 border=0>
+        <FORM id=form1 name=form1 
+        action=http://www-106.ibm.com/search/searchResults.jsp method=get>
+          <TBODY>
+            <TR>
+              <TD colSpan=7><IMG height=4 alt="" src="c.gif" 
+            width=390 border=0></TD>
+            </TR>
+            <TR vAlign=center>
+              <TD class=dwsearch><NOBR><FONT 
+            color=#ffffff><B>搜索:</B></FONT></NOBR>&nbsp;&nbsp;</TD>
+              <TD><INPUT class=dwsearch maxLength=100 size=23 name=query></TD>
+              <TD class=dwsearch vAlign=center>&nbsp;<FONT 
+            color=#ffffff><B>在</B></FONT>&nbsp;</TD>
+              <TD class=dwsearch><SELECT class=dwsearch2 
+              name=searchScope>
+                  &nbsp;&nbsp;
+                  <OPTION value=dW selected>dW 
+                  全部内容</OPTION>
+                  <OPTION value=javaZ>&nbsp;Java 技术</OPTION>
+                  <OPTION 
+              value=linuxZ>&nbsp;Linux</OPTION>
+                  <OPTION 
+              value=opensrcZ>&nbsp;开放源码</OPTION>
+                  <OPTION 
+              value=securityZ>&nbsp;安全</OPTION>
+                  <OPTION value=webservZ>&nbsp;Web 
+                  服务</OPTION>
+                  <OPTION value=xmlZ>&nbsp;XML</OPTION>
+                  <OPTION 
+              value=dW>.................</OPTION>
+                  <OPTION 
+              value=dmdd>&nbsp;DB2</OPTION>
+                  <OPTION 
+              value=wsdd>&nbsp;WebSphere</OPTION>
+                  <OPTION 
+              value=lotusdd>&nbsp;Lotus 专题</OPTION>
+                  <OPTION 
+              value=tivolidd>&nbsp;Tivoli 专题</OPTION>
+                  <OPTION 
+              value=dW>.................</OPTION>
+                  <OPTION value=all>IBM 
+                  全部内容</OPTION>
+                </SELECT></TD>
+              <TD><IMG height=1 alt="" src="c.gif" width=5 
+            border=0></TD>
+              <TD><INPUT type=image height=23 alt="Search button" width=64 
+            src="search.gif" value=Search border=0 
+            name=Search></TD>
+              <TD vAlign=top><IMG height=1 alt="" 
+            src="c.gif" width=30 border=0></TD>
+            </TR>
+            <TR vAlign=top>
+              <TD>&nbsp;</TD>
+              <TD class=dwsearch>&nbsp;<FONT color=#ffffff>只用 + - "&nbsp;" 
+                (&nbsp;)</FONT>
+              <TD>&nbsp;</TD>
+              <TD>&nbsp;</TD>
+              <TD>&nbsp;</TD>
+              <TD>&nbsp;</TD>
+              <TD>&nbsp;</TD>
+            </TR>
+          <INPUT type=hidden value=1 name=searchType>
+          <INPUT 
+        type=hidden value=dWChina name=searchSite>
+          <INPUT type=hidden value=zh 
+        name=pageLang>
+          <INPUT type=hidden value=gb2312 name=langEncoding>
+        </FORM>
+          </TBODY>
+      </TABLE></TD>
+  </TR>
+    <A id=main name=main>
+  
+  <TR>
+    <TD class=hbg width=160 height=21>&nbsp;</TD>
+    <TD class=bbg vAlign=top colSpan=2 height=21>&nbsp;&nbsp;&nbsp; <A 
+      class=mainlink 
+      href="http://www-900.ibm.com/developerWorks/cn/cgi-bin/click.cgi?url=www-900.ibm.com/cn/&amp;origin=dwhead">IBM 
+      主页</A> <SPAN class=divider>&nbsp;&nbsp;|&nbsp;&nbsp;</SPAN> <A 
+      class=mainlink 
+      href="http://www-900.ibm.com/developerWorks/cn/cgi-bin/click.cgi?url=www-900.ibm.com/cn/products/index.shtml&amp;origin=dwhead">产品与服务</A> <SPAN class=divider>&nbsp;&nbsp;|&nbsp;&nbsp;</SPAN> <A class=mainlink 
+      href="http://www-900.ibm.com/developerWorks/cn/cgi-bin/click.cgi?url=www-900.ibm.com/cn/support/index.shtml&amp;origin=dwhead">支持与下载</A> <SPAN class=divider>&nbsp;&nbsp;|&nbsp;&nbsp;</SPAN> <A class=mainlink 
+      href="http://www-900.ibm.com/developerWorks/cn/cgi-bin/click.cgi?url=www-900.ibm.com/cn/account/index.shtml&amp;origin=dwhead">个性化服务</A></TD>
+  </TR>
+    </TBODY>
+</TABLE>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY>
+    <TR class=hil>
+      <TD width="100%" height=1><IMG height=1 alt="" 
+      src="c.gif" width=592></TD>
+    </TR>
+    <TR class=dwr1>
+      <TD width="100%" height=2><IMG height=2 alt="" 
+      src="c.gif" width=592></TD>
+    </TR>
+    <TR class=dwg3>
+      <TD width="100%" height=1><IMG height=1 alt="" 
+      src="c.gif" width=592></TD>
+    </TR>
+    <TR class=bbg>
+      <TD width="100%" height=1><IMG height=1 alt="" 
+      src="c.gif" width=592></TD>
+    </TR>
+    <TR class=hil>
+      <TD width="100%" height=1><IMG height=1 alt="" 
+      src="c.gif" width=592></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY>
+    <TR vAlign=top>
+      <TD width=5><IMG height=1 alt="" src="c.gif" width=5 
+      border=0></TD>
+      <TD width="100%"><TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+          <TBODY>
+            <TR vAlign=top>
+              <TD width="100%"><IMG height=4 alt="" 
+            src="c.gif" width=2 border=0><BR>
+                <B><A 
+            href="http://www.ibm.com/">IBM</A> : <A 
+            href="http://www-900.ibm.com/developerWorks/cn/index.shtml">developerWorks 
+                中国网站</A> : <A 
+            href="http://www-900.ibm.com/developerWorks/cn/java/index.shtml">Java</A> : <A 
+            href="http://www-900.ibm.com/developerWorks/cn/cnpapers.nsf/java-papers-bynewest?OpenView&amp;count=10">所有的文章 </A></B></TD>
+              <TD align=right width=136><A 
+            href="http://www-900.ibm.com/developerWorks/cn/index.shtml"><IMG 
+            height=24 alt="developerWorks 中国网站" 
+            src="dwlogo-small.gif" width=136 
+          border=0></A></TD>
+              <TD width=5><IMG height=1 alt="" src="c.gif" 
+            width=5 border=0></TD>
+            </TR>
+          </TBODY>
+        </TABLE></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<!-- Title Area-->
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY>
+    <TR vAlign=top>
+      <TD colSpan=5><IMG height=15 alt="" src="c.gif" 
+      width=5 border=0></TD>
+    </TR>
+    <TR vAlign=top>
+      <TD width=2><IMG height=1 alt="" src="c.gif" width=2 
+      border=0></TD>
+      <TD><SPAN class=atitle>实现非阻塞套接字的一种简单方法</SPAN></TD>
+      <TD width=8><IMG height=1 alt="" src="c.gif" width=8 
+      border=0></TD>
+      <TD vAlign=bottom align=right width=180><NOBR><A 
+      href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index_eng.shtml" 
+      target=_blank><B>英文原文</B></A></NOBR></TD>
+      <TD width=6><IMG height=1 alt="" src="c.gif" width=6 
+      border=0></TD>
+    </TR>
+    <!-- Black line separator-->
+    <TR vAlign=top>
+      <TD bgColor=#000000 colSpan=5><IMG height=1 alt="" 
+      src="c.gif" width=100 border=0></TD>
+    </TR>
+    <TR vAlign=top>
+      <TD bgColor=#ffffff colSpan=5><IMG height=8 alt="" 
+      src="c.gif" width=100 border=0></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<!-- END HEADER AREA--><!-- START BODY AREA-->
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY>
+    <TR vAlign=top>
+      <TD width=10><IMG height=1 alt="" src="c.gif" 
+      width=10 border=0></TD>
+      <TD width="100%"><TABLE cellSpacing=0 cellPadding=0 width=168 align=right border=0>
+          <TBODY>
+            <TR><!-- Sidebar Gutter-->
+              <TD width=8><IMG height=21 alt="" src="c.gif" 
+            width=5></TD>
+              <TD width=160><!-- Start TOC-->
+                
+                <TABLE cellSpacing=0 cellPadding=0 width=160 border=0>
+                  <TBODY>
+                    <TR>
+                      <TD width=160 bgColor=#000000 height=1><IMG height=1 alt="" 
+                  src="c.gif" width=160></TD>
+                    </TR>
+                    <TR>
+                      <TD align=middle background=实现非阻塞套接字的一种简单方法.files/bg-gold.gif 
+                height=5><B>内容：</B></TD>
+                    </TR>
+                    <TR>
+                      <TD width=160 bgColor=#666666 height=1><IMG height=1 alt="" 
+                  src="c.gif" width=160></TD>
+                    </TR>
+                    <TR>
+                      <TD align=right><TABLE cellSpacing=0 cellPadding=3 width="98%" border=0>
+                          <TBODY>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#IDAL4I5B">阻塞和非阻塞通信</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#IDAP4I5B">传统的非阻塞客户机套接字</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#IDAM1I5B">NIO，非阻塞客户机套接字</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#IDA3UI5B">传统的非阻塞服务器套接字</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#IDABWI5B">创建替代的非阻塞服务器套接字</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#IDA1WI5B">创建 
+                                SSL 连接</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#IDABBJ5B">创建安全的非阻塞连接</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#IDAJDJ5B">安全和非安全连接</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#IDAKEJ5B">最简单的集成方法</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#resources">参考资料</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#author1">关于作者</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#rating">对本文的评价</A></TD>
+                            </TR>
+                          </TBODY>
+                        </TABLE></TD>
+                    </TR>
+                  </TBODY>
+                </TABLE>
+                <!-- End TOC--><!-- Start Related Content Area-->
+                
+                <TABLE cellSpacing=0 cellPadding=0 width=160 border=0>
+                  <TBODY>
+                    <TR>
+                      <TD width=160 bgColor=#000000 height=1><IMG height=1 alt="" 
+                  src="c.gif" width=160></TD>
+                    </TR>
+                    <TR>
+                      <TD align=middle background=实现非阻塞套接字的一种简单方法.files/bg-gold.gif 
+                height=5><B>相关内容：</B></TD>
+                    </TR>
+                    <TR>
+                      <TD width=160 bgColor=#666666 height=1><IMG height=1 alt="" 
+                  src="c.gif" width=160></TD>
+                    </TR>
+                    <TR>
+                      <TD align=right><TABLE cellSpacing=0 cellPadding=3 width="98%" border=0>
+                          <TBODY>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-javaio/">Merlin 
+                                给 Java 平台带来了非阻塞 I/O</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-mer03253/" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                        xmlns:dw="http://www.ibm.com/developerWorks/">Merlin 的新 
+                                I/O 缓冲区的输入和输出</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/java/j-customssl/" 
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                        xmlns:dw="http://www.ibm.com/developerWorks/">Custom 为高级 
+                                JSSE 开发人员定制 SSL</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/toolbox/index.shtml">developerWorks 
+                                Toolbox 
+                                subscription</A></TD>
+                            </TR>
+                          </TBODY>
+                        </TABLE></TD>
+                    </TR>
+                  </TBODY>
+                </TABLE>
+                <!-- End TOC--><!-- Start Related Content Area-->
+                
+                <TABLE cellSpacing=0 cellPadding=0 width=160 border=0>
+                  <TBODY>
+                    <TR>
+                      <TD width=160 bgColor=#000000 height=1><IMG height=1 alt="" 
+                  src="c.gif" width=160></TD>
+                    </TR>
+                    <TR>
+                      <TD align=middle background=实现非阻塞套接字的一种简单方法.files/bg-gold.gif 
+                height=5><A class=nav 
+                  href="http://www-900.ibm.com/developerWorks/cn/java/index.shtml"><B>Java 
+                        专区中还有:</B></A></TD>
+                    </TR>
+                    <TR>
+                      <TD width=160 bgColor=#666666 height=1><IMG height=1 alt="" 
+                  src="c.gif" width=160></TD>
+                    </TR>
+                    <TR>
+                      <TD align=right><TABLE cellSpacing=0 cellPadding=3 width="98%" border=0>
+                          <TBODY>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/cnedu.nsf/java-onlinecourse-bytitle?OpenView&amp;Count=500">教学</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/cntools.nsf/dw/java-all-byname?OpenDocument&amp;count=500">工具与产品</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/cntools.nsf/dw/java-beans-bytitle?OpenDocument&amp;count=500">代码与组件</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/cnpapers.nsf/java-papers-bynewest?OpenView&amp;Count=500">所有文章</A></TD>
+                            </TR>
+                            <TR>
+                              <TD><A 
+                        href="http://www-900.ibm.com/developerWorks/cn/cntips.nsf/java-tips-bydate?OpenView&amp;Count=500">实用技巧</A></TD>
+                            </TR>
+                          </TBODY>
+                        </TABLE></TD>
+                    </TR>
+                  </TBODY>
+                </TABLE>
+                <!-- End Related dW Content Area-->
+                
+                <TABLE cellSpacing=0 cellPadding=0 width=160 border=0>
+                  <TBODY>
+                    <TR>
+                      <TD width=150 bgColor=#000000 colSpan=2 height=2><IMG height=2 
+                  alt="" src="c.gif" width=160></TD>
+                    </TR>
+                    <TR>
+                      <TD width=150 bgColor=#ffffff colSpan=2 height=2><IMG height=2 
+                  alt="" src="c.gif" 
+              width=160></TD>
+                    </TR>
+                  </TBODY>
+                </TABLE>
+                <!-- END STANDARD SIDEBAR AREA--></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <SPAN 
+      class=atitle2>使用 JSSE 和 NIO 实现非阻塞通信的一种快速方法</SPAN><BR>
+        <TABLE cellSpacing=0 cellPadding=0 border=0>
+          <TBODY>
+            <TR vAlign=top align=left>
+              <TD><P>级别： 中级</P></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P><A 
+      href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#author1">Kenneth 
+          Ballard</A> (<A 
+      href="mailto:kenneth.ballard@ptk.org">kenneth.ballard@ptk.org</A>)<BR>
+          计算机科学系学生，珀鲁州立大学<BR>
+          2003 
+          年 11 月</P>
+        <BLOCKQUOTE>尽管 SSL 阻塞操作——当读写数据的时候套接字的访问被阻塞——与对应的非阻塞方式相比提供了更好的 I/O 
+          错误通知，但是非阻塞操作允许调用的线程继续运行。本文中，作者同时就客户端和服务器端描述了如何使用 Java Secure Socket 
+          Extensions （JSSE） 和 Java NIO （新 I/O）库创建非阻塞的安全连接，并且介绍了创建非阻塞套接字的传统方法，以及使用 
+          JSSE 和 NIO 的一种可选的（必需的）方法。</BLOCKQUOTE>
+        <P>阻塞，还是非阻塞？这就是问题所在。无论在程序员的头脑中多么高贵……当然这不是莎士比亚，本文提出了任何程序员在编写 Internet 
+          客户程序时都应该考虑的一个重要问题。通信操作应该是阻塞的还是非阻塞的？ </P>
+        <P>许多程序员在使用 Java 语言编写 Internet 客户程序时并没有考虑这个问题，主要是因为在以前只有一种选择——阻塞通信。但是现在 
+          Java 程序员有了新的选择，因此我们编写的每个客户程序也许都应该考虑一下。 </P>
+        <P>非阻塞通信在 Java 2 SDK 的 1.4 版被引入 Java 语言。如果您曾经使用该版本编过程序，可能会对新的 I/O 
+          库（NIO）留下了印象。在引入它之前，非阻塞通信只有在实现第三方库的时候才能使用，而第三方库常常会给应用程序引入缺陷。 </P>
+        <P>NIO 库包含了文件、管道以及客户机和服务器套接字的非阻塞功能。库中缺少的一个特性是安全的非阻塞套接字连接。在 NIO 或者 JSSE 
+          库中没有建立安全的非阻塞通道类，但这并不意味着不能使用安全的非阻塞通信。只不过稍微麻烦一点。 </P>
+        <P>要完全领会本文，您需要熟悉：</P>
+        <UL xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:dw="http://www.ibm.com/developerWorks/">
+          <LI>Java 套接字通信的概念。您也应该实际编写过应用程序。而且不只是打开连接、读取一行然后退出的简单应用程序，应该是实现 POP3 或 
+            HTTP 之类协议的客户机或通信库这样的程序。<BR>
+            <BR>
+          <LI>SSL 基本概念和加密之类的概念。基本上就是知道如何设置一个安全连接（但不必担心 JSSE 
+            ——这就是关于它的一个“紧急教程”）。<BR>
+            <BR>
+          <LI>NIO 库。<BR>
+            <BR>
+          <LI>在您选择的平台上安装 Java 2 SDK 1.4 或以后的版本。（我是在 Windows 98 上使用 1.4.1_01 版。） </LI>
+        </UL>
+        <P>如果需要关于这些技术的介绍，请参阅<A 
+      href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#resources" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:dw="http://www.ibm.com/developerWorks/">参考资料</A>部分。 </P>
+        <P>那么到底什么是阻塞和非阻塞通信呢？ </P>
+        <P><A name=IDAL4I5B><SPAN 
+      class=atitle2>阻塞和非阻塞通信</SPAN></A><BR>
+          阻塞通信意味着通信方法在尝试访问套接字或者读写数据时阻塞了对套接字的访问。在 
+          JDK 1.4 之前，绕过阻塞限制的方法是无限制地使用线程，但这样常常会造成大量的线程开销，对系统的性能和可伸缩性产生影响。java.nio 
+          包改变了这种状况，允许服务器有效地使用 I/O 流，在合理的时间内处理所服务的客户请求。 </P>
+        <P>没有非阻塞通信，这个过程就像我所喜欢说的“为所欲为”那样。基本上，这个过程就是发送和读取任何能够发送/读取的东西。如果没有可以读取的东西，它就中止读操作，做其他的事情直到能够读取为止。当发送数据时，该过程将试图发送所有的数据，但返回实际发送出的内容。可能是全部数据、部分数据或者根本没有发送数据。 </P>
+        <P>阻塞与非阻塞相比确实有一些优点，特别是遇到错误控制问题的时候。在阻塞套接字通信中，如果出现错误，该访问会自动返回标志错误的代码。错误可能是由于网络超时、套接字关闭或者任何类型的 
+          I/O 
+          错误造成的。在非阻塞套接字通信中，该方法能够处理的唯一错误是网络超时。为了检测使用非阻塞通信的网络超时，需要编写稍微多一点的代码，以确定自从上一次收到数据以来已经多长时间了。 </P>
+        <P>哪种方式更好取决于应用程序。如果使用的是同步通信，如果数据不必在读取任何数据之前处理的话，阻塞通信更好一些，而非阻塞通信则提供了处理任何已经读取的数据的机会。而异步通信，如 
+          IRC 和聊天客户机则要求非阻塞通信以避免冻结套接字。 </P>
+        <P><A name=IDAP4I5B><SPAN class=atitle2>创建传统的非阻塞客户机套接字</SPAN></A><BR>
+          Java 
+          NIO 库使用通道而非流。通道可同时用于阻塞和非阻塞通信，但创建时默认为非阻塞版本。但是所有的非阻塞通信都要通过一个名字中包含 <CODE>Channel</CODE> 的类完成。在套接字通信中使用的类是 <CODE>SocketChannel，</CODE>而创建该类的对象的过程不同于典型的套接字所用的过程，如清单 1 所示。 </P>
+        <A 
+      name=listing1><B>清单 1. 创建并连接 SocketChannel 对象</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+SocketChannel sc = SocketChannel.open();
+sc.connect("www.ibm.com",80);
+sc.finishConnect();
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P>必须声明一个 <CODE>SocketChannel</CODE> 类型的指针，但是不能使用 <CODE>new</CODE> 操作符创建对象。相反，必须调用 <CODE>SocketChannel</CODE> 类的一个静态方法打开通道。打开通道后，可以通过调用 <CODE>connect()</CODE> 方法与它连接。但是当该方法返回时，套接字不一定是连接的。为了确保套接字已经连接，必须接着调用 <CODE>finishConnect()</CODE>。 </P>
+        <P>当套接字连接之后，非阻塞通信就可以开始使用 <CODE>SocketChannel</CODE> 类的 <CODE>read()</CODE> 和 <CODE>write()</CODE> 方法了。也可以把该对象强制转换成单独的 <CODE>ReadableByteChannel</CODE> 和 <CODE>WritableByteChannel</CODE> 对象。无论哪种方式，都要对数据使用 <CODE>Buffer</CODE> 对象。因为 NIO 库的使用超出了本文的范围，我们不再对此进一步讨论。 </P>
+        <P>当不再需要套接字时，可以使用 <CODE>close()</CODE> 方法将其关闭： </P>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+sc.close();
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P>这样就会同时关闭套接字连接和底层的通信通道。 </P>
+        <P><A name=IDAM1I5B><SPAN 
+      class=atitle2>创建替代的非阻塞的客户机套接字</SPAN></A><BR>
+          上述方法比传统的创建套接字连接的例程稍微麻烦一点。不过，传统的例程也能用于创建非阻塞套接字，不过需要增加几个步骤以支持非阻塞通信。 </P>
+        <P><CODE>SocketChannel</CODE> 对象中的底层通信包括两个 <CODE>Channel</CODE> 类：<CODE>ReadableByteChannel</CODE> 和 <CODE>WritableByteChannel。</CODE>这两个类可以分别从现有的 <CODE>InputStream</CODE> 和 <CODE>OutputStream</CODE><CODE> </CODE>阻塞流中使用 <CODE>Channels</CODE> 类的 <CODE>newChannel()</CODE> 方法创建，如清单 2 所示：</P>
+        <A name=listing2><B>清单 2. 
+        从流中派生通道</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+ReadableByteChannel rbc = Channels.newChannel(s.getInputStream());
+WriteableByteChannel wbc = Channels.newChannel(s.getOutputStream());
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P><CODE>Channels</CODE> 类也用于把通道转换成流或者 reader 和 
+          writer。这似乎是把通信切换到阻塞模式，但并非如此。如果试图读取从通道派生的流，读方法将抛出 <CODE>IllegalBlockingModeException </CODE>异常。 </P>
+        <P>相反方向的转换也是如此。不能使用 <CODE>Channels</CODE> 类把流转换成通道而指望进行非阻塞通信。如果试图读从流派生的通道，读仍然是阻塞的。但是像编程中的许多事情一样，这一规则也有例外。 </P>
+        <P>这种例外适合于实现 <CODE>SelectableChannel</CODE> 抽象类的类。<CODE>SelectableChannel</CODE> 和它的派生类能够选择使用阻塞或者非阻塞模式。 <CODE>SocketChannel</CODE> 就是这样的一个派生类。 </P>
+        <P>但是，为了能够在两者之间来回切换，接口必须作为 <CODE>SelectableChannel </CODE>实现。对于套接字而言，为了实现这种能力必须使用 <CODE>SocketChannel</CODE> 而不是 <CODE>Socket</CODE>。 </P>
+        <P>回顾一下，要创建套接字，首先必须像通常使用 <CODE>Socket</CODE> 类那样创建一个套接字。套接字连接之后，使用<A 
+      href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#listing2" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:dw="http://www.ibm.com/developerWorks/">清单 2</A> 中的两行代码把流转换成通道。 </P>
+        <A name=listing3><B>清单 3. 创建套接字的另一种方法</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+Socket s = new Socket("www.ibm.com", 80);
+ReadableByteChannel rbc = Channels.newChannel(s.getInputStream());
+WriteableByteChannel wbc = Channels.newChannel(s.getOutputStream());
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P>如前所述，这样并不能实现非阻塞套接字通信——所有的通信仍然在阻塞模式下。在这种情况下，非阻塞通信必须模拟实现。模拟层不需要多少代码。让我们来看一看。 </P>
+        <P><A name=emulread><SPAN 
+      class=atitle3>从模拟层读数据</SPAN></A><BR>
+          模拟层在尝试读操作之前首先检查数据的可用性。如果数据可读则开始读。如果没有数据可用，可能是因为套接字被关闭，则返回表示这种情况的代码。在清单 
+          4 中要注意仍然使用了 <CODE>ReadableByteChannel</CODE> 读，尽管 <CODE>InputStream</CODE> 完全可以执行这个动作。为什么这样做呢？为了造成是 NIO 
+          而不是模拟层执行通信的假象。此外，还可以使模拟层与其他通道更容易结合，比如向文件通道内写入数据。 </P>
+        <A 
+      name=listing4><B>清单 4. 模拟非阻塞的读操作</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+/* The checkConnection method returns the character read when 
+   determining if a connection is open.
+ */
+
+y = checkConnection();
+if(y &lt;= 0) return y;
+
+buffer.putChar((char ) y);
+return rbc.read(buffer); 
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P><A name=emulwrite><SPAN 
+      class=atitle3>向模拟层写入数据</SPAN></A><BR>
+          对于非阻塞通信，写操作只写入能够写的数据。发送缓冲区的大小和一次可以写入的数据多少有很大关系。缓冲区的大小可以通过调用 <CODE>Socket</CODE> 对象的 <CODE>getSendBufferSize()</CODE> 方法确定。在尝试非阻塞写操作时必须考虑到这个大小。如果尝试写入比缓冲块更大的数据，必须拆开放到多个非阻塞写操作中。太大的单个写操作可能被阻塞。 </P>
+        <A name=listing5><B>清单 5. 模拟非阻塞的写操作</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+int x, y = s.getSendBufferSize(), z = 0;
+int expectedWrite;
+byte [] p = buffer.array();
+ByteBuffer buf = ByteBuffer.allocateDirect(y);
+
+/* If there isn't any data to write, return, otherwise flush the stream */
+
+if(buffer.remaining() == 0) return 0;
+os.flush()
+
+for(x = 0; x &lt; p.length; x += y)
+{
+    if(p.length - x &lt; y)
+    {
+        buf.put(p, x, p.length - x);
+        expectedWrite = p.length - x;
+    }
+    else
+    {
+        buf.put(p, x, y);
+        expectedWrite = y;
+    }
+    
+    /* Check the status of the socket to make sure it's still open */
+    
+    if(!s.isConnected()) break;
+
+    /* Write the data to the stream, flushing immediately afterward */
+
+    buf.flip(); 
+    z = wbc.write(buf); os.flush();
+    if(z &lt; expectedWrite) break;
+    buf.clear();
+    
+}
+if(x &gt; p.length) return p.length;
+else if(x == 0) return -1;
+else return x + z;
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P>与读操作类似，首先要检查套接字是否仍然连接。但是如果把数据写入 <CODE>WritableByteBuffer</CODE> 对象，就像清单 
+          5 
+          那样，该对象将自动进行检查并在没有连接时抛出必要的异常。在这个动作之后开始写数据之前，流必须立即被清空，以保证发送缓冲区中有发送数据的空间。任何写操作都要这样做。发送到块中的数据与发送缓冲区的大小相同。执行清除操作可以保证发送缓冲不会溢出而导致写操作被阻塞。 </P>
+        <P>因为假定写操作只能写入能够写的内容，这个过程还必须检查套接字保证它在每个数据块写入后仍然是打开的。如果在写入数据时套接字被关闭，则必须中止写操作并返回套接字关闭之前能够发送的数据量。 </P>
+        <P><CODE>BufferedOutputReader</CODE> 可用于模拟非阻塞写操作。如果试图写入超过缓冲区两倍长度的数据，则直接写入缓冲区整倍数长度的数据（缓冲余下的数据）。比如说，如果缓冲区的长度是 256 
+          字节而需要写入 529 字节的数据，则该对象将清除当前缓冲区、发送 512 字节然后保存剩下的 17 字节。 </P>
+        <P>对于非阻塞写而言，这并非我们所期望的。我们希望分次把数据写入同样大小的缓冲区中，并最终把全部数据都写完。如果发送的大块数据留下一些数据被缓冲，那么在所有数据被发送的时候，写操作就会被阻塞。 </P>
+        <P><A name=emulclass><SPAN 
+      class=atitle3>模拟层类模板</SPAN></A><BR>
+          整个模拟层可以放到一个类中，以便更容易和应用程序集成。如果要这样做，我建议从 <CODE>ByteChannel </CODE>派生这个类。这个类可以强制转换成单独的 <CODE>ReadableByteChannel</CODE> 和 <CODE>WritableByteChannel</CODE> 类。 </P>
+        <P>清单 6 给出了从 <CODE>ByteChannel</CODE> 派生的模拟层类模板的一个例子。本文后面将一直使用这个类表示通过阻塞连接执行的非阻塞操作。 </P>
+        <A name=listing6><B>清单 6. 
+        模拟层的类模板</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+public class nbChannel implements ByteChannel
+{
+    Socket s;
+    InputStream is; OutputStream os;
+    ReadableByteChannel rbc;
+    WritableByteChannel wbc;
+    
+    public nbChannel(Socket socket);
+    public int read(ByteBuffer dest);
+    public int write(ByteBuffer src);
+    public void close();
+		
+    protected int checkConnection();
+}
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P><A name=emulsocket><SPAN 
+      class=atitle3>使用模拟层创建套接字</SPAN></A><BR>
+          使用新建的模拟层创建套接字非常简单。只要像通常那样创建 <CODE>Socket</CODE> 对象，然后创建 <CODE>nbChannel</CODE> 对象就可以了，如清单 7 所示：</P>
+        <A 
+      name=listing7><B>清单 7. 使用模拟层</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+Socket s = new Socket("www.ibm.com", 80);
+nbChannel socketChannel = new nbChannel(s);
+ReadableByteChannel rbc = (ReadableByteChannel)socketChannel;
+WritableByteChannel wbc = (WritableByteChannel)socketChannel;
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P><A name=IDA3UI5B><SPAN 
+      class=atitle2>创建传统的非阻塞服务器套接字</SPAN></A><BR>
+          服务器端的非阻塞套接字和客户端上的没有很大差别。稍微麻烦一点的只是建立接受输入连接的套接字。套接字必须通过从服务器套接字通道派生一个阻塞的服务器套接字绑定到阻塞模式。清单 
+          8 列出了需要做的步骤。 </P>
+        <A name=listing8><B>清单 8. 
+        创建非阻塞的服务器套接字（SocketChannel）</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+ServerSocketChannel ssc = ServerSocketChannel.open();
+ServerSocket ss = ssc.socket();
+ss.bind(new InetSocketAddress(port));
+SocketChannel sc = ssc.accept();
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P>与客户机套接字通道相似，服务器套接字通道也必须打开而不是使用 <CODE>new</CODE> 操作符或者构造函数。在打开之后，必须派生服务器套接字对象以便把套接字通道绑定到一个端口。一旦套接字被绑定，服务器套接字对象就可以丢弃了。 </P>
+        <P>通道使用 <CODE>accept()</CODE> 方法接收到来的连接并把它们转给套接字通道。一旦接收了到来的连接并转给套接字通道对象，通信就可以通过 <CODE>read()</CODE> 和 <CODE>write()</CODE> 方法开始进行了。 </P>
+        <P><A name=IDABWI5B><SPAN 
+      class=atitle2>创建替代的非阻塞服务器套接字</SPAN></A><BR>
+          实际上，并非真正的替代。因为服务器套接字通道必须使用服务器套接字对象绑定，为何不完全绕开服务器套接字通道而仅使用服务器套接字对象呢？不过这里的通信不使用 <CODE>SocketChannel</CODE>，而要使用模拟层 <CODE>nbChannel。</CODE> </P>
+        <A 
+      name=listing9><B>清单 9. 建立服务器套接字的另一种方法</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+ServerSocket ss = new ServerSocket(port);
+Socket s = ss.accept();
+nbChannel socketChannel = new nbChannel(s);
+ReadableByteChannel rbc = (ReadableByteChannel)socketChannel;
+WritableByteChannel wbc = (WritableByteChannel)socketChannel;
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P><A name=IDA1WI5B><SPAN class=atitle2>创建 SSL 
+          连接</SPAN></A><BR>
+          创建SSL连接，我们要分别从客户端和服务器端考察。 </P>
+        <P><A name=IDADXI5B><SPAN class=atitle3>从客户端</SPAN></A><BR>
+          创建 SS 
+          L连接的传统方法涉及到使用套接字工厂和其他一些东西。我将不会详细讨论如何创建SSL连接，不过有一本很好的教程，“Secure your 
+          sockets with JSSE”（请参阅<A 
+      href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#resources" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:dw="http://www.ibm.com/developerWorks/">参考资料</A>），从中您可以了解到更多的信息。 </P>
+        <P>创建 SSL 套接字的默认方法非常简单，只包括几个很短的步骤：</P>
+        <OL xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:dw="http://www.ibm.com/developerWorks/">
+          <LI>创建套接字工厂。
+          <LI>创建连接的套接字。
+          <LI>开始握手。
+          <LI>派生流。
+          <LI>通信。</LI>
+        </OL>
+        <P>清单 10 说明了这些步骤：</P>
+        <A name=listing10><B>清单 10. 创建安全的客户机套接字</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+SSLSocketFactory sslFactory = 
+  (SSLSocketFactory)SSLSocketFactory.getDefault();
+SSLSocket ssl = (SSLSocket)sslFactory.createSocket(host, port);
+ssl.startHandshake();
+InputStream is = ssl.getInputStream();
+OutputStream os = ssl.getOutputStream();
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P>默认方法不包括客户验证、用户证书和其他特定连接可能需要的东西。 </P>
+        <P><A name=IDAFAJ5B><SPAN 
+      class=atitle3>从服务器端</SPAN></A><BR>
+          建立SSL服务器连接的传统方法稍微麻烦一点，需要加上一些类型转换。因为这些超出了本文的范围，我将不再进一步介绍，而是说说支持SSL服务器连接的默认方法。 </P>
+        <P>创建默认的 SSL 服务器套接字也包括几个很短的步骤：</P>
+        <OL xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:dw="http://www.ibm.com/developerWorks/">
+          <LI>创建服务器套接字工厂。
+          <LI>创建并绑定服务器套接字。
+          <LI>接受传入的连接。
+          <LI>开始握手。
+          <LI>派生流。
+          <LI>通信。</LI>
+        </OL>
+        <P>尽管看起来似乎与客户端的步骤相似，要注意这里去掉了很多安全选项，比如客户验证。 </P>
+        <P>清单 11 说明这些步骤：</P>
+        <A name=listing11><B>清单 11. 创建安全的服务器套接字</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+SSLServerSocketFactory sslssf = 
+  (SSLServerSocketFactory)SSLServerSocketFactory.getDefault();
+SSLServerSocket sslss = (SSLServerSocket)sslssf.createServerSocket(port);
+SSLSocket ssls = (SSLSocket)sslss.accept();
+ssls.startHandshake();
+InputStream is = ssls.getInputStream();
+OutputStream os = ssls.getOutputStream();
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P><A name=IDABBJ5B><SPAN 
+      class=atitle2>创建安全的非阻塞连接</SPAN></A><BR>
+          要精心实现安全的非阻塞连接，也需要分别从客户端和服务器端来看。 </P>
+        <P><A name=IDAJBJ5B><SPAN 
+      class=atitle3>从客户端</SPAN></A><BR>
+          在客户端建立安全的非阻塞连接非常简单： </P>
+        <OL xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:dw="http://www.ibm.com/developerWorks/">
+          <LI>创建并连接 <CODE>Socket</CODE> 对象。
+          <LI>把 <CODE>Socket</CODE> 对象添加到模拟层上。
+          <LI>通过模拟层通信。 </LI>
+        </OL>
+        <P>清单 12 说明了这些步骤：</P>
+        <A name=listing12><B>清单 12. 创建安全的客户机连接</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+/* Create the factory, then the secure socket */
+
+SSLSocketFactory sslFactory = 
+  (SSLSocketFactory)SSLSocketFactory.getDefault();
+SSLSocket ssl = (SSLSocket)sslFactory.createSocket(host, port);
+
+/* Start the handshake.  Should be done before deriving channels */
+
+ssl.startHandshake();
+
+/* Put it into the emulation layer and create separate channels */
+
+nbChannel socketChannel = new nbChannel(ssl);
+ReadableByteChannel rbc = (ReadableByteChannel)socketChannel;
+WritableByteChannel wbc = (WritableByteChannel)socketChannel;
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P>利用前面给出的 <A 
+      href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#emulclass" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:dw="http://www.ibm.com/developerWorks/">模拟层类</A> 就可以实现非阻塞的安全连接。因为安全套接字通道不能使用 <CODE>SocketChannel</CODE> 类打开，而 Java API 
+          中又没有完成这项工作的类，所以创建了一个模拟类。模拟类可以实现非阻塞通信，无论使用安全套接字连接还是非安全套接字连接。 </P>
+        <P>列出的步骤包括默认的安全设置。对于更高级的安全性，比如用户证书和客户验证，<A 
+      href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#resources" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:dw="http://www.ibm.com/developerWorks/">参考资料</A> 部分提供了说明如何实现的文章。 </P>
+        <P><A name=IDAWCJ5B><SPAN 
+      class=atitle3>从服务器端</SPAN></A><BR>
+          在服务器端建立套接字需要对默认安全稍加设置。但是一旦套接字被接收和路由，设置必须与客户端的设置完全相同，如清单 
+          13 所示： </P>
+        <A name=listing13><B>清单 13. 创建安全的非阻塞服务器套接字</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+/* Create the factory, then the socket, and put it into listening mode */               
+                
+SSLServerSocketFactory sslssf = 
+  (SSLServerSocketFactory)SSLServerSocketFactory.getDefault();
+SSLServerSocket sslss = (SSLServerSocket)sslssf.createServerSocket(port);
+SSLSocket ssls = (SSLSocket)sslss.accept();
+
+/* Start the handshake on the new socket */
+
+ssls.startHandshake();
+
+/* Put it into the emulation layer and create separate channels */
+
+nbChannel socketChannel = new nbChannel(ssls);
+ReadableByteChannel rbc = (ReadableByteChannel)socketChannel;
+WritableByteChannel wbc = (WritableByteChannel)socketChannel;
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P>同样，要记住这些步骤使用的是默认安全设置。 </P>
+        <P><A name=IDAJDJ5B><SPAN class=atitle2>集成安全的和非安全的客户机连接</SPAN></A><BR>
+          多数 
+          Internet 客户机应用程序，无论使用 Java 语言还是其他语言编写，都需要提供安全和非安全连接。Java Secure Socket 
+          Extensions 库使得这项工作非常容易，我最近在编写一个 HTTP 客户库时就使用了这种方法。 </P>
+        <P><CODE>SSLSocket</CODE> 类派生自 <CODE>Socket。</CODE> 您可能已经猜到我要怎么做了。所需要的只是该对象的一个 <CODE>Socket</CODE> 指针。如果套接字连接不使用SSL，则可以像通常那样创建套接字。如果要使用 SSL，就稍微麻烦一点，但此后的代码就很简单了。清单 14 
+          给出了一个例子： </P>
+        <A name=listing14><B>清单 14. 集成安全的和非安全的客户机连接</B></A><BR>
+        <TABLE cellSpacing=0 cellPadding=5 width="100%" bgColor=#cccccc 
+        border=1>
+          <TBODY>
+            <TR>
+              <TD><PRE><CODE>
+Socket s;
+ReadableByteChannel rbc;
+WritableByteChannel wbc;
+nbChannel socketChannel;
+
+if(!useSSL) s = new Socket(host, port);
+else
+{
+    SSLSocketFactory sslsf = SSLSocketFactory.getDefault();
+    SSLSocket ssls = (SSLSocket)SSLSocketFactory.createSocket(host, port);
+    ssls.startHandshake();
+    s = ssls;
+}
+
+socketChannel = new nbChannel(s);
+rbc = (ReadableByteChannel)socketChannel;
+wbc = (WritableByteChannel)socketChannel;
+
+...
+
+s.close();
+</CODE></PRE></TD>
+            </TR>
+          </TBODY>
+        </TABLE>
+        <P>创建通道之后，如果套接字使用了SSL，那么就是安全通信，否则就是普通通信。如果使用了 SSL，关闭套接字将导致握手中止。 </P>
+        <P>这种设置的一种可能是使用两个单独的类。一个类负责处理通过套接字沿着与非安全套接字的连接进行的所有通信。一个单独的类应该负责创建安全的连接，包括安全连接的所有必要设置，无论是否是默认的。安全类应该直接插入通信类，只有在使用安全连接时被调用。 </P>
+        <P><A name=IDAKEJ5B><SPAN 
+      class=atitle2>最简单的集成方法</SPAN></A><BR>
+          本文提出的方法是我所知道的把 JSSE 和 NIO 
+          集成到同一代码中以提供非阻塞安全通信的最简单方法。尽管还有其他方法，但是都需要准备实现这一过程的程序员花费大量的时间和精力。 </P>
+        <P>一种可能是使用 Java Cryptography Extensions 在 NIO 上实现自己的 SSL 层。另一种方法是修改现有的称为 
+          EspreSSL （以前称为 jSSL）的定制 SSL 层， 把它改到 NIO 库中。我建议只有在您有很充裕的时间时才使用这两种方法。 </P>
+        <P><A 
+      href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#resources" 
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      xmlns:dw="http://www.ibm.com/developerWorks/">参考资料</A> 部分的可下载 zip 
+          文件提供了示例代码，帮助您实践本文所述的技术，其中包括： </P>
+        <UL>
+          <LI>nbChannel，清单 7 所介绍的模拟层的源代码。
+          <LI>连接到 Verisign's Web 站点并下载主页的示例 HTTPS 客户程序。
+          <LI>一个简单的非阻塞安全服务器 （Secure Daytime Server）。
+          <LI>集成的安全和非安全客户程序。 </LI>
+        </UL>
+        <P><A name=resources><SPAN class=atitle2>参考资料</SPAN></A>
+        
+        <UL>
+          <LI>下载本文的 <A 
+        href="ftp://www6.software.ibm.com/software/developer/library/j-sslnb.zip" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">源代码</A>。<BR>
+            <BR>
+          <LI>"<A 
+        href="ftp://ftp.pgpi.org/pub/pgp/7.0/docs/english/IntroToCrypto.pdf" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">Introduction to 
+            Cryptography</A>" 通过介绍 SSL 提供了加密的基本原理（PDF 格式）。<BR>
+            <BR>
+          <LI>"<A 
+        href="http://www.onjava.com/pub/a/onjava/2001/05/03/java_security.html" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">Secure Your Sockets with 
+            JSSE</A>" 是应用 JSSE 的入门指南。<BR>
+            <BR>
+          <LI>"<A href="http://www-900.ibm.com/developerWorks/cn/java/j-javaio/" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">Merlin 给 Java 平台带来了非阻塞 
+            I/O</A>" (<I xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">developerWorks</I>，2002 年 
+            3 月)介绍了 Merlin 的 NIO 包的非阻塞特性，并提供了套接字编程的例子。<BR>
+            <BR>
+          <LI>"<A href="http://www-900.ibm.com/developerWorks/cn/java/j-mer03253/" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">Merlin 的新 I/O 
+            缓冲区的输入和输出</A>" (<I xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">developerWorks</I>，2003 年 
+            3 月) 展示了如何为读/写基本数据类型这样的任务操作数据缓冲区和使用内存映射文件。<BR>
+            <BR>
+          <LI>"<A 
+        href="http://www-900.ibm.com/developerWorks/cn/java/j-customssl/" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">为高级 JSSE 开发人员定制 SSL</A>" 
+            (<I xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">developerWorks</I>，2002 年 
+            9 月) 示范了如何编程绕过 SSL 的一些限制。<BR>
+            <BR>
+          <LI>教程 "<A 
+        href="http://www-106.ibm.com/developerworks/java/edu/j-dw-java-nio-i.html" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">Getting started with new 
+            I/O (NIO)</A>" (<I xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">developerWorks</I>，2003 年 
+            7 月)非常详细地讨论了 NIO 库，从高级概念到隐藏的编程细节。<BR>
+            <BR>
+          <LI><A 
+        href="http://www-1.ibm.com/servers/eserver/zseries/software/java/jsse.html" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">IBMJSSE Overview</A> 概要介绍了 
+            Java Secure Socket Extension。<BR>
+            <BR>
+          <LI><A 
+        href="http://java.sun.com/j2se/1.4.2/docs/guide/security/jsse/JSSERefGuide.html" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">JSSE reference guide</A> 是该技术巨细无遗的参考资料。<BR>
+            <BR>
+          <LI>Ron Hitchens 所著的 <A 
+        href="http://www.oreilly.com/catalog/javanio/index.html" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/"><I>Java NIO</I></A> (O'Reilly &amp; Associates, 2002)，深入探索了 1.4 版的新I/O功能。<BR>
+            <BR>
+          <LI><I xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">Java NIO</I> 还有一个支持网站， <A 
+        href="http://www.javanio.info/" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/">JavaNIO.info</A>, 
+            提供了代码开发的幻灯片、GUI 演示工具和该书的其他补充资料。<BR>
+            <BR>
+          <LI>在 <A href="http://www-900.ibm.com/developerWorks/cn/java" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:dw="http://www.ibm.com/developerWorks/"><I>developerWorks</I> Java 
+            技术专区</A> 上可以找到数百篇关于 Java 各个方面的文章。<BR>
+            <BR>
+          </LI>
+        </UL>
+        <!-- AUTHOR BIOS--><!-- Make author heading singular or plural as needed-->
+        
+        <TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+          <TBODY>
+            <TR>
+              <TD><A name=author1><SPAN class=atitle2>关于作者</SPAN></A> <BR>
+                Kenneth 
+                Ballard 目前在内布拉斯加州珀鲁州立大学学习计算机科学。他还是校内的学生报纸 <I 
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+            xmlns:dw="http://www.ibm.com/developerWorks/">Peru State Times </I>的职业作者。他从爱荷华州 Creston 的 Southwestern Community College 获得了计算机编程 
+                Associate of Science 学位，在那里作为 PC 技术人员参加了一个工作效率研究项目。他的研究范围包括 Java 
+                技术、C++、COBOL、Visual Basic 和网络。可以通过 <A 
+            href="mailto:kenneth.ballard@ptk.org" 
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+            xmlns:dw="http://www.ibm.com/developerWorks/">kenneth.ballard@ptk.org</A> 与 Kenneth 联系。 </TD>
+            </TR>
+          </TBODY>
+        </TABLE></TD>
+      <TD width=10><IMG height=1 alt="" src="c.gif" 
+      width=10 border=0></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<!-- END PAPER BODY--><BR 
+clear=all>
+<IMG height=10 alt="" src="c.gif" width=100 
+border=0><BR>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY>
+    <TR>
+      <TD align=right width="100%"><A 
+      href="http://www-900.ibm.com/developerWorks/cn/java/j-sslnb/index.shtml#top">到页首</A></TD>
+      <TD width=5><IMG height=1 alt="" src="c.gif" width=5 
+      border=0></TD>
+    </TR>
+    <TR vAlign=top>
+      <TD bgColor=#000000 colSpan=2><IMG height=1 alt="" 
+      src="c.gif" width=100 border=0></TD>
+    </TR>
+    <TR vAlign=top>
+      <TD bgColor=#ffffff colSpan=2><IMG height=8 alt="" 
+      src="c.gif" width=100 border=0></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<TABLE cellSpacing=0 cellPadding=10 width="100%" border=0>
+  <TBODY>
+    <TR vAlign=top>
+      <TD><FORM name=getURL 
+      action=/developerWorks/cn/cnratings.nsf/RateArticle?CreateDocument 
+      method=post>
+          <INPUT type=hidden value=实现非阻塞套接字的一种简单方法 name=ArticleTitle>
+          <INPUT type=hidden name=url>
+          <INPUT type=hidden value=Java name=Zone>
+          <INPUT type=hidden 
+      value=/developerWorks/cn/thankyou/feedback-java.html name=RedirectURL>
+          <A 
+      name=rating><B>您对这篇文章的看法如何？</B></A>
+          <TABLE cellSpacing=0 cellPadding=0 width=600 border=0>
+            <TBODY>
+              <TR>
+                <TD colSpan=5><IMG height=8 alt="" src="c.gif" 
+            width=100 border=0></TD>
+              </TR>
+              <TR vAlign=top>
+                <TD width="16%"><INPUT type=radio value=5 name=Rating>
+                  真棒！(5)</TD>
+                <TD width="20%"><INPUT type=radio value=4 name=Rating>
+                  好材料 (4)</TD>
+                <TD width="24%"><INPUT type=radio value=3 name=Rating>
+                  一般；尚可 (3)</TD>
+                <TD width="22%"><INPUT type=radio value=2 name=Rating>
+                  需提高 (2)</TD>
+                <TD width="18%"><INPUT type=radio value=1 name=Rating>
+                  太差！ 
+                  (1)</TD>
+              </TR>
+            </TBODY>
+          </TABLE>
+          <BR>
+          <B>建议？</B><BR>
+          <TEXTAREA name=Comments rows=5 wrap=virtual cols=60></TEXTAREA>
+          <BR>
+          <BR>
+          <INPUT type=submit value=提交反馈意见>
+        </FORM></TD>
+    </TR>
+    <TR vAlign=top>
+      <TD bgColor=#ffffff><IMG height=8 alt="" src="c.gif" 
+      width=100 border=0></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY>
+    <TR>
+      <TD align=right>(c) Copyright IBM Corp. 2001, (c) Copyright IBM China 
+        2001, All Right Reserved</TD>
+    </TR>
+    <TR vAlign=top>
+      <TD class=bbg height=21>&nbsp;&nbsp;<A class=mainlink 
+      href="http://www-900.ibm.com/developerWorks/cn/cgi-bin/click.cgi?url=www-900.ibm.com/cn/ibm/index.shtml&amp;origin=dwhead">关于 
+        IBM</A><SPAN class=divider>&nbsp;&nbsp;|&nbsp;&nbsp;</SPAN><A 
+      class=mainlink 
+      href="http://www-900.ibm.com/developerWorks/cn/cgi-bin/click.cgi?url=www-900.ibm.com/cn/ibm/privacy/index.shtml&amp;origin=dwhead">隐私条约</A><SPAN 
+      class=divider>&nbsp;&nbsp;|&nbsp;&nbsp;</SPAN><A class=mainlink 
+      href="http://www-900.ibm.com/developerWorks/cn/cgi-bin/click.cgi?url=www-900.ibm.com/cn/ibm/legal/index.shtml&amp;origin=dwhead">法律条款</A><SPAN 
+      class=divider>&nbsp;&nbsp;|&nbsp;&nbsp;</SPAN><A class=mainlink 
+      href="http://www-900.ibm.com/developerWorks/cn/cgi-bin/click.cgi?url=www-900.ibm.com/cn/ibm/contact/index.shtml&amp;origin=dwhead">联系 
+        IBM</A></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<
+<NOSCRIPT>
+<IMG height=1 alt="" src="c(1).gif" 
+width=1 border=0>
+</NOSCRIPT>
+</A>
+</BODY>
+</html>

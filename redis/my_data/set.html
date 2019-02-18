@@ -1,0 +1,631 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from redis.readthedocs.org/en/2.4/set.html by HTTrack Website Copier/3.x [XR&CO'2010], Tue, 22 Nov 2011 10:08:52 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>集合(Set) &mdash; Redis命令参考简体中文版 v2.4 documentation</title>
+    <link rel="stylesheet" href="static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="static/jquery.js"></script>
+    <script type="text/javascript" src="static/underscore.js"></script>
+    <script type="text/javascript" src="static/doctools.js"></script>
+    <script type="text/javascript" src="static/translations.js"></script>
+    <link rel="author" title="关于这些文档" href="about.html" />
+    <link rel="top" title="Redis命令参考简体中文版 v2.4 documentation" href="index.html" />
+    <link rel="next" title="有序集(Sorted Set)" href="sorted_set.html" />
+    <link rel="prev" title="表(List)" href="list.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>导航</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="总目录"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="sorted_set.html" title="有序集(Sorted Set)"
+             accesskey="N">下一页</a> |</li>
+        <li class="right" >
+          <a href="list.html" title="表(List)"
+             accesskey="P">上一页</a> |</li>
+        <li><a href="index.html">Redis命令参考简体中文版 v2.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="set">
+<span id="set-struct"></span><h1>集合(Set)<a class="headerlink" href="#set" title="永久链接至标题">¶</a></h1>
+<p>附录，常用集合运算：</p>
+<div class="highlight-python"><pre>A = {'a', 'b', 'c'}
+B = {'a', 'e', 'i', 'o', 'u'}
+
+inter(x, y): 交集，在集合x和集合y中都存在的元素。
+inter(A, B) = {'a'}
+
+union(x, y): 并集，在集合x中或集合y中的元素，如果一个元素在x和y中都出现，那只记录一次即可。
+union(A,B) = {'a', 'b', 'c', 'e', 'i', 'o', 'u'}
+
+diff(x, y): 差集，在集合x中而不在集合y中的元素。
+diff(A,B) = {'b', 'c'}
+
+card(x): 基数，一个集合中元素的数量。
+card(A) = 3
+
+空集： 基数为0的集合。</pre>
+</div>
+<div class="section" id="sadd">
+<span id="id1"></span><h2>SADD<a class="headerlink" href="#sadd" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SADD key member [member ...]</tt></dt>
+<dd></dd></dl>
+
+<p>将一个或多个<tt class="docutils literal"><span class="pre">member</span></tt>元素加入到集合<tt class="docutils literal"><span class="pre">key</span></tt>当中，已经存在于集合的<tt class="docutils literal"><span class="pre">member</span></tt>元素将被忽略。</p>
+<p>假如<tt class="docutils literal"><span class="pre">key</span></tt>不存在，则创建一个只包含<tt class="docutils literal"><span class="pre">member</span></tt>元素作成员的集合。</p>
+<p>当<tt class="docutils literal"><span class="pre">key</span></tt>不是集合类型时，返回一个错误。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N)，<tt class="docutils literal"><span class="pre">N</span></tt>是被添加的元素的数量。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>被添加到集合中的<em>新</em>元素的数量，不包括被忽略的元素。</dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">在Redis2.4版本以前，<a class="reference internal" href="#sadd">SADD</a>只接受单个<tt class="docutils literal"><span class="pre">member</span></tt>值。</p>
+</div>
+<div class="highlight-python"><pre># 添加单个元素
+
+redis&gt; SADD bbs "discuz.net"
+(integer) 1
+
+# 添加重复元素
+
+redis&gt; SADD bbs "discuz.net"
+(integer) 0
+
+# 添加多个元素
+
+redis&gt; SADD bbs "tianya.cn" "groups.google.com"
+(integer) 2
+
+redis&gt; SMEMBERS bbs
+1) "discuz.net"
+2) "groups.google.com"
+3) "tianya.cn"</pre>
+</div>
+</div>
+<div class="section" id="srem">
+<span id="id2"></span><h2>SREM<a class="headerlink" href="#srem" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SREM key member [member ...]</tt></dt>
+<dd></dd></dl>
+
+<p>移除集合<tt class="docutils literal"><span class="pre">key</span></tt>中的一个或多个<tt class="docutils literal"><span class="pre">member</span></tt>元素，不存在的<tt class="docutils literal"><span class="pre">member</span></tt>元素会被忽略。</p>
+<p>当<tt class="docutils literal"><span class="pre">key</span></tt>不是集合类型，返回一个错误。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N)，<tt class="docutils literal"><span class="pre">N</span></tt>为给定<tt class="docutils literal"><span class="pre">member</span></tt>元素的数量。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>被成功移除的元素的数量，不包括被忽略的元素。</dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">在Redis2.4版本以前，<a class="reference internal" href="#srem">SREM</a>只接受单个<tt class="docutils literal"><span class="pre">member</span></tt>值。</p>
+</div>
+<div class="highlight-python"><pre># 测试数据
+
+redis&gt; SMEMBERS languages
+1) "c"
+2) "lisp"
+3) "python"
+4) "ruby"
+
+# 移除单个元素
+
+redis&gt; SREM languages ruby
+(integer) 1
+
+# 移除不存在元素
+
+redis&gt; SREM languages non-exists-language
+(integer) 0
+
+# 移除多个元素
+
+redis&gt; SREM languages lisp python c
+(integer) 3
+
+redis&gt; SMEMBERS languages
+(empty list or set)</pre>
+</div>
+</div>
+<div class="section" id="smembers">
+<span id="id3"></span><h2>SMEMBERS<a class="headerlink" href="#smembers" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SMEMBERS key</tt></dt>
+<dd></dd></dl>
+
+<p>返回集合<tt class="docutils literal"><span class="pre">key</span></tt>中的所有成员。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N)，<tt class="docutils literal"><span class="pre">N</span></tt>为集合的基数。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>集合中的所有成员。</dd>
+</dl>
+<div class="highlight-python"><pre># 情况1：空集合
+
+redis&gt; EXISTS not_exists_key    # 不存在的key视为空集合
+(integer) 0
+
+redis&gt; SMEMBERS not_exists_key
+(empty list or set)
+
+
+# 情况2：非空集合
+
+redis&gt; SADD programming_language python
+(integer) 1
+
+redis&gt; SADD programming_language ruby
+(integer) 1
+
+redis&gt; SADD programming_language c
+(integer) 1
+
+redis&gt; SMEMBERS programming_language
+1) "c"
+2) "ruby"
+3) "python"</pre>
+</div>
+</div>
+<div class="section" id="sismember">
+<span id="id4"></span><h2>SISMEMBER<a class="headerlink" href="#sismember" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SISMEMBER key member</tt></dt>
+<dd></dd></dl>
+
+<p>判断<tt class="docutils literal"><span class="pre">member</span></tt>元素是否是集合<tt class="docutils literal"><span class="pre">key</span></tt>的成员。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值:</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">如果<tt class="docutils literal"><span class="pre">member</span></tt>元素是集合的成员，返回<tt class="docutils literal"><span class="pre">1</span></tt>。</div>
+<div class="line">如果<tt class="docutils literal"><span class="pre">member</span></tt>元素不是集合的成员，或<tt class="docutils literal"><span class="pre">key</span></tt>不存在，返回<tt class="docutils literal"><span class="pre">0</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS joe's_movies
+1) "hi, lady"
+2) "Fast Five"
+3) "2012"
+
+redis&gt; SISMEMBER joe's_movies "bet man"
+(integer) 0
+
+redis&gt; SISMEMBER joe's_movies "Fast Five"
+(integer) 1</pre>
+</div>
+</div>
+<div class="section" id="scard">
+<span id="id5"></span><h2>SCARD<a class="headerlink" href="#scard" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SCARD key</tt></dt>
+<dd></dd></dl>
+
+<p>返回集合<tt class="docutils literal"><span class="pre">key</span></tt>的<strong>基数</strong>(集合中元素的数量)。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">集合的基数。</div>
+<div class="line">当<tt class="docutils literal"><span class="pre">key</span></tt>不存在时，返回<tt class="docutils literal"><span class="pre">0</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS tool
+1) "pc"
+2) "printer"
+3) "phone"
+
+redis&gt; SCARD tool
+(integer) 3
+
+redis&gt; SMEMBERS fake_set
+(empty list or set)
+
+redis&gt; SCARD fake_set
+(integer) 0</pre>
+</div>
+</div>
+<div class="section" id="smove">
+<span id="id6"></span><h2>SMOVE<a class="headerlink" href="#smove" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SMOVE source destination member</tt></dt>
+<dd></dd></dl>
+
+<p>将<tt class="docutils literal"><span class="pre">member</span></tt>元素从<tt class="docutils literal"><span class="pre">source</span></tt>集合移动到<tt class="docutils literal"><span class="pre">destination</span></tt>集合。</p>
+<p><a class="reference internal" href="#smove">SMOVE</a>是原子性操作。</p>
+<p>如果<tt class="docutils literal"><span class="pre">source</span></tt>集合不存在或不包含指定的<tt class="docutils literal"><span class="pre">member</span></tt>元素，则<a class="reference internal" href="#smove">SMOVE</a>命令不执行任何操作，仅返回<tt class="docutils literal"><span class="pre">0</span></tt>。否则，<tt class="docutils literal"><span class="pre">member</span></tt>元素从<tt class="docutils literal"><span class="pre">source</span></tt>集合中被移除，并添加到<tt class="docutils literal"><span class="pre">destination</span></tt>集合中去。</p>
+<p>当<tt class="docutils literal"><span class="pre">destination</span></tt>集合已经包含<tt class="docutils literal"><span class="pre">member</span></tt>元素时，<a class="reference internal" href="#smove">SMOVE</a>命令只是简单地将<tt class="docutils literal"><span class="pre">source</span></tt>集合中的<tt class="docutils literal"><span class="pre">member</span></tt>元素删除。</p>
+<p>当<tt class="docutils literal"><span class="pre">source</span></tt>或<tt class="docutils literal"><span class="pre">destination</span></tt>不是集合类型时，返回一个错误。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值:</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">如果<tt class="docutils literal"><span class="pre">member</span></tt>元素被成功移除，返回<tt class="docutils literal"><span class="pre">1</span></tt>。</div>
+<div class="line">如果<tt class="docutils literal"><span class="pre">member</span></tt>元素不是<tt class="docutils literal"><span class="pre">source</span></tt>集合的成员，并且没有任何操作对<tt class="docutils literal"><span class="pre">destination</span></tt>集合执行，那么返回<tt class="docutils literal"><span class="pre">0</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS songs
+1) "Billie Jean"
+2) "Believe Me"
+
+redis&gt; SMEMBERS my_songs
+(empty list or set)
+
+redis&gt; SMOVE songs my_songs "Believe Me"
+(integer) 1
+
+redis&gt; SMEMBERS songs
+1) "Billie Jean"
+
+redis&gt; SMEMBERS my_songs
+1) "Believe Me"</pre>
+</div>
+</div>
+<div class="section" id="spop">
+<span id="id7"></span><h2>SPOP<a class="headerlink" href="#spop" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SPOP key</tt></dt>
+<dd></dd></dl>
+
+<p>移除并返回集合中的一个随机元素。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值:</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">被移除的随机元素。</div>
+<div class="line">当<tt class="docutils literal"><span class="pre">key</span></tt>不存在或<tt class="docutils literal"><span class="pre">key</span></tt>是空集时，返回<tt class="docutils literal"><span class="pre">nil</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS my_sites
+1) "huangz.iteye.com"
+2) "sideeffect.me"
+3) "douban.com/people/i_m_huangz"
+
+redis&gt; SPOP my_sites
+"huangz.iteye.com"
+
+redis&gt; SMEMBERS my_sites
+1) "sideeffect.me"
+2) "douban.com/people/i_m_huang"</pre>
+</div>
+<div class="admonition- admonition seealso">
+<p class="first admonition-title">也可以参考</p>
+<p class="last">如果只想获取一个随机元素，但不想该元素从集合中被移除的话，可以使用<a class="reference internal" href="#srandmember">SRANDMEMBER</a>命令。</p>
+</div>
+</div>
+<div class="section" id="srandmember">
+<span id="id8"></span><h2>SRANDMEMBER<a class="headerlink" href="#srandmember" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SRANDMEMBER key</tt></dt>
+<dd></dd></dl>
+
+<p>返回集合中的一个随机元素。</p>
+<p>该操作和<a class="reference internal" href="#spop">SPOP</a>相似，但<a class="reference internal" href="#spop">SPOP</a>将随机元素从集合中移除并返回，而<a class="reference internal" href="#srandmember">SRANDMEMBER</a>则仅仅返回随机元素，而不对集合进行任何改动。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>被选中的随机元素。
+当<tt class="docutils literal"><span class="pre">key</span></tt>不存在或<tt class="docutils literal"><span class="pre">key</span></tt>是空集时，返回<tt class="docutils literal"><span class="pre">nil</span></tt>。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS joe's_movies
+1) "hi, lady"
+2) "Fast Five"
+3) "2012"
+
+redis&gt; SRANDMEMBER joe's_movies
+"Fast Five"
+
+redis&gt; SMEMBERS joe's_movies    # 集合中的元素不变
+1) "hi, lady"
+2) "Fast Five"
+3) "2012"</pre>
+</div>
+</div>
+<div class="section" id="sinter">
+<span id="id9"></span><h2>SINTER<a class="headerlink" href="#sinter" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SINTER key [key ...]</tt></dt>
+<dd></dd></dl>
+
+<p>返回一个集合的全部成员，该集合是所有给定集合的<em>交集</em>。</p>
+<p>不存在的<tt class="docutils literal"><span class="pre">key</span></tt>被视为空集。</p>
+<p>当给定集合当中有一个空集时，结果也为空集(根据集合运算定律)。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N * M)，<tt class="docutils literal"><span class="pre">N</span></tt>为给定集合当中基数最小的集合，<tt class="docutils literal"><span class="pre">M</span></tt>为给定集合的个数。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>交集成员的列表。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS group_1
+1) "LI LEI"
+2) "TOM"
+3) "JACK"   # &lt;-
+
+redis&gt; SMEMBERS group_2
+1) "HAN MEIMEI"
+2) "JACK"   # &lt;-
+
+redis&gt; SINTER group_1 group_2
+1) "JACK"</pre>
+</div>
+</div>
+<div class="section" id="sinterstore">
+<span id="id10"></span><h2>SINTERSTORE<a class="headerlink" href="#sinterstore" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SINTERSTORE destination key [key ...]</tt></dt>
+<dd></dd></dl>
+
+<p>此命令等同于<a class="reference internal" href="#sinter">SINTER</a>，但它将结果保存到<tt class="docutils literal"><span class="pre">destination</span></tt>集合，而不是简单地返回结果集。</p>
+<p>如果<tt class="docutils literal"><span class="pre">destination</span></tt>集合已经存在，则将其覆盖。</p>
+<p><tt class="docutils literal"><span class="pre">destination</span></tt>可以是<tt class="docutils literal"><span class="pre">key</span></tt>本身。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N * M)，<tt class="docutils literal"><span class="pre">N</span></tt>为给定集合当中基数最小的集合，<tt class="docutils literal"><span class="pre">M</span></tt>为给定集合的个数。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>结果集中的成员数量。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS songs
+1) "good bye joe"   # &lt;-
+2) "hello,peter"
+
+redis&gt; SMEMBERS my_songs
+1) "good bye joe"   # &lt;-
+2) "falling"
+
+redis&gt; SINTERSTORE song_and_my_song songs my_songs
+(integer) 1
+
+redis&gt; SMEMBERS song_and_my_song
+1) "good bye joe"</pre>
+</div>
+</div>
+<div class="section" id="sunion">
+<span id="id11"></span><h2>SUNION<a class="headerlink" href="#sunion" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SUNION key [key ...]</tt></dt>
+<dd></dd></dl>
+
+<p>返回一个集合的全部成员，该集合是所有给定集合的<em>并集</em>。</p>
+<p>不存在的<tt class="docutils literal"><span class="pre">key</span></tt>被视为空集。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N)，<tt class="docutils literal"><span class="pre">N</span></tt>是所有给定集合的成员数量之和。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>并集成员的列表。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS songs
+1) "Billie Jean"
+
+redis&gt; SMEMBERS my_songs
+1) "Believe Me"
+
+redis&gt; SUNION songs my_songs
+1) "Billie Jean"
+2) "Believe Me"</pre>
+</div>
+</div>
+<div class="section" id="sunionstore">
+<span id="id12"></span><h2>SUNIONSTORE<a class="headerlink" href="#sunionstore" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SUNIONSTORE destination key [key ...]</tt></dt>
+<dd></dd></dl>
+
+<p>此命令等同于<a class="reference internal" href="#sunion">SUNION</a>，但它将结果保存到<tt class="docutils literal"><span class="pre">destination</span></tt>集合，而不是简单地返回结果集。</p>
+<p>如果<tt class="docutils literal"><span class="pre">destination</span></tt>已经存在，则将其覆盖。</p>
+<p><tt class="docutils literal"><span class="pre">destination</span></tt>可以是<tt class="docutils literal"><span class="pre">key</span></tt>本身。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N)，<tt class="docutils literal"><span class="pre">N</span></tt>是所有给定集合的成员数量之和。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>结果集中的元素数量。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS ms_sites
+1) "microsoft.com"
+2) "skype.com"
+
+redis&gt; SMEMBERS google_sites
+1) "youtube.com"
+2) "google.com"
+
+redis&gt; SUNIONSTORE google_and_ms_sites ms_sites google_sites
+(integer) 4
+
+redis&gt; SMEMBERS google_and_ms_sites
+1) "microsoft.com"
+2) "skype.com"
+3) "google.com"
+4) "youtube.com"</pre>
+</div>
+</div>
+<div class="section" id="sdiff">
+<span id="id13"></span><h2>SDIFF<a class="headerlink" href="#sdiff" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SDIFF key [key ...]</tt></dt>
+<dd></dd></dl>
+
+<p>返回一个集合的全部成员，该集合是所有给定集合的<em>差集</em> 。</p>
+<p>不存在的<tt class="docutils literal"><span class="pre">key</span></tt>被视为空集。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N)，<tt class="docutils literal"><span class="pre">N</span></tt>是所有给定集合的成员数量之和。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>交集成员的列表。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS peter's_movies
+1) "bet man"
+2) "start war"
+3) "2012"   # &lt;-
+
+redis&gt; SMEMBERS joe's_movies
+1) "hi, lady"
+2) "Fast Five"
+3) "2012"   # &lt;-
+
+redis&gt; SDIFF peter's_movies joe's_movies
+1) "bet man"
+2) "start war"</pre>
+</div>
+</div>
+<div class="section" id="sdiffstore">
+<span id="id14"></span><h2>SDIFFSTORE<a class="headerlink" href="#sdiffstore" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SDIFFSTORE destination key [key ...]</tt></dt>
+<dd></dd></dl>
+
+<p>此命令等同于<a class="reference internal" href="#sdiff">SDIFF</a>，但它将结果保存到<tt class="docutils literal"><span class="pre">destination</span></tt>集合，而不是简单地返回结果集。</p>
+<p>如果<tt class="docutils literal"><span class="pre">destination</span></tt>集合已经存在，则将其覆盖。</p>
+<p><tt class="docutils literal"><span class="pre">destination</span></tt>可以是<tt class="docutils literal"><span class="pre">key</span></tt>本身。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度:</strong></dt>
+<dd>O(N)，<tt class="docutils literal"><span class="pre">N</span></tt>是所有给定集合的成员数量之和。</dd>
+<dt><strong>返回值:</strong></dt>
+<dd>结果集中的元素数量。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SMEMBERS joe's_movies
+1) "hi, lady"
+2) "Fast Five"
+3) "2012"
+
+redis&gt; SMEMBERS peter's_movies
+1) "bet man"
+2) "start war"
+3) "2012"
+
+redis&gt; SDIFFSTORE joe_diff_peter joe's_movies peter's_movies
+(integer) 2
+
+redis&gt; SMEMBERS joe_diff_peter
+1) "hi, lady"
+2) "Fast Five"</pre>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">內容目录</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">集合(Set)</a><ul>
+<li><a class="reference internal" href="#sadd">SADD</a></li>
+<li><a class="reference internal" href="#srem">SREM</a></li>
+<li><a class="reference internal" href="#smembers">SMEMBERS</a></li>
+<li><a class="reference internal" href="#sismember">SISMEMBER</a></li>
+<li><a class="reference internal" href="#scard">SCARD</a></li>
+<li><a class="reference internal" href="#smove">SMOVE</a></li>
+<li><a class="reference internal" href="#spop">SPOP</a></li>
+<li><a class="reference internal" href="#srandmember">SRANDMEMBER</a></li>
+<li><a class="reference internal" href="#sinter">SINTER</a></li>
+<li><a class="reference internal" href="#sinterstore">SINTERSTORE</a></li>
+<li><a class="reference internal" href="#sunion">SUNION</a></li>
+<li><a class="reference internal" href="#sunionstore">SUNIONSTORE</a></li>
+<li><a class="reference internal" href="#sdiff">SDIFF</a></li>
+<li><a class="reference internal" href="#sdiffstore">SDIFFSTORE</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>上一个主题</h4>
+  <p class="topless"><a href="list.html"
+                        title="上一章">表(List)</a></p>
+  <h4>下一个主题</h4>
+  <p class="topless"><a href="sorted_set.html"
+                        title="下一章">有序集(Sorted Set)</a></p>
+  <h3>本页</h3>
+  <ul class="this-page-menu">
+    <li><a href="sources/set.txt"
+           rel="nofollow">显示源代码</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>快速搜索</h3>
+    <form class="search" action="http://redis.readthedocs.org/en/2.4/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="搜索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    输入相关的模块，术语，类或者函数名称进行搜索
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>导航</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="总目录"
+             >索引</a></li>
+        <li class="right" >
+          <a href="sorted_set.html" title="有序集(Sorted Set)"
+             >下一页</a> |</li>
+        <li class="right" >
+          <a href="list.html" title="表(List)"
+             >上一页</a> |</li>
+        <li><a href="index.html">Redis命令参考简体中文版 v2.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; 版权所有 2011, huangz1990.
+      使用 <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.8.
+    </div>
+  </body>
+
+<!-- Mirrored from redis.readthedocs.org/en/2.4/set.html by HTTrack Website Copier/3.x [XR&CO'2010], Tue, 22 Nov 2011 10:08:52 GMT -->
+</html>

@@ -1,0 +1,2220 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>HBase基本数据操作详解【完整版，绝对精品】</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG><SPAN 
+style="FONT-SIZE: 14pt">概述</SPAN></STRONG></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">对于建表，和RDBMS类似，HBase也有namespace的概念，可以指定表空间创建表，也可以直接创建表，进入default表空间。</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">对于数据操作，HBase支持四类主要的数据操作，分别是：</SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<UL>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>Put</STRONG>：增加一行，修改一行；<BR></SPAN></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>Delete</STRONG>：删除一行，删除指定列族，删除指定column的多个版本，删除指定column的制定版本等；<BR></SPAN></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>Get</STRONG>：获取指定行的所有信息，获取指定行和指定列族的所有colunm，获取指定column，获取指定column的几个版本，</SPAN>获取指定column的指定版本等；<BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>Scan</STRONG>：获取所有行，获取指定行键范围的行，获取从某行开始的几行，获取满足过滤条件的行等。</SPAN></LI></UL></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">这四个类都是</SPAN>org.apache.hadoop.hbase.client的子类，可以到官网API去查看详细信息，本文仅总结常用方法，力争让读者用20%的时间掌握80%的常用功能。</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+<STRONG><SPAN style="FONT-SIZE: 14pt">目录</SPAN></STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>1.命名空间Namespace</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>2.创建表</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>3.删除表</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>4.修改表</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>5.新增、更新数据Put</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>6.删除数据Delete</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>7.获取单行Get</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>8.获取多行Scan</STRONG></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV>
+<DIV><SPAN style="FONT-SIZE: 16pt; LINE-HEIGHT: 1.5"><STRONG>1. 
+命名空间Namespace</STRONG></SPAN><BR></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">在关系数据库系统中，命名空间</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">namespace指的是一个<STRONG>表的逻辑分组</STRONG>，同一组中的表有类似的用途。命名空间的概念为<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">即将到来</SPAN>的多租户特性打下基础：</SPAN><BR></DIV></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">配额管理（</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Quota Management 
+  (HBASE-8410)）：限制一个namespace可以使用的资源，资源包括region和table等；</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">命名空间安全管理（</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Namespace Security Administration 
+  (HBASE-9206)）：提供了另一个层面的多租户安全管理；</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Region服务器组（Region server 
+  groups 
+  (HBASE-6721)）：一个命名空间或一张表，可以被固定到一组</SPAN>regionservers上，从而保证了数据隔离性。<BR></LI></UL></DIV>
+<DIV><SPAN style="FONT-SIZE: 14pt"></SPAN>
+<HR>
+</DIV>
+<DIV><SPAN style="FONT-SIZE: 14pt"><STRONG>1.1.命名空间管理</STRONG></SPAN></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">命名空间可以被创建、移除、修改。</SPAN></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">表和命名空间的隶属关系</SPAN>在在创建表时决定，通过以下格式指定：</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>&lt;namespace&gt;:&lt;table&gt;</STRONG></SPAN></SPAN><BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>Example：hbase shell中创建命名空间、创建命名空间中的表、移除命名空间、修改命名空间</STRONG></DIV>
+<DIV><PRE class=programlisting style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0.75em; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 1ex; PADDING-TOP: 1ex; PADDING-LEFT: 1ex; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN-TOP: 0.75em; LINE-HEIGHT: 1; PADDING-RIGHT: 1ex" name="code"><SPAN style="BACKGROUND-COLOR: rgb(238,238,238)">#Create a namespace
+</SPAN><STRONG><SPAN style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">create_namespace</SPAN></STRONG><SPAN style="BACKGROUND-COLOR: rgb(238,238,238)"> 'my_ns'
+            </SPAN></PRE><PRE class=programlisting style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0.75em; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 1ex; PADDING-TOP: 1ex; PADDING-LEFT: 1ex; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN-TOP: 0.75em; LINE-HEIGHT: 1; PADDING-RIGHT: 1ex" name="code"><SPAN style="BACKGROUND-COLOR: rgb(238,238,238)">#create my_table in my_ns namespace
+create </SPAN><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">'<SPAN style="COLOR: rgb(255,0,0)"><STRONG>my_ns:</STRONG></SPAN></SPAN><SPAN style="BACKGROUND-COLOR: rgb(238,238,238)">my_table', 'fam'
+          </SPAN></PRE><PRE class=programlisting style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0.75em; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 1ex; PADDING-TOP: 1ex; PADDING-LEFT: 1ex; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN-TOP: 0.75em; LINE-HEIGHT: 1; PADDING-RIGHT: 1ex" name="code"><SPAN style="BACKGROUND-COLOR: rgb(238,238,238)">#drop namespace
+</SPAN><STRONG><SPAN style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">drop_namespace</SPAN></STRONG><SPAN style="BACKGROUND-COLOR: rgb(238,238,238)"> 'my_ns'
+          </SPAN></PRE><PRE class=programlisting style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0.75em; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 1ex; PADDING-TOP: 1ex; PADDING-LEFT: 1ex; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN-TOP: 0.75em; LINE-HEIGHT: 1; PADDING-RIGHT: 1ex" name="code"><SPAN style="BACKGROUND-COLOR: rgb(238,238,238)">#alter namespace
+</SPAN><STRONG><SPAN style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">alter_namespace</SPAN></STRONG><SPAN style="BACKGROUND-COLOR: rgb(238,238,238)"> 'my_ns', {METHOD =&gt; 'set', 'PROPERTY_NAME' =&gt; 'PROPERTY_VALUE'}
+        </SPAN></PRE></DIV></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV>
+<DIV><SPAN style="FONT-SIZE: 14pt"><STRONG>1.2. 预定义的命名空间</STRONG></SPAN></DIV>
+<DIV>有两个系统内置的预定义命名空间：</DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG><SPAN 
+  style="COLOR: rgb(255,0,0)">hbase</SPAN></STRONG>：系统命名空间，用于包含hbase的内部表</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG><SPAN 
+  style="COLOR: rgb(255,0,0)">default</SPAN></STRONG>：<SPAN 
+  style="COLOR: rgb(255,0,0)">所有未指定命名空间的表都自动进入该命名空间</SPAN></SPAN></LI></UL></DIV>
+<DIV><STRONG>Example：指定命名空间和默认命名空间</STRONG></DIV></DIV>
+<DIV><PRE class=programlisting style="WORD-WRAP: break-word; MARGIN-BOTTOM: 0.75em; BORDER-TOP: rgb(204,204,204) 1px solid; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; PADDING-BOTTOM: 1ex; PADDING-TOP: 1ex; PADDING-LEFT: 1ex; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN-TOP: 0.75em; LINE-HEIGHT: 1; PADDING-RIGHT: 1ex; BACKGROUND-COLOR: rgb(238,238,238)" name="code">#namespace=foo and table qualifier=bar
+create 'foo:bar', 'fam'
+
+#namespace=default and table qualifier=bar
+create 'bar', 'fam'</PRE></DIV>
+<DIV>
+<HR>
+<SPAN style="FONT-SIZE: 16pt"><STRONG>2.创建表</STRONG></SPAN></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">废话不多说，直接上样板代码，代码后再说明注意事项和知识点：</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HBaseAdmin&nbsp;admin&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HBaseAdmin(conf);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//create&nbsp;<SPAN 
+style="TEXT-DECORATION: underline">namespace</SPAN>&nbsp;named&nbsp;"my_ns"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.createNamespace(NamespaceDescriptor.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"my_ns"</SPAN>).build());</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//create&nbsp;tableDesc,&nbsp;with&nbsp;<SPAN 
+style="TEXT-DECORATION: underline">namespace</SPAN>&nbsp;name&nbsp;"my_ns"&nbsp;and&nbsp;table&nbsp;name&nbsp;"<SPAN 
+style="TEXT-DECORATION: underline">mytable</SPAN>"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTableDescriptor&nbsp;tableDesc&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTableDescriptor(TableName.<SPAN 
+style="FONT-STYLE: italic">valueOf</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"my_ns:mytable"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">tableDesc.setDurability(Durability.</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(0,0,192); LINE-HEIGHT: 1.5"><EM>SYNC_WAL</EM></SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//add&nbsp;a&nbsp;column&nbsp;family&nbsp;"<SPAN 
+style="TEXT-DECORATION: underline">mycf</SPAN>"</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HColumnDescriptor&nbsp;hcd&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HColumnDescriptor(<SPAN 
+style="COLOR: rgb(42,0,255)">"mycf"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tableDesc.addFamily(hcd);</SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.createTable(tableDesc);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="FONT-WEIGHT: bold"><SPAN style="FONT-SIZE: 14pt"><SPAN 
+style="COLOR: rgb(255,0,0)"><SPAN 
+style="FONT-SIZE: 12pt">关键知识点：</SPAN></SPAN></SPAN></SPAN></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">必须将HBase集群的hbase-site.xml文件添加进工程的classpath中，或者通过Configuration对象设置相关属性，否则</SPAN><SPAN 
+  style="FONT-SIZE: 12px; FONT-FAMILY: 'Courier New'"><SPAN 
+  style="LINE-HEIGHT: 19px">程序</SPAN></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">获取不到集群相关信息，也就无法找到集群，运行程序时会报错；</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">HTableDescriptor&nbsp;tableDesc&nbsp;=&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; COLOR: rgb(127,0,85); LINE-HEIGHT: 19px"><STRONG>new</STRONG></SPAN><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">&nbsp;HTableDescriptor(TableName.</SPAN><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px"><EM>valueOf</EM></SPAN><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">(</SPAN><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; COLOR: rgb(42,0,255); LINE-HEIGHT: 19px">"my_ns:mytable"</SPAN><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">))</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">代码是描述表mytable，并将mytable放到了my_ns命名空间中，前提是该命名空间已存在，如果指定的是不存在命名空间，则会报</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">错</SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">org.apache.hadoop.hbase.NamespaceNotFoundException；</SPAN></LI>
+  <LI>命名空间一般在建模阶段通过命令行创建，在java代码中通过<SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">admin.createNamespace(NamespaceDescriptor.</SPAN><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px"><EM>create</EM></SPAN><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">(</SPAN><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; COLOR: rgb(42,0,255); LINE-HEIGHT: 19px">"my_ns"</SPAN><SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">).build())</SPAN>创建的机会不多；</LI>
+  <LI><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">创建<SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">HBaseAdmin</SPAN>对象时就已经建立了客户端程序与HBase集群的connection</SPAN>，所以在程序执行完成后，务必通过<SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">admin.close()</SPAN>关闭connection；</LI>
+  <LI>可以通过<SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px; BACKGROUND-COLOR: rgb(255,255,0)"><STRONG><SPAN 
+  style="COLOR: rgb(255,0,0)">HTableDescriptor</SPAN></STRONG></SPAN>对象设置<SPAN 
+  style="BACKGROUND-COLOR: rgb(255,255,0)">表的特性</SPAN>，比如：<SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">通过</SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">tableDesc.setMaxFileSize(512)</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">设置一个region中的store文件的最大size，当一个region中的最大store文件达到这个size时，region就开始分裂；</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">通过</SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">tableDesc.setMemStoreFlushSize(512)</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">设置region内存中的memstore的最大值，当memstore达到这个值时，开始往磁盘中刷数据。</SPAN>更多特性请自行查阅官网API；</LI>
+  <LI>可以通过<SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px; BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+  style="COLOR: rgb(255,0,0)"><STRONG>HColumnDescriptor</STRONG></SPAN></SPAN>对象设置<SPAN 
+  style="BACKGROUND-COLOR: rgb(255,255,0)">列族的特性</SPAN>，比如：通过<SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">hcd.setTimeToLive(5184000)</SPAN>设置数据保存的最长时间；通过<SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">hcd.setInMemory(<SPAN 
+  style="COLOR: rgb(127,0,85)"><STRONG>true</STRONG></SPAN>)</SPAN>设置数据保存在内存中以提高响应速度；通过<SPAN 
+  style="COLOR: rgb(255,0,0)"><SPAN 
+  style="BACKGROUND-COLOR: rgb(0,255,0)">&nbsp;<SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'"><U>hcd<SPAN 
+  style="TEXT-DECORATION: none">.setMaxVersions(10)</SPAN></U></SPAN></SPAN></SPAN>设置数据保存的最大版本数；通过<SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">hcd.setMinVersions(5)</SPAN>设置数据保存的最小版本数（配合TimeToLive使用）。更多特性请自行查阅官网API；<BR></LI>
+  <LI>数据的版本数只能通过<SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; COLOR: rgb(255,0,0); LINE-HEIGHT: 19px; BACKGROUND-COLOR: rgb(255,255,0)">HColumnDescriptor</SPAN>对象设置，不能通过<SPAN 
+  style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px"><SPAN 
+  style="COLOR: rgb(255,0,0)">HTableDescriptor</SPAN></SPAN>对象设置；</LI>
+  <LI>由于HBase的数据是先写入内存，数据累计达到内存阀值时才往磁盘中flush数据，所以，如果在数据还没有flush进硬盘时，regionserver 
+  down掉了，内存中的数据将丢失。要想解决这个场景的问题就需要用到WAL（Write-Ahead-Log），<SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">tableDesc.setDurability(Durability.</SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(0,0,192); LINE-HEIGHT: 1.5"><EM>SYNC_WAL</EM></SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">)</SPAN>就是设置写WAL日志的级别，示例中设置的是同步写WAL，该方式安全性较高，但无疑会一定程度影响性能，请根据具体场景选择使用；</LI>
+  <LI><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+  style="BACKGROUND-COLOR: rgb(255,255,0)">setDurability</SPAN></SPAN>(Durability 
+  d)方法可以在相关的三个对象中使用，分别是：<STRONG><SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HTableDescriptor，</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Delete，</SPAN></SPAN><SPAN 
+  style="COLOR: rgb(255,0,0)">Put（其中Delete和Put的该方法都是继承自父类</SPAN></STRONG><SPAN 
+  style="COLOR: rgb(255,0,0)"><STRONG>org.apache.hadoop.hbase.client.Mutation）</STRONG></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">。分别针对表、插入操作、删除操作设定WAL日志写入级别。需要注意的是，</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5"><STRONG>Delete和Put并不会继承Table的Durability级别（已实测验证）</STRONG></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">。Durability是一个枚举变量，可选值参见4.2节。如果不通过该方法指定WAL日志级别，则为</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5"><STRONG>默认</STRONG></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+  style="COLOR: rgb(255,0,0)"><STRONG>USE_DEFAULT</STRONG></SPAN>级别。</SPAN></LI></OL><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"></SPAN>
+<DIV>
+<HR>
+<SPAN style="FONT-SIZE: 16pt"><STRONG>3.删除表</STRONG></SPAN></DIV>
+<DIV>删除表没创建表那么多学问，直接上代码：</DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HBaseAdmin&nbsp;admin&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HBaseAdmin(conf);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;tablename&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"my_ns:mytable"</SPAN>;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>if</STRONG></SPAN>(admin.tableExists(tablename))&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>try</STRONG></SPAN>&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.disableTable(tablename);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.deleteTable(tablename);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>catch</STRONG></SPAN>&nbsp;(Exception&nbsp;e)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//&nbsp;<SPAN 
+style="COLOR: rgb(127,159,191)"><STRONG>TODO</STRONG></SPAN>:&nbsp;handle&nbsp;exception</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>说明</STRONG>：删除表前必须先disable表。</SPAN></DIV>
+<DIV>
+<HR>
+<SPAN style="FONT-SIZE: 16pt"><STRONG>4.修改表</STRONG></SPAN></DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 14pt">4.1.实例代码</SPAN></STRONG></DIV>
+<DIV><STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">（1）删除列族、新增列族</SPAN></STRONG></DIV>
+<DIV><STRONG>修改之前，四个列族：</STRONG></DIV>
+<DIV>
+<DIV>hbase(main):014:0&gt; describe 'rd_ns:itable'</DIV>
+<DIV>DESCRIPTION &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp;ENABLED</DIV>
+<DIV>&nbsp;'rd_ns:itable', {NAME =&gt; '<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">info</SPAN>', DATA_BLOCK_ENCODING =&gt; 
+'NONE', BLOOMFILTER =&gt; 'ROW', REPLICATION_SCOPE =&gt; '0', V true</DIV>
+<DIV>&nbsp;ERSIONS =&gt; '10', COMPRESSION =&gt; 'NONE', MIN_VERSIONS =&gt; '0', 
+TTL =&gt; '2147483647', KEEP_DELETED_CELLS =&gt; 'false',</DIV>
+<DIV>&nbsp;BLOCKSIZE =&gt; '65536', IN_MEMORY =&gt; 'false', BLOCKCACHE =&gt; 
+'true'}, {NAME =&gt; '<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">newcf</SPAN>', DATA_BLOCK_ENCODING 
+=&gt; 'NONE</DIV>
+<DIV>&nbsp;', BLOOMFILTER =&gt; 'ROW', REPLICATION_SCOPE =&gt; '0', COMPRESSION 
+=&gt; 'NONE', VERSIONS =&gt; '10', TTL =&gt; '2147483647',</DIV>
+<DIV>&nbsp;MIN_VERSIONS =&gt; '0', KEEP_DELETED_CELLS =&gt; 'false', BLOCKSIZE 
+=&gt; '65536', IN_MEMORY =&gt; 'false', BLOCKCACHE =&gt; 'tr</DIV>
+<DIV>&nbsp;ue'}, {NAME =&gt; '<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">note</SPAN>', DATA_BLOCK_ENCODING =&gt; 
+'NONE', BLOOMFILTER =&gt; 'ROW', REPLICATION_SCOPE =&gt; '0', VERSIONS 
+=&gt;</DIV>
+<DIV>&nbsp; '10', COMPRESSION =&gt; 'NONE', MIN_VERSIONS =&gt; '0', TTL =&gt; 
+'2147483647', KEEP_DELETED_CELLS =&gt; 'false', BLOCKSIZE</DIV>
+<DIV>&nbsp;=&gt; '65536', IN_MEMORY =&gt; 'false', BLOCKCACHE =&gt; 'true'}, 
+{NAME =&gt; '<SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">sysinfo</SPAN>', 
+DATA_BLOCK_ENCODING =&gt; 'NONE', BLOOM</DIV>
+<DIV>&nbsp;FILTER =&gt; 'ROW', REPLICATION_SCOPE =&gt; '0', COMPRESSION =&gt; 
+'NONE', VERSIONS =&gt; '10', TTL =&gt; '2147483647', MIN_VERS</DIV>
+<DIV>&nbsp;IONS =&gt; '0', KEEP_DELETED_CELLS =&gt; 'true', BLOCKSIZE =&gt; 
+'65536', IN_MEMORY =&gt; 'false', BLOCKCACHE =&gt; 'true'}</DIV>
+<DIV>1 row(s) in 0.0450 seconds</DIV></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>修改表，删除三个列族，新增一个列族，代码如下：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HBaseAdmin&nbsp;admin&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HBaseAdmin(conf);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;tablename&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>if</STRONG></SPAN>(admin.tableExists(tablename))&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>try</STRONG></SPAN>&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.disableTable(tablename);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//get&nbsp;the&nbsp;TableDescriptor&nbsp;of&nbsp;target&nbsp;table</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTableDescriptor&nbsp;newtd&nbsp;=&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>admin.getTableDescriptor</STRONG></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//remove&nbsp;3&nbsp;useless&nbsp;column&nbsp;families</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newtd.removeFamily(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"note"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newtd.removeFamily(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"newcf"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newtd.removeFamily(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"sysinfo"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//create&nbsp;HColumnDescriptor&nbsp;for&nbsp;new&nbsp;column&nbsp;family</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HColumnDescriptor&nbsp;newhcd&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HColumnDescriptor(<SPAN 
+style="COLOR: rgb(42,0,255)">"action_log"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newhcd.setMaxVersions(10);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newhcd.setKeepDeletedCells(<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>true</STRONG></SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//add&nbsp;the&nbsp;new&nbsp;column&nbsp;family(HColumnDescriptor)&nbsp;to&nbsp;HTableDescriptor</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;newtd.addFamily(newhcd);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//modify&nbsp;target&nbsp;table&nbsp;<SPAN 
+style="TEXT-DECORATION: underline">struture</SPAN></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>modifyTable</STRONG></SPAN></SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>),newtd);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.enableTable(tablename);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>catch</STRONG></SPAN>&nbsp;(Exception&nbsp;e)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//&nbsp;<SPAN 
+style="COLOR: rgb(127,159,191)"><STRONG>TODO</STRONG></SPAN>:&nbsp;handle&nbsp;exception</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>修改之后：</STRONG></DIV>
+<DIV>
+<DIV>hbase(main):015:0&gt; describe 'rd_ns:itable'</DIV>
+<DIV>DESCRIPTION &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp;ENABLED</DIV>
+<DIV>&nbsp;'rd_ns:itable', {NAME =&gt; '<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">action_log</SPAN>', DATA_BLOCK_ENCODING 
+=&gt; 'NONE', BLOOMFILTER =&gt; 'ROW', REPLICATION_SCOPE =&gt; &nbsp;true</DIV>
+<DIV>&nbsp;'0', COMPRESSION =&gt; 'NONE', VERSIONS =&gt; '10', TTL =&gt; 
+'2147483647', MIN_VERSIONS =&gt; '0', KEEP_DELETED_CELLS =&gt; 'tr</DIV>
+<DIV>&nbsp;ue', BLOCKSIZE =&gt; '65536', IN_MEMORY =&gt; 'false', BLOCKCACHE 
+=&gt; 'true'}, {NAME =&gt; '<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">info</SPAN>', DATA_BLOCK_ENCODING =&gt; 
+'</DIV>
+<DIV>&nbsp;NONE', BLOOMFILTER =&gt; 'ROW', REPLICATION_SCOPE =&gt; '0', VERSIONS 
+=&gt; '10', COMPRESSION =&gt; 'NONE', MIN_VERSIONS =&gt; '</DIV>
+<DIV>&nbsp;0', TTL =&gt; '2147483647', KEEP_DELETED_CELLS =&gt; 'false', 
+BLOCKSIZE =&gt; '65536', IN_MEMORY =&gt; 'false', BLOCKCACHE =&gt;</DIV>
+<DIV>&nbsp; 'true'}</DIV>
+<DIV>1 row(s) in 0.0400 seconds</DIV></DIV>
+<DIV><BR></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>逻辑很简单：</STRONG></SPAN></DIV>
+<DIV>
+<OL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">通过</SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+  style="COLOR: rgb(255,0,0)"><STRONG>admin.getTableDescriptor</STRONG></SPAN></SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">(Bytes.<SPAN 
+  style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+  style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>))</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">取得目标表的描述对象，应该就是取得指向该对象的指针了；</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">修改目标表描述对象；</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">通过</SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">admin.</SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+  style="COLOR: rgb(255,0,0)"><STRONG>modifyTable</STRONG></SPAN></SPAN><SPAN 
+  style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">(Bytes.<SPAN 
+  style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+  style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>),newtd)</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">将修改后的描述对象应用到目标表。</SPAN><BR></LI></OL>
+<DIV><BR></DIV></DIV>
+<DIV style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">（2）修改现有列族的属性（setMaxVersions）</SPAN></STRONG></DIV></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 10.5pt/1.5 Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HBaseAdmin&nbsp;admin&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HBaseAdmin(conf);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;tablename&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>if</STRONG></SPAN>(admin.tableExists(tablename))&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>try</STRONG></SPAN>&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.disableTable(tablename);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//get&nbsp;the&nbsp;TableDescriptor&nbsp;of&nbsp;target&nbsp;table</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTableDescriptor&nbsp;htd&nbsp;=&nbsp;admin.getTableDescriptor(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HColumnDescriptor&nbsp;infocf&nbsp;=&nbsp;htd.getFamily(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;infocf.setMaxVersions(100);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//modify&nbsp;target&nbsp;table&nbsp;<SPAN 
+style="TEXT-DECORATION: underline">struture</SPAN></SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.modifyTable(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>),htd);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.enableTable(tablename);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>catch</STRONG></SPAN>&nbsp;(Exception&nbsp;e)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(63,127,95)">//&nbsp;<SPAN 
+style="COLOR: rgb(127,159,191)"><STRONG>TODO</STRONG></SPAN>:&nbsp;handle&nbsp;exception</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e.printStackTrace();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admin.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 10.5pt/1.5 Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><BR></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<HR>
+</DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV><SPAN style="FONT-SIZE: 16pt"><STRONG>5.新增、更新数据Put</STRONG></SPAN></DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 14pt">5.1.常用构造函数：</SPAN></STRONG></DIV>
+<DIV><STRONG>（1）指定行键</STRONG></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">public Put(byte[] 
+row)</SPAN></DIV>
+<DIV>参数：<SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">row 行键</SPAN></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（2）指定行键和时间戳</STRONG></DIV>
+<DIV>public Put(byte[] row,&nbsp;<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">long ts)</SPAN></DIV>
+<DIV>参数：<SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">row 行键，</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">ts 时间戳</SPAN></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（3）从目标字符串中提取子串，作为行键</STRONG></DIV>
+<DIV>
+<DIV>Put(byte[] rowArray, int rowOffset, int rowLength)</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（4）从目标字符串中提取子串，作为行键，并加上时间戳</STRONG><BR></DIV>
+<DIV>Put(byte[] rowArray, int rowOffset, int rowLength, long ts)</DIV></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 14pt">5.2.常用方法：</SPAN></STRONG></DIV>
+<DIV><STRONG>（1）指定<SPAN 
+style="COLOR: rgb(255,0,0)">列族、限定符</SPAN>，添加值</STRONG></DIV>
+<DIV>add(byte[] family, byte[] qualifier, byte[] value) &nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（2）指定<SPAN 
+style="COLOR: rgb(255,0,0)">列族、限定符、时间戳</SPAN>，添加值</STRONG></DIV>
+<DIV>add(byte[] family, byte[] qualifier, long ts, byte[] value)</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（3）<SPAN style="COLOR: rgb(255,0,0)">设置写WAL</SPAN></STRONG><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>（Write-Ahead-Log）的级别</STRONG></SPAN></SPAN></DIV>
+<DIV>public void setDurability(Durability d)<BR></DIV>
+<DIV>参数是一个枚举值，可以有以下几种选择：</DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">ASYNC_WAL ： 
+  当数据变动时，异步写WAL日志</SPAN><BR></SPAN></LI>
+  <LI><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">SYNC_WAL ： 
+  当数据变动时，同步写WAL日志</SPAN><BR></SPAN></LI>
+  <LI><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">FSYNC_WAL ： 
+  当数据变动时，同步写WAL日志，并且，强制将数据写入磁盘</SPAN><BR></SPAN></LI>
+  <LI><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">SKIP_WAL ： 
+  不写WAL日志</SPAN><BR></SPAN></LI>
+  <LI><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">USE_DEFAULT ： 
+  使用HBase全局默认的WAL写入级别，即</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">SYNC_WAL</SPAN></SPAN><BR></LI></UL></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 14pt">5.3.实例代码</SPAN></STRONG></DIV>
+<DIV><STRONG>（1）插入行</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:leetable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Put&nbsp;put&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Put(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100001"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"name"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"lion"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"address"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"shangdi"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"age"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"30"</SPAN>));</SPAN></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; put.setDurability(Durability.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>SYNC_WAL</EM></SPAN>);</SPAN>&nbsp;&nbsp;<BR></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext"><BR></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.put(put);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（2）更新行</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:leetable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Put&nbsp;put&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Put(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100001"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"name"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"lee"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"address"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"longze"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"age"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"31"</SPAN>));</SPAN></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; put.setDurability(Durability.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>SYNC_WAL</EM></SPAN>);</SPAN>&nbsp;&nbsp;<BR></DIV><BR></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.put(put);</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp; &nbsp; &nbsp;&nbsp;</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV>
+<DIV><STRONG>注意：</STRONG></DIV>
+<DIV>
+<OL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG><SPAN 
+  style="COLOR: rgb(255,0,0)">Put的构造函数都需要指定行键，如果是全新的行键，则新增一行；如果是已有的行键，则更新现有行。</SPAN></STRONG><BR></SPAN></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">创建Put对象及put.add过程都是在构建一行的数据，创建Put对象时相当于创建了行对象，add的过程就是往目标行里添加cell，直到table.put才将数据插入表格；</SPAN></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">以上代码创建Put对象用的是构造函数1，也可用构造函数2，第二个参数是时间戳；</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Put还有别的构造函数，请查阅官网API。</SPAN></LI></OL></DIV></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（3）<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">从目标字符串中提取子串，作为行键，构建Put</SPAN></STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:leetable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Put&nbsp;put&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Put(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100001_100002"</SPAN>),7,6);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"name"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"show"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"address"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"caofang"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;put.add(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"age"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"30"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.put(put);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>注意，关于：<SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">Put&nbsp;put&nbsp;=&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; COLOR: rgb(127,0,85); LINE-HEIGHT: 19px">new</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">&nbsp;Put(Bytes.</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px"><EM>toBytes</EM></SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">(</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; COLOR: rgb(42,0,255); LINE-HEIGHT: 19px">"100001_100002"</SPAN><SPAN 
+style="FONT-SIZE: 13px; FONT-FAMILY: 'Courier New'; LINE-HEIGHT: 19px">),7,6)</SPAN></STRONG></DIV>
+<DIV>
+<OL>
+  <LI>第二个参数是偏移量，也就是行键从第一个参数的第几个字符开始截取；</LI>
+  <LI>第三个参数是截取长度；</LI>
+  <LI>这个代码实际是从 100001_100002 中截取了100002子串作为目标行的行键。</LI></OL></DIV>
+<DIV>
+<HR>
+<STRONG><SPAN style="FONT-SIZE: 16pt">6.删除数据Delete</SPAN></STRONG></DIV>
+<DIV>
+<DIV>&nbsp; &nbsp; &nbsp; &nbsp;Delete类用于删除表中的一行数据，通过HTable.delete来执行该动作。</DIV>
+<DIV>&nbsp; &nbsp; &nbsp; 
+&nbsp;在执行Delete操作时，HBase并不会立即删除数据，而是对需要删除的数据打上一个“墓碑”标记，直到当Storefile合并时，再清除这些被标记上“墓碑”的数据。</DIV>
+<DIV>
+<DIV>&nbsp; &nbsp; &nbsp; 
+&nbsp;如果希望删除整行，用行键来初始化一个Delete对象即可。如果希望进一步定义删除的具体内容，可以使用以下这些Delete对象的方法：</DIV>
+<DIV>
+<UL>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">为了删除指定的列族，可以使用</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">deleteFamily</SPAN></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">为了删除指定列的多个版本，可以使用</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">deleteColumns</SPAN></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">为了删除指定列的<SPAN 
+  style="COLOR: rgb(255,0,0)"><STRONG>指定版本</STRONG></SPAN>，可以使用</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">deleteColumn，这样的话就只会删除版本号（时间戳）与指定版本相同的列。如果不指定时间戳，默认只删除最新的版本</SPAN></LI></UL></DIV>
+<DIV>&nbsp; &nbsp; &nbsp; 下面详细说明构造函数和常用方法：</DIV></DIV></DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 14pt">6.1.构造函数</SPAN></STRONG></DIV>
+<DIV>
+<DIV><STRONG>（1）指定要删除的行键</STRONG></DIV>
+<DIV>Delete(byte[] row)</DIV>
+<DIV>删除行键指定行的数据。</DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果没有进一步的操作，使用该构造函数将删除行键指定的行中</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5"><STRONG>所有列族中所有列的所有版本</STRONG></SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">！</SPAN></DIV>
+<DIV><BR></DIV>
+<DIV>
+<DIV><STRONG>（2）指定要删除的行键和时间戳</STRONG></DIV>
+<DIV>Delete(byte[] row, long timestamp)</DIV></DIV>
+<DIV>删除行键和时间戳共同确定行的数据。</DIV>
+<DIV>如果没有进一步的操作，使用该构造函数将删除行键指定的行中，所有列族中所有列的<SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>时间戳<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">小于等于</SPAN>指定时间戳的数据版本</STRONG></SPAN>。</DIV>
+<DIV><STRONG>注意</STRONG>：该时间戳仅仅和删除行有关，如果需要进一步指定列族或者列，你必须分别为它们指定时间戳。</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（3）给定一个字符串，目标行键的偏移，截取的长度</STRONG></DIV>
+<DIV>Delete(byte[] rowArray, int rowOffset, int rowLength)</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（4）给定一个字符串，目标行键的偏移，截取的长度，时间戳</STRONG><BR></DIV>
+<DIV>Delete(byte[] rowArray, int rowOffset, int rowLength, long ts)</DIV>
+<DIV><BR></DIV></DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 14pt">6.2.常用方法</SPAN></STRONG></DIV>
+<DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Delete 
+  &nbsp;</SPAN><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+  style="BACKGROUND-COLOR: rgb(255,255,0)"><STRONG>deleteColumn</STRONG></SPAN>(byte[] 
+  family, byte[] qualifier) &nbsp; &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">删除指定列的</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">最新版本</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的数据。</SPAN></LI></UL></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Delete 
+  &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)"><STRONG>deleteColumn<SPAN 
+  style="COLOR: rgb(255,0,0)">s</SPAN></STRONG></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">(byte[] family, byte[] qualifier) 
+  &nbsp; &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">删除指定列的</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">所有版本</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的数据。</SPAN></LI></UL></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Delete 
+  &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>deleteColumn</STRONG>(byte[] 
+  family, byte[] qualifier, long&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">timestamp</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">) &nbsp; &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">删除指定列的</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">指定版本</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的数据。</SPAN></LI></UL></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Delete 
+  &nbsp;</SPAN><STRONG><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">deleteColumn</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+  style="COLOR: rgb(255,0,0)">s</SPAN></SPAN></STRONG><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">(byte[] family, byte[] qualifier, 
+  long&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">timestamp</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">) &nbsp; &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">删除指定列的，时间戳</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5"><SPAN 
+  style="BACKGROUND-COLOR: rgb(255,255,0)">小于等于给定时间戳</SPAN></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+  style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">所有</SPAN></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">版本的数据。</SPAN></LI></UL></DIV>
+<DIV><BR></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Delete 
+  &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>deleteFamily</STRONG>(byte[] 
+  family) &nbsp; &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">删除指定列族的所有列的</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)"><STRONG><SPAN 
+  style="COLOR: rgb(255,0,0)">所有</SPAN></STRONG></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">版本数据。</SPAN></LI></UL></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Delete 
+  &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">deleteFamily</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">(byte[] family, long timestamp) 
+  &nbsp; &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">删除指定列族的所有列中</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">时间戳<SPAN 
+  style="COLOR: rgb(255,0,0)">小于等于</SPAN>指定时间戳</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的所有数据。</SPAN></LI></UL></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Delete 
+  &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">deleteFamilyVersion</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">(byte[] family, long timestamp) 
+  &nbsp; &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">删除指定列族中所有</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)"><STRONG>列的时间戳<SPAN 
+  style="COLOR: rgb(255,0,0)">等于</SPAN>指定时间戳</STRONG></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的版本数据。</SPAN></LI></UL></DIV>
+<DIV><BR></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">void</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; WHITE-SPACE: pre; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setTimestamp</STRONG>(long 
+  timestamp) &nbsp; &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">为Delete对象设置时间戳。</SPAN></LI></UL></DIV></DIV>
+<DIV><BR></DIV>
+<DIV><SPAN style="FONT-SIZE: 14pt"><STRONG>6.3.实例代码</STRONG></SPAN></DIV>
+<DIV><STRONG>（1）删除整行的所有列族、所有行、所有版本</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:leetable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Delete&nbsp;delete&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Delete(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"000"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.delete(delete);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（2）删除<SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">指定列的最新版本</SPAN></STRONG></DIV>
+<DIV>以下是删除之前的数据，注意看100003行的info:address，这是该列最新版本的数据，值是caofang1，在这之前的版本值是caofang：</DIV>
+<DIV>
+<DIV>hbase(main):007:0&gt; scan 'rd_ns:leetable'</DIV>
+<DIV>ROW &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; COLUMN+CELL</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405304843114, value=longze</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405304843114, value=31</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405304843114, value=leon</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405305471343, value=caofang</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405305471343, value=30</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405305471343, value=show</DIV>
+<DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;100003 &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; column=info:address, 
+timestamp=1405390959464, value=caofang1</SPAN></DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405390959464, value=301</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405390959464, value=show1</DIV>
+<DIV>3 row(s) in 0.0270 seconds</DIV></DIV>
+<DIV><BR></DIV>
+<DIV>执行以下代码：</DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:leetable"</SPAN>);</SPAN></DIV>
+<DIV><BR></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Delete&nbsp;delete&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Delete(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100003"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;delete.deleteColumn(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"address"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.delete(delete);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV>然后查看数据，发现100003列的info:address列的值显示为前一个版本的caofang了！其余值均不变：</DIV>
+<DIV>
+<DIV>hbase(main):008:0&gt; scan 'rd_ns:leetable'</DIV>
+<DIV>ROW &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; COLUMN+CELL</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405304843114, value=longze</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405304843114, value=31</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405304843114, value=leon</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405305471343, value=caofang</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405305471343, value=30</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405305471343, value=show</DIV>
+<DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;100003 &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; column=info:address, 
+timestamp=1405390728175, value=caofang</SPAN></DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405390959464, value=301</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405390959464, value=show1</DIV>
+<DIV>3 row(s) in 0.0560 seconds</DIV></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（3）删除<SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">指定列的所有版本</SPAN></STRONG></DIV>
+<DIV>接以上场景，执行以下代码：</DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:leetable"</SPAN>);</SPAN></DIV>
+<DIV><BR></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Delete&nbsp;delete&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Delete(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100003"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'"><SPAN>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;delete.</SPAN><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">deleteColumns</SPAN></STRONG></SPAN><SPAN>(Bytes.</SPAN><SPAN 
+style="COLOR: windowtext"><EM>toBytes</EM></SPAN><SPAN>(</SPAN><SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN><SPAN>),&nbsp;Bytes.</SPAN><SPAN 
+style="COLOR: windowtext"><EM>toBytes</EM></SPAN><SPAN>(</SPAN><SPAN 
+style="COLOR: rgb(42,0,255)">"address"</SPAN><SPAN>));</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.delete(delete);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV>然后我们会发现，100003行的整个info:address列都没了：</DIV>
+<DIV>
+<DIV>hbase(main):009:0&gt; scan 'rd_ns:leetable'</DIV>
+<DIV>ROW &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; COLUMN+CELL</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405304843114, value=longze</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405304843114, value=31</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405304843114, value=leon</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405305471343, value=caofang</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405305471343, value=30</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405305471343, value=show</DIV>
+<DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;100003 &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; column=info:age, 
+timestamp=1405390959464, value=301</SPAN></DIV>
+<DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;100003 &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; column=info:name, 
+timestamp=1405390959464, value=show1</SPAN></DIV>
+<DIV>3 row(s) in 0.0240 seconds</DIV></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（4）<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">删除指定列族中所有</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">列的时间戳<SPAN 
+style="COLOR: rgb(255,0,0)">等于</SPAN>指定时间戳</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的版本数据</SPAN></STRONG></DIV>
+<DIV>为了演示效果，我已经向100003行的info:address列新插入一条数据</DIV>
+<DIV>
+<DIV>hbase(main):010:0&gt; scan 'rd_ns:leetable'</DIV>
+<DIV>ROW &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; COLUMN+CELL</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405304843114, value=longze</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405304843114, value=31</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405304843114, value=leon</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405305471343, value=caofang</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405305471343, value=30</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405305471343, value=show</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">1405391883886</SPAN>, 
+value=shangdi</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=<SPAN 
+style="BACKGROUND-COLOR: rgb(0,255,0)">1405390959464</SPAN>, value=301</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=<SPAN 
+style="BACKGROUND-COLOR: rgb(0,255,0)">1405390959464</SPAN>, value=show1</DIV>
+<DIV>3 row(s) in 0.0250 seconds</DIV></DIV>
+<DIV><BR></DIV>
+<DIV>现在，我们的目的是删除info列族中，时间戳为1405390959464的所有列数据：</DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:leetable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Delete&nbsp;delete&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Delete(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100003"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;delete.<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><U>deleteFamilyVersion</U></SPAN>(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;1405390959464L);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.delete(delete);</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV>
+<DIV>hbase(main):011:0&gt; scan 'rd_ns:leetable'</DIV>
+<DIV>ROW &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; COLUMN+CELL</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405304843114, value=longze</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405304843114, value=31</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405304843114, value=leon</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405305471343, value=caofang</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405305471343, value=30</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405305471343, value=show</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">1405391883886</SPAN>, 
+value=shangdi</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=<SPAN 
+style="BACKGROUND-COLOR: rgb(0,255,0)">1405390728175</SPAN>, value=30</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=<SPAN 
+style="BACKGROUND-COLOR: rgb(0,255,0)">1405390728175</SPAN>, value=show</DIV>
+<DIV>3 row(s) in 0.0250 seconds</DIV></DIV>
+<DIV><BR></DIV>
+<DIV>可以看到，100003行的info列族，已经不存在时间戳为<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">1405390959464的数据，比它更早版本的数据被查询出来，而info列族中时间戳不等于</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">1405390959464的address列，不受该delete的影响</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">。</SPAN></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 16pt">7.获取单行Get</SPAN></STRONG></DIV>
+<DIV>
+<DIV>如果希望获取整行数据，用行键初始化一个Get对象就可以，如果希望进一步缩小获取的数据范围，可以使用Get对象的以下方法：</DIV>
+<DIV>
+<UL>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果希望取得指定列族的所有列数据，使用</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>addFamily</STRONG>添加所有的目标列族即可；</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果希望取得指定列的数据，使用</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>addColumn</STRONG>添加所有的目标列即可；</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果希望取得目标列的指定时间戳范围的数据版本，使用</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setTimeRange</STRONG>；</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果仅希望获取目标列的指定时间戳版本，则使用</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setTimestamp</STRONG>；</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果希望限制每个列返回的版本数，使用</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setMaxVersions</STRONG>；</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果希望添加过滤器，使用</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setFilter</STRONG></SPAN><BR></LI></UL></DIV>
+<DIV>下面详细描述构造函数及常用方法：</DIV></DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 14pt">7.1.构造函数</SPAN></STRONG></DIV>
+<DIV>Get的构造函数很简单，只有一个构造函数：<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Get(byte[] row) 参数是行键。</SPAN></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 14pt">7.2.常用方法</SPAN></STRONG></DIV>
+<DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Get</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; WHITE-SPACE: pre; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">addFamily(byte[] family) 
+  &nbsp;指定希望获取的列族</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Get</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; WHITE-SPACE: pre; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">addColumn(byte[] family, byte[] 
+  qualifier) &nbsp;指定希望获取的列</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Get</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; WHITE-SPACE: pre; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">setTimeRange(long minStamp, long 
+  maxStamp) &nbsp;设置获取数据的</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+  style="COLOR: rgb(255,0,0)">时间戳范围</SPAN></SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Get</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; WHITE-SPACE: pre; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">setTimeStamp(long timestamp) 
+  &nbsp;设置获取数据的时间戳</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Get</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; WHITE-SPACE: pre; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">setMaxVersions(int maxVersions) 
+  设定获取数据的版本数</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Get</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; WHITE-SPACE: pre; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">setMaxVersions() 
+  &nbsp;设定获取数据的</SPAN><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+  style="COLOR: rgb(255,0,0)">所有版本</SPAN></SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Get</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; WHITE-SPACE: pre; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">setFilter(Filter filter) 
+  &nbsp;为Get对象添加过滤器，过滤器详解请参见：http://blog.csdn.net/u010967382/article/details/37653177</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">void</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; WHITE-SPACE: pre; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">setCacheBlocks(boolean 
+  cacheBlocks) &nbsp;设置该Get获取的数据是否缓存在内存中</SPAN><BR></LI></UL></DIV>
+<DIV><BR></DIV>
+<DIV><SPAN style="FONT-SIZE: 14pt"><STRONG>7.3.实测代码</STRONG></SPAN></DIV>
+<DIV>测试表的所有数据：</DIV>
+<DIV>
+<DIV>hbase(main):016:0&gt; scan 'rd_ns:leetable'</DIV>
+<DIV>ROW &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; COLUMN+CELL</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405304843114, value=longze</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405304843114, value=31</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405304843114, value=leon</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405305471343, value=caofang</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405305471343, value=30</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405305471343, value=show</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405407883218, value=qinghe</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405407883218, value=28</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405407883218, value=shichao</DIV>
+<DIV>3 row(s) in 0.0250 seconds</DIV></DIV>
+<DIV><STRONG>（1）获取行键指定行的<SPAN style="COLOR: rgb(255,0,0)">所有列族、所有列</SPAN>的<SPAN 
+style="COLOR: rgb(255,0,0)">最新版本</SPAN>数据</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:leetable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Get&nbsp;get&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Get(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100003"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Result&nbsp;r&nbsp;=&nbsp;table.get(get);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><STRONG>代码输出：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;qinghe</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;28</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shichao</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（2）获取行键指定行中，<SPAN 
+style="COLOR: rgb(255,0,0)">指定列</SPAN>的最新版本数据</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:leetable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Get&nbsp;get&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Get(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100003"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">get.addColumn(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"name"</SPAN>));</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Result&nbsp;r&nbsp;=&nbsp;table.get(get);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><STRONG>代码输出：</STRONG></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shichao</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（3）获取行键指定的行中，<SPAN 
+style="COLOR: rgb(255,0,0)">指定时间戳</SPAN>的数据</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:leetable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Get&nbsp;get&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Get(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100003"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">get.setTimeStamp(1405407854374L);</SPAN></SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Result&nbsp;r&nbsp;=&nbsp;table.get(get);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();&nbsp;</SPAN>&nbsp;&nbsp;<BR></DIV></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>代码输出了上面scan命令输出中没有展示的历史数据：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;huangzhuang</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;32</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;lily</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（4）获取行键指定的行中，<SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(0,255,0)">所有版本</SPAN>的数据</STRONG><BR></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Get&nbsp;get&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Get(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100003"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;get.setMaxVersions();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Result&nbsp;r&nbsp;=&nbsp;table.get(get);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;"</SPAN>+cell.getTimestamp()</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">&nbsp; 
+&nbsp; &nbsp; &nbsp; table.close(); &nbsp; &nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;&nbsp;</SPAN><BR></DIV></DIV>
+<DIV><STRONG><BR></STRONG></DIV>
+<DIV><STRONG>代码输出：</STRONG></DIV>
+<DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;xierqi&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shangdi&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417477465</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;longze&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417448414</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;29&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;30&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417477465</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;31&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417448414</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;leon&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;lee&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417477465</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;lion&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417448414</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV><STRONG><BR></STRONG></DIV>
+<DIV><STRONG>注意：</STRONG></DIV>
+<DIV><SPAN 
+style="COLOR: rgb(255,0,0)"><STRONG>能输出多版本数据的前提是当前列族能保存多版本数据，列族可以保存的数据版本数通过HColumnDescriptor的setMaxVersions(Int)方法设置。</STRONG></SPAN></DIV>
+<DIV>
+<HR>
+</DIV>
+<DIV><STRONG><SPAN style="FONT-SIZE: 16pt">8.获取多行Scan</SPAN></STRONG></DIV>
+<DIV>
+<DIV>&nbsp; &nbsp; &nbsp; &nbsp;Scan对象可以返回满足给定条件的多行数据。<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果希望获取所有的行，直接初始化一个Scan对象即可。</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果希望限制扫描的行范围，可以使用以下方法：</SPAN></DIV>
+<DIV>
+<DIV>
+<UL>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果希望获取指定列族的所有列，可使用<STRONG>addFamily</STRONG>方法来添加所有希望获取的列族</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">如果希望获取指定列，使用<STRONG>addColumn</STRONG>方法来添加所有列</SPAN></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">通过<STRONG>setTimeRange</STRONG>方法设定获取列的时间范围</SPAN></LI>
+  <LI>通过<STRONG>setTimestamp</STRONG>方法指定具体的时间戳，只返回该时间戳的数据</LI>
+  <LI>通过<STRONG>setMaxVersions</STRONG>方法设定最大返回的版本数</LI>
+  <LI>通过<STRONG>setBatch</STRONG>方法设定返回数据的最大行数</LI>
+  <LI>通过<STRONG>setFilter</STRONG>方法为Scan对象添加过滤器，过滤器详解请参见：<A 
+  style="TEXT-DECORATION: none; COLOR: rgb(202,0,0)" 
+  href="http://blog.csdn.net/u010967382/article/details/37653177" 
+  target=_blank>http://blog.csdn.net/u010967382/article/details/37653177</A></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan的结果数据是可以缓存在内存中的，可以通过</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">getCaching</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">()方法来查看当前设定的缓存条数，也可以通过</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">setCaching</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">(int 
+  caching)来设定缓存在内存中的行数，缓存得越多，以后查询结果越快，同时也消耗更多内存。此外，</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">通过</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">setCacheBlocks</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">方法设置是否缓存Scan的结果数据块，默认为true</SPAN></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">我们可以通过</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">setMaxResultSize(long)方法来设定Scan返回的结果行数。</SPAN></LI></UL></DIV>
+<DIV><BR></DIV></DIV>
+<DIV>&nbsp; &nbsp; &nbsp; &nbsp;下面是官网文档中的一个入门示例：假设表有几行键值为 "row1", "row2", 
+"row3"，还有一些行有键值 "abc1", "abc2", 和 "abc3"，目标是返回"row"打头的行：</DIV></DIV></DIV>
+<BLOCKQUOTE 
+style="BORDER-TOP: medium none; BORDER-RIGHT: medium none; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: medium none; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 14px/26px Arial; PADDING-LEFT: 0px; MARGIN: 0px 0px 0px 40px; BORDER-LEFT: medium none; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <DIV>HTable htable = ... &nbsp; &nbsp; &nbsp;// instantiate HTable</DIV>
+  <DIV>Scan scan = new Scan();</DIV>
+  <DIV>scan.addColumn(Bytes.toBytes("cf"),Bytes.toBytes("attr"));</DIV>
+  <DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">scan.setStartRow( 
+  Bytes.toBytes("row")); &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+  &nbsp; // start key is inclusive</SPAN></DIV>
+  <DIV><SPAN style="BACKGROUND-COLOR: rgb(255,255,0)">scan.setStopRow( 
+  Bytes.toBytes("row" + &nbsp;(char)0)); &nbsp;// stop key is 
+  exclusive</SPAN></DIV>
+  <DIV>ResultScanner rs = htable.getScanner(scan);</DIV>
+  <DIV>try {</DIV>
+  <DIV>&nbsp; for (Result r = rs.next(); r != null; r = rs.next()) {</DIV>
+  <DIV>&nbsp; // process result...</DIV>
+  <DIV>} finally {</DIV>
+  <DIV>&nbsp; rs.close(); &nbsp;<SPAN style="COLOR: rgb(255,0,0)"><SPAN 
+  style="BACKGROUND-COLOR: rgb(255,255,0)">// always close the 
+  ResultScanner!</SPAN></SPAN></DIV>
+  <DIV>}</DIV></BLOCKQUOTE>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(0,0,0); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG><SPAN 
+style="FONT-SIZE: 14pt">8.1.常用构造函数</SPAN></STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV><STRONG>（1）创建扫描所有行的Scan</STRONG></DIV>
+<DIV>Scan()</DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（2）创建Scan，从指定行开始扫描</STRONG>，</DIV>
+<DIV>Scan(byte[] startRow)</DIV>
+<DIV>参数：<SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">startRow</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">行键</SPAN></DIV>
+<DIV><STRONG>注意</STRONG>：如果指定行不存在，从下一个最近的行开始<BR></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（3）创建Scan，指定起止行</STRONG></DIV>
+<DIV>Scan(byte[] startRow, byte[] stopRow)</DIV>
+<DIV>参数：<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">startRow起始行，</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">stopRow终止行</SPAN></DIV>
+<DIV><STRONG>注意</STRONG>：<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">startRow &lt;= 结果集 
+&lt;&nbsp;</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">stopRow</SPAN></DIV>
+<DIV><BR></DIV>
+<DIV><STRONG>（4）创建Scan，指定起始行和过滤器</STRONG></DIV>
+<DIV>Scan(byte[] startRow, Filter filter)&nbsp;</DIV>
+<DIV>参数：<SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">startRow</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">起始行，</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">filter</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">过滤器</SPAN></DIV>
+<DIV>注意：过滤器的功能和构造参见<A 
+style="FONT-SIZE: 10.5pt; TEXT-DECORATION: none; COLOR: rgb(202,0,0); LINE-HEIGHT: 1.5" 
+href="http://blog.csdn.net/u010967382/article/details/37653177" 
+target=_blank>http://blog.csdn.net/u010967382/article/details/37653177</A></DIV></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG><SPAN 
+style="FONT-SIZE: 14pt">8.2.常用方法</SPAN></STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setStartRow</STRONG>(byte[] 
+  startRow) &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">设置Scan的开始行，</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">默认</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">结果集</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">包含</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">该行。</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">如果希望结果集不包含该行，可以在行键末尾加上0。</SPAN></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setStopRow</STRONG>(byte[] 
+  stopRow)&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">设置Scan的结束行，</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">默认</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">结果集</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">不包含</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">该行。</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">如果希望结果集包含该行，可以在行键末尾加上0。</SPAN></LI></UL></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setTimeRange</STRONG>(long 
+  minStamp, long maxStamp)&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">&nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">扫描指定<SPAN 
+  style="BACKGROUND-COLOR: rgb(255,255,0)">时间范围</SPAN>的数据</SPAN></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan 
+  &nbsp;<STRONG>setTimeStamp</STRONG>(long timestamp) &nbsp;扫描指定<SPAN 
+  style="BACKGROUND-COLOR: rgb(255,255,0)">时间</SPAN>的数据</SPAN></LI></UL></DIV></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan 
+  &nbsp;<STRONG>addColumn</STRONG>(byte[] family, byte[] qualifier) 
+  &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">指定扫描的列</SPAN></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>addFamily</STRONG>(byte[] 
+  family) 指定扫描的列族</SPAN></LI></UL>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setFilter</STRONG>(Filter 
+  filter) &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">为Scan设置过滤器</SPAN></LI></UL></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setReversed</STRONG>(boolean 
+  reversed) 
+  &nbsp;设置Scan的扫描顺序，默认是正向扫描（false），可以设置为逆向扫描（true）。注意：该方法0.98版本以后才可用！！</SPAN></SPAN></LI></UL>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setMaxVersions</STRONG>() 
+  &nbsp;获取所有版本的数据</SPAN><BR></LI>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">Scan &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setMaxVersions</STRONG>(int 
+  maxVersions) &nbsp;设置获取的最大版本数</SPAN></LI></UL>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">void &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setCaching</STRONG>(int 
+  caching) &nbsp;</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">设定缓存在内存中的行数，缓存得越多，以后查询结果越快，同时也消耗更多内存</SPAN></LI></UL></DIV>
+<DIV>
+<UL>
+  <LI><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">void</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; WHITE-SPACE: pre; LINE-HEIGHT: 1.5"></SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>setRaw</STRONG>(boolean 
+  raw) &nbsp;激活或者禁用raw模式。如果raw模式被激活，Scan将返回<SPAN 
+  style="COLOR: rgb(255,0,0)"><STRONG>所有已经被打上删除标记但尚未被真正删除</STRONG></SPAN>的数据。该功能仅用于激活了</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">KEEP_DELETED_ROWS的列族，即列族开启了</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">hcd.setKeepDeletedCells(true)</SPAN><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">。Scan激活raw模式后，就不能指定任意的列，否则会报错</SPAN><BR></LI></UL></DIV>
+<DIV><SPAN style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV>Enable/disable "raw" mode for this scan. If "raw" is enabled the scan will 
+return all delete marker and deleted rows that have not been collected, yet. 
+This is mostly useful for Scan on&nbsp;<STRONG><SPAN 
+style="COLOR: rgb(255,0,0)">column families</SPAN></STRONG>&nbsp;that have 
+KEEP_DELETED_ROWS enabled. It is an error to specify any column when "raw" is 
+set.</DIV>
+<DIV>hcd.setKeepDeletedCells(true);</DIV></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG><SPAN 
+style="FONT-SIZE: 14pt">8.3.实测代码</SPAN></STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>（1）扫描表中的<SPAN 
+style="COLOR: rgb(255,0,0)">所有行</SPAN>的最新版本数据</STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;s&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(s);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;"</SPAN>+cell.getTimestamp()</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>代码输出：</STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100001&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;anywhere&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417403438</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100001&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;24&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417403438</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100001&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;zhangtao&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417403438</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100002&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shangdi&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417426693</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100002&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;28&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417426693</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100002&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shichao&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417426693</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;xierqi&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;29&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;leon&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>（2）<SPAN 
+style="COLOR: rgb(255,0,0)">扫描指定行键范围，通过末尾加0，使得结果集包含StopRow</SPAN></STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>);</SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;s&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s.<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">setStartRow</SPAN>(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100001"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s.<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">setStopRow</SPAN>(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">1000020</SPAN>"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(s);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;"</SPAN>+cell.getTimestamp()</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>代码输出：</STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100001&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;anywhere&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417403438</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100001&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;24&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417403438</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100001&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;zhangtao&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417403438</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">Rowkey&nbsp;:&nbsp;100002&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shangdi&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417426693</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">Rowkey&nbsp;:&nbsp;100002&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;28&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417426693</SPAN></DIV><SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)"><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100002&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shichao&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417426693</SPAN>&nbsp;&nbsp;</SPAN><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>（3）<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">返回</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5">所有已经被打上删除标记但尚未被真正删除</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的数据</SPAN></STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">本测试针对rd_ns:itable表的100003行。</DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">如果使用get结合<SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">setMaxVersions()</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">方法能返回所有未删除的数据，输出如下：</SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;huilongguan&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494141522</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shangdi&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417477465</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;new29&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494141522</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;liyang&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494141522</SPAN>&nbsp;&nbsp;<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">然而，使用Scan强大的<SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">s.setRaw(</SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: rgb(127,0,85); LINE-HEIGHT: 1.5"><STRONG>true</STRONG></SPAN><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; LINE-HEIGHT: 1.5">)</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">方法，可以获得所有</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 10.5pt; COLOR: rgb(255,0,0); LINE-HEIGHT: 1.5; BACKGROUND-COLOR: rgb(255,255,0)">已经被打上删除标记但尚未被真正删除</SPAN><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">的数据。</SPAN></SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><STRONG>代码如下：</STRONG></SPAN></SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;s&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s.setStartRow(Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"100003"</SPAN>));</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s.setRaw(<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>true</STRONG></SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;s.setMaxVersions();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(s);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;"</SPAN>+cell.getTimestamp()</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><SPAN 
+style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5"><BR></SPAN></SPAN></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG><BR></STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>输出结果如下：</STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;huilongguan&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494141522</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;xierqi&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shangdi&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417477465</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417448414</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;longze&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417448414</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;new29&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494141522</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;29&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;30&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417477465</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;31&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417448414</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;liyang&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494141522</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405493879419</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;leon&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417500485</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;lee&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417477465</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;lion&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417448414</SPAN></DIV></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>（4）<SPAN 
+style="COLOR: rgb(255,0,0); BACKGROUND-COLOR: rgb(255,255,0)">结合过滤器，获取所有age在25到30之间的行</SPAN></STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>目前的数据：</STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV>hbase(main):049:0&gt; scan 'rd_ns:itable'</DIV>
+<DIV>ROW &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+COLUMN+CELL</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405417403438, value=anywhere</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405417403438, value=24</DIV>
+<DIV>&nbsp;100001 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405417403438, value=zhangtao</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405417426693, value=shangdi</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405417426693, value=28</DIV>
+<DIV>&nbsp;100002 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405417426693, value=shichao</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:address, timestamp=1405494141522, value=huilongguan</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:age, timestamp=1405494999631, value=29</DIV>
+<DIV>&nbsp;100003 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+column=info:name, timestamp=1405494141522, value=liyang</DIV>
+<DIV>3 row(s) in 0.0240 seconds</DIV></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>代码：</STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp; 
+&nbsp; &nbsp; &nbsp; 
+Configuration&nbsp;conf&nbsp;=&nbsp;HBaseConfiguration.<SPAN 
+style="FONT-STYLE: italic">create</SPAN>();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTable&nbsp;table&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;HTable(conf,&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"rd_ns:itable"</SPAN>);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext"><BR></SPAN></DIV>
+<DIV></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FilterList&nbsp;filterList&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;FilterList(FilterList.Operator.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>MUST_PASS_ALL</EM></SPAN>);&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SingleColumnValueFilter&nbsp;filter1&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;SingleColumnValueFilter(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"age"</SPAN>),</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>GREATER_OR_EQUAL</EM></SPAN>,</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"25"</SPAN>)</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SingleColumnValueFilter&nbsp;filter2&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;SingleColumnValueFilter(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"info"</SPAN>),</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"age"</SPAN>),</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CompareOp.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>LESS_OR_EQUAL</EM></SPAN>,</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bytes.<SPAN 
+style="FONT-STYLE: italic">toBytes</SPAN>(<SPAN 
+style="COLOR: rgb(42,0,255)">"30"</SPAN>)</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filterList.addFilter(filter1);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext; BACKGROUND-COLOR: rgb(255,255,0)">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;filterList.addFilter(filter2);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scan&nbsp;scan&nbsp;=&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>new</STRONG></SPAN>&nbsp;Scan();</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;scan.setFilter(filterList);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultScanner&nbsp;rs&nbsp;=&nbsp;table.getScanner(scan);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Result&nbsp;r&nbsp;:&nbsp;rs)&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(127,0,85)"><STRONG>for</STRONG></SPAN>&nbsp;(Cell&nbsp;cell&nbsp;:&nbsp;r.rawCells())&nbsp;{</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;System.<SPAN 
+style="COLOR: rgb(0,0,192)"><EM>out</EM></SPAN>.println(</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"Rowkey&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(r.getRow())+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneQualifier</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;"</SPAN>+Bytes.<SPAN 
+style="FONT-STYLE: italic">toString</SPAN>(CellUtil.<SPAN 
+style="FONT-STYLE: italic">cloneValue</SPAN>(cell))+</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN 
+style="COLOR: rgb(42,0,255)">"&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;"</SPAN>+cell.getTimestamp()</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}</SPAN></DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;table.close();</SPAN>&nbsp;&nbsp;<BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG><BR></STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>代码输出：</STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100002&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shangdi&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417426693</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100002&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">28</SPAN>&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417426693</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100002&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;shichao&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405417426693</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;address&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;huilongguan&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494141522</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;age&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;<SPAN 
+style="BACKGROUND-COLOR: rgb(255,255,0)">29</SPAN>&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494999631</SPAN></DIV>
+<DIV><SPAN 
+style="FONT-SIZE: 10pt; FONT-FAMILY: 'Courier New'; COLOR: windowtext">Rowkey&nbsp;:&nbsp;100003&nbsp;&nbsp;&nbsp;Familiy:Quilifier&nbsp;:&nbsp;name&nbsp;&nbsp;&nbsp;Value&nbsp;:&nbsp;liyang&nbsp;&nbsp;&nbsp;Time&nbsp;:&nbsp;1405494141522</SPAN></DIV></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><BR></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px"><STRONG>注意：</STRONG></DIV>
+<DIV 
+style="FONT-SIZE: 14px; FONT-FAMILY: 'Microsoft YaHei UI', 'Microsoft YaHei', SimSun, 'Segoe UI', Tahoma, Helvetica, sans-serif, 'Microsoft YaHei', Georgia, Helvetica, Arial, sans-serif, 宋体, PMingLiU, serif; LINE-HEIGHT: 21px">
+<OL>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">HBase对列族、列名大小写敏感</SPAN><BR></LI>
+  <LI><SPAN 
+  style="FONT-SIZE: 10.5pt; LINE-HEIGHT: 1.5">关于过滤器请参见我的另外一篇博客：</SPAN><A 
+  style="FONT-SIZE: 10.5pt; TEXT-DECORATION: none; COLOR: rgb(202,0,0); LINE-HEIGHT: 1.5" 
+  href="http://blog.csdn.net/u010967382/article/details/37653177" 
+  target=_blank>http://blog.csdn.net/u010967382/article/details/37653177</A></LI></OL></DIV></DIV></DIV></body>
+</html>

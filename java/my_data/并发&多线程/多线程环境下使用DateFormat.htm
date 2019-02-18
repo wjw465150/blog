@@ -1,0 +1,59 @@
+<HTML>
+<HEAD>
+<META HTTP-EQUIV=Content-Type CONTENT=text/html; charset=utf-8>
+<title>多线程环境下使用 DateFormat</title>
+<style type="text/css">
+<!--
+.9t {
+	font-size: 9pt;
+	color: #000000;
+	font-family: "宋体";
+}
+-->
+</style>
+</HEAD>
+<body bgcolor="#FFFFFF">
+<table width="90%" border="0" align="center" >
+  <tr>
+    <td><PRE class="9t">
+SimpleDateFormat是线程不安全的，要保证线程安全，有四种方法：
+
+1）每次都new一个SimpleDateFormat对象
+
+2）同步
+
+3）使用ThreadLocal
+
+4）使用commons-lang包中的DateUtils和DateFormatUtils替代
+
+第三种方法是针对第一种方法的优化，因为如果我们要频繁使用SimpleDateFormat对象时，每次都new一个，这样会增加创建对象的开销。如下：
+public class SimpleDateFormatTest {
+ 
+    private static ThreadLocal&lt;SimpleDateFormat&gt; threadLocal = new ThreadLocal&lt;SimpleDateFormat&gt;() {
+        protected SimpleDateFormat initialValue() {
+            return new SimpleDateFormat("yyyy-MM-dd");
+        }
+    };
+ 
+    public static void main(String[] args) {
+        SimpleDateFormatTest.getDateFormat().format(new Date());
+    }
+ 
+    public static SimpleDateFormat getDateFormat() {
+ 
+        return (SimpleDateFormat) threadLocal.get();
+ 
+    }
+ 
+}
+第四种方法也是我推荐的，我简单测试了一下，他的性能还比较好。又简单，又快，我们为啥不用了？示例代码如下：
+
+public static void main(String[] args)  {
+        System.out.println( DateFormatUtils.format(new Date(),"yyyy-MM-dd"));
+}
+ 
+</PRE></td>
+  </tr>
+</table>
+</Body>
+</HTML>

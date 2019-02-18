@@ -1,0 +1,254 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>HBase + Kerberos 配置示例（一）</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">用过hbase的朋友可能都有过这样的疑问，我写一个java 
+client，好像就提供了zookeeper 
+quorum地址就连上hbase了，那么是不是存在安全问题？的确是，如何解决？hbase中引入了kerberos认证。我准备用两篇博文介绍hbase + 
+kerberos的相关内容，本篇主要介绍kerberos的配置。</P>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">环境准备</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kerberos简介</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kerberos 
+  server配置</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kerberos 
+  client配置</LI></UL>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">环境准备</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">这里我准备了三台server，各自安装上centos 
+6.5 64bit</P>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kb1: 
+  kerberos server</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kbhbase1: 
+  kerberos client, 后续也用于安装运行HBase</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kbjavatest1: 
+  kerberos client, 后续将在其上部署java程序访问kbhbase1上的hbase数据库</LI></UL>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">kerberos简介</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">kerberos简单来说就是一套完全控制机制，它有一个中心服务器（KDC），KDC中有数据库，你可以往里添加各种“人”以及各种“服务”的“身份证”，当某个人要访问某个服务时，他拿着自己的“身份证”联系KDC并告诉KDC他想要访问的服务，KDC经过一系列验证步骤，最终依据验证结果允许/拒绝这个人访问此服务。关于kerberos具体的工作流程，参见文章<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); FONT-STYLE: italic; transition: 0.25s; -webkit-transition: 0.25s" 
+href="http://www.roguelynn.com/words/explain-like-im-5-kerberos/" 
+rel=nofollow,noindex target=_blank>《Explain like I’m 5: Kerberos》</A></P>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">kerberos 
+server配置</H2>
+<H4 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">安装</H4>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">#yum 
+install krb5-libs krb5-server krb5-workstation</P>
+<H4 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">配置</H4>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">1）#vim 
+/etc/krb5.conf</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><IMG 
+style="MAX-WIDTH: 550px; BORDER-TOP: 0px; HEIGHT: auto; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; TEXT-ALIGN: center; MARGIN: 0px auto; BORDER-LEFT: 0px" 
+src="http://img2.tuicool.com/7JJJry.gif"><PRE class="prettyprint ruby" style="WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px"><SPAN style="COLOR: rgb(0,0,0)">[logging]
+ </SPAN><SPAN style="COLOR: rgb(0,0,255)">default</SPAN> = <SPAN class=constant>FILE</SPAN><SPAN class=symbol style="COLOR: rgb(153,0,115)">:/<SPAN style="COLOR: rgb(0,0,255)">var</SPAN>/log/<SPAN style="COLOR: rgb(0,0,0)">krb5libs</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">.log
+ kdc </SPAN>= <SPAN class=constant>FILE</SPAN><SPAN class=symbol style="COLOR: rgb(153,0,115)">:/<SPAN style="COLOR: rgb(0,0,255)">var</SPAN>/log/<SPAN style="COLOR: rgb(0,0,0)">krb5kdc</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">.log
+ admin_server </SPAN>= <SPAN class=constant>FILE</SPAN><SPAN class=symbol style="COLOR: rgb(153,0,115)">:/<SPAN style="COLOR: rgb(0,0,255)">var</SPAN>/log/<SPAN style="COLOR: rgb(0,0,0)">kadmind</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">.log
+ 
+[libdefaults]
+ default_realm </SPAN>=<SPAN style="COLOR: rgb(0,0,0)"> <SPAN class=constant>MH</SPAN>.<SPAN class=constant>COM</SPAN>
+ dns_lookup_realm </SPAN>= <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">false</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+ dns_lookup_kdc </SPAN>= <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">false</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+ ticket_lifetime </SPAN>=<SPAN style="COLOR: rgb(0,0,0)"> <SPAN class=number style="COLOR: rgb(0,153,153)">24</SPAN>h
+ renew_lifetime </SPAN>=<SPAN style="COLOR: rgb(0,0,0)"> <SPAN class=number style="COLOR: rgb(0,153,153)">7</SPAN>d
+ forwardable </SPAN>= <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">true</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)"> 
+
+[realms]
+ <SPAN class=constant>MH</SPAN>.<SPAN class=constant>COM</SPAN> </SPAN>=<SPAN style="COLOR: rgb(0,0,0)"> {
+  kdc </SPAN>= kb1.mh.<SPAN class=symbol style="COLOR: rgb(153,0,115)">com:</SPAN><SPAN style="COLOR: rgb(128,0,128)"><SPAN class=number style="COLOR: rgb(0,153,153)">88</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+  admin_server </SPAN>= kb1.mh.<SPAN class=symbol style="COLOR: rgb(153,0,115)">com:</SPAN><SPAN style="COLOR: rgb(128,0,128)"><SPAN class=number style="COLOR: rgb(0,153,153)">749</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+ } 
+
+[domain_realm]
+ .mh.com </SPAN>=<SPAN style="COLOR: rgb(0,0,0)"> <SPAN class=constant>MH</SPAN>.<SPAN class=constant>COM</SPAN>
+ mh.com </SPAN>= <SPAN class=constant>MH</SPAN>.<SPAN class=constant>COM</SPAN></PRE><SPAN>View 
+Code</SPAN></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">2）#vim 
+/var/kerberos/krb5kdc/kdc.conf</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><IMG 
+style="MAX-WIDTH: 550px; BORDER-TOP: 0px; HEIGHT: auto; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; TEXT-ALIGN: center; MARGIN: 0px auto; BORDER-LEFT: 0px" 
+src="http://img2.tuicool.com/7JJJry.gif"><PRE class="prettyprint ruby" style="WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, 'Courier New', monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px"><SPAN style="COLOR: rgb(0,0,0)">[kdcdefaults]
+ kdc_ports </SPAN>= <SPAN style="COLOR: rgb(128,0,128)"><SPAN class=number style="COLOR: rgb(0,153,153)">88</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+ kdc_tcp_ports </SPAN>= <SPAN style="COLOR: rgb(128,0,128)"><SPAN class=number style="COLOR: rgb(0,153,153)">88</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+
+[realms]
+ <SPAN class=constant>MH</SPAN>.<SPAN class=constant>COM</SPAN> </SPAN>=<SPAN style="COLOR: rgb(0,0,0)"> {
+  <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">#master_key_type </SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">= aes256-<SPAN style="COLOR: rgb(0,0,0)">cts</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+  acl_file </SPAN>= <SPAN class=regexp style="COLOR: rgb(0,153,38)">/<SPAN style="COLOR: rgb(0,0,255)">var</SPAN>/kerberos</SPAN><SPAN class=regexp style="COLOR: rgb(0,153,38)">/krb5kdc/<SPAN style="COLOR: rgb(0,0,0)">kadm</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">5.acl
+  dict_file </SPAN>= <SPAN class=regexp style="COLOR: rgb(0,153,38)">/usr/share</SPAN><SPAN class=regexp style="COLOR: rgb(0,153,38)">/dict/<SPAN style="COLOR: rgb(0,0,0)">words</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+  admin_keytab </SPAN>= <SPAN class=regexp style="COLOR: rgb(0,153,38)">/<SPAN style="COLOR: rgb(0,0,255)">var</SPAN>/kerberos</SPAN><SPAN class=regexp style="COLOR: rgb(0,153,38)">/krb5kdc/<SPAN style="COLOR: rgb(0,0,0)">kadm</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">5.keytab
+  supported_enctypes </SPAN>= aes256-<SPAN class=symbol style="COLOR: rgb(153,0,115)">cts:</SPAN>normal aes128-<SPAN class=symbol style="COLOR: rgb(153,0,115)">cts:</SPAN>normal des3-hmac-<SPAN class=symbol style="COLOR: rgb(153,0,115)">sha1:</SPAN>normal arcfour-<SPAN class=symbol style="COLOR: rgb(153,0,115)">hmac:</SPAN>normal des-hmac-<SPAN class=symbol style="COLOR: rgb(153,0,115)">sha1:</SPAN>normal des-cbc-<SPAN class=symbol style="COLOR: rgb(153,0,115)">md5:</SPAN>normal des-cbc-<SPAN style="COLOR: rgb(0,0,0)"><SPAN class=symbol style="COLOR: rgb(153,0,115)">crc:</SPAN>normal
+ }</SPAN></PRE><SPAN>View Code</SPAN></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">kerberos中的realm，即kerberos的域，类似于计算机网络中"domain"的概念。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">3）#vim 
+/var/kerberos/krb5kdc/kadm5.acl</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">这个文件是用来控制哪些人可以使用kadmin工具来管理kerberos数据库，我这里就配了一行：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">*/admin@MH.COM 
+*</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">其中前一个*号是通配符，表示像名为“abc/admin”或“xxx/admin”的人都可以使用此工具（远程或本地）管理kerberos数据库，后一个*跟权限有关，*表示所有权限，还可以进行更细的控制，参见<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); FONT-STYLE: italic; transition: 0.25s; -webkit-transition: 0.25s" 
+href="http://web.mit.edu/kerberos/krb5-1.12/doc/admin/conf_files/kadm5_acl.html" 
+rel=nofollow,noindex target=_blank>ACL</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">4）#kdb5_util 
+create -s初始化一个kerberos数据库。</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">5）现在数据库是空的，想要使用kadmin添加一个人到数据库中，这是需要权限的，那么最开始的那一个人是怎么加到数据库中的？这就需要kadmin.local这个工具，这个工具只能在kerberos 
+server上执行（类似于oracle中的sys用户无密码登录）。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">#kadmin.local 
+-q "addprinc admin/admin"</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">我这里把管理员叫“admin/admin”，你可以叫任何名字，但是因为此前我们在kadm5.acl中的配置，名字必须以/admin结尾。过程中会提示你输入两次密码，记住这个密码，当你在别的机器连接kadmin时，需要这个密码。</P></DIV>
+<H4 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">启动</H4>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">#service 
+  krb5kdc start</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">#service 
+  kadmin start</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">#chkconfig 
+  krb5kdc on</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">#chkconfig 
+  kadmin on</LI></UL>
+<H4 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">验证</H4>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">#kinit 
+  admin/admin</LI></UL>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">如果kinit不带参数，则会默认以当前操作系统用户名，比如root，作为名称。因为root在kerberos的数据库中并没有，所以会提示失败</P>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">#klist</LI></UL>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">正常应该显示：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">Ticket 
+cache: FILE:/tmp/krb5cc_0</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">Default 
+principal: admin/admin@MH.COM</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">Valid 
+starting&nbsp;&nbsp;&nbsp;&nbsp; 
+Expires&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+Service principal</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">04/10/15 
+13:03:36&nbsp; 04/11/15 13:03:36&nbsp; krbtgt/MH.COM@MH.COM</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">renew 
+until 04/10/15 13:03:36</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">以下这两个应该不是必须的，与兼容性有关，ktadd命令会把“身份证”写入到文件（.keytab后缀），可以指定keytab文件，如不指定，默认写入/etc/krb5.keytab</P>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kadmin.local:&nbsp;ktadd 
+  kadmin/admin</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kadmin.local:&nbsp;ktadd 
+  kadmin/changepw</LI></UL>
+<H4 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">其它一些命令</H4>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">#kdestroy，退出当前kerberos用户，即你最后使用kinit过的那个用户</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kadmin.local&gt;listprincs 
+  列出所有存在数据库中的人或服务</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kadmin.local&gt;delprinc 
+  zookeeper/kbhbase1.mh.com@MH.COM 删除人或服务</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kadmin.local&gt;addprinc 
+  admin/admin 添加人或服务</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kadmin.local&gt;q 
+  退出kadmin</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kadmin:&nbsp; 
+  addprinc -randkey root/kbhbase1.mh@MH.COM</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kadmin:&nbsp; 
+  xst -k root.keytab root/kbhbase1.mh.com</LI>
+  <LI style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em"># klist 
+  -kt root.keytab 列出这个keytab中保存的所有人或服务</LI></UL>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">一般在实例使用中通过kinit的方式较少，因为每次都要输入密码，所以更经常使用的是keytab文件，相当于为某个人或服务生成一个密码，并放在文件中，程序中则指向这个keytab，不用每次都输入密码。</P>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">kerberos 
+client配置</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">现在，我们到kbhbase1这台机器上，即我们的kerberos 
+客户端上。kerberos对服务器跟客户端之间的时间有要求，所以一般需要安装ntp来作时间同步，我这里直接手工同步了一下，就不再介绍ntp了。 #yum 
+install krb5-libs krb5-workstation 注意与kerberos 
+server上的yum命令对比。安装完成后把server上的krb5.conf文件拷贝过来覆盖一下即可。注意：</P>
+<UL 
+style="LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">kb1和kbhbase1的/etc/hosts文件都要把各自以及对方添加上去</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">关闭这两个server上的防火墙
+  <UL 
+  style="LIST-STYLE-TYPE: none; FONT-SIZE: 16px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0px 25px; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 0px">
+    <LI 
+    style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">#service 
+    iptables stop</LI>
+    <LI 
+    style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">#chkconfig 
+    iptables off</LI></UL></LI></UL>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">与在server上类似，使用kinit和klist查看一下。也可以尝试执行kadmin，按提示使用admin/admin并输入密码（你之前创建管理员时输入的密码），正常应该能够连接上服务器，并对数据库进行操作（比如添加或删除人、服务）。</P></body>
+</html>

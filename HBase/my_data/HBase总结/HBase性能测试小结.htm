@@ -1,0 +1,47 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>HBase性能测试小结</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">性能测试小结：<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>测试环境：<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>机器：1 client 5 regin server 1 master 
+3 zookeeper<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>配置：8 core超到16 
+/24G内存，region server分配了4G heap /单seta磁盘,raid10后500GB<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>系统：Red Hat Enterprise Linux Server 
+release 5.4<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>版本：hadoop-0.20.2+737 / hbase-0.90.1 
+/ Java HotSpot(TM) 64-Bit Server VM (build 17.0-b16, mixed mode)<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>htable假设：row key = 200 Byte；row 
+value=1k Byte；1 family 1 column</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">前期主要测试了读写性能，非常满意。可以跑满网卡。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">接下来进行了一些持续压力测试，下面是测试的一些结论<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>1、master启动时会读取和恢复所有hlog，这一步的工作是读取所有hlog放在内存中。在集群比较大写入比较频繁时需要配置较大内存<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>2、dns配置必须保证一致，在启动时dns解析不一致，运行不会报错，但是balance和recovery时会产生很大的问题，因为master无法准确地判断region 
+server的状态。这个问题非常严重<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>3、LRU引起的性能消耗非常大，因为一旦内存不能命中，则需要从网络上其它主机请求数据，性能的下降是一到两个数量级。因此需要严格计算内存的使用情况，默认的计算公式是heap 
+of regionserver * 0.2 * 0.85，其中0.2那个因子是可以配置的，建议配置到0.4-0.5<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>4、update时会引起读写锁互斥，目前测试可以得到互斥会引起读的性能下降一倍。当然对写是无影响的。insert也不会有影响<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>5、balancer将定期检查，默认是5分钟。balance主要将平衡各台机器的总region数量，有三种平衡算法，效果都差不多，由于balance时会改变region对应的server的信息，因此会有短暂的服务不可用时间，抛出NotServingRegion异常。该异常在客户端进行处理，目前默认的处理办法是阻塞。经压力测试得到balance时的region不可用时间为20ms以内，6小时内balance次数约12次<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>6、balancer不会以table为粒度进行工作。这会导致如果一张表的row 
+key长期没有发生变化，则数据有可能倾斜在某个region server上<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>7、compact时虽然复杂，但几乎不会阻塞读写，因为region的状态并没有改变，而只是生成了一个新的store 
+file再做一次rename操作，只在rename时会加一个写锁，但是很快解锁。在平均3500qps写入的压力测试中统计了3个小时内某个region 
+server中的compact次数为195次，其中40次&lt;1s，110次1-2s，32次2-3s，10次3-4s，1次4s，1次7s<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><BR>8、split耗时在10ms级别，对访问正在split的region的请求抛出NotServingRegion异常</P></body>
+</html>

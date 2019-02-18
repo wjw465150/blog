@@ -1,0 +1,151 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+<HTML xmlns="http://www.w3.org/1999/xhtml" sizcache="1" 
+sizset="13"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>OpenJWeb平台Spring Security+CAS SSO的配置</title>
+<LINK media=all href="Cogitation_1.css" 
+type=text/css rel=stylesheet><LINK media=all 
+href="csdn_favbykimi.css" type=text/css 
+rel=stylesheet><LINK href="1.ico" 
+rel="Shortcut Icon"><LINK title=RSS 
+href="baozhengw" type=application/rss+xml 
+rel=alternate></HEAD>
+
+<BODY id="defaultuser" sizcache="1" sizset="13">
+
+<DIV id="csdnblog_allwrap" sizcache="1" sizset="13">
+
+<DIV id="csdnblog_midwrap" sizcache="1" sizset="13">
+
+<DIV id=csdnblog_content>
+
+<DIV class=gutter>
+
+<DIV class=default_contents>
+
+<DIV class=user_article><!--StartFragment-->
+<H1 class=title_txt>OpenJWeb平台Spring Security+CAS SSO的配置 <CITE class=fav_csdnstylebykimi><A 
+title=收藏到我的网摘中，并分享给我的朋友 class=fav_csdnstylebykimi 
+href="javascript:d=document;t=d.selection%3F(d.selection.type!='None'?d.selection.createRange().text:''):(d.getSelection?d.getSelection():'');void(saveit=window.open('http://wz.csdn.net/storeit.aspx?t='+escape(d.title)+'&amp;u='+escape(d.location.href)+'&amp;c='+escape(t),'saveit','scrollbars=no,width=590,height=300,left=75,top=20,status=no,resizable=yes'));saveit.focus();">收藏</A> 
+</CITE></H1>
+<DIV class=blogstory>
+<P>CAS Server的搭建就不用介绍了,这里介绍一下OpenJWeb平台中Spring Security如何与CAS集成.Spring 
+security集成CAS的官方例子可从<A 
+href="https://src.springframework.org/svn/spring-security/trunk/samples/cas/client/src/main/webapp">https://src.springframework.org/svn/spring-security/trunk/samples/cas/client/src/main/webapp</A>下载,但是这个例子过于简单,权限ID是配置在xml中,而本文介绍的配置,权限ID是存储在数据库中的.下面是配置的applicationContext-security.xml(这个配置已测通):</P>
+<P>&lt;?xml version="1.0" encoding="UTF-8"?&gt;</P>
+<P>&lt;beans xmlns="<A 
+href="http://www.springframework.org/schema/beans">http://www.springframework.org/schema/beans</A>"<BR>&nbsp;&nbsp;&nbsp; 
+xmlns:sec="<A 
+href="http://www.springframework.org/schema/security">http://www.springframework.org/schema/security</A>"<BR>&nbsp;&nbsp;&nbsp; 
+xmlns:xsi="<A 
+href="http://www.w3.org/2001/XMLSchema-instance">http://www.w3.org/2001/XMLSchema-instance</A>"<BR>&nbsp;&nbsp;&nbsp; 
+xsi:schemaLocation="<A 
+href="http://www.springframework.org/schema/beans">http://www.springframework.org/schema/beans</A> 
+<A 
+href="http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">http://www.springframework.org/schema/beans/spring-beans-2.0.xsd</A><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+<A 
+href="http://www.springframework.org/schema/security">http://www.springframework.org/schema/security</A> 
+<A 
+href="http://www.springframework.org/schema/security/spring-security-2.0.xsd">http://www.springframework.org/schema/security/spring-security-2.0.xsd</A>"&gt;<BR>&nbsp;&nbsp; 
+<BR>&nbsp;&nbsp;&nbsp; &lt;sec:http 
+entry-point-ref="casProcessingFilterEntryPoint"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;sec:intercept-url pattern="/secure/extreme/**" access="ROLE_SUPERVISOR" 
+requires-channel="https"/&gt;<BR>&nbsp;&nbsp;&lt;sec:intercept-url pattern="/secure/**" 
+access="ROLE_USER" /&gt;&nbsp;&nbsp; <BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;sec:logout 
+logout-success-url="/index.jsp"/&gt;<BR>&nbsp;&nbsp;&nbsp; &lt;/sec:http&gt;<BR>&nbsp; <BR>&nbsp;&nbsp;&nbsp; 
+&lt;sec:authentication-manager alias="authenticationManager"/&gt;</P>
+<P>&nbsp;&nbsp;&nbsp; &lt;bean id="casProcessingFilter" 
+class="org.springframework.security.ui.cas.CasProcessingFilter"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;sec:custom-filter after="CAS_PROCESSING_FILTER"/&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="authenticationManager" ref="authenticationManager"/&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;property name="authenticationFailureUrl" 
+value="/casfailed.jsp"/&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property name= 
+"defaultTargetUrl"value="/comm/index.action?operate=selectPageList"/&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="proxyGrantingTicketStorage" ref="proxyGrantingTicketStorage" 
+/&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property name="proxyReceptorUrl" value="/secure/receptor" 
+/&gt; <BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <BR>&nbsp;&nbsp;&nbsp; &lt;/bean&gt;</P>
+<P>&nbsp;&nbsp;&nbsp; &lt;bean id="casProcessingFilterEntryPoint" 
+class="org.springframework.security.ui.cas.CasProcessingFilterEntryPoint"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;property name="loginUrl" value="<A 
+href='https://casserver.haoyisheng.com:8443/cas/login"/'  ??>https://casserver.haoyisheng.com:8443/cas/login"/</A>&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;property name="serviceProperties" ref="serviceProperties"/&gt;<BR>&nbsp;&nbsp;&nbsp; 
+&lt;/bean&gt;</P>
+<P>&nbsp;&nbsp;&nbsp; &lt;bean id="casAuthenticationProvider" 
+class="org.springframework.security.providers.cas.CasAuthenticationProvider"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;sec:custom-authentication-provider /&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="userDetailsService" ref="userDetailsService"/&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="serviceProperties" ref="serviceProperties" /&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="ticketValidator"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&lt;bean 
+class="org.jasig.cas.client.validation.Cas20ServiceTicketValidator"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&nbsp;&nbsp;&lt;constructor-arg index="0" value="<A 
+href="https://casserver.haoyisheng.com:8443/cas">https://casserver.haoyisheng.com:8443/cas</A>" 
+/&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&lt;property name="proxyGrantingTicketStorage" 
+ref="proxyGrantingTicketStorage" /&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; &lt;property 
+name="proxyCallbackUrl" value="<A 
+href="https://bzwang.haoyisheng.com:8443/crm/secure/receptor">https://bzwang.haoyisheng.com:8443/crm/secure/receptor</A>" 
+/&gt;&nbsp; <BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; <BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;/bean&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;/property&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;property name="key" 
+value="an_id_for_this_auth_provider_only"/&gt;<BR>&nbsp;&nbsp;&nbsp; &lt;/bean&gt;<BR>&nbsp;&nbsp;&nbsp; 
+<BR>&nbsp;&nbsp;&nbsp; &lt;bean id="proxyGrantingTicketStorage" 
+class="org.jasig.cas.client.proxy.ProxyGrantingTicketStorageImpl" /&gt;</P>
+<P>&nbsp;&nbsp;&nbsp; &lt;bean id="serviceProperties" 
+class="org.springframework.security.ui.cas.ServiceProperties"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;property name="service" value="<A 
+href='https://bzwang.haoyisheng.com:8443/crm/j_spring_cas_security_check"/'  ??>https://bzwang.haoyisheng.com:8443/crm/j_spring_cas_security_check"/</A>&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+&lt;property name="sendRenew" value="false"/&gt;<BR>&nbsp;&nbsp;&nbsp; &lt;/bean&gt;<BR>&nbsp;<BR>&nbsp;&nbsp; 
+&lt;bean 
+id="daoAuthenticationProvider"<BR>&nbsp;&nbsp;class="org.springframework.security.providers.dao.DaoAuthenticationProvider"&gt;<BR>&nbsp;&nbsp;&lt;property 
+name="userDetailsService" ref="userDetailsService" /&gt;<BR>&nbsp;&nbsp;&lt;property 
+name="userCache" ref="userCache" /&gt;<BR>&nbsp;&nbsp;&lt;property name="passwordEncoder" 
+ref="passwordEncoder" /&gt;<BR>&nbsp;&lt;/bean&gt;<BR>&nbsp;&lt;bean 
+id="passwordEncoder"<BR>&nbsp;&nbsp;class="org.springframework.security.providers.encoding.Md5PasswordEncoder" 
+/&gt;<BR>&nbsp;&lt;bean 
+id="userDetailsService"<BR>&nbsp;&nbsp;class="org.openjweb.core.springsecurity.UserDetailsServiceImpl"&gt;<BR>&nbsp;&nbsp;&lt;constructor-arg&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;ref 
+bean="IBaseDao3" /&gt;<BR>&nbsp;&nbsp;&lt;/constructor-arg&gt;<BR>&nbsp;&lt;/bean&gt;</P>
+<P>&nbsp;&lt;bean 
+id="userCache"<BR>&nbsp;&nbsp;class="org.springframework.security.providers.dao.cache.EhCacheBasedUserCache"&gt;<BR>&nbsp;&nbsp;&lt;property 
+name="cache" ref="userCacheBacked" /&gt;<BR>&nbsp;&lt;/bean&gt;</P>
+<P>&nbsp;&lt;bean 
+id="userCacheBacked"<BR>&nbsp;&nbsp;class="org.springframework.cache.ehcache.EhCacheFactoryBean"&gt;<BR>&nbsp;&nbsp;&lt;property 
+name="cacheManager" ref="cacheManager" /&gt;<BR>&nbsp;&nbsp;&lt;property name="cacheName" 
+value="userCache" /&gt;<BR>&nbsp;&lt;/bean&gt;</P>
+<P>&nbsp;&lt;bean 
+id="cacheManager"<BR>&nbsp;&nbsp;class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean"&gt;<BR>&nbsp;&nbsp;&lt;property 
+name="configLocation"<BR>&nbsp;&nbsp;&nbsp;value="classpath:ehcache-security.xml" 
+/&gt;<BR>&nbsp;&lt;/bean&gt;<BR>&nbsp;&lt;bean 
+id="filterSecurityInterceptor"<BR>&nbsp;&nbsp;class="org.springframework.security.intercept.web.FilterSecurityInterceptor"&gt;<BR>&nbsp;&nbsp;&lt;sec:custom-filter 
+before="FILTER_SECURITY_INTERCEPTOR" /&gt;<BR>&nbsp;&nbsp;&lt;property 
+name="authenticationManager"<BR>&nbsp;&nbsp;&nbsp;ref="authenticationManager" 
+/&gt;<BR>&nbsp;&nbsp;&lt;property 
+name="accessDecisionManager"<BR>&nbsp;&nbsp;&nbsp;ref="accessDecisionManager" 
+/&gt;<BR>&nbsp;&nbsp;&lt;property name="<SPAN id=TheWorldHiLightStyleID 
+style="BACKGROUND: #ffff00; COLOR: #000000">alwaysReauthenticate</SPAN>" 
+value="true" /&gt;<BR>&nbsp;&nbsp;&lt;property 
+name="objectDefinitionSource"<BR>&nbsp;&nbsp;&nbsp;ref="databaseFilterInvocationDefinitionSource" 
+/&gt;<BR>&nbsp;&lt;/bean&gt;<BR>&nbsp;&lt;bean 
+id="accessDecisionManager"<BR>&nbsp;&nbsp;class="org.springframework.security.vote.AffirmativeBased"&gt;<BR>&nbsp;&nbsp;&lt;property 
+name="decisionVoters"&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;list&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&lt;bean<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;class="org.springframework.security.vote.RoleVoter"&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;property 
+name="rolePrefix" value="" 
+/&gt;<BR>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/bean&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;/list&gt;<BR>&nbsp;&nbsp;&lt;/property&gt;<BR>&nbsp;&lt;/bean&gt;<BR>&nbsp;&lt;bean 
+id="databaseFilterInvocationDefinitionSource"<BR>&nbsp;&nbsp;class="org.springframework.security.intercept.web.DefaultFilterInvocationDefinitionSource"&gt;<BR>&nbsp;&nbsp;&lt;constructor-arg<BR>&nbsp;&nbsp;&nbsp;type="org.springframework.security.util.UrlMatcher"<BR>&nbsp;&nbsp;&nbsp;ref="antUrlPathMatcher" 
+/&gt;<BR>&nbsp;&nbsp;&lt;constructor-arg type="java.util.LinkedHashMap" ref="requestMap" 
+/&gt;<BR>&nbsp;&lt;/bean&gt;</P>
+<P>&nbsp;&lt;bean 
+id="antUrlPathMatcher"<BR>&nbsp;&nbsp;class="org.springframework.security.util.AntUrlPathMatcher" 
+/&gt;</P>
+<P>&nbsp;&lt;bean 
+id="requestMap"<BR>&nbsp;&nbsp;class="org.openjweb.core.springsecurity.RequestMapFactoryBean"<BR>&nbsp;&nbsp;init-method="init"&gt;<BR>&nbsp;&nbsp; 
+<BR>&nbsp;&lt;/bean&gt;</P>
+<P>&lt;/beans&gt;</P>
+<P>说明:(1)SSO认证入口为/secure/index.jsp,这个文件有个重定向语句,作用是当SSO认证通过后跳转到系统主页面.在测试过程中发现只有访问/secure目录下jsp才自动到cas 
+server认证,sec:intercept-url 配置其他的目录不跳转到cas server进行认证,不知道是什么原因.</P>
+<P>(2) cas server采用3.3.2版本</P>
+<P>(3)client端为cas-client-core-3.1.3.jar</P></DIV><!--EndFragment--></DIV>
+</DIV>
+</DIV>
+</DIV>
+</DIV>
+</DIV>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

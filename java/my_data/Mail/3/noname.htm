@@ -1,0 +1,258 @@
+﻿<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<LINK href="zaxis.css" rel=stylesheet>
+<SCRIPT Language="JavaScript" SRC="common.js"></SCRIPT>
+<SCRIPT Language="JavaScript" SRC="gad.js"></SCRIPT>
+<title>Javamail操作指南(一)</title>
+</HEAD>
+<BODY text='#000000' bgColor='#f1f1f1' leftMargin=0 topMargin=2><!-- start of header row --><!-- start of news row -->
+<TABLE cellSpacing=0 cellPadding=0 width="762" border=0 height="180" align=center>
+  <TBODY>
+    <TR>
+      <TD width=1 bgColor=#000000 height="180"><IMG src="spacer.gif" 
+      width=1 height=1></TD><!--right column-->
+      <TD vAlign=top width=760 bgColor=#ffffff height="180"><DIV align=center>
+          <TABLE height=5 cellSpacing=0 cellPadding=0 width="100%" border=0 
+     ><!--space-->
+            <TBODY>
+              <TR>
+                <TD width="95%" align=center><!-- content begin -->
+                  
+                  <table cellSpacing=0 cellPadding=0 width="100%" border=0 
+           >
+                    <tbody>
+                      <tr>
+                        <td><!-- start of article title -->
+                          
+                          <TABLE cellSpacing=0 cellPadding=0 width="100%" bgColor=#ffffff border=0>
+                            <TBODY>
+                              <TR>
+                                <TD class="title1" align="center" height="40" width="100%"  
+                      bgColor=#eeeeee><B> Javamail操作指南(一)</B></TD>
+                              </TR>
+                            </TBODY>
+                        </TABLE></td>
+                      </tr><!-- end of article title -->
+                      <tr>
+                        <TD vAlign=top align=center width="100%"><!--start of article content -->
+                          
+                          <TABLE width="98%" border=0>
+                            <TBODY>
+                              <TR>
+                                <TD align=left width="100%" class="text"><!-- Google Ad --> 
+                                  怎样才算比较完整的Javamail操作指南？我想应该包括绝大多数基本的email操作，能够应付一般的应用。在本指南中打算囊括以下内容：<BR>
+                                  <BR>
+                                  &nbsp;●&nbsp;发送email：包括文本邮件、HTML邮件、带附件的邮件、SMTP验证<BR>
+                                  &nbsp;●&nbsp;接收email：pop3远程连接、收取不同MIME的邮件、处理附件<BR>
+                                  <BR>
+                                  我想有了上述功能的介绍，应该可以应付很多email的相关应用了。所以请允许我给本文拟了一个比较狂妄的名字，这样才能保证收视率，:)。还是那句话，写这个post的原因就是没有在网上看到更全面的，你看过的话记得要告诉我。<BR>
+                                  <BR>
+                                  下面的所有例子都经过实际测试，你可以说它写得不够OO，不够plugable，但是它的确是可以参考的。自从有了javamail，发垃圾邮件就方便多了。本文代码多说明少，这倒不是我偷懒，而是很多东西都涉及pop3等协议的规范，如果不了解这些规范的话，有的东西我实在不知道怎么跟你解释；如果了解的话，那我基本上就不用再解释。所以本着实用的原则就省略了，由兴趣的话自己去翻翻协议规范。<BR>
+                                  <BR>
+                                  废话少说，首先需要配置环境。需要的包是mail.jar和activation.jar。高版本的J2SDK&nbsp;EE自带。地址嘛，再java.sun.com上搜索一下，很容易找到。放到classpath中就KO。<BR>
+                                  <BR>
+                                  &nbsp;一、&nbsp;邮件的发送<BR>
+                                  <BR>
+                                  &nbsp;下面了弄个发邮件的Hello&nbsp;World，热热身：<BR>
+                                  <div class=codeStyle>
+                                    <ol>
+                                      <li><i><font color='#339900'>/*************</font></i>
+                                      <li><i><font color='#339900'>&nbsp;Name:TextMailSender.java</font></i>
+                                      <li><i><font color='#339900'>&nbsp;Author:Bromon</font></i>
+                                      <li><i><font color='#339900'>&nbsp;Version:1.0</font></i>
+                                      <li><i><font color='#339900'>&nbsp;Date:2004-4-26</font></i>
+                                      <li><i><font color='#339900'>&nbsp;Note:发送email到bromon@163.com,需要安装SMTP服务器</font></i>
+                                      <li><i><font color='#339900'>&nbsp;*************/</font></i>
+                                      <li>&nbsp;<b><font color='#0000ff'>package</font></b>&nbsp;org.bromon.mail;
+                                      <li>&nbsp;<b><font color='#0000ff'>import</font></b>&nbsp;javax.mail.*;
+                                      <li>&nbsp;<b><font color='#0000ff'>import</font></b>&nbsp;javax.mail.internet.*;
+                                      <li>&nbsp;<b><font color='#0000ff'>import</font></b>&nbsp;java.util.*;
+                                      <li>&nbsp;<b><font color='#0000ff'>public</font></b>&nbsp;<b><font color='#0000ff'>class</font></b>&nbsp;TextMailSender
+                                      <li>&nbsp;{
+                                      <li>&nbsp;<b><font color='#0000ff'>public</font></b>&nbsp;<b><font color='#0000ff'>static</font></b>&nbsp;<b><font color='#0000ff'>void</font></b>&nbsp;main(<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;args[])
+                                      <li>&nbsp;{
+                                      <li>&nbsp;&nbsp;<b><font color='#0000ff'>try</font></b>
+                                      <li>&nbsp;&nbsp;{
+                                      <li>&nbsp;&nbsp;&nbsp;<font color='#ff0000'>Properties</font>&nbsp;prop=<b><font color='#0000ff'>new</font></b>&nbsp;<font color='#ff0000'>Properties</font>();
+                                      <li>&nbsp;&nbsp;&nbsp;<i><font color='#339900'>//指定要使用的SMTP服务器为bromon2k</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;prop.put(<font color='#ff33ff'>"mail.smtp.host"</font>,<font color='#ff33ff'>"bromon2k"</font>);
+                                      <li>&nbsp;&nbsp;&nbsp;Session&nbsp;mailSession=Session.getDefaultInstance(prop);
+                                      <li>
+                                      <li>&nbsp;&nbsp;&nbsp;<i><font color='#339900'>//发件人地址</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;InternetAddress&nbsp;from=<b><font color='#0000ff'>new</font></b>&nbsp;InternetAddress(<font color='#ff33ff'>"bromon@bromon2k"</font>);
+                                      <li>&nbsp;&nbsp;&nbsp;<i><font color='#339900'>//收件人地址</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;InternetAddress&nbsp;to=<b><font color='#0000ff'>new</font></b>&nbsp;InternetAddress(<font color='#ff33ff'>"bromon@163.com"</font>);
+                                      <li>&nbsp;&nbsp;&nbsp;
+                                      <li>&nbsp;&nbsp;&nbsp;MimeMessage&nbsp;msg=<b><font color='#0000ff'>new</font></b>&nbsp;MimeMessage(mailSession);
+                                      <li>&nbsp;&nbsp;&nbsp;msg.setFrom(from);
+                                      <li>&nbsp;&nbsp;&nbsp;msg.addRecipient(javax.mail.Message.RecipientType.TO,to);
+                                      <li>&nbsp;&nbsp;&nbsp;<i><font color='#339900'>//发信日期</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;msg.setSentDate(<b><font color='#0000ff'>new</font></b>&nbsp;java.util.<b><a href="file:///J:/source/jdk142/java/util/Date.java.html" target="_blank"><font class=classLink><u>Date</u></font></a></b>());
+                                      <li>&nbsp;&nbsp;&nbsp;<i><font color='#339900'>//title</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;msg.setSubject(<font color='#ff33ff'>"你好"</font>);
+                                      <li>&nbsp;&nbsp;&nbsp;<i><font color='#339900'>//邮件正文</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;msg.setText(<font color='#ff33ff'>"hello,bromon"</font>);
+                                      <li>&nbsp;&nbsp;&nbsp;Transport.send(msg);
+                                      <li>&nbsp;&nbsp;}<b><font color='#0000ff'>catch</font></b>(<b><a href="file:///J:/source/jdk142/java/lang/Exception.java.html" target="_blank"><font class=classLink><u>Exception</u></font></a></b>&nbsp;e)
+                                      <li>&nbsp;&nbsp;{
+                                      <li>&nbsp;&nbsp;&nbsp;<b><a href="file:///J:/source/jdk142/java/lang/System.java.html" target="_blank"><font class=classLink><u>System</u></font></a></b>.out.println(e);
+                                      <li>&nbsp;&nbsp;}
+                                      <li>&nbsp;}
+                                      <li>&nbsp;}&nbsp;</li>
+                                    </ol>
+                                  </div>
+                                  <BR>
+                                  <BR>
+                                  程序很简单，但是它是不能运行的（倒）。除非你的机器上安装了一个SMTP服务器，而且你的机器还叫做bromon2k。写这么一段不能执行的程序不是为了找打，而是让各位对javamail有个基本印象，我就懒得改了。下面演示的是如何通过163、sohu等email服务商提供的免费邮箱来发邮件，基本操作和上面的一样，只是多一个SMTP验证而已：<BR>
+                                  <BR>
+                                  <div class=codeStyle>
+                                    <ol>
+                                      <li><i><font color='#339900'>/*</font></i>
+                                      <li><i><font color='#339900'>&nbsp;*&nbsp;Created&nbsp;on&nbsp;2004-4-26</font></i>
+                                      <li><i><font color='#339900'>&nbsp;*/</font></i>
+                                      <li>&nbsp;<b><font color='#0000ff'>package</font></b>&nbsp;org.bromon.mail;
+                                      <li>&nbsp;<b><font color='#0000ff'>import</font></b>&nbsp;javax.mail.*;
+                                      <li>&nbsp;<b><font color='#0000ff'>import</font></b>&nbsp;java.util.*;
+                                      <li>&nbsp;<b><font color='#0000ff'>import</font></b>&nbsp;javax.mail.internet.*;
+                                      <li>
+                                      <li>&nbsp;<i><font color='#339900'>/**</font></i>
+                                      <li><i><font color='#339900'>&nbsp;*&nbsp;@author&nbsp;Bromon</font></i>
+                                      <li><i><font color='#339900'>&nbsp;*/</font></i>
+                                      <li>&nbsp;<b><font color='#0000ff'>public</font></b>&nbsp;<b><font color='#0000ff'>class</font></b>&nbsp;SenderWithSMTPVer
+                                      <li>&nbsp;{
+                                      <li>&nbsp;<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;host=<font color='#ff33ff'>""</font>;
+                                      <li>&nbsp;<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;user=<font color='#ff33ff'>""</font>;
+                                      <li>&nbsp;<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;password=<font color='#ff33ff'>""</font>;
+                                      <li>
+                                      <li>&nbsp;<b><font color='#0000ff'>public</font></b>&nbsp;<b><font color='#0000ff'>void</font></b>&nbsp;setHost(<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;host)
+                                      <li>&nbsp;{
+                                      <li>&nbsp;&nbsp;<b><font color='#0000ff'>this</font></b>.host=host;
+                                      <li>&nbsp;}
+                                      <li>
+                                      <li>&nbsp;<b><font color='#0000ff'>public</font></b>&nbsp;<b><font color='#0000ff'>void</font></b>&nbsp;setAccount(<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;user,<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;password)
+                                      <li>&nbsp;{
+                                      <li>&nbsp;&nbsp;<b><font color='#0000ff'>this</font></b>.user=user;
+                                      <li>&nbsp;&nbsp;<b><font color='#0000ff'>this</font></b>.password=password;
+                                      <li>&nbsp;}
+                                      <li>
+                                      <li>&nbsp;<b><font color='#0000ff'>public</font></b>&nbsp;<b><font color='#0000ff'>void</font></b>&nbsp;send(<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;from,<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;to,<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;subject,<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;content)
+                                      <li>&nbsp;{
+                                      <li>&nbsp;&nbsp;<font color='#ff0000'>Properties</font>&nbsp;props&nbsp;=&nbsp;<b><font color='#0000ff'>new</font></b>&nbsp;<font color='#ff0000'>Properties</font>();
+                                      <li>&nbsp;&nbsp;props.put(<font color='#ff33ff'>"mail.smtp.host"</font>,&nbsp;host);<i><font color='#339900'>//指定SMTP服务器</font></i>
+                                      <li>&nbsp;&nbsp;props.put(<font color='#ff33ff'>"mail.smtp.auth"</font>,&nbsp;<font color='#ff33ff'>"true"</font>);<i><font color='#339900'>//指定是否需要SMTP验证</font></i>
+                                      <li>&nbsp;&nbsp;<b><font color='#0000ff'>try</font></b>
+                                      <li>&nbsp;&nbsp;{
+                                      <li>&nbsp;&nbsp;&nbsp;Session&nbsp;mailSession&nbsp;=&nbsp;Session.getDefaultInstance(props);
+                                      <li>&nbsp;&nbsp;&nbsp;
+                                      <li>&nbsp;&nbsp;&nbsp;mailSession.setDebug(<b><font color='#0000ff'>true</font></b>);<i><font color='#339900'>//是否在控制台显示debug信息</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;
+                                      <li>&nbsp;&nbsp;&nbsp;Message&nbsp;message=<b><font color='#0000ff'>new</font></b>&nbsp;MimeMessage(mailSession);
+                                      <li>&nbsp;&nbsp;&nbsp;message.setFrom(<b><font color='#0000ff'>new</font></b>&nbsp;InternetAddress(from));<i><font color='#339900'>//发件人</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;message.addRecipient(Message.RecipientType.TO,<b><font color='#0000ff'>new</font></b>&nbsp;InternetAddress(to));<i><font color='#339900'>//收件人</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;
+                                      <li>&nbsp;&nbsp;&nbsp;message.setSubject(subject);<i><font color='#339900'>//邮件主题</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;message.setText(content);<i><font color='#339900'>//邮件内容</font></i>
+                                      <li>&nbsp;&nbsp;&nbsp;message.saveChanges();
+                                      <li>&nbsp;&nbsp;&nbsp;
+                                      <li>&nbsp;&nbsp;&nbsp;Transport&nbsp;transport&nbsp;=&nbsp;mailSession.getTransport(<font color='#ff33ff'>"smtp"</font>);
+                                      <li>&nbsp;&nbsp;&nbsp;transport.connect(host,&nbsp;user,&nbsp;password);
+                                      <li>&nbsp;&nbsp;&nbsp;transport.sendMessage(message,&nbsp;message.getAllRecipients());
+                                      <li>&nbsp;&nbsp;&nbsp;transport.close();
+                                      <li>&nbsp;&nbsp;}<b><font color='#0000ff'>catch</font></b>(<b><a href="file:///J:/source/jdk142/java/lang/Exception.java.html" target="_blank"><font class=classLink><u>Exception</u></font></a></b>&nbsp;e)
+                                      <li>&nbsp;&nbsp;{
+                                      <li>&nbsp;&nbsp;&nbsp;<b><a href="file:///J:/source/jdk142/java/lang/System.java.html" target="_blank"><font class=classLink><u>System</u></font></a></b>.out.println(e);
+                                      <li>&nbsp;&nbsp;}
+                                      <li>&nbsp;&nbsp;
+                                      <li>&nbsp;}
+                                      <li>
+                                      <li>&nbsp;<b><font color='#0000ff'>public</font></b>&nbsp;<b><font color='#0000ff'>static</font></b>&nbsp;<b><font color='#0000ff'>void</font></b>&nbsp;main(<b><a href="file:///J:/source/jdk142/java/lang/String.java.html" target="_blank"><font class=classLink><u>String</u></font></a></b>&nbsp;args[])
+                                      <li>&nbsp;{
+                                      <li>&nbsp;&nbsp;SenderWithSMTPVer&nbsp;sm=<b><font color='#0000ff'>new</font></b>&nbsp;SenderWithSMTPVer();
+                                      <li>
+                                      <li>&nbsp;&nbsp;sm.setHost(<font color='#ff33ff'>"smtp.163.com"</font>);<i><font color='#339900'>//指定要使用的邮件服务器</font></i>
+                                      <li>&nbsp;&nbsp;sm.setAccount(<font color='#ff33ff'>"abc"</font>,<font color='#ff33ff'>"123"</font>);<i><font color='#339900'>//指定帐号和密码</font></i>
+                                      <li>
+                                      <li>&nbsp;&nbsp;<i><font color='#339900'>/*</font></i>
+                                      <li><i><font color='#339900'>&nbsp;*&nbsp;@param&nbsp;String&nbsp;发件人的地址</font></i>
+                                      <li><i><font color='#339900'>&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;String&nbsp;收件人地址</font></i>
+                                      <li><i><font color='#339900'>&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;String&nbsp;邮件标题</font></i>
+                                      <li><i><font color='#339900'>&nbsp;&nbsp;&nbsp;*&nbsp;@param&nbsp;String&nbsp;邮件正文</font></i>
+                                      <li><i><font color='#339900'>&nbsp;&nbsp;*/</font></i>
+                                      <li>&nbsp;&nbsp;sm.send(<font color='#ff33ff'>"abc@163.com"</font>,<font color='#ff33ff'>"bromon@163.com"</font>,<font color='#ff33ff'>"标题"</font>,<font color='#ff33ff'>"内容"</font>);
+                                      <li>&nbsp;}
+                                      <li>
+                                      <li>&nbsp;}&nbsp;</li>
+                                    </ol>
+                                  </div>
+                                  <BR>
+                                  <BR>
+                                  &nbsp;这段程序好像也不需要解释了吧，把SMTP地址、帐号、密码等配置信息写到Properties里面，Java里面很多API都需要这么干，比如再程序中加入对代理服务器的支持等。<BR>
+                                  <BR>
+                                  &nbsp;上面的程序修改一下服务器地址、帐号、密码就可以使用，非常简单。<BR>
+                                  <BR>
+                                  &nbsp;如何发送一个HTML格式的Email呢？也很简单，再邮件正文中写入HTML代码，然后指定邮件的ContentType就OK，下面只给出关键代码：<BR>
+                                  <BR>
+                                  <div class=codeStyle>
+                                    <ol>
+                                      <li>………
+                                      <li>&nbsp;MimeMessage&nbsp;msg=<b><font color='#0000ff'>new</font></b>&nbsp;MimeMessage(mailSession);
+                                      <li>&nbsp;msg.setContent(content,<font color='#ff33ff'>"text/html"</font>);
+                                      <li>&nbsp;msg.setText(“&lt;html&gt;&lt;body&gt;&lt;h1&gt;下面的，你们好吗?&lt;/body&gt;&lt;/html&gt;”);
+                                      <li>&nbsp;………</li>
+                                    </ol>
+                                  </div>
+                                  <BR>
+                                  <BR>
+                                  &nbsp;下面是发送带有附件的email，稍微复杂一点，而且和前面的程序有一些不同，请仔细一点，同时需要一点IO的知识。相同的代码就不在列出，只写关键部分，谁都想偷懒不是？<BR>
+                                  <BR>
+                                  <div class=codeStyle>
+                                    <ol>
+                                      <li><b><font color='#0000ff'>import</font></b>&nbsp;javax.mail.*;
+                                      <li>&nbsp;<b><font color='#0000ff'>import</font></b>&nbsp;javax.mail.internet.*;
+                                      <li>&nbsp;<b><font color='#0000ff'>import</font></b>&nbsp;javax.activation.*;
+                                      <li>&nbsp;<b><font color='#0000ff'>import</font></b>&nbsp;java.util.*;
+                                      <li>&nbsp;……….
+                                      <li>&nbsp;MimeMessage&nbsp;msg=<b><font color='#0000ff'>new</font></b>&nbsp;MimeMessage(mailSession);
+                                      <li>&nbsp;msg.setSentDate(<b><font color='#0000ff'>new</font></b>&nbsp;<font color='#ff0000'>Date</font>());
+                                      <li>&nbsp;msg.setSubject(<font color='#ff33ff'>"hello"</font>);
+                                      <li>
+                                      <li>&nbsp;MimeBodyPart&nbsp;textBodyPart=<b><font color='#0000ff'>new</font></b>&nbsp;MimeBodyPart();
+                                      <li>&nbsp;textBodyPart.setText(“邮件正文”);
+                                      <li>
+                                      <li>&nbsp;MimeBodyPart&nbsp;fileBodyPart=<b><font color='#0000ff'>new</font></b>&nbsp;MimeBodyPart();
+                                      <li>&nbsp;FileDataSource&nbsp;fds=<b><font color='#0000ff'>new</font></b>&nbsp;FileDataSource(<font color='#ff33ff'>"GIS.rar"</font>);<i><font color='#339900'>//要发送的附件</font></i>
+                                      <li>&nbsp;fileBodyPart.setDataHandler(<b><font color='#0000ff'>new</font></b>&nbsp;DataHandler(fds));
+                                      <li>&nbsp;fileBodyPart.setFileName(fds.getName());
+                                      <li>&nbsp;<a href="file:///J:/source/j2ee1.3.1/javax/mail/Multipart.java.html" target="_blank"><font class=classLink><u>Multipart</u></font></a>&nbsp;container=<b><font color='#0000ff'>new</font></b>&nbsp;MimeMultipart();
+                                      <li>&nbsp;container.addBodyPart(textBodyPart);
+                                      <li>&nbsp;container.addBodyPart(fileBodyPart);
+                                      <li>&nbsp;msg.setContent(container);
+                                      <li>&nbsp;<a href="file:///J:/source/j2ee1.3.1/javax/mail/Transport.java.html" target="_blank"><font class=classLink><u>Transport</u></font></a>.send(msg);
+                                      <li>&nbsp;…………&nbsp;</li>
+                                    </ol>
+                                  </div>
+                        <P>
+                                  <BR>
+                                  <BR>
+                                  <BR>
+                                  &nbsp;这里的msg由两个MimeBodyPart构成，这个东西解释起来基本上比较难，如果不了解相关的规范就不太好解释，如果了解的话，我就不用解释了，这个这个………唉。 <br>
+                                <br></P>
+                        <P>&nbsp;</P></TD>
+                              </TR>
+                            </TBODY>
+                          </TABLE></TD>
+                      </tr><!--end of article content --><!-- end of comment --><!--end of article --></tbody>
+                  </table><!-- end of content --></TD>
+              </TR>
+            </TBODY>
+          </TABLE>
+        </DIV></TD>
+      <TD width=1 bgColor=#000000 height="180"><IMG src="spacer.gif" 
+      width=1 height=1></TD>
+    </TR>
+  </TBODY>
+</TABLE><!-- end of news row--><!--start of bottom row--><!--end of bottom row-->
+
+</BODY>
+</HTML>

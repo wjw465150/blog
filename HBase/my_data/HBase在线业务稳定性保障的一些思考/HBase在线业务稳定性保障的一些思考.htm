@@ -1,0 +1,77 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>HBase在线业务稳定性保障的一些思考</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">自2012年微博平台在本厂率先使用HBase做在线业务以来，HBase目前已在本厂广泛使用，最大的集群单集群就有三四千亿条记录。当然我们也在HBase在线服务的稳定性方面遇到一些挑战，前一段时间也总结了一篇从应用层面进行稳定性保障的思路&nbsp;http://weibo.com/p/1001603760460208954116 
+，但近期的实践和思考发现仅从战术、应用层面去防御是不足的，HBase稳定性保障需要全方位的防御建设。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">首先看看HBase相比Mysql、Redis等有何差异点：</P>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL 
+style="FONT-SIZE: 16px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">以Java构建，内部实现相当复杂，本厂几位读源代码的同学都没能搞定； 
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">Client 
+  过于厚重，实现比较封闭，没办法进行定制扩展开发，前段时间我们做HBase Fail Fast机制时就吃了大亏； 
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">内部组件状态不透明，各个组件的关联关系相当复杂，某一模块出问题就可能导致全局出问题； 
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">服务恢复复杂，各个组件之间有比较多的关联； 
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">由于数据量较大，有的集群恢复时间以天为单位，对服务影响较大，前端稳定性配合的难度也比较高；</LI></OL>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">以上特点导致虽然我们持续投入了众多主力干将，但掌控水平仍然不够理想。而拆解这些问题之后会发现这些问题还是有解决方案：</P></DIV>
+<DIV 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<OL 
+style="FONT-SIZE: 16px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LINE-HEIGHT: 1.8em; PADDING-RIGHT: 0px">
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">单集群规模过大，这时瓶颈是带宽和磁盘速度，其解决方案只能是保持集群规模，否则只能祈祷集群整体不要出问题。<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><SPAN>虽然HBase提供的是一体化的解决方案，但为了确保服务故障时能够快速恢复，还是要控制单个集群的规模，必要时要对集群进行拆分</SPAN><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>； 
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">Client实现复杂的问题，如果代码嵌入不进去，那么就当个黑盒用，我们的Fail 
+  Fast就是当做黑盒，从近期几次问题来看，效果还是很理想； 
+  <LI 
+  style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">对代码体系掌控不足的问题，对于这么一个复杂的问题，第一步应该是先掌握最简单的模型，然后逐步去了解周边的各种功能模块； 
+
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.8em">对于修复复杂的问题，可以用最经典的解决方案：“<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><SPAN>重做整个集群</SPAN><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>”，如果面对一个棘手的问题重做是更优的解决方案；</LI></OL>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.8em; TEXT-INDENT: 1em">做到如上的点，我们HBase的稳定性保障已经会大大提升，但由于HBase只能部署在单个机房，如果这个机房网络故障，则也会影响整个服务，这时我们便可用多集群部署的解决方案，如下图：</P></DIV>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px"><IMG 
+class=alignCenter 
+style="MAX-WIDTH: 550px; BORDER-TOP: 0px; HEIGHT: auto; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; TEXT-ALIGN: center; MARGIN: 0px auto; BORDER-LEFT: 0px; DISPLAY: block" 
+src="7Jz2Yf.jpg" alt="">如上的解决方案在资源上会有一些冗余，但如果应用在核心服务则可以确保服务有非常高的可用性保障。相比于Mysql的解决方案，按2000亿条数据（恢复时间在24小时左右，业务能忍受的极限）一个集群算，集群内的容量线性扩容，依然是一个很好的万亿级数据的解决方案。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">最终我们可以总结出如下的HBase稳定性保障体系：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px"><IMG 
+class=alignCenter 
+style="MAX-WIDTH: 550px; BORDER-TOP: 0px; HEIGHT: auto; BORDER-RIGHT: 0px; VERTICAL-ALIGN: middle; BORDER-BOTTOM: 0px; TEXT-ALIGN: center; MARGIN: 0px auto; BORDER-LEFT: 0px; DISPLAY: block" 
+src="QJV3uuB.jpg" alt=""></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px"></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">也欢迎其他厂使用HBase做大规模在线服务的同学分享一下自己在HBase稳定性保障方面的经验。</P></body>
+</html>

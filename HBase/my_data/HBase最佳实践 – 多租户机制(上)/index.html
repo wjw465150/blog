@@ -1,0 +1,599 @@
+<!DOCTYPE html><!--
+ ______________ 
+< TUICOOL.COM >
+ -------------- 
+        \   ^__^
+         \  (**)\__$__$__
+            (__)\       )\/\
+             U  ||------|
+                ||     ||
+--><html><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta content="authenticity_token" name="csrf-param">
+<meta content="6a6oCU/U84rHDhVj7TPzMAcHv+kXwGKPQ+zx5bOoL30=" name="csrf-token">
+    <title>
+            HBase最佳实践 – 多租户机制(上) - 推酷
+   </title>
+    <meta name="description" content="HBase最佳实践 – 多租户机制(上)">
+  <link rel="shortcut icon" href="urn:not-loaded:http://static0.tuicool.com/favicon.ico" type="image/x-icon">
+  <link href="http://static0.tuicool.com/images/icon114.png" rel="Bookmark">
+  <link rel="apple-touch-icon" sizes="57x57" href="urn:not-loaded:http://static1.tuicool.com/images/icon57.png"> 
+  <link rel="apple-touch-icon" sizes="72x72" href="urn:not-loaded:http://static2.tuicool.com/images/icon72.png">  
+  <link rel="apple-touch-icon" sizes="114x114" href="urn:not-loaded:http://static0.tuicool.com/images/icon114.png">    
+  <link rel="apple-touch-icon" sizes="144x144" href="urn:not-loaded:http://static1.tuicool.com/images/icon144.png">  
+  <link href="index_files/application-c3ceaaaeea1cd3ae0c20b1f52b15424d.css" media="screen" rel="stylesheet" type="text/css">
+  <link href="index_files/font-awesome.min.css" rel="stylesheet">
+  <script src="index_files/application-7edeeea3a20493861059090224f774ae.js" type="text/javascript"></script>
+
+  <!--[if IE 7]>
+  <link rel="stylesheet" href="http://assets.tuicool.com/assets/font-awesome-ie7.min.css">
+  <![endif]--> 
+    <script type="text/javascript" src="index_files/tip.js"></script>
+  
+  <script type="text/javascript" src="index_files/spin.min.js"></script><style type="text/css"></style>
+<link rel="stylesheet" href="index_files/github.css">
+
+</head>
+<body class="  pace-done"><div class="pace  pace-inactive"><div class="pace-progress" style="transform: translate3d(100%, 0px, 0px);" data-progress-text="100%" data-progress="99">
+  <div class="pace-progress-inner"></div>
+</div>
+<div class="pace-activity"></div></div>
+  
+  <div id="header" class="navbar-fixed-top">
+    <div class="container">
+      <div class="navbar">
+        <div class="navbar-inner">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse"> 
+            <span class="icon-bar"></span> 
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span> 
+          </a>
+          <a href="http://www.tuicool.com/" class="brand">推酷</a>        
+        <nav class="nav-collapse collapse">
+            <ul class="nav navbar primary-nav">                            
+              <li class="active">
+                <a href="http://www.tuicool.com/ah">
+                  文章
+                </a>
+              </li>              
+              <li class="">
+                <a href="http://www.tuicool.com/sites/hot">
+                  站点
+                </a>
+              </li>
+              <li class="">
+                <a href="http://www.tuicool.com/topics">
+                  主题
+                </a>
+              </li>
+              <li class="">
+                <a href="http://huodong.tuicool.com/">
+                  活动
+                </a>
+              </li>
+                  <li class="">
+                    <a href="http://course.tuicool.com/">
+                      公开课
+                    </a>
+                  </li>
+              <li class="">
+                <a href="http://www.tuicool.com/mobile">
+                  APP
+                    <sup style="font-size:0.8em;color: #16A085;">荐</sup>
+                </a>
+              </li>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">周刊 <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                  <li><a href="http://www.tuicool.com/mags">编程狂人</a></li>
+                  <li><a href="http://www.tuicool.com/mags/design">设计匠艺</a></li> 
+                  <li><a href="http://www.tuicool.com/mags/startup">创业周刊</a></li> 
+                  <li><a href="http://www.tuicool.com/mags/tech">科技周刊</a></li>      
+                  <li><a href="http://www.tuicool.com/mags/guru">Guru Weekly</a></li> 
+                  <li><a href="http://www.tuicool.com/articles/weekly">一周拾遗</a></li>                  
+                </ul>
+              </li>
+              
+              </ul>
+            <form class="navbar-search pull-left" action="http://www.tuicool.com/search">
+              <input class="search-query span2" name="kw" placeholder="搜索" type="text">
+            </form>
+            <ul class="nav pull-right">
+                <li><a href="http://www.tuicool.com/login">登录</a></li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+  </div>   
+</div>
+  <div id="flash_container" class="noPrint">    
+  </div>
+  
+  <div class="container-fluid">  
+      
+<div class="row-fluid article_row_fluid">
+    <div class="span8 contant article_detail_bg">
+        <h1>HBase最佳实践 – 多租户机制(上)</h1>
+        <div class="article_meta">
+            <div style="margin-bottom: 5px;">
+            <span class="timestamp">时间 2016-09-26 09:46:16
+            </span>
+            <span class="from">
+                <i class="icon-globe"></i>
+                    <a class="cut cut28 from" href="http://www.tuicool.com/sites/eMBFfe" target="_blank">有态度的HBase
+                    </a>
+            </span>
+            </div>
+            <div class="source">
+                <i style="float:left;">原文</i>  
+                <a class="cut cut70" href="http://hbasefly.com/2016/09/26/hbase-mutiltenant-1/?utm_source=tuicool&amp;utm_medium=referral" style="display:inline-block;">http://hbasefly.com/2016/09/26/hbase-mutiltenant-1/</a>
+            </div>
+            <div>
+                <span>主题</span>
+                <a href="http://www.tuicool.com/topics/11030035" target="_blank">
+                    <span class="new-label">HBase</span>
+                </a>
+            </div>
+        </div>
+        <div class="article_body" id="nei">
+            <div> 
+ <h3> <b> <span>背景介绍</span> </b> </h3> 
+ <p> <span>在HBase1.1.0发布之前，HBase同一集群上的用户、表都是平等的，没有优劣之分。这种’大同’社会看起来完美，实际上有很多问题。最棘手的主要有这么两个，其一是某些业务较其他业务重要，需要在资源有限的情况下优先保证核心重要业务的正常运行，其二是有些业务在某些场景下会时常’抽风’，QPS常常居高不下，严重消耗系统资源，导致其他业务无法正常运转。</span> <span> </span> <span> <span>这实际上是典型的多租户问题，社区针对这个问题提出了相应的应对措施，主要有如下三点：</span> </span> </p> 
+ <div> 
+  <span> <p>（1）资源限制，主要针对用户、namespace以及表的QPS和请求大小进行限制，详见HBase-11598</p> </span> 
+  <span> <p>（2）资源调度，主要针对任务进行优先级调度，通常会优先调度实时交互而且小的任务，而批量操作任务或者长时间操作任务（大scan）优先级相对较低，详见HBase-10993</p> </span> 
+  <span>（3）资源隔离，将不同表通过物理隔离的方式分布到不同的RegionServer上，详见HBase-6721</span> 
+ </div> 
+ <p>本文将会重点介绍HBase中的资源限制方案 – Quotas，主要对其使用方式、实现原理进行介绍，并对其实际效果通过实践进行验证。另外，本文还会对HBase的资源调度原理进行简单介绍，并对主要配置进行讲解。</p> 
+ <p> <span> </span> </p> 
+ <h3> <span> <b>资源限制－Quotas</b> </span> </h3> 
+ <h4> <b> <span>Quotas使用条件</span> </b> </h4> 
+ <div> 
+  <span> <p>（1）HBase版本在1.1.0以上，或者低版本HBase应用了对应的Patch（HBase-11598）</p> </span> 
+  <span>（2）Quotas功能默认是关闭的，需要在配置文件hbase-site.xml中通过设置hbase.quota.enabled为true打开。设置完成之后，需要重启HMaster才能生效。</span> 
+ </div> 
+ <h4> <span> <b>Quotas语句详解</b> </span> </h4> 
+ <pre class="prettyprint php"><b>hbase&gt; set_quota TYPE =&gt; THROTTLE, THROTTLE_TYPE =&gt; READ, USER =&gt; <span class="string">'u1'</span>, TABLE =&gt; <span class="string">'t2'</span>, LIMIT =&gt; <span class="string">'10req/sec'</span></b></pre> 
+ <div> 
+  <span> <p>（1）Quotas分别支持表级别以及用户级别资源限制，或者同时支持表级别和用户级别，如示例所示</p> </span> 
+  <span> <p>（2）THROTTLE_TYPE可以取值READ / WRITE，分别对随机读和随机写进行限制</p> </span> 
+  <span>（3）LIMIT 可以从两个维度对资源进行限制，分别为req/time 和 size/time，前者限制单位时间内的请求数，后者限制单位时间内的请求数据量。需要指明的是time的单位可以是sec | min | hour | day，size的单位可以是B(bytes) | K | M | G | T | P，因此LIMIT可以表示为’1000req/min’或者’100G/day’，分别表示’限制1分钟的请求数在1000次以内’，’限制一台的数据量为100G’</span> 
+ </div> 
+ <p> <span> </span> </p> 
+ <h4> <span> <b>常用Quotas语句</b> </span> </h4> 
+ <pre class="prettyprint php"><b>hbase&gt; set_quota TYPE =&gt; THROTTLE, TABLE =&gt; <span class="string">'t1'</span>, LIMIT =&gt; <span class="string">'1000req/sec'</span>
+hbase&gt; set_quota TYPE =&gt; THROTTLE, THROTTLE_TYPE =&gt; WRITE, USER =&gt; <span class="string">'u1'</span>, LIMIT =&gt; <span class="string">'10M/sec'</span></b></pre> 
+ <p> <span> <b> <span>注意事项</span> </b> </span> </p> 
+ <p>（1）set_quota命令执行的限制都是针对单个RegionServer来说的，并不是针对整个集群</p> 
+ <p>（2）set_quota命令默认执行后并不会立刻生效，需要等待一段时间才会生效，等待时间默认为5min。可以通过参数 hbase.quota.refresh.period 进行设置，比如可以通过设置</p> 
+ <p>hbase.quota.refresh.period = 60000将生效时间缩短为1min</p> 
+ <p>（3）可以通过命令list_quotas查看当前所有执行的set_quota命令</p> 
+ <h4> <span> <b>Quotas – 实现原理</b> </span> </h4> 
+ <p>原理很简单，如果请求数超过设置的Quota数，就抛出异常！有同学会说也没在日志中看到任何异常嘛，这是因为这类异常日志级别是debug，而默认的日志输出级别为info，可以通过调整log4j来查看。但是这类异常实在太多，没有必要输出。</p> 
+ <h4> <span> <b>Quotas – 实践效果</b> </span> </h4> 
+ <p>了解了Quotas的使用方法以及基本原理，是不是很想试一试它的功效，笔者在测试环境做了如下的测试：</p> 
+ <p> <span>1. 测试硬件情况</span> </p> 
+ <table class="table table-bordered" cellspacing="0"> 
+  <tbody> 
+   <tr> 
+    <td width="28%" valign="top"> <span>集群规模</span> </td> 
+    <td width="24%" valign="top"> <p> <span>RS JVM内存配置</span> </p> </td> 
+    <td width="17%" valign="top"> <p> <span>硬盘</span> </p> </td> 
+    <td width="15%" valign="top"> <span>HBase版本</span> </td> 
+    <td width="16%" valign="top"> <p> <span>YCSB版本</span> </p> </td> 
+   </tr> 
+   <tr> 
+    <td width="28%" valign="top"> <p> <span>4台RegionServer</span> </p> </td> 
+    <td width="24%" valign="top"> <span>72G</span> </td> 
+    <td width="17%" valign="top"> <p> <span>12 * 3.6T</span> </p> </td> 
+    <td width="15%" valign="top"> <p> <span>1.1.2</span> </p> </td> 
+    <td width="16%" valign="top"> <p> <span>0.8.0</span> </p> </td> 
+   </tr> 
+  </tbody> 
+ </table> 
+ <div> 
+  <span> <p>2. 测试环境新建两张表，分别称为A和B。两张表的数据构成都相同，10亿条数据，每条数据500Bytes，总大小500G左右。</p> </span> 
+  <span> <p>3. 分别使用两个YCSB客户端分别对这两张表执行读写混合操作（读写比为1:1），再然后对B表不断执行set_quota操作，对该表QPS进行限制。再分别观察A表和B表的QPS以及读延迟变化情况。</p> </span> 
+  <span>4. 为了方便理解，下面测试结果中A表称为Unthrottle_Table，B表称为Throttle_Table。测试结果如下：</span> 
+ </div> 
+ <p> <img src="index_files/MJJvqqu.png%21web.png" class="alignCenter"> </p> 
+ <p> <img src="index_files/EvUvYjj.png%21web.png" class="alignCenter"> </p> 
+ <p> <span> </span> <span>通过测试基本可以看出，随着B表执行的QPS限制越来越严格，上图中Throttle_Table表对应的吞吐量（红色柱状图）越来越小，相应Unthrottle_Table表（紫色柱状图）对应的吞吐量却越来越大，这是因为B表执行QPS限制之后各种硬件资源就会更多地分配给A表。</span> <span> </span> <span>总体来说，Quotas功能总体看来基本完成了资源限制的职能，达到了资源限制的目的。同时</span> <span>支持用户级别和表级别，另外同时支持请求大小和请求数量两个维度，基本涵盖了常见的资源限制维度；另外，易用性也是一大亮点，比较人性化，只需要在</span> <span>Shell界面上敲一行命令就可以搞定。</span> </p> 
+ <p> <span> </span> </p> 
+ <h3> <span> <b>资源调度</b> </span> </h3> 
+ <p> <span>在 0.99版本之前，HBase只提供了一种请求队列类型：FIFO队列，意为先到的请求会优先被处理，后到的请求需要等待之前的请求被处理完。</span> <span>这样的设计有一个致命的缺陷，就是在线交互式查询有可能会被离线大scan长时间阻塞，而从优先级的角度讲在线交互式查询无疑更加重要。</span> </p> 
+ <p>0.99版本之后，HBase将默认请求队列由FIFO类型改为了Deadline类型，用来解决上述缺陷。提起DeadLine队列，很多对Linux  IO调度算法比较了解的同学并不陌生，Linux IO常用调度算法主要有Noop、CFQ（Completely Fair Queuing）以及Deadline，其中Noop调度算法基本可以认为就是FIFO算法，因此同样存在上述弊端；而CFQ算法会按照IO请求的地址进行排序，这样处理的目的在于尽量少地减少磁盘移动，实际效果来看确实极大的提升了IO的吞吐率，但是相比Noop，部分IO请求有可能会一直排到队尾，存在饿死的情况。Deadline算法首先将读写IO队列进行了分离，而且读IO优先级要高于写IO优先级；除此之外，它还会为每一个IO请求设置一个时间戳，用以判断请求是否长时间没有得到处理，进而需要优先处理。需要知道的是，对于常见数据库环境来说（Oracle,MySQL等），Deadline算法总是最佳选择。</p> 
+ <p> <span>那HBase新增的Deadline算法和Linux IO中Deadline算法是否一样呢？答案是肯定的，至少两者实现思路基本是一致的。接下来主要结合HBase请求调度源码对Deadline算法进行深入分析。</span> <span> </span> <span> <span>Deadline算法基于Deadline类型队列实现，Deadline类型队列和FIFO类型队列不同，属于优先级队列，里面的元素会按照优先级进行排序，优先级高的排在队首，优先级低的排在队尾。很显然，Deadline算法目标是使得在线交互式查询请求优先级更高，而离线长scan请求优先级更低。</span> <span>除此之外还有一个通常不会被注意的目标：不能出现任何请求被饿死！</span> <span>在弄懂具体的实现机制前，需要首先搞清楚一个问题：如何量化一个scan的请求长短？</span> </span> </p> 
+ <p> <span>如何量化一个scan的请求长短：这个问题的理解需要对scan的流程有一个大体认识，一次scan请求并不会将所有数据查询返回，这一方面是因为在数据量大的场景下诸如带宽之类的系统资源会被严重消耗，另一方面也有可能会因为数据量大导致客户端OOM。因此HBase实际上将一次scan请求分为多次连续的next小请求执行，每次查询纪录数用户可以配置，默认为100条。这样假如一次scan查询总纪录数为1000，每次查询返回100条，就需要10次客户端到服务器端的next请求。看到这里，很多童鞋已经明白，可以通过当前RPC请求次数（即next RPC调用次数）粗略地衡量scan的长短，比如当前scanA的RPC请求次数为10，scanB的RPC请求次数为5，就可以认为scanA长于scanB，那理论上scanA的这次请求优先级就会低于scanB的这次请求。</span> <span> </span> <span>HBase在具体实现中会为每一个请求设置一个deadline（时间期限），代表这个请求的处理期限，deadline越小，请求优先级越高。</span> </p> 
+ <p> <span> <img src="index_files/BJ3E7bq.png%21web.png" class="alignCenter"> </span> </p> 
+ <p> <span> </span> </p> 
+ <p> <span>这个deadline参数是理解HBase资源调度的关键，它由两部分构成：后半部分的核心在于vtime，代表当前scan的next请求次数，可见vtime越大（scan越长），对应的deadline越大，优先级越低；因为设定get操作的vtime为0，因此同等条件下get操作优先级最高；可见，通过vtime就可以实现请求优先级功能。那对于长scan，会不会出现因为优先级太低长时间得不到处理饿死的情况呢？这就需要看看前半部分，</span> <span>timestamp表示请求点的绝对时间戳，设置绝对时间戳是为了保证该请求的deadline肯定早于5s（等式后面部分最大就是5s）之后所有请求的deadline，从而能够保证不会被饿死；</span> </p> 
+ <p> <span> <span> <span> </span> </span> </span> <span>好吧，上面不是说Linux IO调度系统中Deadline算法还实现了读IO和写IO的分离，那HBase实现了么？当然，用户只需要通过简单的配置就不仅可以实现读请求和写请求的分离，还可以实现了scan请求的分离。</span> </p> 
+ <p> 默认场景下，HBase只提供一个队列，所有请求都会进入该队列进行优先级排序。用户可以通过设置参数hbase.ipc.server.callqueue.handler.factor来设置多个队列，队列个数等于该参数 * handlercount，比如该参数设置为0.1，总的handlercount胃150，则会产生15个独立队列。 <br> 独立队列产生之后，可以通过参数 hbase.ipc.server.callqueue.read.ratio 来设置读写队列比例，比如设置0.6，则表示会有9个队列用于接收读请求，6个用于接收写请求；另外，可以通过参数 hbase.ipc.server.callqueue.scan.ratio 设置get和scan的队列比例，比如设置为0.1，表示1个队列用于scan请求，另外8个用于get请求； </p> 
+ <p> <span> </span> </p> 
+ <h3> <span> <b> <span>总</span> 结 </b> </span> </h3> 
+ <div> 
+  <b></b> 
+  <p>本文主要介绍了HBase中多租户实现中的两个重要手段：资源限制以及资源调度，对其工作原理以及使用方法进行了解析。后续再针对资源隔离这个重头戏进行深入解析~</p> 
+ </div> 
+</div>
+        </div>
+        <div class="article_social">
+         <div class="article_like">
+    <div class="circle circle-like" id="my_zan" data_id="QjaMBra">  </div>
+
+</div>
+        <div id="share_weixin_image">
+            <img src="index_files/qrcode.php.png" height="100px" width="100px">
+        </div>
+<div class="article_share_fav">
+    <div class="share" id="ckepop">
+        <span>分享</span>
+        <button class="share_weibo" id="share_weibo_id" title="分享到新浪微博"></button>
+        <button class="share_qq" id="share_qq_id" title="分享到QQ空间"></button>
+        <button class="share_weixin" id="share_weixin_id"></button>
+    </div>
+    <div class="fav_correct">
+        <button id="my_fav" data_id="QjaMBra">
+            <i class="icon icon-star-empty"></i> <span id="fav_tip">收藏</span>
+        </button>
+        <button id="article-correct" data_id="QjaMBra" uid="0">
+            <i class="icon icon-warning-sign"></i>
+            <span>纠错</span>
+        </button>
+    </div>
+</div>
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+
+
+            <div class="bottom_plink huodong-detail-plink-banner clearfix">
+                  <a href="https://www.jiguang.cn/devservice/?from=tuicool01" target="_blank"><img src="index_files/jpush700.jpg" class="fykvqqzftxwjmadpgomn"></a>
+
+            </div>
+        </div>
+        <div id="site_articles" style="clear:both;">
+              <div class="article-part-title">
+                <span>推荐文章</span>
+              </div>
+          <ul class="side_article_list">
+                <li class="side_article_list_item">
+                    1.<a href="http://www.tuicool.com/articles/uamQBjq" target="_blank" title="消费者低价网购租车卡被骗 数据系篡改而来">
+                    消费者低价网购租车卡被骗 数据系篡改而来
+                    </a>
+                </li>
+                <li class="side_article_list_item">
+                    2.<a href="http://www.tuicool.com/articles/6rEFRn7" target="_blank" title="无视监管细则连发亿元大标，红岭创投在想什么？">
+                    无视监管细则连发亿元大标，红岭创投在想什么？
+                    </a>
+                </li>
+                <li class="side_article_list_item">
+                    3.<a href="http://www.tuicool.com/articles/emEVb23" target="_blank" title="阿里巴巴总参谋长曾鸣：为什么马云没钱的时候也能吸引人才？">
+                    阿里巴巴总参谋长曾鸣：为什么马云没钱的时候也能吸引人才？
+                    </a>
+                </li>
+                <li class="side_article_list_item">
+                    4.<a href="http://www.tuicool.com/articles/ymQRvyv" target="_blank" title="校园金融再停摆，放弃万亿市场的“独角兽”们路在何方？">
+                    校园金融再停摆，放弃万亿市场的“独角兽”们路在何方？
+                    </a>
+                </li>
+                <li class="side_article_list_item">
+                    5.<a href="http://www.tuicool.com/articles/bYJnYbj" target="_blank" title="董明珠网络直播首秀 网友们直呼“好年轻”">
+                    董明珠网络直播首秀 网友们直呼“好年轻”
+                    </a>
+                </li>
+                <li class="side_article_list_item">
+                    6.<a href="http://www.tuicool.com/articles/rMjYZb" target="_blank" title="中概股回归两极分化 加速或放弃">
+                    中概股回归两极分化 加速或放弃
+                    </a>
+                </li>
+          </ul>
+        </div>
+        <div id="kan_articles"></div>
+        <div id="article_weibo" style="display:none;">
+            <div class="article-part-title">
+                <span>相关微博</span>
+                <sub>
+                    <a href="http://www.tuicool.com/articles/weibo_list/QjaMBra" target="_blank">(<i id="weibo_num"></i>)</a> 
+               </sub>
+            </div>
+            <div class="related-weibo-list"></div>
+        </div>
+        <div class="comments">
+    <div class="comments-area">
+    <div class="comments-header">
+        <h5>我来评几句</h5>
+        <div class="alert comment-alert alert-error" style="display:none;">
+            错误
+        </div>
+            <textarea cols="60" rows="5" id="comment-body" placeholder="请输入评论内容..." style="resize: none;"></textarea>
+            <span class="btn btn-medium btn-submit" id="comment-submit">登录后评论</span>
+        <p style="margin-top: 5px;margin-left:10px;">
+            已发表评论数(<span class="comment_cnt">0</span>)
+        </p>
+    </div>
+    <div class="comments-list">
+        <div class="empty-cmts alert alert-success" style="display:none;">
+            没有更多评论了^^
+        </div>
+    </div>
+    <div class="more-comments" style="display:none;">
+        <a href="">更多评论</a>
+    </div>
+    <div class="load-fail" style="display:none;">
+        评论加载失败，<a href="javascript:void(0);">重新加载</a>
+    </div>
+    </div>
+</div>
+
+    </div>
+        <div class="span4 article_right_side">
+            <div class="right_top">
+    <div class="article_related_site article_detail_bg">
+    <h4 class="article-part-title">相关站点</h4>
+    <div class="article_related_site_body clearfix">
+        <div class="logo">
+            <img src="index_files/eMBFfe.png">
+        </div>
+        <div class="name">
+            <div>
+                <a href="http://www.tuicool.com/sites/eMBFfe" target="_blank"> 有态度的HBase</a>
+            </div>
+            <div>
+                <div class="btn btn-success right_site_follow" id="my_follow" data_id="eMBFfe">＋订阅</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="right_site_articles" class="article_detail_bg">
+    <div class="article-part-title">
+        <span>热门文章</span>
+    </div>
+    <ul class="side_article_list">
+        <li class="side_article_list_item">
+            1.<a href="http://www.tuicool.com/articles/rMjYZb" target="_blank" title="中概股回归两极分化 加速或放弃"> 中概股回归两极分化 加速或放弃 </a>
+        </li>
+        <li class="side_article_list_item">
+            2.<a href="http://www.tuicool.com/articles/6rEFRn7" target="_blank" title="无视监管细则连发亿元大标，红岭创投在想什么？"> 无视监管细则连发亿元大标，红岭创投在想什么？ </a>
+        </li>
+        <li class="side_article_list_item">
+            3.<a href="http://www.tuicool.com/articles/emEVb23" target="_blank" title="阿里巴巴总参谋长曾鸣：为什么马云没钱的时候也能吸引人才？"> 阿里巴巴总参谋长曾鸣：为什么马云没钱的时候也能吸引人才？ </a>
+        </li>
+        <li class="side_article_list_item">
+            4.<a href="http://www.tuicool.com/articles/ymQRvyv" target="_blank" title="校园金融再停摆，放弃万亿市场的“独角兽”们路在何方？"> 校园金融再停摆，放弃万亿市场的“独角兽”们路在何方？ </a>
+        </li>
+        <li class="side_article_list_item">
+            5.<a href="http://www.tuicool.com/articles/vYZBBv6" target="_blank" title="印度游戏工作室Flixy Games获日本风投42.5万美元种子轮投资"> 印度游戏工作室Flixy Games获日本风投42.5万美元种子轮投资 </a>
+        </li>
+    </ul>
+</div>
+
+
+      <div class="right-link">
+              <a href="https://www.jiguang.cn/devservice/?from=tuicool01" target="_blank"><img src="index_files/jpush120.jpg" class="fykvqqzftxwjmadpgomn"></a>
+
+      </div>
+      <div class="right-link" style="margin-top: 5px">
+              <a href="https://www.teambition.com/?utm_source=tuicool&amp;utm_medium=banner01" target="_blank"><img src="index_files/teambition120.jpg" class="fykvqqzftxwjmadpgomn"></a>
+
+      </div>
+      <div class="right-link" style="margin-top: 5px">
+              <a href="https://www.jiandaoyun.com/?f=tc" target="_blank"><img src="index_files/jiandaoyun120.jpg" class="fykvqqzftxwjmadpgomn"></a>
+
+      </div>
+<div class="right-link" style="margin-top: 5px">
+      <a href="http://www.toushibao.com/landing.html?utm_source=tuicoolwenzhang&amp;utm_medium=guanggao&amp;utm_campaign=tuicoolwenzhang.guanggao.tsbxgn" target="_blank"><img src="index_files/jiankongbao120.jpg" class="fykvqqzftxwjmadpgomn"></a>
+
+</div>
+      <div class="right-link" style="margin-top: 5px">
+              <a href="http://www.handone.com/?f=tc" target="_blank"><img src="index_files/handone300.jpg" class="fykvqqzftxwjmadpgomn"></a>
+
+      </div>
+<div class="right-link" style="margin-top: 5px">
+      <a href="https://www.daocloud.io/cloud/voice.html?utm_source=tuicool&amp;utm_medium=banner%20&amp;utm_campaign=daovoicecampaign" target="_blank"><img src="index_files/daocloud300.jpg" class="fykvqqzftxwjmadpgomn"></a>
+
+</div>
+</div>
+<div class="operate_zone">
+      <div class="right-link" style="margin-top: 0px">
+              <a href="http://click.aliyun.com/m/6365/" target="_blank"><img src="index_files/aliyun120.jpg" class="fykvqqzftxwjmadpgomn"></a>
+
+      </div>
+        <div class="frd_pos">
+        <script async="" src="index_files/adsbygoogle.js"></script>
+<ins class="adsbygoogle" style="display:inline-block;width:300px;height:250px" data-ad-client="ca-pub-7054762349007490" data-ad-slot="5705695566"></ins>
+<script><!--
+/* Script removed by snapshot save */
+--></script>
+
+        </div>
+</div>
+         </div>
+</div>
+
+<div>
+   <!-- add_article to kan -->
+<div id="add-article-to-kan" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <span class="add-title">收藏到推刊</span>
+    <a href="#new-kan" class="btn pull-right" data-toggle="modal">创建推刊</a>
+    <i class="clearfix"></i>
+  </div>
+  <div class="modal-body">
+    <ul id="add-kan-list">
+    </ul>
+  </div>
+  <div class="modal-footer">
+    <input value="QjaMBra" class="article-id" type="hidden"> 
+    <button class="btn btn-primary pull-left add-to-btn">  收 藏  </button>
+    <button class="btn" data-dismiss="modal" aria-hidden="true" style="margin-right: 15px">取消</button>
+  </div>
+</div>
+
+   <div id="new-kan" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-body">
+    <input name="name" id="new-kan-name" placeholder="推刊名(必填)" required="" data-validation-required-message="请填写推刊名" type="text">
+    <span class="new-ness-name">请填写推刊名</span>
+    <br>
+    <textarea name="desc" id="desc" rows="6" placeholder="推刊描述"></textarea>
+    <span class="new-ness-desc">描述不能大于100个字符!</span>
+    <br>
+    权限设置：<input name="type" value="1" checked="checked" type="radio"> 公开
+    <input name="type" value="0" type="radio"> 仅自己可见
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary pull-left create-kan-btn" disabled="disabled">创建</button>
+    <button class="btn dismiss-new-kan" data-dismiss="modal" aria-hidden="true">取消</button>
+  </div>
+</div>
+
+
+</div>
+<div id="article-correct-modal" class="modal hide fade in" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+            ×
+        </button>
+        <h3>文章纠错</h3>
+    </div>
+    <div class="modal-body">
+        <input value="QjaMBra" id="article-correct-source" type="hidden">
+        <div>
+            <label for="article-correct-email">
+                邮箱地址
+            </label>
+            <input id="article-correct-email" class="input-large" type="email">
+        </div>
+        <div>
+            <label for="article-correct-select">
+                错误类型
+            </label>
+            <select id="article-correct-select">
+                <option value="正文不准确" selected="selected">正文不准确</option>
+                <option value="标题不准确">标题不准确</option>
+                <option value="排版有问题">排版有问题</option>
+                <option value="排版有问题">主题不准确</option>
+                <option value="没有分页内容">没有分页内容</option>
+                <option value="图片无法显示">图片无法显示</option>
+                <option value="视频无法显示">视频无法显示</option>
+                <option value="与原文不一致">与原文不一致</option>
+            </select>
+        </div>
+        <div>
+            <label for="article-correct-other">
+                补充信息
+            </label>
+            <textarea id="article-correct-other" class="span4"></textarea>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary pull-right huodong_correct_submit" id="article-correct-submit">
+              提交  
+        </button>
+    </div>
+</div>
+
+<style type="text/css"><!--
+/* Effective stylesheet produced by snapshot save */
+.load-fail { display: none; }
+--></style>
+<script src="index_files/highlight.pack.js"></script>
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+
+
+    <div class="loader-inner ball-pulse ball-loading-center" id="page-loading" style="display: none">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+    <div class="read-later-alert"></div>
+  </div>
+
+    <div class="footer">
+    <div class="footer-inner">
+    <dl class="about-link site-link">
+        <dt>
+            网站相关
+        </dt>
+        <dd>
+            <a target="_blank" href="http://www.tuicool.com/about">关于我们</a>
+        </dd>
+        <dd>
+            <a target="_blank" href="http://www.tuicool.com/mobile">移动应用</a>
+        </dd>
+        <dd>
+            <a target="_blank" href="http://www.tuicool.com/bbs/go/issues">建议反馈</a>
+        </dd>
+    </dl>
+    <dl class="site-link follow-link">
+        <dt>
+            关注我们
+        </dt>
+        <dd>
+            <a target="_blank" href="http://e.weibo.com/tuicool2012"><img src="index_files/weibo-32.png">推酷网</a>
+        </dd>
+        <dd><img src="index_files/weixin-32.png">tuicool2012
+        </dd>
+    </dl>
+    <dl class="site-link links">
+        <dt>
+            友情链接
+        </dt>
+        <dd>
+                <a href="http://www.woshipm.com/" title="人人都是产品经理" target="_blank">人人都是产品经理</a>
+                <a href="http://www.pm265.com/" title="PM256" target="_blank">PM256</a>
+                <a href="http://www.yidonghua.com/" title="移动信息化" target="_blank">移动信息化</a>
+                <a href="http://www.snsiu.com/" title="行晓网" target="_blank">行晓网</a>
+                <a href="http://www.taskcity.com/" title="智城外包网" target="_blank">智城外包网</a>
+                <a href="http://www.huxiu.com/" title="虎嗅" target="_blank">虎嗅</a>
+                <a href="http://www.iterduo.com/" title="IT耳朵" target="_blank">IT耳朵</a>
+                <a href="http://mediaworks.caixin.com/" title="创媒工场" target="_blank">创媒工场</a>
+                <a href="http://www.managershare.com/" title="经理人分享" target="_blank">经理人分享</a>
+                <a href="http://www.shichangbu.com/" title="市场部网" target="_blank">市场部网</a>
+                <a href="http://www.ikanchai.com/" title="砍柴网" target="_blank">砍柴网</a>
+                <a href="http://www.cocoachina.com/" title="CocoaChina" target="_blank">CocoaChina</a>
+                <a href="http://www.ibeifeng.com/" title="北风网" target="_blank">北风网</a>
+                <a href="http://www.jiankongbao.com/" title="云智慧" target="_blank">云智慧</a>
+                <a href="http://www.wyzc.com/" title="我赢职场" target="_blank">我赢职场</a>
+                <a href="http://www.thebigdata.cn/" title="大数据时代" target="_blank">大数据时代</a>
+                <a href="http://www.qidic.com/" title="奇笛网" target="_blank">奇笛网</a>
+                <a href="http://www.cngulu.com/" title="咕噜网" target="_blank">咕噜网</a>
+                <a href="http://www.linuxdiyf.com/" title="红联linux" target="_blank">红联linux</a>
+                <a href="http://win10.ithome.com/" title="Win10之家" target="_blank">Win10之家</a>
+                <a href="http://www.niaogebiji.com/" title="鸟哥笔记" target="_blank">鸟哥笔记</a>
+                <a href="http://www.play.cn/" title="爱游戏" target="_blank">爱游戏</a>
+                <a href="http://www.investide.cn/" title="投资潮" target="_blank">投资潮</a>
+                <a href="http://www.31huiyi.com/" title="31会议网" target="_blank">31会议网</a>
+                <a href="https://www.jiguang.cn/" title="极光推送" target="_blank">极光推送</a>
+                <a href="https://www.teambition.com/" title="Teambition" target="_blank">Teambition</a>
+                <a href="http://www.guigu.org/" title="硅谷网" target="_blank">硅谷网</a>
+                <a href="https://home.leangoo.com/" title="leangoo" target="_blank">leangoo</a>
+                <a href="http://www.zealer.com/" title="ZEALER中国" target="_blank">ZEALER中国</a>
+                <a href="http://www.opensns.cn/" title="OpenSNS" target="_blank">OpenSNS</a>
+                <a href="http://www.edu360.cn/" title="小牛学堂" target="_blank">小牛学堂</a>
+                <a href="http://www.handone.com/" title="handone" target="_blank">handone</a>
+                <a href="http://www.scrumcn.com/" title="Scrum中文网" target="_blank">Scrum中文网</a>
+                <a href="http://www.bigniu.com/" title="比戈大牛" target="_blank">比戈大牛</a>
+                <a href="https://www.upyun.com/" title="又拍云" target="_blank">又拍云</a>
+            <a href="http://www.tuicool.com/links">更多链接&gt;&gt;</a>  
+        </dd>
+    </dl>
+    <div class="clear"></div>
+    </div>
+</div>
+
+<div style="display:none;">
+   <script src="index_files/stat.php.js" language="JavaScript"></script>
+</div>
+
+
+
+
+<div class="return" title="返回顶部" style="display: none;"></div></body></html>

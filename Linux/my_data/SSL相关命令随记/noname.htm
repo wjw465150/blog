@@ -1,0 +1,93 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>SSL相关命令随记</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body><!--StartFragment--><h2>
+			<a id="viewpost1_TitleUrl" href="http://www.blogjava.net/stone2083/archive/2011/10/17/361471.html">SSL相关命令随记</a>
+		</h2>
+		<strong>背景</strong><br>之前利用笨重的Java写过内网访问程序（SSL双向认证系统），今天才发现curl等命令对SSL都有良好的支持。<br>故记录相关点滴。<br><br><strong>创建CA根证书</strong><br>
+<div>
+<p>#创建ca私钥<br>
+openssl genrsa -out ca.key<br>
+#创建证书请求文件（<span class="Apple-style-span" style="FONT-FAMILY: arial, 宋体, sans-serif; LINE-HEIGHT: 24px; BACKGROUND-COLOR: #ffffff" >Certificate Secure Request）<br></span>openssl req -new -key ca.key -out ca.csr</p>
+#创建CA根证书<br>
+openssl x509 -req -days 3650 -in ca.csr -signkey ca.key -out ca.crt<br>
+<br>
+<strong>创建服务器证书<br>
+</strong>#创建服务器私钥<br>
+<div style="DISPLAY: inline !important" >
+<p style="DISPLAY: inline !important" >openssl genrsa -out server.key<br>
+</p>
+</div>
+#创建服务器证书请求文件<br>openssl req -new -key server.key -out server.csr<div><p>
+#创建服务器证书<br>
+openssl ca -in server.csr -cert ca.crt -keyfile ca.key -out server.crt<br>
+<br>
+<strong>PFX证书转换<br>
+</strong>#pfx格式证书导出成pem格式证书<br>
+</p>
+<div>
+<p>openssl pkcs12 -in jinli.pfx -nodes -out jinli.pem<br>
+#导出私钥<br>
+openssl rsa -in jinli.pem -out jinli.key<br>
+#导出证书，公钥<br>
+openssl x509 -in jinli.pem -out jinli.crt</p>
+</div>
+<br>
+<strong>curl访问HTTPS命令<br>
+</strong>
+<div>curl -E jinli.pem:${password} --cacert ca.crt https://www.cn.alibaba-inc.com/</div>
+curl --cacert gmail.pem https://mail.google.com/mail<br>
+curl --cert jinli.crt --key jinli.key --cacert ca.crt https://www.cn.alibaba-inc.com/<br>
+<em>参数解释</em>：<br>
+<div style="FONT-SIZE: 13px; BORDER-TOP: #cccccc 1px solid; BORDER-RIGHT: #cccccc 1px solid; WIDTH: 98%; BORDER-BOTTOM: #cccccc 1px solid; WORD-BREAK: break-all; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: #cccccc 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: #eeeeee"><span style="COLOR: #000000" >&nbsp; &nbsp; --cacert&nbsp;</span><span style="COLOR: #0000ff" >&lt;</span><span style="COLOR: #800000" >file</span><span style="COLOR: #0000ff" >&gt;</span><span style="COLOR: #000000" >&nbsp;CA&nbsp;certificate&nbsp;to&nbsp;verify&nbsp;peer&nbsp;against&nbsp;(SSL)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;--capath&nbsp;</span><span style="COLOR: #0000ff" >&lt;</span><span style="COLOR: #800000" >directory</span><span style="COLOR: #0000ff" >&gt;</span><span style="COLOR: #000000" >&nbsp;CA&nbsp;directory&nbsp;to&nbsp;verify&nbsp;peer&nbsp;against&nbsp;(SSL)<br>
+&nbsp;-E/--cert&nbsp;</span><span style="COLOR: #0000ff" >&lt;</span><span style="COLOR: #800000" >cert</span><span style="COLOR: #ff0000" >[:passwd]</span><span style="COLOR: #0000ff" >&gt;</span><span style="COLOR: #000000" >&nbsp;Client&nbsp;certificate&nbsp;file&nbsp;and&nbsp;password&nbsp;(SSL)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;--cert-type&nbsp;</span><span style="COLOR: #0000ff" >&lt;</span><span style="COLOR: #800000" >type</span><span style="COLOR: #0000ff" >&gt;</span><span style="COLOR: #000000" >&nbsp;Certificate&nbsp;file&nbsp;type&nbsp;(DER/PEM/ENG)&nbsp;(SSL)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;--key&nbsp;</span><span style="COLOR: #0000ff" >&lt;</span><span style="COLOR: #800000" >key</span><span style="COLOR: #0000ff" >&gt;</span><span style="COLOR: #000000" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Private&nbsp;key&nbsp;file&nbsp;name&nbsp;(SSL/SSH)<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;--key-type&nbsp;</span><span style="COLOR: #0000ff" >&lt;</span><span style="COLOR: #800000" >type</span><span style="COLOR: #0000ff" >&gt;</span><span style="COLOR: #000000" >&nbsp;Private&nbsp;key&nbsp;file&nbsp;type&nbsp;(DER/PEM/ENG)&nbsp;(SSL)</span></div>
+<br>
+<strong>python访问HTTPS代码</strong><br>
+<div style="FONT-SIZE: 13px; BORDER-TOP: #cccccc 1px solid; BORDER-RIGHT: #cccccc 1px solid; WIDTH: 98%; BORDER-BOTTOM: #cccccc 1px solid; WORD-BREAK: break-all; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: #cccccc 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: #eeeeee"         ><span style="COLOR: #0000ff" >from</span><span style="COLOR: #000000" >&nbsp;httplib&nbsp;</span><span style="COLOR: #0000ff" >import</span><span style="COLOR: #000000" >&nbsp;HTTPSConnection<br>
+<br>
+con&nbsp;</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >&nbsp;HTTPSConnection(</span><span style="COLOR: #800000" >'</span><span style="COLOR: #800000" >www.cn.alibaba-inc.com</span><span style="COLOR: #800000" >'</span><span style="COLOR: #000000" >,&nbsp;cert_file</span><span style="COLOR: #000000" >=</span><span style="COLOR: #800000" >'</span><span style="COLOR: #800000" >jinli.pem</span><span style="COLOR: #800000" >'</span><span style="COLOR: #000000" >)<br>
+con.connect()<br>
+con.request(</span><span style="COLOR: #800000" >'</span><span style="COLOR: #800000" >GET</span><span style="COLOR: #800000" >'</span><span style="COLOR: #000000" >,&nbsp;</span><span style="COLOR: #800000" >'</span><span style="COLOR: #800000" >/xxx</span><span style="COLOR: #800000" >'</span><span style="COLOR: #000000" >)<br>
+res&nbsp;</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >&nbsp;con.getresponse()<br>
+</span><span style="COLOR: #0000ff" >print</span><span style="COLOR: #000000" >&nbsp;res.status<br>
+</span><span style="COLOR: #0000ff" >print</span><span style="COLOR: #000000" >&nbsp;res.read()<br>
+res.close()<br>
+con.close()</span></div>
+<br>
+<strong>python查看证书信息代码<br>
+</strong>
+<div style="FONT-SIZE: 13px; BORDER-TOP: #cccccc 1px solid; BORDER-RIGHT: #cccccc 1px solid; WIDTH: 98%; BORDER-BOTTOM: #cccccc 1px solid; WORD-BREAK: break-all; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: #cccccc 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: #eeeeee"         ><span style="COLOR: #000000" ><div><span style="COLOR: #0000ff" >from</span> OpenSSL <span style="COLOR: #0000ff" >import</span> crypto<br></div>x509&nbsp;</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >&nbsp;crypto.load_certificate(crypto.FILETYPE_PEM,&nbsp;open(</span><span style="COLOR: #800000" >'</span><span style="COLOR: #800000" >cert_file</span><span style="COLOR: #800000" >'</span><span style="COLOR: #000000" >).read())<br>
+</span><span style="COLOR: #0000ff" >print</span><span style="COLOR: #000000" >&nbsp;x509.get_issuer()<br>
+<br>
+pkcs&nbsp;</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >&nbsp;crypto.load_pkcs12(open(pkcs_file).read(),passphrase)<br>
+</span><span style="COLOR: #0000ff" >print</span><span style="COLOR: #000000" >&nbsp;pkcs.get_certificate().get_issuer()</span></div>
+<p>&nbsp;</p>
+</div>
+<p><strong>HTTPSConnection不理解的地方</strong>&nbsp;<br>
+</p><div style="FONT-SIZE: 13px; BORDER-TOP: #cccccc 1px solid; BORDER-RIGHT: #cccccc 1px solid; WIDTH: 98%; BORDER-BOTTOM: #cccccc 1px solid; WORD-BREAK: break-all; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: #cccccc 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: #eeeeee"><span style="COLOR: #0000ff" >def</span><span style="COLOR: #000000" >&nbsp;wrap_socket(sock,&nbsp;keyfile</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >None,&nbsp;certfile</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >None,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;server_side</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >False,&nbsp;cert_reqs</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >CERT_NONE,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ssl_version</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >PROTOCOL_SSLv23,&nbsp;ca_certs</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >None,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;do_handshake_on_connect</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >True,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;suppress_ragged_eofs</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >True,&nbsp;ciphers</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >None):<br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff" >return</span><span style="COLOR: #000000" >&nbsp;SSLSocket(sock,&nbsp;keyfile</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >keyfile,&nbsp;certfile</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >certfile,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;server_side</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >server_side,&nbsp;cert_reqs</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >cert_reqs,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ssl_version</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >ssl_version,&nbsp;ca_certs</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >ca_certs,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;do_handshake_on_connect</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >do_handshake_on_connect,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;suppress_ragged_eofs</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >suppress_ragged_eofs,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ciphers</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >ciphers)</span></div>
+<p>&nbsp;</p>
+</div>
+ssl wrap的函数是支持ca_certs参数的，但是HTTPSConnection不支持ca_certs参数<br><div style="FONT-SIZE: 13px; BORDER-TOP: #cccccc 1px solid; BORDER-RIGHT: #cccccc 1px solid; WIDTH: 98%; BORDER-BOTTOM: #cccccc 1px solid; WORD-BREAK: break-all; PADDING-BOTTOM: 4px; PADDING-TOP: 4px; PADDING-LEFT: 4px; BORDER-LEFT: #cccccc 1px solid; PADDING-RIGHT: 5px; BACKGROUND-COLOR: #eeeeee"><span style="COLOR: #0000ff" >class</span><span style="COLOR: #000000" >&nbsp;HTTPSConnection(HTTPConnection):<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #800000" >"</span><span style="COLOR: #800000" >This&nbsp;class&nbsp;allows&nbsp;communication&nbsp;via&nbsp;SSL.</span><span style="COLOR: #800000" >"</span><span style="COLOR: #000000" ><br><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;default_port&nbsp;</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >&nbsp;HTTPS_PORT<br><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff" >def</span><span style="COLOR: #000000" >&nbsp;</span><span style="COLOR: #800080" >__init__</span><span style="COLOR: #000000" >(self,&nbsp;host,&nbsp;port</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >None,&nbsp;key_file</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >None,&nbsp;cert_file</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >None,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;strict</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >None,&nbsp;timeout</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >socket._GLOBAL_DEFAULT_TIMEOUT,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;source_address</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >None):<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HTTPConnection.</span><span style="COLOR: #800080" >__init__</span><span style="COLOR: #000000" >(self,&nbsp;host,&nbsp;port,&nbsp;strict,&nbsp;timeout,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;source_address)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.key_file&nbsp;</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >&nbsp;key_file<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.cert_file&nbsp;</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >&nbsp;cert_file<br><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff" >def</span><span style="COLOR: #000000" >&nbsp;connect(self):<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #800000" >"</span><span style="COLOR: #800000" >Connect&nbsp;to&nbsp;a&nbsp;host&nbsp;on&nbsp;a&nbsp;given&nbsp;(SSL)&nbsp;port.</span><span style="COLOR: #800000" >"</span><span style="COLOR: #000000" ><br><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sock&nbsp;</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >&nbsp;socket.create_connection((self.host,&nbsp;self.port),<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.timeout,&nbsp;self.source_address)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="COLOR: #0000ff" >if</span><span style="COLOR: #000000" >&nbsp;self._tunnel_host:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.sock&nbsp;</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >&nbsp;sock<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self._tunnel()<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.sock&nbsp;</span><span style="COLOR: #000000" >=</span><span style="COLOR: #000000" >&nbsp;ssl.wrap_socket(sock,&nbsp;self.key_file,&nbsp;self.cert_file)</span></div>
+<P><br><br><br><br><br><!--EndFragment--></P>
+<P>&nbsp;</P>
+</body>
+</htm</html>

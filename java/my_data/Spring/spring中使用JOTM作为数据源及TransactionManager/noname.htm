@@ -1,0 +1,109 @@
+﻿<!-- saved from url=http://dev.csdn.net/article/73/73441.shtm -->
+<script>
+window.onerror = new Function("return(false);")
+</script><!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<HTML><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>spring中使用JOTM作为数据源及TransactionManager</title><LINK 
+href="csdn.css" type=text/css rel=stylesheet></HEAD>
+
+<BODY text=#000000 bgColor=#ffffff topMargin=0>
+
+<FORM id=Form1 name=Form1 action=readarticle.aspx?id=73441 method=post>
+
+<TABLE id=Table1 height=161 cellSpacing=0 cellPadding=0 width=955 align=center 
+border=0>
+
+<TBODY>
+
+<TR>
+
+<TD vAlign=top width=786>
+
+<TABLE cellPadding=4 width="100%" border=0>
+
+<TBODY><!--StartFragment-->
+<TR>
+<TD height=19>
+<TABLE cellSpacing=3 cellPadding=3 width="100%" bgColor=#eeeeee border=0>
+<TBODY>
+<TR>
+<TD><B><SPAN 
+id=ArticleTitle1_ArticleTitle1_lblTitle>spring中使用JOTM作为数据源及TransactionManager</SPAN></B>&nbsp;&nbsp;&nbsp;&nbsp; 
+选择自 <A id=ArticleTitle1_ArticleTitle1_AuthorLink href="repex">repex</A> 的 
+Blog </TD></TR>
+<TR>
+<TD align=center bgColor=#003399 height=16><FONT color=#ffffff>关键字</FONT></TD>
+<TD width=500>&nbsp; <SPAN 
+id=ArticleTitle1_ArticleTitle1_lblKeywords>spring中使用JOTM作为数据源及TransactionManager</SPAN></TD></TR>
+<TR>
+<TD align=center bgColor=#003399 height=16><FONT color=#ffffff>出处</FONT></TD>
+<TD>&nbsp; <SPAN 
+id=ArticleTitle1_ArticleTitle1_lblSource></SPAN></TD></TR></TBODY></TABLE></TD></TR>
+<TR>
+<TD width=10></TD>
+<TD><SPAN id=ArticleContent1_ArticleContent1_lblContent>
+<P>首先要下载jotm <A 
+href="http://www.objectweb.org/jotm/download/">http://www.objectweb.org/jotm/download/</A><BR>将jotm的lib 
+copy到你的lib目录中<BR>创建一个carol.properties文件，内容如下<BR># lmi stands for Local Method 
+Invocation (it's a "fake" RMI)<BR>carol.protocols=lmi</P>
+<P># do not use CAROL JNDI wrapper<BR>carol.start.jndi=false</P>
+<P># do not start a name server<BR>carol.start.ns=false</P>
+<P></P>
+<P>修改spring的配置文件如下：</P>
+<P>&lt;bean id="jotm" 
+class="org.springframework.transaction.jta.JotmFactoryBean"/&gt;</P>
+<P>&lt;bean id="innerDataSource" 
+class="org.enhydra.jdbc.standard.StandardXADataSource" 
+destroy-method="shutdown"&gt;<BR>&nbsp;&lt;property 
+name="transactionManager"&gt;&lt;ref 
+local="jotm"/&gt;&lt;/property&gt;<BR>&nbsp;&lt;property 
+name="driverName"&gt;&lt;value&gt;oracle.jdbc.driver.OracleDriver&lt;/value&gt;&lt;/property&gt;<BR>&nbsp;&lt;property 
+name="url"&gt;&lt;value&gt;jdbc:oracle:thin:@192.168.122.16:1521:tol&lt;/value&gt;&lt;/property&gt;</P>
+<P>&lt;/bean&gt;<BR>&nbsp;<BR>&lt;bean id="dataSource" 
+class="org.enhydra.jdbc.pool.StandardXAPoolDataSource" 
+destroy-method="shutdown"&gt;<BR>&nbsp;&lt;property name="dataSource"&gt;&lt;ref 
+local="innerDataSource"/&gt;&lt;/property&gt;<BR>&nbsp;&lt;property 
+name="transactionManager"&gt;&lt;ref 
+local="jotm"/&gt;&lt;/property&gt;<BR>&nbsp;&lt;property 
+name="maxSize"&gt;&lt;value&gt;10&lt;/value&gt;&lt;/property&gt;<BR>&nbsp;&lt;property 
+name="user"&gt;&lt;value&gt;newclass&lt;/value&gt;&lt;/property&gt;<BR>&nbsp;&lt;property 
+name="password"&gt;&lt;value&gt;newclass&lt;/value&gt;&lt;/property&gt;<BR>&lt;/bean&gt;</P>
+<P><BR>&lt;bean id="transactionManager" 
+class="org.springframework.transaction.jta.JtaTransactionManager"&gt;<BR>&nbsp;&lt;property 
+name="userTransaction"&gt;&lt;ref 
+local="jotm"/&gt;&lt;/property&gt;<BR>&lt;/bean&gt;</P>
+<P>&lt;bean id="sessionFactory" 
+class="org.springframework.orm.hibernate.LocalSessionFactoryBean"&gt;<BR>&nbsp;&lt;property 
+name="mappingResources"&gt;<BR>&nbsp;&nbsp;&lt;list&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;value&gt;hibernate/test.hbm.xml&lt;/value&gt;<BR>&nbsp;&nbsp;&lt;/list&gt;<BR>&nbsp;&lt;/property&gt;<BR>&nbsp;&lt;property 
+name="hibernateProperties"&gt;<BR>&nbsp;&nbsp;&lt;props&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;prop 
+key="show_sql"&gt;true&lt;/prop&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;prop 
+key="hibernate.dialect"&gt;net.sf.hibernate.dialect.OracleDialect&lt;/prop&gt;<BR>&nbsp;&nbsp;&lt;/props&gt;<BR>&nbsp;&lt;/property&gt;<BR>&nbsp;&lt;property 
+name="dataSource"&gt;<BR>&nbsp;&nbsp;&lt;ref 
+local="dataSource"/&gt;<BR>&nbsp;&lt;/property&gt;<BR>&lt;/bean&gt;</P>
+<P><BR>&lt;bean id="transactionTemplate" abstract="true" 
+class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean"&gt;<BR>&nbsp;&lt;property 
+name="transactionManager"&gt;&lt;ref 
+bean="transactionManager"/&gt;&lt;/property&gt;<BR>&nbsp;&lt;property 
+name="transactionAttributes"&gt;<BR>&nbsp;&nbsp;&lt;props&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;prop 
+key="get*"&gt;PROPAGATION_REQUIRED,readOnly&lt;/prop&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;prop 
+key="find*"&gt;PROPAGATION_REQUIRED,readOnly&lt;/prop&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;prop 
+key="create*"&gt;PROPAGATION_REQUIRED,-Exception&lt;/prop&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;prop 
+key="update*"&gt;PROPAGATION_REQUIRED,-Exception&lt;/prop&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;prop 
+key="save*"&gt;PROPAGATION_REQUIRED,-Exception&lt;/prop&gt;<BR>&nbsp;&nbsp;&nbsp;&lt;prop 
+key="delete"&gt;PROPAGATION_REQUIRED,-Exception&lt;/prop&gt;<BR>&nbsp;&nbsp;&lt;/props&gt;<BR>&nbsp;&lt;/property&gt;<BR>&nbsp;&lt;property 
+name="proxyTargetClass"&gt;&lt;value&gt;true&lt;/value&gt;&lt;/property&gt;<BR>&lt;/bean&gt;</P>
+<P>&nbsp;&lt;bean id="testDao" 
+class="com.tol24.spring.test.jotm.TestDao"&gt;<BR>&nbsp;&nbsp;&lt;property 
+name="sessionFactory"&gt;&lt;ref 
+local="sessionFactory"/&gt;&lt;/property&gt;<BR>&nbsp;&lt;/bean&gt;&nbsp;</P></SPAN><BR></TD></TR><!--EndFragment--></TBODY>
+</TABLE>
+</TD>
+</TR>
+</TBODY>
+</TABLE>
+</FORM>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

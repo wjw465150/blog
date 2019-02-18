@@ -1,0 +1,1201 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3c.org/TR/1999/REC-html401-19991224/loose.dtd">
+
+<HTML lang=en xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<title>使用 XML 的流 API (StAX)</title>
+<!-- LOCALIZATION RELATED INFORMATION --><!-- LOCALIZATION RELATED INFORMATION -->
+<LINK 
+media=all href="edocs.css" type=text/css rel=StyleSheet>
+</HEAD>
+<BODY scroll=yes><!--StartFragment--><!-- Breadcrumbs begin --><!-- Breadcrumbs end --><!-- page title --><!-- page title end -->
+<TABLE id=SummaryNotReq1 cellSpacing=0 cellPadding=2 width="100%" align=left 
+border=0>
+</TABLE>
+<H1 class=pChapHead><DEL><A name=wp1098406></A>     </DEL>使用 XML 的流 API (StAX) </H1>
+<P class=pBody><DEL><A name=wp1095825></A></DEL>下列部分描述了如何使用“XML 的流 API”<EM 
+class=cEmphasis></EM>解析和生成 XML 文档： </P>
+<DIV class=pSmartList1Bullet>
+  <UL>
+    <LI><DEL><A name=wp1097761></A></DEL><A href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1088369">XML 的流 API 
+      概述</A>
+    <LI><DEL><A name=wp1106870></A></DEL><A href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1099797">使用 
+      XMLStreamReader 接口解析 XML：典型步骤</A>
+    <LI><DEL><A name=wp1106874></A></DEL><A href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1104639">用 
+      XMLStreamWriter 接口生成 XML：典型步骤</A>
+    <LI><DEL><A name=wp1098762></A></DEL><A href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1097624">为 
+      XMLInputFactory 接口定义的属性</A>
+    <LI><DEL><A name=wp1104663></A></DEL><A href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1099912">为 
+      XMLOutputFactory 接口定义的属性</A> </LI>
+  </UL>
+</DIV>
+<P>&nbsp;</P>
+<HR noShade>
+<H2 class=pHeading1><DEL><A name=wp1088369></A>    </DEL>XML 的流 API 概述 </H2>
+<P class=pBody><DEL><A name=wp1088379></A></DEL>Java Community Processs 的 <SPAN 
+class=cHyperlink><A 
+href="http://www.jcp.org/en/jsr/detail?id=173">JSR-173</A></SPAN> 指定的 XML的流 API 
+  (StAX) 提供了简单直观的解析和生成 XML 文档的方式。它与 SAX API 类似，但启用对 XML 文档的基于流的过程处理，而不要求编写 SAX 
+  事件处理程序；在使用复杂 XML 文档时，编写 SAX 事件处理程序将变得非常复杂。换句话说，与 SAX 相比，StAX 提供了更多对解析的控制。 </P>
+<P class=pBody><DEL><A name=wp1088371></A></DEL>在程序使用 SAX 解析 XML 
+  文档时，程序必须创建事件监听器（在解析事件发生进行监听）；程序必须响应事件，而非请求特定事件。相比而言，如果使用 StAX，则可以有系统地逐步解析 XML 
+  文档，请求某些事件类型（如元素的开始）、迭代元素的特性、跳到文档开头、随时停止处理、获取特定元素的子元素并根据需要筛选掉元素。由于是在请求事件而非响应事件，因此常将使用 
+  StAX 称为“pull parsing”。<EM class=cEmphasis></EM> </P>
+<P class=pBody><DEL><A name=wp1096440></A></DEL>StAX 包含两个 API：“游标 API”和“事件迭代器 
+  API”<EM class=cEmphasis></EM><EM class=cEmphasis></EM>，它们中的任一个都可以用于读取和写入 
+  XML。下列部分描述了各个 API 及它们的强项。 </P>
+<H3 class=pHeading2><DEL><A name=wp1095979></A>   </DEL>游标 API 的描述 </H3>
+<P class=pBody><DEL><A name=wp1098480></A>  
+          </DEL>通过游标 API 
+  的基本功能，编程人员能够以最轻松且有效方式来解析和生成 XML。对于 StAX 的 两个 API 而言，大多数编程人员乐意使用此 API。 </P>
+<P class=pBody><DEL><A name=wp1106477></A></DEL>游标 API 
+  可在一组事件（例如开始元素、注释和特性）中迭代，即使可能并未实现这些事件。游标 API 具有两个主要接口：用于解析 XML 的 <CODE 
+class=cCode>XMLStreamReader</CODE>，以及用于生成 XML 的 <CODE 
+class=cCode>XMLStreamWriter</CODE>。 </P>
+<H4 class=pHeading3><DEL><A name=wp1106301></A>  </DEL>XMLStreamReader 接口 </H4>
+<P class=pBody><DEL><A name=wp1106359></A></DEL>游标 API 使用 <CODE 
+class=cCode>XMLStreamReader</CODE> 接口在 XML 文档上移动虚拟游标，并允许通过调用 <CODE 
+class=cCode>hasNext()</CODE>、<CODE class=cCode>next()</CODE>、<CODE 
+class=cCode>getEventType()</CODE> 和 <CODE class=cCode>getText()</CODE> 之类的方法调用访问数据和底层状态。<CODE class=cCode>XMLStreamReader</CODE> 接口只允许以向前和只读方式访问 XML。 </P>
+<P class=pBody><DEL><A name=wp1106302></A></DEL>可使用 <CODE 
+class=cCode>XMLInputFactory</CODE> 类新建 <CODE class=cCode>XMLStreamReader</CODE> 的实例。在获取新读取器时，您可以设置各种属性；有关详情信息，请参阅<A href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1097624">为 XMLInputFactory 
+  接口定义的属性</A>。 </P>
+<P class=pBody><DEL><A name=wp1106306></A></DEL>在使用 <CODE 
+class=cCode>XMLStreamReader</CODE> 接口的 <CODE class=cCode>next()</CODE> 方法解析 XML 
+  时，读取器可获取下一个解析事件，并返回一个整数（此整数可标识刚读取的事件的类型）。解析与 XML 文档的部分相对应的事件，如 XML 
+  声明、开始和结束元素标记、字符数据、空格、注释和处理指令。<CODE class=cCode>XMLStreamConstant</CODE> 接口可指定 <CODE class=cCode>next()</CODE> 方法返回的整数所对应的事件。还可以使用 <CODE 
+class=cCode>XMLStreamReader</CODE> 的<CODE class=cCode>getEventType()</CODE> 方法来确定事件类型。 </P>
+<P class=pBody><DEL><A name=wp1106307></A></DEL><CODE 
+class=cCode>XMLStreamReader</CODE> 接口具有很多获取 XML 文档中特定数据的方法。其中的某些方法包括： </P>
+<DIV class=pSmartList1Bullet>
+  <UL>
+    <LI><DEL><A name=wp1106308></A></DEL><CODE class=cCode>getLocalName()</CODE> - 
+      返回当前事件的本地名称。
+    <LI><DEL><A name=wp1106309></A></DEL><CODE class=cCode>getPrefix()</CODE> - 
+      返回当前事件的前缀。
+    <LI><DEL><A name=wp1106310></A></DEL><CODE class=cCode>getAttributeXXX()</CODE> - 返回有关当前特性事件的信息的一组方法。
+    <LI><DEL><A name=wp1106311></A></DEL><CODE class=cCode>getNamespaceXXX()</CODE> - 返回有关当前名称空间事件的信息的一组方法。
+    <LI><DEL><A name=wp1106312></A></DEL><CODE class=cCode>getTextXXX()</CODE> - 
+      返回有关当前文本事件的信息的一组方法。
+    <LI><DEL><A name=wp1106313></A></DEL><CODE class=cCode>getPIData()</CODE> - 
+      返回当前处理的指令事件的数据部分。 </LI>
+  </UL>
+</DIV>
+<P class=pBody><DEL><A 
+name=wp1106314></A></DEL>对于每种事件类型而言，只有某些方法是有效的；如果您尝试对无效事件类型调用方法，StAX 处理器将引发 <CODE class=cCode>java.lang.IllegalStateException</CODE>。例如，尝试对名称空间事件调用 <CODE 
+class=cCode>getAttributeXXX()</CODE> 方法是错误的。有关完整事件列表及其有效 <CODE 
+class=cCode>XMLStreamReader</CODE> 方法的信息，请参阅 <SPAN class=cHyperlink><A 
+href="http://www.jcp.org/en/jsr/detail?id=173">StAX specification</A></SPAN>。 </P>
+<H4 class=pHeading3><DEL><A name=wp1106473></A>  </DEL>XMLStreamWriter 接口 </H4>
+<P class=pBody><DEL><A name=wp1106424></A></DEL>游标 API 使用 <CODE 
+class=cCode>XMLStreamWriter</CODE> 接口指定如何生成 XML。 </P>
+<P class=pBody><DEL><A name=wp1106425></A></DEL>可使用 <CODE 
+class=cCode>XMLOutputFactory</CODE> 类新建 <CODE class=cCode>XMLStreamWriter</CODE> 的实例。在获取新编写器时，可以设置用于修复名称空间和前缀的属性；有关详情信息，请参阅<A href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1099912">为 
+  XMLOutputFactory 接口定义的属性</A>。 </P>
+<P class=pBody><DEL><A name=wp1106429></A></DEL><CODE 
+class=cCode>XMLStreamWriter</CODE> 接口定义了一组 <CODE class=cCode>writeXXX()</CODE> 方法来写入 XML 文档的标准部分，例如： </P>
+<DIV class=pSmartList1Bullet>
+  <UL>
+    <LI><DEL><A name=wp1106430></A></DEL><CODE 
+class=cCode>writeStartElement()</CODE>
+    <LI><DEL><A name=wp1106431></A></DEL><CODE class=cCode>writeEndDocument()</CODE>
+    <LI><DEL><A name=wp1106432></A></DEL><CODE class=cCode>writeAttribute()</CODE>
+    <LI><DEL><A name=wp1106433></A></DEL>writeNamespace()
+    <LI><DEL><A name=wp1106434></A></DEL><CODE class=cCode>writeCData()</CODE> </LI>
+  </UL>
+</DIV>
+<P class=pBody><DEL><A name=wp1106435></A>  
+   </DEL>必须使用这些方法，显式写入 XML 
+  文档的每个部分（包括特性和命名空间）。 </P>
+<P class=pBody><DEL><A name=wp1106436></A></DEL>可使用 <CODE 
+class=cCode>flush()</CODE> 方法将任何缓存数据写入输出，使用 <CODE class=cCode>close()</CODE> 方法关闭编写器，并释放所有资源。 </P>
+<P class=pBody><DEL><A name=wp1106437></A></DEL>在生成 XML 时，<CODE 
+class=cCode>XMLStreamWriter</CODE> 不检查生成文档的格式是否标准；创建标准格式的 XML 文档是编程人员的职责。要打印特殊字符 <CODE class=cCode>&amp;</CODE>、<CODE class=cCode>&lt;</CODE> 和 <CODE 
+class=cCode>&gt;</CODE>，请使用 <CODE class=cCode>writeCharacters()</CODE> 方法。 </P>
+<H3 class=pHeading2><DEL><A name=wp1096053></A>   </DEL>事件迭代器 API 的描述 </H3>
+<P class=pBody><DEL><A name=wp1104670></A></DEL>事件迭代器 API 是位于游标 API 
+  顶端的层。它易于扩展并简化了管道操作。管道操作指多个 XML 到 XML 的转换。通过使用事件迭代器 API，编程人员无需在管道的每个阶段反序列化和序列化 
+  XML；而是只需在管道的每个末尾处执行操作，并使用 API 方法（如 <CODE 
+class=cCode>nextEvent()</CODE>）在中间阶段进行通信。事件迭代器 API 具有两个主要接口：用于解析 XML 的<CODE 
+class=cCode>XMLEventReader</CODE>，以及用于生成 XML 的 <CODE 
+class=cCode>XMLEventWriter</CODE>。 </P>
+<P class=pBody><DEL><A name=wp1106961></A></DEL>由于游标 API 是 StAX 中最常用的 
+  API，故本部分不再详细描述事件迭代器 API 的用法，只显示一个示例。有关使用此 API 的详细信息，请参阅 <SPAN 
+class=cHyperlink><A href="http://www.jcp.org/en/jsr/detail?id=173">StAX 
+  specification</A></SPAN>。 </P>
+<P class=pBody><DEL><A name=wp1107225></A></DEL>以下示例显示了一个简单程序，此程序使用 StAX 的 <CODE 
+class=cCode>XMLEventReader</CODE> 接口解析 XML 文档。此程序采用单个参数，即一个 XML 文件，并使用此参数创建 <CODE class=cCode>XMLEventReader</CODE> 对象。程序然后使用此读取器迭代事件流，并进行打印。 </P>
+<DEL><A 
+name=wp1106995></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>package examples.event;</PRE>
+</DIV>
+<DEL><A name=wp1106997></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>import java.io.FileReader;<BR>import javax.xml.stream.*;<BR>import javax.xml.stream.events.*;<BR>import javax.xml.stream.util.*;<BR>import javax.xml.namespace.QName;</PRE>
+</DIV>
+<DEL><A 
+name=wp1107003></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>/**<BR> * 迭代事件的简单示例<BR> *<BR> * @author 版权所有 (c) 2002，BEA System。保留所有权利。<BR> */</PRE>
+</DIV>
+<DEL><A 
+name=wp1107009></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>public class Parse {<BR>  private static String filename = null;</PRE>
+</DIV>
+<DEL><A 
+name=wp1107012></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  private static void printUsage() {<BR>    System.out.println("usage: java examples.event.Parse &lt;xmlfile&gt;");<BR>  }</PRE>
+</DIV>
+<DEL><A 
+name=wp1107016></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  public static void main(String[] args) throws Exception {<BR>    try {<BR>      filename = args[0];<BR>    } catch (ArrayIndexOutOfBoundsException aioobe){<BR>      printUsage();<BR>      System.exit(0);<BR>    }</PRE>
+</DIV>
+<DEL><A 
+name=wp1107024></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    XMLInputFactory factory = XMLInputFactory.newInstance();<BR>    XMLEventReader r =<BR>      factory.createXMLEventReader(new FileReader(filename));<BR>    while(r.hasNext()) {<BR>      XMLEvent e = r.nextEvent();<BR>      System.out.println("ID:"+e.hashCode()+"["+e+"]");<BR>    }<BR>  }<BR>}</PRE>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1097611></A>  </DEL>StAX 的主要接口和类 </H3>
+<P class=pBody><DEL><A name=wp1095950></A>    </DEL>下表描述了 XML 的流 API 的主要接口和类。</P>
+<DIV align=left>
+  <TABLE class=table id=wp1079013table1079011 cellSpacing=0 cellPadding=3>
+    <CAPTION>
+    <DEL><A name=wp1079013></A>     
+    </DEL>表 4-1 XML 的流 API 的主要接口和类
+    </CAPTION>
+    <TBODY>
+      <TR vAlign=top align=center bgColor=#cccccc>
+        <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1079015></A> </DEL>接口或类 </DIV></TH>
+        <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1096546></A>    </DEL>用于游标 API 还是事件迭代 API？ </DIV></TH>
+        <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1079163></A> </DEL>描述 </DIV></TH>
+      </TR>
+      <TR vAlign=top align=left>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079017></A></DEL><CODE 
+class=cCode>XMLInputFactory 类</CODE> </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1096548></A> </DEL>二者 </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079165></A></DEL>用于创建 <CODE 
+class=cCode>XMLStreamReader</CODE> 或 <CODE class=cCode>XMLEventReader</CODE> 实例的工厂类。 </DIV></TD>
+      </TR>
+      <TR vAlign=top align=left>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079019></A></DEL><CODE 
+class=cCode>XMLOutputFactory 类</CODE> </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1096550></A> </DEL>二者 </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079167></A></DEL>用于创建 <CODE 
+class=cCode>XMLStreamWriter</CODE> 或 <CODE class=cCode>XMLEventWriter</CODE> 实例的工厂类。 </DIV></TD>
+      </TR>
+      <TR vAlign=top align=left>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1087134></A></DEL><CODE 
+class=cCode>XMLEventFactory 类</CODE> </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1096552></A> </DEL>事件迭代器 </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1087136></A></DEL>用于创建 <CODE 
+class=cCode>XMLEvent</CODE> 实例的工厂类。 </DIV></TD>
+      </TR>
+      <TR vAlign=top align=left>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079021></A></DEL><CODE 
+class=cCode>XMLStreamReader 接口</CODE> </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1096554></A> </DEL>游标 </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079169></A>  
+             </DEL>用于解析 XML 
+            文档的接口。通过此接口，可以查看下一个事件、获取下一个事件和检查更多事件。 </DIV></TD>
+      </TR>
+      <TR vAlign=top align=left>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079023></A></DEL><CODE 
+class=cCode>XMLStreamWriter 接口</CODE> </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1096556></A> </DEL>游标 </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079171></A></DEL>用于生成 XML 文档的接口。它提供了一组 <CODE class=cCode>write</CODE><CODE class=cCodeEmphasis>XXX</CODE><CODE 
+class=cCode>()</CODE> 方法，用于生成 XML 文档的特定部分，如开始元素和特性等。 </DIV></TD>
+      </TR>
+      <TR vAlign=top align=left>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079025></A></DEL><CODE 
+class=cCode>XMLEventReader 接口</CODE> </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1096558></A> </DEL>事件迭代器 </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098625></A>  
+             </DEL>用于解析 XML 
+            事件的接口。通过此接口，可以查看下一个事件、获取下一个事件和检查更多事件。 </DIV></TD>
+      </TR>
+      <TR vAlign=top align=left>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079027></A></DEL><CODE 
+class=cCode>XMLEventWriter 接口</CODE> </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1096560></A> </DEL>事件迭代器 </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079175></A></DEL>用于生成 XML 的接口。它可使用 <CODE 
+class=cCode>add()</CODE> 方法将 XMLEvent 添加到输出流。 </DIV></TD>
+      </TR>
+      <TR vAlign=top align=left>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098561></A> </DEL>XMLEvent </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098563></A> </DEL>事件迭代器 </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098565></A></DEL>用于处理事件的基本接口。从 <CODE 
+class=cCode>XMLEvent</CODE> 扩展的所有特定 XML 事件，如 <CODE 
+class=cCode>StartElement</CODE> 和 <CODE class=cCode>Attribute</CODE> 等。 </DIV></TD>
+      </TR>
+      <TR vAlign=top align=left>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079029></A></DEL><CODE 
+class=cCode>XMLStreamException 接口</CODE> </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1096562></A> </DEL>二者 </DIV></TD>
+        <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1079177></A>  
+             </DEL>意外处理错误的基异常，如缺少标准格式的 XML 
+            文档结构。 </DIV></TD>
+      </TR>
+    </TBODY></TABLE>
+</DIV>
+<P class=pBody></P>
+<P>&nbsp;</P>
+<HR noShade>
+<H2 class=pHeading1><DEL><A name=wp1099797></A>   
+   </DEL>使用 XMLStreamReader 接口解析 
+  XML：典型步骤 </H2>
+<P class=pBody><DEL><A name=wp1106583></A></DEL>以下过程描述了使用 StAX 游标 API 的 <CODE 
+class=cCode>XMLStreamReader</CODE> 接口解析 XML 文档的典型步骤。此过程在其描述中使用了<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1099660">使用 StAX 解析 XML 的示例</A>中的示例。 </P>
+<DIV class=pSmartList1>
+  <OL class=pSmartList1 type=1>
+    <LI><DEL><A name=wp1106587></A></DEL>导入 <CODE 
+class=cCode>javax.xml.stream.*</CODE> 类。
+    <LI><DEL><A name=wp1106589></A></DEL>可使用 <CODE 
+class=cCode>XMLInputFactory.newInstance()</CODE> 方法实例化 <CODE 
+class=cCode>XMLInputFactory</CODE>，如以下代码摘录所示： <DEL><A name=wp1106590></A></DEL>
+      <DIV class=pPreformattedRelative>
+        <PRE>XMLInputFactory xmlif = XMLInputFactory.newInstance();</PRE>
+      </DIV>
+      <P class=pBodyRelative><DEL><A name=wp1106594></A></DEL>有关可以设置的属性列表的信息，请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1097624">为 XMLInputFactory 接口定义的属性</A>。 </P>
+    <LI><DEL><A name=wp1106595></A></DEL>可使用 <CODE 
+class=cCode>XMLInputFactory.createXMLStreamReader()</CODE> 方法实例化基于 XML 文档的 <CODE 
+class=cCode>XMLStreamReader</CODE> 对象。
+      <P class=pBodyRelative><DEL><A name=wp1106599></A></DEL>有关详细信息，请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1073967">获取 XMLStreamReader 对象</A>。 </P>
+    <LI><DEL><A name=wp1106600></A></DEL>可使用 <CODE class=cCode>hasNext()</CODE> 和 <CODE class=cCode>next()</CODE> 方法逐一查看 XML 事件，以解析 XML 文档，如以下代码摘录所示： <DEL><A 
+name=wp1106601></A></DEL>
+      <DIV class=pPreformattedRelative>
+        <PRE>while(xmlr.hasNext()){<BR>      printEvent(xmlr);<BR>      xmlr.next();</PRE>
+      </DIV>
+      <P class=pBodyRelative><DEL><A name=wp1106602></A></DEL>在此示例中，<CODE 
+class=cCode>xmlr</CODE> 为 <CODE class=cCode>XMLStreamReader</CODE> 实例，本地 <CODE 
+class=cCode>printEvent()</CODE> 方法（不属于 StAX API）用于确定特定事件类型，如下一步中所述。 </P>
+    <LI><DEL><A name=wp1106603></A></DEL>在解析 XML 文档期间，确定当前的特定事件类型并采取相应的操作。事件类型包括 XML 
+      文档的开始和结束、XML 元素的开始和结束、注释和实体引用等。
+      <P class=pBodyRelative><DEL><A name=wp1106607></A></DEL>请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1076314">确定特定 XML 事件类型</A>。 </P>
+    <LI><DEL><A name=wp1106608></A></DEL>如果当前事件类型是开始元素或结束元素，则可根据需要获取其特性。
+      <P class=pBodyRelative><DEL><A name=wp1106612></A></DEL>请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1103432">获取元素的特性</A>。 </P>
+    <LI><DEL><A name=wp1106613></A></DEL>如果当前事件类型是开始元素或结束元素，则可根据需要获取其名称空间。
+      <P class=pBodyRelative><DEL><A name=wp1106617></A></DEL>请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1101131">获取元素的名称空间</A>。 </P>
+    <LI><DEL><A name=wp1106618></A></DEL>如果当前事件类型包含文本数据，如 CDATA 或注释，则可根据需要获取实际数据。
+      <P class=pBodyRelative><DEL><A name=wp1106622></A></DEL>请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1104140">获取文本数据</A>。 </P>
+    <LI><DEL><A name=wp1106623></A></DEL>可根据需要获取位置信息，如当前事件的行号或列号。
+      <P class=pBodyRelative><DEL><A name=wp1106627></A></DEL>请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1104501">获取位置信息</A>。 </P>
+    <LI><DEL><A name=wp1106628></A></DEL>关闭流。
+      <P class=pBodyRelative><DEL><A name=wp1106632></A></DEL>请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1087407">关闭输入流</A>。 </P>
+    </LI>
+  </OL>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1099660></A>     </DEL>使用 StAX 解析 XML 的示例 </H3>
+<P class=pBody><DEL><A name=wp1099829></A></DEL>以下示例显示了一个简单程序，此程序使用 StAX 的 <CODE 
+class=cCode>XMLStreamReader</CODE> 接口解析 XML 文档。 </P>
+<P class=pBody><DEL><A name=wp1100895></A>   
+     
+   </DEL>此程序采用单个参数，即一个 XML 文件，并使用此参数创建 
+  XMLStreamReader 对象。此程序然后使用读取器迭代事件流，确定每个事件的类型，如 XML 
+  元素的开始、元素的特性列表和处理指令等。此程序可打印出有关这些事件的信息，在适当时使用内部方法打印出特性列表和名称空间列表。 </P>
+<P class=pBody><DEL><A name=wp1101063></A> </DEL>稍后各部分将描述用粗体显示的代码。 </P>
+<DEL><A 
+name=wp1100342></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>package examples.basic;</PRE>
+</DIV>
+<DEL><A name=wp1100344></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>import java.io.FileReader;<BR>import java.util.Iterator;<BR><CODE class=cCodeBold>import javax.xml.stream.*;<BR></CODE>import javax.xml.namespace.QName;</PRE>
+</DIV>
+<DEL><A 
+name=wp1104687></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>/**<BR> * 这是一个简单的解析示例，说明<BR> * XMLStreamReader 类。<BR> *<BR> * @author 版权所有 (c) 2003，BEA Systems。保留所有权利。<BR> */</PRE>
+</DIV>
+<DEL><A 
+name=wp1100358></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>public class Parse {<BR>  private static String filename = null;</PRE>
+</DIV>
+<DEL><A 
+name=wp1100361></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  private static void printUsage() {<BR>    System.out.println("usage: java examples.basic.Parse &lt;xmlfile&gt;");<BR>  }</PRE>
+</DIV>
+<DEL><A 
+name=wp1100365></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  public static void main(String[] args) throws Exception {<BR>    try {<BR>      filename = args[0];<BR>    } catch (ArrayIndexOutOfBoundsException aioobe){<BR>      printUsage();<BR>      System.exit(0);<BR>    }</PRE>
+</DIV>
+<DEL><A 
+name=wp1100373></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    <BR>    // 获取输入工厂<BR>    //<BR><CODE class=cCodeBold>    XMLInputFactory xmlif = XMLInputFactory.newInstance();<BR></CODE><CODE class=cCode>    System.out.println("FACTORY: " + xmlif);</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100379></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    <BR>    // 实例化读取器<BR>    //<BR><CODE class=cCodeBold>    XMLStreamReader xmlr = xmlif.createXMLStreamReader(new FileReader(filename));<BR></CODE>    System.out.println("READER:  " + xmlr + "\n");</PRE>
+</DIV>
+<DEL><A 
+name=wp1100386></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    <BR>    // 解析 XML<BR>    //<BR><CODE class=cCodeBold>    while(xmlr.hasNext()){<BR>      printEvent(xmlr);<BR>      xmlr.next();<BR>    }</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100421></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    <BR>    // 关闭读取器<BR>    //<BR><CODE class=cCodeBold>    xmlr.close();</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100426></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  }</PRE>
+</DIV>
+<DEL><A name=wp1100428></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  private static void printEvent(XMLStreamReader xmlr) {</PRE>
+</DIV>
+<DEL><A 
+name=wp1104691></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    System.out.print("EVENT:["+xmlr.getLocation().getLineNumber()+"]["+<BR>                     xmlr.getLocation().getColumnNumber()+"] ");</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1104690></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    System.out.print(" [");</PRE>
+</DIV>
+<DEL><A name=wp1100926></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    switch (xmlr.getEventType()) {</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100738></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    case XMLStreamConstants.START_ELEMENT:<BR>      System.out.print("&lt;");<BR>      printName(xmlr);<BR>      printNamespaces(xmlr);<BR>      printAttributes(xmlr);<BR>      System.out.print("&gt;");<BR>      break;</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100441></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    case XMLStreamConstants.END_ELEMENT:<BR>      System.out.print("&lt;/");<BR>      printName(xmlr);<BR>      System.out.print("&gt;");<BR>      break;</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100447></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    case XMLStreamConstants.SPACE:</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100739></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    case XMLStreamConstants.CHARACTERS:<BR>      int start = xmlr.getTextStart();<BR>      int length = xmlr.getTextLength();<BR>      System.out.print(new String(xmlr.getTextCharacters(),<BR>                                  start,<BR>                                  length));<BR>      break;</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100455></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    case XMLStreamConstants.PROCESSING_INSTRUCTION:<BR>      System.out.print("&lt;?");<BR>      if (xmlr.hasText())<BR>        System.out.print(xmlr.getText());<BR>      System.out.print("?&gt;");<BR>      break;</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100461></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    case XMLStreamConstants.CDATA:<BR>      System.out.print("&lt;![CDATA[");<BR>      start = xmlr.getTextStart();<BR>      length = xmlr.getTextLength();<BR>      System.out.print(new String(xmlr.getTextCharacters(),<BR>                                  start,<BR>                                  length));<BR>      System.out.print("]]&gt;");<BR>      break;</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100501></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    case XMLStreamConstants.COMMENT:<BR>      System.out.print("&lt;!--");<BR>      if (xmlr.hasText())<BR>        System.out.print(xmlr.getText());<BR>      System.out.print("--&gt;");<BR>      break;</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100507></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    case XMLStreamConstants.ENTITY_REFERENCE:<BR>      System.out.print(xmlr.getLocalName()+"=");<BR>      if (xmlr.hasText())<BR>        System.out.print("["+xmlr.getText()+"]");<BR>      break;</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100512></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><CODE class=cCodeBold>    case XMLStreamConstants.START_DOCUMENT:<BR>      System.out.print("&lt;?xml");<BR>      System.out.print(" version='"+xmlr.getVersion()+"'");<BR>      System.out.print(" encoding='"+xmlr.getCharacterEncodingScheme()+"'");<BR>      if (xmlr.isStandalone())<BR>        System.out.print(" standalone='yes'");<BR>      else<BR>        System.out.print(" standalone='no'");<BR>      System.out.print("?&gt;");<BR>      break;</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1100523></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    <BR>    System.out.println("]");<BR>  }</PRE>
+</DIV>
+<DEL><A 
+name=wp1100532></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  private static void printName(XMLStreamReader xmlr){<BR><CODE class=cCodeBold>    if(xmlr.hasName()){<BR>      String prefix = xmlr.getPrefix();<BR>      String uri = xmlr.getNamespaceURI();<BR>      String localName = xmlr.getLocalName();<BR></CODE>      printName(prefix,uri,localName);<BR>    }<BR>  }</PRE>
+</DIV>
+<DEL><A 
+name=wp1100541></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  private static void printName(String prefix,<BR>                                String uri,<BR>                                String localName) {<BR>    if (uri != null &amp;&amp; !("".equals(uri)) ) System.out.print("['"+uri+"']:");<BR>    if (prefix != null) System.out.print(prefix+":");<BR>    if (localName != null) System.out.print(localName);<BR>  }</PRE>
+</DIV>
+<DEL><A 
+name=wp1100818></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  private static void printAttributes(XMLStreamReader xmlr){<BR><CODE class=cCodeBold>    for (int i=0; i &lt; xmlr.getAttributeCount(); i++) {<BR>      printAttribute(xmlr,i);<BR></CODE>    }<BR>  }</PRE>
+</DIV>
+<DEL><A 
+name=wp1100820></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  private static void printAttribute(XMLStreamReader xmlr, int index) {<BR><CODE class=cCodeBold>    String prefix = xmlr.getAttributePrefix(index);<BR>    String namespace = xmlr.getAttributeNamespace(index);<BR>    String localName = xmlr.getAttributeLocalName(index);<BR>    String value = xmlr.getAttributeValue(index);<BR></CODE>    System.out.print(" ");<BR>    printName(prefix,namespace,localName);<BR>    System.out.print("='"+value+"'");<BR>  }</PRE>
+</DIV>
+<DEL><A 
+name=wp1100601></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  private static void printNamespaces(XMLStreamReader xmlr){<BR><CODE class=cCodeBold>    for (int i=0; i &lt; xmlr.getNamespaceCount(); i++) {<BR>      printNamespace(xmlr,i);<BR></CODE>    }<BR>  }</PRE>
+</DIV>
+<DEL><A 
+name=wp1100607></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  private static void printNamespace(XMLStreamReader xmlr, int index) {<BR><CODE class=cCodeBold>    String prefix = xmlr.getNamespacePrefix(index);<BR>    String uri = xmlr.getNamespaceURI(index);<BR></CODE>    System.out.print(" ");<BR>    if (prefix == null)<BR>      System.out.print("xmlns='"+uri+"'");<BR>    else<BR>      System.out.print("xmlns:"+prefix+"='"+uri+"'");<BR>  }<BR>}</PRE>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1073967></A>   </DEL>获取 XMLStreamReader 对象 </H3>
+<P class=pBody><DEL><A name=wp1099355></A></DEL>可使用 <CODE 
+class=cCode>XMLInputFactory.createXMLStreamReader()</CODE> 方法实例化基于 XML 文档的 <CODE 
+class=cCode>XMLStreamReader</CODE> 对象，如以下代码摘录所示： </P>
+<DEL><A 
+name=wp1099433></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>XMLStreamReader xmlr = xmlif.createXMLStreamReader(new FileReader(filename));</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1099356></A></DEL>在此示例中，<CODE 
+class=cCode>xmlif</CODE> 是 <CODE class=cCode>XMLInputFactory</CODE> 实例。 </P>
+<P class=pBody><DEL><A name=wp1099447></A></DEL><CODE 
+class=cCode>createXMLStreamReader()</CODE> 方法的各种签名允许将下列 XML 文档格式作为参数： </P>
+<DIV class=pSmartList1Bullet>
+  <UL>
+    <LI><DEL><A name=wp1099357></A></DEL><CODE 
+class=cCode>java.io.InputStream</CODE>
+    <LI><DEL><A name=wp1099358></A></DEL><CODE 
+class=cCode>java.io.Reader</CODE>（如示例所示）
+    <LI><DEL><A name=wp1099359></A></DEL><CODE 
+class=cCode>javax.xml.transform.Source</CODE>（在 <SPAN class=cHyperlink><A 
+href="http://java.sun.com/xml/">JAXP API</A></SPAN> 中指定） </LI>
+  </UL>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1076314></A>   </DEL>确定特定 XML 事件类型 </H3>
+<P class=pBody><DEL><A name=wp1102586></A></DEL>要在解析 XML 文档时确定特定事件类型，请使用 <CODE 
+class=cCode>XMLStreamReader.next()</CODE> 或 <CODE 
+class=cCode>XMLStreamReader.getEventType()</CODE> 方法。<CODE 
+class=cCode>next()</CODE> 方法可读取下一个事件，并返回一个整数（此整数可标识所读取的事件类型）；<CODE 
+class=cCode>getEventType()</CODE> 方法只返回标识当前事件类型的整数。<CODE 
+class=cCode>XMLStreamReader</CODE> 的 <CODE class=cCode>XMLStreamConstants</CODE> 超接口可定义事件类型常量，如以下列表所示： </P>
+<DIV class=pSmartList1Bullet>
+  <UL>
+    <LI><DEL><A name=wp1102714></A></DEL><CODE 
+class=cCode>XMLStreamConstants.ATTRIBUTE</CODE>
+    <LI><DEL><A name=wp1102718></A></DEL><CODE 
+class=cCode>XMLStreamConstants.CDATA</CODE>
+    <LI><DEL><A name=wp1102722></A></DEL><CODE 
+class=cCode>XMLStreamConstants.CHARACTERS</CODE>
+    <LI><DEL><A name=wp1102726></A></DEL><CODE 
+class=cCode>XMLStreamConstants.COMMENT</CODE>
+    <LI><DEL><A name=wp1102730></A></DEL><CODE 
+class=cCode>XMLStreamConstants.DTD</CODE>
+    <LI><DEL><A name=wp1102734></A></DEL><CODE 
+class=cCode>XMLStreamConstants.END_DOCUMENT</CODE>
+    <LI><DEL><A name=wp1102738></A></DEL><CODE 
+class=cCode>XMLStreamConstants.END_ELEMENT</CODE>
+    <LI><DEL><A name=wp1102742></A></DEL><CODE 
+class=cCode>XMLStreamConstants.ENTITY_DECLARATION</CODE>
+    <LI><DEL><A name=wp1102746></A></DEL><CODE 
+class=cCode>XMLStreamConstants.ENTITY_REFERENCE</CODE>
+    <LI><DEL><A name=wp1102750></A></DEL><CODE 
+class=cCode>XMLStreamConstants.NAMESPACE</CODE>
+    <LI><DEL><A name=wp1102754></A></DEL><CODE 
+class=cCode>XMLStreamConstants.NOTATION_DECLARATION</CODE>
+    <LI><DEL><A name=wp1102758></A></DEL><CODE 
+class=cCode>XMLStreamConstants.PROCESSING_INSTRUCTION</CODE>
+    <LI><DEL><A name=wp1102886></A></DEL><CODE 
+class=cCode>XMLStreamConstants.SPACE</CODE>
+    <LI><DEL><A name=wp1102882></A></DEL><CODE 
+class=cCode>XMLStreamConstants.START_DOCUMENT</CODE>
+    <LI><DEL><A name=wp1102878></A></DEL><CODE 
+class=cCode>XMLStreamConstants.START_ELEMENT</CODE> </LI>
+  </UL>
+</DIV>
+<P class=pBody><DEL><A name=wp1102509></A></DEL>以下示例显示了如何使用 Java <CODE 
+class=cCode>case</CODE> 语句来确定 <CODE class=cCode>XMLStreamReader.next()</CODE> 方法返回的特定事件类型。此示例使用 <CODE class=cCode>XMLStreamReader.getEventType()</CODE> 方法确定由 <CODE class=cCode>next()</CODE> 方法返回的当前事件的整数事件类型。为简化起见，此示例仅打印已找到的事件，后面部分显示对事件的进一步处理。 </P>
+<DEL><A 
+name=wp1103284></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>switch (xmlr.getEventType()) {</PRE>
+</DIV>
+<DEL><A name=wp1103285></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.START_ELEMENT:<BR>  System.out.print("Start Element\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103154></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.END_ELEMENT:<BR>  System.out.print("End Element\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103158></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.SPACE:<BR>  System.out.print("Space\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103162></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.CHARACTERS:<BR>  System.out.print("Characters\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103166></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.PROCESSING_INSTRUCTION:<BR>  System.out.print("Processing Instrcutions\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103170></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.CDATA:<BR>  System.out.print("CDATA\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103174></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.COMMENT:<BR>  System.out.print("Comment\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103178></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.DTD:<BR>  System.out.print("DTD\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103182></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.ENTITY_REFERENCE:<BR>  System.out.print("Entity Reference\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103186></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.ENTITY_DECLARATION:<BR>  System.out.print("Entity Declaration\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103190></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.START_DOCUMENT:<BR>  System.out.print("Start Document\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103194></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.END_DOCUMENT:<BR>  System.out.print("End Document\n");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1104692></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>}</PRE>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1073269></A> </DEL>获取元素的全名 </H3>
+<P class=pBody><DEL><A name=wp1103433></A></DEL>元素的全名包含其前缀、名称空间 URI 
+  和本地名称；一旦确定了当前事件是开始元素还是结束元素，就可以分别使用 <CODE class=cCode>XMLStreamReader</CODE> 接口的 <CODE class=cCode>getPrefix()</CODE>、<CODE class=cCode>getNamespaceURI()</CODE> 和 <CODE class=cCode>getLocalName()</CODE> 方法获取此信息。 </P>
+<P class=pBody><DEL><A name=wp1104148></A></DEL>例如，假定在此示例程序中开始元素事件的 <CODE 
+class=cCode>case</CODE> 语句如下所示： </P>
+<DEL><A name=wp1103452></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.START_ELEMENT:</PRE>
+</DIV>
+<DEL><A 
+name=wp1103453></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  System.out.print("&lt;");<BR>  printName(xmlr);<BR>  printNamespaces(xmlr);<BR>  printAttributes(xmlr);<BR>  System.out.print("&gt;");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1103485></A></DEL>
+<TABLE class=Note>
+  <TBODY>
+    <TR>
+      <TD vAlign=top><STRONG>注意：</STRONG></TD>
+      <TD><CODE class=cCode>printNamespaces()</CODE> 和 <CODE 
+class=cCode>printAttributes()</CODE> 方法将在其他部分中讨论。 </TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<P class=pBody><DEL><A name=wp1103615></A></DEL>两个本地 <CODE 
+class=cCode>printName()</CODE> 方法可使用 <CODE class=cCode>getXXX()</CODE> 方法，如下： </P>
+<DEL><A name=wp1103502></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>private static void printName(XMLStreamReader xmlr){<BR>  if(xmlr.hasName()){<BR>    String prefix = xmlr.getPrefix();<BR>    String uri = xmlr.getNamespaceURI();<BR>    String localName = xmlr.getLocalName();<BR>    printName(prefix,uri,localName);<BR>  }<BR>}</PRE>
+</DIV>
+<DEL><A 
+name=wp1103511></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>private static void printName(String prefix,<BR>                              String uri,<BR>                              String localName) {<BR>  if (uri != null &amp;&amp; !("".equals(uri)) ) System.out.print("['"+uri+"']:");<BR>  if (prefix != null) System.out.print(prefix+":");<BR>  if (localName != null) System.out.print(localName);<BR>}</PRE>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1103432></A> </DEL>获取元素的特性 </H3>
+<P class=pBody><DEL><A name=wp1103420></A></DEL>一旦确定了当前事件是开始元素、结束元素还是特性，就可以使用 <CODE class=cCode>XMLStreamReader</CODE> 接口的 <CODE 
+class=cCode>getAttributeXXX()</CODE> 方法获取特性的列表及其值。 </P>
+<DEL><A 
+name=wp1103729></A></DEL>
+<TABLE class=Note>
+  <TBODY>
+    <TR>
+      <TD vAlign=top><STRONG>警告：</STRONG></TD>
+      <TD>只能将 <CODE class=cCode>getAttributeXXX()</CODE> 方法<EM 
+class=cEmphasis></EM>用于开始元素、结束元素和特性事件；如果尝试在其他任何事件类型上执行这些方法，将引发 <CODE 
+class=cCode>java.lang.IllegalStateException</CODE>。</TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<P class=pBody><DEL><A name=wp1103730></A></DEL>可使用 <CODE 
+class=cCode>getAttributeCount()</CODE> 方法返回当前元素的特性数目，并在迭代特性列表的循环中使用此计数。此方法的计数中不包含名称空间。其他 <CODE 
+class=cCode>getAttributeXXX()</CODE> 方法可返回特定特性的前缀、名称空间 URI、本地名称和值。 </P>
+<P class=pBody><DEL><A name=wp1103791></A></DEL>例如，假定此示例程序的开始元素事件的 <CODE 
+class=cCode>case</CODE> 语句如下所示： </P>
+<DEL><A name=wp1103792></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.START_ELEMENT:</PRE>
+</DIV>
+<DEL><A 
+name=wp1103793></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  System.out.print("&lt;");<BR>  printName(xmlr);<BR>  printNamespaces(xmlr);<BR>  printAttributes(xmlr);<BR>  System.out.print("&gt;");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1104166></A></DEL>
+<TABLE class=Note>
+  <TBODY>
+    <TR>
+      <TD vAlign=top><STRONG>注意：</STRONG></TD>
+      <TD><CODE class=cCode>printName()</CODE> 和 <CODE 
+class=cCode>printNamespaces()</CODE> 方法将在其他部分中讨论。 </TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<P class=pBody><DEL><A name=wp1103783></A></DEL>以下本地 <CODE 
+class=cCode>printAttributes()</CODE> 方法显示了一种迭代特性列表的方法；由于特性索引基于零，因此 <CODE 
+class=cCode>for</CODE> 循环将从 0 开始： </P>
+<DEL><A name=wp1103812></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>private static void printAttributes(XMLStreamReader xmlr){</PRE>
+</DIV>
+<DEL><A 
+name=wp1103814></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  for (int i=0; i &lt; xmlr.getAttributeCount(); i++) {<BR>    printAttribute(xmlr,i);<BR>  }<BR>}</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1103824></A></DEL>以下本地 <CODE 
+class=cCode>printAttribute()</CODE> 方法显示了如何打印出特定特性的所有信息： </P>
+<DEL><A 
+name=wp1103915></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>private static void printAttribute(XMLStreamReader xmlr, int index) {<BR>  String prefix = xmlr.getAttributePrefix(index);<BR>  String namespace = xmlr.getAttributeNamespace(index);<BR>  String localName = xmlr.getAttributeLocalName(index);<BR>  String value = xmlr.getAttributeValue(index);<BR>  System.out.print(" ");<BR>  printName(prefix,namespace,localName);<BR>  System.out.print("='"+value+"'");<BR>}</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1103862></A></DEL><CODE 
+class=cCode>printName()</CODE> 方法在<A href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1073269">获取元素的全名</A>中描述。 </P>
+<H3 class=pHeading2><DEL><A name=wp1101131></A> </DEL>获取元素的名称空间 </H3>
+<P class=pBody><DEL><A name=wp1104048></A></DEL>一旦确定了当前事件是开始元素、结束元素还是名称空间，就可以使用 <CODE class=cCode>XMLStreamReader</CODE> 接口的 <CODE 
+class=cCode>getNamespaceXXX()</CODE> 方法获取为事件声明的名称空间的列表。 </P>
+<DEL><A 
+name=wp1104049></A></DEL>
+<TABLE class=Note>
+  <TBODY>
+    <TR>
+      <TD vAlign=top><STRONG>警告：</STRONG></TD>
+      <TD>只能将 <CODE class=cCode>getNamespaceXXX()</CODE> 方法<EM 
+class=cEmphasis></EM>用于开始元素、结束元素和名称空间事件；如果尝试在其他任何事件类型上执行这些方法，将引发 <CODE 
+class=cCode>java.lang.IllegalStateException</CODE>。</TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<P class=pBody><DEL><A name=wp1104050></A></DEL>可使用 <CODE 
+class=cCode>getNamespaceCount()</CODE> 方法返回为当前事件声明的名称空间数目，并在迭代列表的循环中使用此计数。如果当前事件是结束元素，此计数则指将要超出范围的名称空间的数目。其他 <CODE 
+class=cCode>getNamespaceXXX()</CODE> 方法可返回特定名称空间的前缀和名称空间 URI。 </P>
+<P class=pBody><DEL><A name=wp1104156></A></DEL>例如，假定此示例程序的开始元素事件的 <CODE 
+class=cCode>case</CODE> 语句如下所示： </P>
+<DEL><A name=wp1103930></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.START_ELEMENT:</PRE>
+</DIV>
+<DEL><A 
+name=wp1103931></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  System.out.print("&lt;");<BR>  printName(xmlr);<BR>  printNamespaces(xmlr);<BR>  printAttributes(xmlr);<BR>  System.out.print("&gt;");<BR>  break;</PRE>
+</DIV>
+<DEL><A 
+name=wp1104185></A></DEL>
+<TABLE class=Note>
+  <TBODY>
+    <TR>
+      <TD vAlign=top><STRONG>注意：</STRONG></TD>
+      <TD><CODE class=cCode>printName()</CODE> 和 <CODE 
+class=cCode>printAttributes()</CODE> 方法将在其他部分中讨论。 </TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<P class=pBody><DEL><A name=wp1103932></A></DEL>以下本地 <CODE 
+class=cCode>printNamespaces()</CODE> 方法显示一种迭代开始元素名称空间列表的方法；由于名称空间索引基于零，故 <CODE 
+class=cCode>for</CODE> 循环从 0 开始： </P>
+<DEL><A name=wp1103980></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>private static void printNamespaces(XMLStreamReader xmlr){<BR>  for (int i=0; i &lt; xmlr.getNamespaceCount(); i++) {<BR>    printNamespace(xmlr,i);<BR>  }<BR>}</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1103975></A></DEL>以下的本地 <CODE 
+class=cCode>printNamespace()</CODE> 方法显示如何打印特定名称空间的所有信息： </P>
+<DEL><A 
+name=wp1103998></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>private static void printNamespace(XMLStreamReader xmlr, int index) {<BR>  String prefix = xmlr.getNamespacePrefix(index);<BR>  String uri = xmlr.getNamespaceURI(index);<BR>  System.out.print(" ");<BR>  if (prefix == null)<BR>    System.out.print("xmlns='"+uri+"'");<BR>  else<BR>    System.out.print("xmlns:"+prefix+"='"+uri+"'");<BR>}</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1103373></A></DEL><CODE 
+class=cCode>getNamespacePrefix()</CODE> 方法为默认名称空间声明返回 null。 </P>
+<H3 class=pHeading2><DEL><A name=wp1104140></A> </DEL>获取文本数据 </H3>
+<P class=pBody><DEL><A name=wp1104214></A></DEL><CODE 
+class=cCode>XMLStreamReader</CODE> 接口包含各种 <CODE class=cCode>getTextXXX()</CODE> 方法，以便从注释和 CDATA 之类的事件获取文本数据。 </P>
+<P class=pBody><DEL><A name=wp1104364></A></DEL>使用 <CODE 
+class=cCode>getTextStart()</CODE> 方法获取存储当前文本事件第一个字符的文本字符数组的偏移量。使用 <CODE 
+class=cCode>getTextLength()</CODE> 方法获取文本字符数组中字符序列的长度。最后，使用 <CODE 
+class=cCode>getTextCharacters()</CODE> 方法返回当前事件的字符数组。字符数组仅包含有关当前事件的文本信息，一旦调用 <CODE class=cCode>next()</CODE> 方法读取输入流的下一个事件，字符数组将用新信息来填写。 </P>
+<P class=pBody><DEL><A name=wp1104385></A>   </DEL>以下示例显示如何为 CDATA 事件打印文本数据： </P>
+<DEL><A name=wp1104426></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.CDATA:<BR>  System.out.print("&lt;![CDATA[");<BR>  start = xmlr.getTextStart();<BR>  length = xmlr.getTextLength();<BR>  System.out.print(new String(xmlr.getTextCharacters(),<BR>                              start,<BR>                              length));<BR>  System.out.print("]]&gt;");<BR>  break;</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1104439></A></DEL>如果首先要检查字符事件实际上具有文本，请使用 <CODE 
+class=cCode>hasText()</CODE> 方法，如以下示例所示： </P>
+<DEL><A name=wp1104478></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>case XMLStreamConstants.COMMENT:<BR>  System.out.print("&lt;!--");<BR>  if (xmlr.hasText())<BR>    System.out.print(xmlr.getText());<BR>  System.out.print("--&gt;");<BR>  break;</PRE>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1104501></A> </DEL>获取位置信息 </H3>
+<P class=pBody><DEL><A name=wp1104533></A></DEL>StAX API 的 <CODE 
+class=cCode>Location</CODE> 接口提供了获取事件位置信息的方法，如行号或列号，以及正在解析的 XML 的公共 ID 和系统 ID。使用 <CODE class=cCode>XMLStreamReader</CODE> 接口的 <CODE 
+class=cCode>getLocation()</CODE> 方法返回当前事件的 <CODE class=cCode>Location</CODE> 对象，如以下示例所示： </P>
+<DEL><A name=wp1104557></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>System.out.print("EVENT:["+xmlr.getLocation().getLineNumber()+"]["+<BR>                     xmlr.getLocation().getColumnNumber()+"] ");</PRE>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1087407></A> </DEL>关闭输入流 </H3>
+<P class=pBody><DEL><A name=wp1104636></A></DEL>在完成使用后，明确关闭 <CODE 
+class=cCode>XMLStreamReader</CODE> 是一个良好的编程实践，这样做可以释放资源。要关闭读取器，请使用 <CODE 
+class=cCode>XMLStreamReader.close()</CODE> 方法，如以下示例所示： </P>
+<DEL><A 
+name=wp1104649></A></DEL>
+<DIV class=pPreformatted>
+  <PRE><BR>// 关闭读取器<BR>//<BR>xmlr.close();</PRE>
+</DIV>
+<P>&nbsp;</P>
+<HR noShade>
+<H2 class=pHeading1><DEL><A name=wp1104639></A>   
+   </DEL>用 XMLStreamWriter 接口生成 
+  XML：典型步骤 </H2>
+<P class=pBody><DEL><A name=wp1087063></A></DEL>下列过程描述使用 StAX 游标 API 的 <CODE 
+class=cCode>XMLStreamWriter</CODE> 接口生成新 XML 文档的典型步骤。 </P>
+<DIV class=pSmartList1>
+  <OL class=pSmartList1 type=1>
+    <LI><DEL><A name=wp1101623></A></DEL>导入 <CODE 
+class=cCode>javax.xml.stream.*</CODE> 类。
+    <LI><DEL><A name=wp1101631></A></DEL>使用 <CODE 
+class=cCode>XMLOutputFactory.newInstance()</CODE> 方法来实例化 <CODE 
+class=cCode>XMLOutputFactory</CODE>，如下列代码摘录所示： <DEL><A name=wp1101633></A></DEL>
+      <DIV class=pPreformattedRelative>
+        <PRE>XMLOutputFactory xmlof = XMLOutputFactory.newInstance();</PRE>
+      </DIV>
+      <P class=pBodyRelative><DEL><A name=wp1101730></A></DEL>有关可以设置的属性列表的信息，请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1099912">为 XMLOutputFactory 接口定义的属性</A>。 </P>
+    <LI><DEL><A name=wp1101677></A></DEL>使用 <CODE 
+class=cCode>XMLOutputFactory.createXMLStreamWriter()</CODE> 方法实例化 <CODE 
+class=cCode>XMLStreamWriter</CODE> 对象，为其传送文件名或将包含 XML 的对象。
+      <P class=pBodyRelative><DEL><A name=wp1101637></A></DEL>有关详细信息，请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1101694">获取 XMLStreamWriter 对象</A>。 </P>
+    <LI><DEL><A name=wp1077527></A></DEL>将 XML 声明添加到输出<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1105345">将 XML 声明添加到输出流</A>
+    <LI><DEL><A name=wp1105756></A></DEL>将标准 XML 对象，如开始元素、注释和字符添加到输出。请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1074020">将标准 XML 事件添加到输出流</A>。
+    <LI><DEL><A name=wp1105762></A></DEL>将特性和名称空间声明添加到开始元素。请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1105299">将特性和名称空间声明添加到开始元素</A>。
+    <LI><DEL><A name=wp1105767></A></DEL>关闭输出流。请参阅<A 
+href="http://edocs.bea.com.cn/wls/docs100/xml/stax.html#wp1074024">关闭输出流</A>。 </LI>
+  </OL>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1106752></A>     </DEL>使用 StAX 生成 XML 的示例 </H3>
+<P class=pBody><DEL><A name=wp1106753></A></DEL>以下示例显示一个简单程序，此程序使用 StAX 的 <CODE 
+class=cCode>XMLStreamWriter</CODE> 接口生成 XML 文档。 </P>
+<P class=pBody><DEL><A name=wp1106754></A></DEL>程序首先创建 <CODE 
+class=cCode>XMLStreamWriter</CODE> 的实例，指定将输出写入当前目录的 <CODE 
+class=cCode>outFile.xml</CODE> 文件。然后使用各种 <CODE class=cCode>writeXXX()</CODE> 方法生成如下的 XML 文件： </P>
+<DEL><A name=wp1106755></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>&lt;?xml version='1.0' encoding='utf-8'?&gt;</PRE>
+</DIV>
+<DEL><A 
+name=wp1106756></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>&lt;!-- 这是注释 --&gt;<BR>&lt;person xmlns:one="http://namespaceOne" gender="f"&gt;<BR>    &lt;one:name hair="pigtails" freckles="yes"&gt;Pippi Longstocking&lt;/one:name&gt;<BR>&lt;/person&gt;</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1106757></A></DEL><CODE 
+class=cCode>XMLStreamWriter</CODE> 接口并不检查 XML 
+  文档的格式是否标准，确保格式的标准（例如每个开始元素都有一个相应的结束元素等）是编程人员的职责。此示例还显示如何使用 <CODE 
+class=cCode>writeCharacters("\n")</CODE> 方法，将新行添加到输出，以便使写入文本文件时 XML 的可读性更好。 </P>
+<P class=pBody><DEL><A name=wp1106758></A> </DEL>稍后各部分将描述用粗体显示的代码。 </P>
+<DEL><A 
+name=wp1106759></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>package examples.basic;</PRE>
+</DIV>
+<DEL><A name=wp1106760></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>import java.io.FileOutputStream;<BR>import java.util.Iterator;<BR><CODE class=cCodeBold>import javax.xml.stream.*;<BR></CODE>import javax.xml.namespace.QName;</PRE>
+</DIV>
+<DEL><A 
+name=wp1106761></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>/**<BR> * 这是一个简单的示例，说明如何使用<BR> * XMLStreamWriter 类生成 XML。<BR> *<BR> * 生成的 XML 文件类似如下所示：<BR> *<BR> *   &lt;?xml version='1.0' encoding='utf-8'?&gt;<BR> *<BR> *   &lt;!--this is a comment--&gt;<BR> *   &lt;person xmlns:one="http://namespaceOne" gender="f"&gt;<BR> *       &lt;one:name hair="pigtails" freckles="yes"&gt;Pippi Longstocking&lt;/one:name&gt;<BR> *   &lt;/person&gt;<BR> *<BR> *<BR> * @author 版权所有 (c) 2003，BEA Systems。保留所有权利。<BR> */</PRE>
+</DIV>
+<DEL><A 
+name=wp1106762></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>public class Generate {</PRE>
+</DIV>
+<DEL><A name=wp1106763></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  public static void main(String args[]) throws Exception {</PRE>
+</DIV>
+<DEL><A 
+name=wp1106764></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    <BR>    // 获取输出工厂<BR>    //<BR><CODE class=cCodeBold>    XMLOutputFactory xmlof = XMLOutputFactory.newInstance();<BR></CODE>    System.out.println("FACTORY: " + xmlof);</PRE>
+</DIV>
+<DEL><A 
+name=wp1106765></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    <BR>    // 实例化编写器<BR>    //<BR><CODE class=cCodeBold>    XMLStreamWriter xmlw = xmlof.createXMLStreamWriter(new FileOutputStream ("outFile.xml"));<BR></CODE>    System.out.println("READER:  " + xmlw + "\n");</PRE>
+</DIV>
+<DEL><A 
+name=wp1106766></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    <BR>    // 生成 XML<BR>    //</PRE>
+</DIV>
+<DEL><A 
+name=wp1106767></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 编写默认的 XML 声明<BR><CODE class=cCodeBold>    xmlw.writeStartDocument();<BR>    xmlw.writeCharacters("\n");<BR>    xmlw.writeCharacters("\n");</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1106768></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 编写注释<BR><CODE class=cCodeBold>    xmlw.writeComment("this is a comment");<BR>    xmlw.writeCharacters("\n");</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1106769></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 编写有一个“gender”特性的根元素“person”<BR><CODE class=cCodeBold>    xmlw.writeStartElement("person");<BR>    xmlw.writeNamespace("one", "http://namespaceOne");<BR>    xmlw.writeAttribute("gender","f");<BR>    xmlw.writeCharacters("\n");</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1106770></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 编写有某些内容和两个特性的“name”元素<BR><CODE class=cCodeBold>    xmlw.writeCharacters("    ");<BR>    xmlw.writeStartElement("one", "name", "http://namespaceOne");<BR>    xmlw.writeAttribute("hair","pigtails");<BR>    xmlw.writeAttribute("freckles","yes");<BR>    xmlw.writeCharacters("Pippi Longstocking");</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1106771></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 结束“name”元素<BR><CODE class=cCodeBold>    xmlw.writeEndElement();<BR>    xmlw.writeCharacters("\n");</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1106772></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 结束“person”元素<BR><CODE class=cCodeBold>    xmlw.writeEndElement();</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1106773></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 结束 XML 文档<BR><CODE class=cCodeBold>    xmlw.writeEndDocument();</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1106774></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 关闭 XMLStreamWriter 以释放资源<BR><CODE class=cCodeBold>    xmlw.close();</CODE></PRE>
+</DIV>
+<DEL><A 
+name=wp1106775></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>  }</PRE>
+</DIV>
+<DEL><A name=wp1106776></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>}</PRE>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1101694></A>   </DEL>获取 XMLStreamWriter 对象 </H3>
+<P class=pBody><DEL><A name=wp1101771></A></DEL>使用 <CODE 
+class=cCode>XMLOutputFactory.createXMLStreamWriter()</CODE> 方法来实例化来实例化基于 XML 文档的 <CODE class=cCode>XMLStreamWriter</CODE> 对象，如下列代码摘录所示： </P>
+<DEL><A 
+name=wp1101772></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>XMLStreamWriter xmlw = xmlof.createXMLStreamWriter(new FileOutputStream ("outFile.xml"));</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1101773></A></DEL>在本例中，<CODE 
+class=cCode>xmlof</CODE> 是 <CODE class=cCode>XMLOutputFactory</CODE> 实例。 </P>
+<P class=pBody><DEL><A name=wp1101698></A></DEL><CODE 
+class=cCode>createXMLStreamWriter()</CODE> 方法的各种签名允许将下列 XML 文档格式作为参数： </P>
+<DIV class=pSmartList1Bullet>
+  <UL>
+    <LI><DEL><A name=wp1101699></A></DEL><CODE class=cCode>java.io.OutputStream </CODE>（如示例所示）
+    <LI><DEL><A name=wp1101700></A></DEL><CODE class=cCode>java.io.Writer</CODE>
+    <LI><DEL><A name=wp1101702></A></DEL><CODE 
+class=cCode>javax.xml.transform.Result</CODE>（在 <SPAN class=cHyperlink><A 
+href="http://java.sun.com/xml/">JAXP API</A></SPAN> 中指定） </LI>
+  </UL>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1105345></A>   </DEL>将 XML 声明添加到输出流 </H3>
+<P class=pBody><DEL><A name=wp1105349></A></DEL>可使用 <CODE 
+class=cCode>XMLStreamWriter.writeStartDocument()</CODE> 方法，将 XML 声明作为 XML 
+  文档的第一行进行添加，如以下代码摘录所示： </P>
+<DEL><A name=wp1105356></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>xmlw.writeStartDocument();</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1105371></A>   </DEL>此方法没有任何参数，可写入默认 XML 声明： </P>
+<DEL><A name=wp1105375></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>&lt;?xml version='1.0' encoding='utf-8'?&gt;</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1105383></A></DEL>如果要指定不同编码或 XML 版本，请使用 <CODE 
+class=cCode>writeStartDocument()</CODE> 方法的下列特性： </P>
+<DIV class=pSmartList1Bullet>
+  <UL>
+    <LI><DEL><A name=wp1105398></A></DEL><CODE 
+class=cCode>writeStartDocument(java.lang.String version)</CODE>
+    <LI><DEL><A name=wp1105422></A></DEL><CODE 
+class=cCode>writeStartDocument(java.lang.String encoding, java.lang.String 
+      version)</CODE> </LI>
+  </UL>
+</DIV>
+<P class=pBody><DEL><A name=wp1105448></A></DEL>通过 <CODE 
+class=cCode>writeStartDocument()</CODE> 方法设置编码并不会设置底层输出的实际编码；它仅指定为 XML 声明的 <CODE 
+class=cCode>encoding</CODE> 特性写入的值。要实际设置输出的编码，必须在使用相应的 <CODE 
+class=cCode>XMLOutputFactory.createXMLStreamWriter()</CODE> 方法创建 <CODE 
+class=cCode>XMLStreamWriter</CODE> 实例时指定 <CODE class=cCode>encoding</CODE> 参数。 </P>
+<H3 class=pHeading2><DEL><A name=wp1074020></A>   </DEL>将标准 XML 事件添加到输出流 </H3>
+<P class=pBody><DEL><A name=wp1105539></A></DEL>可使用 <CODE 
+class=cCode>XMLStreamWriter.write</CODE><CODE 
+class=cCodeEmphasis>XXX</CODE><CODE class=cCode>()</CODE> 方法，将标准 XML 
+  事件，如开始元素、结束元素、注释、CDATA 和实体引用等添加到输出流。<CODE class=cCodeEmphasis>XXX</CODE> 指特定的事件，如 <CODE class=cCode>writeStartElement()</CODE>、<CODE 
+class=cCode>writeEndElement()</CODE>、<CODE class=cCode>writeComment()</CODE> 和 <CODE class=cCode>writeCData()</CODE> 等。可通过将名称和文本数据作为一个 <CODE 
+class=cCode>String</CODE> 进行传送来创建大多数元素。 </P>
+<P class=pBody><DEL><A name=wp1105620></A></DEL><CODE 
+class=cCode>XMLStreamWriter</CODE> 接口不会验证数据，也不检查文档格式是否标准，确保格式标准（例如每个开始元素都有一个相应的结束元素等）是编程人员的职责。编程人员还需要确保开始和结束元素事件嵌套的正确性。要在写入文本文件时使输出的 
+  XML 更便于人员阅读，请使用 <CODE class=cCode>writeCharacters("\n")</CODE> 方法在适当的位置添加新的行。 </P>
+<P class=pBody><DEL><A name=wp1105694></A>   </DEL>例如，假定要创建下列 XML 段： </P>
+<DEL><A 
+name=wp1105544></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>&lt;!-- 这是注释 --&gt;<BR>&lt;name&gt;Jane Doe&lt;/name&gt;</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1105545></A>   </DEL>将此元素添加到输出流的 Java 代码如下： </P>
+<DEL><A name=wp1105713></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>xmlw.writeComment("This is a comment");<BR>xmlw.writeCharacters("\n");</PRE>
+</DIV>
+<DEL><A 
+name=wp1105716></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>xmlw.writeStartElement("name");<BR>xmlw.writeCharacters("Jane Doe");<BR>xmlw.writeEndElement();<BR>xmlw.writeCharacters("\n");</PRE>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1105299></A> </DEL>将特性和名称空间声明添加到开始元素 </H3>
+<P class=pBody><DEL><A name=wp1105770></A></DEL>可紧随开始元素事件使用 <CODE 
+class=cCode>writeAttribute()</CODE> 方法将特性添加到开始元素。可以为特性指定前缀及其绑定到的 URI，或不指定任何前缀。 </P>
+<P class=pBody><DEL><A name=wp1105775></A>   </DEL>例如，假定要创建下列 XML 段： </P>
+<DEL><A 
+name=wp1105791></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>&lt;person gender="f"&gt;</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1105803></A>     </DEL>生成此 XML 的 Java 代码如下： </P>
+<DEL><A 
+name=wp1105812></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>xmlw.writeStartElement("person");<BR>xmlw.writeAttribute("gender","f");<BR>xmlw.writeCharacters("\n");</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1105844></A></DEL>可使用 <CODE 
+class=cCode>writeNamespace()</CODE> 方法将名称空间写入输出流。编程人员负责确保当前事件（例如开始元素）允许名称空间的写入；如果当前事件不允许名称空间的写入，将引发 <CODE 
+class=cCode>javax.xml.stream.XMLStreamException</CODE>。可使用其他 <CODE 
+class=cCode>writeXXX()</CODE> 方法的相应特性指定事件的前缀及其绑定到的 URI。 </P>
+<P class=pBody><DEL><A name=wp1105969></A></DEL>例如，下列 XML 输出显示了 <CODE 
+class=cCode>&lt;person&gt;</CODE> 元素的名称空间声明，以及为 <CODE 
+class=cCode>&lt;one&gt;</CODE> 子元素指定的 <CODE class=cCode>one</CODE> 前缀： </P>
+<DEL><A name=wp1105888></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>&lt;person xmlns:one="http://namespaceOne" gender="f"&gt;<BR>    &lt;one:name hair="pigtails" freckles="yes"&gt;Pippi Longstocking&lt;/one:name&gt;<BR>&lt;/person&gt;</PRE>
+</DIV>
+<P class=pBody><DEL><A name=wp1106015></A>     </DEL>生成此 XML 的 Java 代码如下： </P>
+<DEL><A 
+name=wp1106030></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 编写有一个“gender”特性的根元素“person”<BR>    xmlw.writeStartElement("person");<BR>    xmlw.writeNamespace("one", "http://namespaceOne");<BR>    xmlw.writeAttribute("gender","f");<BR>    xmlw.writeCharacters("\n");</PRE>
+</DIV>
+<DEL><A 
+name=wp1106036></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 编写有某些内容和两个特性的“name”元素<BR>    xmlw.writeCharacters("    ");<BR>    xmlw.writeStartElement("one", "name", "http://namespaceOne");<BR>    xmlw.writeAttribute("hair","pigtails");<BR>    xmlw.writeAttribute("freckles","yes");<BR>    xmlw.writeCharacters("Pippi Longstocking");</PRE>
+</DIV>
+<DEL><A 
+name=wp1106043></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 结束“name”元素<BR>    xmlw.writeEndElement();<BR>    xmlw.writeCharacters("\n");</PRE>
+</DIV>
+<DEL><A 
+name=wp1106047></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 结束“person”元素<BR>    xmlw.writeEndElement();</PRE>
+</DIV>
+<H3 class=pHeading2><DEL><A name=wp1074024></A> </DEL>关闭输出流 </H3>
+<P class=pBody><DEL><A name=wp1107544></A></DEL>完成 <CODE 
+class=cCode>XMLStreamWriter</CODE> 的使用后明确将其关闭以释放资源是一个很好的编程实践。要关闭编写器，请使用 <CODE 
+class=cCode>XMLStreamReader.close()</CODE> 方法，如以下示例所示： </P>
+<DEL><A 
+name=wp1106187></A></DEL>
+<DIV class=pPreformatted>
+  <PRE>    // 关闭 XMLStreamWriter 以释放资源<BR>    xmlw.close();</PRE>
+</DIV>
+<P>&nbsp;</P>
+<HR noShade>
+<H2 class=pHeading1><DEL><A name=wp1097624></A>   </DEL>为 XMLInputFactory 接口定义的属性 </H2>
+<P class=pBody><DEL><A name=wp1098769></A></DEL>下表列出在使用 <CODE 
+class=cCode>XMLInputFactory</CODE> 生成 <CODE class=cCode>XMLStreamReader</CODE> 或 <CODE class=cCode>XMLEventReader</CODE> 对象时，可以设置的标准属性。 </P>
+<DEL><A 
+name=wp1099144></A></DEL>
+<TABLE class=Note>
+  <TBODY>
+    <TR>
+      <TD vAlign=top><STRONG>注意：</STRONG></TD>
+      <TD>下表所有属性的前面均以 <CODE class=cCode>javax.xml.stream</CODE> 开始，如 <CODE 
+class=cCode>javax.xml.stream.isValidating</CODE>。
+        <DIV align=left>
+          <TABLE class=table id=wp1098785table1098783 cellSpacing=0 cellPadding=3>
+            <CAPTION>
+            <DEL><A name=wp1098785></A></DEL>表 4-2 <SPAN 
+style="TEXT-DECORATION: none; VERTICAL-ALIGN: baseline; FONT-WEIGHT: bold; FONT-STYLE: normal">标准 
+            XMLInputFactory 属性</SPAN>
+            </CAPTION>
+            <TBODY>
+              <TR vAlign=top align=center bgColor=#cccccc>
+                <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1098793></A> </DEL>属性 </DIV></TH>
+                <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1098795></A> </DEL>描述 </DIV></TH>
+                <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1098797></A> </DEL>返回类型 </DIV></TH>
+                <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1098799></A> </DEL>默认值 </DIV></TH>
+              </TR>
+              <TR vAlign=top align=left>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098801></A> </DEL>isValidating </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098803></A>  
+                     </DEL>指定实现特定的 DTD 
+                    验证是处于启用状态还是禁用状态。 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098805></A> </DEL>布尔 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098807></A> </DEL>False </DIV></TD>
+              </TR>
+              <TR vAlign=top align=left>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098809></A> </DEL>isNamespaceAware </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098811></A> 
+                       </DEL>指定名称空间处理是处于启用状态还是禁用状态。用于 
+                    XML 1.0 支持。 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098813></A> </DEL>布尔 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098815></A> </DEL>True </DIV></TD>
+              </TR>
+              <TR vAlign=top align=left>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098817></A> </DEL>isCoalescing </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098819></A> </DEL>指定是否合并相邻的字符数据。 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098821></A> </DEL>布尔 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098823></A> </DEL>False </DIV></TD>
+              </TR>
+              <TR vAlign=top align=left>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A 
+name=wp1098825></A> </DEL>isReplacingEntityReferences </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A 
+name=wp1098827></A> </DEL>指定内部实体引用是否应替换为其替换文本，且作为字符进行报告。 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098829></A> </DEL>布尔 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098831></A> </DEL>True </DIV></TD>
+              </TR>
+              <TR vAlign=top align=left>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A 
+name=wp1098833></A> </DEL>isSupportingExternalEntities </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098835></A> </DEL>指定是否解析外部已解析的实体。 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098837></A> </DEL>布尔 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098839></A> </DEL>False </DIV></TD>
+              </TR>
+              <TR vAlign=top align=left>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098841></A> </DEL>supportDTD </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098843></A>   </DEL>指定使用的处理器支持 DTD，还是不支持 DTD。 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098845></A> </DEL>布尔 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098847></A> </DEL>True </DIV></TD>
+              </TR>
+              <TR vAlign=top align=left>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098849></A> </DEL>reporter </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1099241></A> 
+                      </DEL>指定应使用的 
+                    javax.xml.stream.XMLReporter 的实现。 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098853></A> </DEL>XMLReporter </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098855></A> </DEL>Null </DIV></TD>
+              </TR>
+              <TR vAlign=top align=left>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098857></A> </DEL>resolver </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1099225></A> 
+                      </DEL>指定应使用的 
+                    javax.xml.stream.XMLResolver 的实现。 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098861></A> </DEL>XMLResolver </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098863></A> </DEL>Null </DIV></TD>
+              </TR>
+              <TR vAlign=top align=left>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098865></A> </DEL>allocator </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1099235></A> 
+                      </DEL>指定应使用的 
+                    javax.xml.stream.util.XMLEventAllocator 的实现。 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098869></A> </DEL>util.XMLEventAllocator </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1098871></A> </DEL>Null </DIV></TD>
+              </TR>
+            </TBODY></TABLE>
+      </DIV></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<P>&nbsp;</P>
+<HR noShade>
+<H2 class=pHeading1><DEL><A name=wp1099912></A>   </DEL>为 XMLOutputFactory 接口定义的属性 </H2>
+<P class=pBody><DEL><A name=wp1099913></A></DEL>下表列出在使用 <CODE 
+class=cCode>XMLOutputFactory</CODE> 生成 <CODE class=cCode>XMLStreamWriter</CODE> 或 <CODE class=cCode>XMLEventWriter</CODE> 对象时，可以设置的标准属性。 </P>
+<DEL><A 
+name=wp1100045></A></DEL>
+<TABLE class=Note>
+  <TBODY>
+    <TR>
+      <TD vAlign=top><STRONG>注意：</STRONG></TD>
+      <TD>下表所有属性的前面均以 <CODE class=cCode>javax.xml.stream</CODE> 开始，如 <CODE 
+class=cCode>javax.xml.stream.isValidating</CODE>。
+        <DIV align=left>
+          <TABLE class=table id=wp1100059table1100057 cellSpacing=0 cellPadding=3>
+            <CAPTION>
+            <DEL><A name=wp1100059></A>    
+            </DEL>表 4-3 标准 XMLOutputFactory 属性
+            </CAPTION>
+            <TBODY>
+              <TR vAlign=top align=center bgColor=#cccccc>
+                <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1100067></A> </DEL>属性 </DIV></TH>
+                <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1100069></A> </DEL>描述 </DIV></TH>
+                <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1100071></A> </DEL>返回类型 </DIV></TH>
+                <TH scope=col> <DIV class=pCellHeading><DEL><A name=wp1100073></A> </DEL>默认值 </DIV></TH>
+              </TR>
+              <TR vAlign=top align=left>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1100075></A> </DEL>isRepairingNamespaces </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1100077></A> </DEL>指定编写器使用默认名称空间前缀声明。 </DIV>
+                  <DIV class=pCellBody><DEL><A name=wp1100202></A></DEL>在生成 XML 时，存在 StAX 
+                    处理器如何修复名称空间和前缀的严格规则。有关详细信息，请参阅 <A 
+href="http://www.jcp.org/en/jsr/detail?id=173">StAX specification</A>。 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1100079></A> </DEL>布尔 </DIV></TD>
+                <TD class=table scope=row><DIV class=pCellBody><DEL><A name=wp1100081></A> </DEL>False </DIV></TD>
+              </TR>
+            </TBODY></TABLE>
+      </DIV></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<P>
+<BR>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

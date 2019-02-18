@@ -1,0 +1,255 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>一篇搞定RSA加密与SHA签名|与Java完全同步</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>看到这篇文章的同学可幸福了，当时在做RSA加密与签名的时候网上的资料简直不要太老，做完后实在是忍受不下去了，这篇文章我会详细讲解iOS如何实现RSA加密与签名，并且与Java完全同步，这是我的第二篇博客，若有什么不足之处还请大家指教。</P>
+<H2 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>基础知识</H2>
+<OL 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'>
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em"><STRONG 
+  style="FONT-WEIGHT: bold; TEXT-INDENT: 0px">什么是RSA？</STRONG><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>答：RSA是一种非对称加密算法，常用来对传输数据进行加密，配合上数字摘要算法，也可以进行文字签名。</LI>
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em"><STRONG 
+  style="FONT-WEIGHT: bold; TEXT-INDENT: 0px">RSA加密中padding？</STRONG><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>答：padding即填充方式，由于RSA加密算法中要加密的明文是要比模数小的，padding就是通过一些填充方式来限制明文的长度。后面会详细介绍padding的几种模式以及分段加密。</LI>
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em"><STRONG 
+  style="FONT-WEIGHT: bold; TEXT-INDENT: 0px">加密和加签有什么区别？</STRONG><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>答：加密：公钥放在客户端，并使用公钥对数据进行加密，服务端拿到数据后用私钥进行解密；<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>加签：私钥放在客户端，并使用私钥对数据进行加签，服务端拿到数据后用公钥进行验签。<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>前者完全为了加密；后者主要是为了防恶意攻击，防止别人模拟我们的客户端对我们的服务器进行攻击，导致服务器瘫痪。</LI></OL>
+<H2 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>基本原理</H2>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">RSA使用“密钥对”对数据进行加密解密，在加密解密前需要先生存公钥（Public 
+Key）和私钥（Private Key）。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">公钥(Public 
+key):用于加密数据. 用于公开, 一般存放在数据提供方, 例如iOS客户端。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">私钥(Private 
+key):用于解密数据. 必须保密, 私钥泄露会造成安全问题。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">iOS中的Security.framework提供了对RSA算法的支持，这种方式需要对密匙对进行处理, 
+根据public key生成证书, 通过private 
+key生成p12格式的密匙。想想jave直接用字符串进行加密解密简单多了。(⊙o⊙)…</P></DIV>
+<H2 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>实战</H2>
+<H2 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>证书生成</H2>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>RSA加密这块公钥、私钥必不可少的。<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>Apple是不支持直接使用字符串进行加密解密的，推荐使用p12文件</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>。这边教大家去生成在加密中使用到的所有文件，并提供给Java使用，想当年这个公钥私钥搞了半天了。 
+%&gt;_</P>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'>
+<UL 
+style="LIST-STYLE-TYPE: none; FONT-SIZE: 16px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">生成模长为1024bit的私钥<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>openssl genrsa -out 
+  private_key.pem 1024</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">生成certification 
+  require file<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>openssl req 
+  -new -key private_key.pem -out rsaCertReq.csr</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">生成certification 
+  并指定过期时间<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>openssl x509 -req 
+  -days 3650 -in rsaCertReq.csr -signkey private_key.pem -out rsaCert.crt</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">生成公钥供iOS使用<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>openssl x509 -outform der -in 
+  rsaCert.crt -out public_key.der</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">生成私钥供iOS使用 
+  这边会让你输入密码，后期用到在生成secKeyRef的时候会用到这个密码<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>openssl pkcs12 -export -out 
+  private_key.p12 -inkey private_key.pem -in rsaCert.crt</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">生成pem结尾的公钥供Java使用<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>openssl rsa -in private_key.pem 
+  -out rsa_public_key.pem -pubout</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">生成pem结尾的私钥供Java使用openssl 
+  pkcs8 -topk8 -in private_key.pem -out pkcs8_private_key.pem 
+-nocrypt</LI></UL></DIV>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>以上所有的步骤都是在终端下完成的哦 
+(<SPAN class=Apple-converted-space>&nbsp;</SPAN><EM 
+style="FONT-STYLE: italic">^__^</EM><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>)</P>
+<H2 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>生成公钥和私钥的secKeyRef</H2>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'><PRE class="prettyprint php" style='WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//根据你的p12文件生成私钥对应的SecKeyRef 这边返回若是nil 请检查你p12文件的生成步骤</SPAN>
+- (SecKeyRef)getPrivateKeyRefrenceFromData:(NSData*)p12Datapassword:(NSString*)password {
+&nbsp;
+SecKeyRef privateKeyRef = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">NULL</SPAN>;
+NSMutableDictionary * options = [[NSMutableDictionary alloc]init];
+[optionssetObject: passwordforKey:(__bridgeid)kSecImportExportPassphrase];
+CFArrayRef items = CFArrayCreate(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">NULL</SPAN>, <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>, <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>, <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">NULL</SPAN>);
+OSStatus securityError = SecPKCS12Import((__bridgeCFDataRef) p12Data, (__bridgeCFDictionaryRef)options, &amp;items);
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (securityError == noErr &amp;&amp; CFArrayGetCount(items) &gt; <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>) {
+&nbsp;&nbsp;&nbsp;&nbsp;CFDictionaryRef identityDict = CFArrayGetValueAtIndex(items, <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>);
+&nbsp;&nbsp;&nbsp;&nbsp;SecIdentityRef identityApp = (SecIdentityRef)CFDictionaryGetValue(identityDict, kSecImportItemIdentity);
+&nbsp;&nbsp;&nbsp;&nbsp;securityError = SecIdentityCopyPrivateKey(identityApp, &amp;privateKeyRef);
+&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (securityError != noErr) {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;privateKeyRef = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">NULL</SPAN>;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+}
+CFRelease(items);
+&nbsp;
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> privateKeyRef;
+}
+</PRE></DIV>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>–</P>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'><PRE class="prettyprint cs" style='WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'> <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//根据你的der文件公钥对应的SecKeyRef</SPAN>
+ - (SecKeyRef)getPublicKeyRefrenceFromeData:&nbsp;&nbsp;&nbsp;&nbsp;(NSData*)derData {
+&nbsp;
+SecCertificateRef myCertificate = SecCertificateCreateWithData(kCFAllocatorDefault, (__bridgeCFDataRef)derData);
+SecPolicyRef myPolicy = SecPolicyCreateBasicX509();
+SecTrustRef myTrust;
+OSStatus status = SecTrustCreateWithCertificates(myCertificate,myPolicy,&amp;myTrust);
+SecTrustResultType trustResult;
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (status == noErr) {
+&nbsp;&nbsp;&nbsp;&nbsp;status = SecTrustEvaluate(myTrust, &amp;trustResult);
+}
+SecKeyRef securityKey = SecTrustCopyPublicKey(myTrust);
+CFRelease(myCertificate);
+CFRelease(myPolicy);
+CFRelease(myTrust);
+&nbsp;
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> securityKey;
+}
+</PRE></DIV>
+<H2 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>加密与解密</H2>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'><PRE class="prettyprint perl" style='WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'>- (NSData<SPAN class=variable style="COLOR: rgb(0,128,128)">*)</SPAN>rsaEncryptData:(NSData<SPAN class=variable style="COLOR: rgb(0,128,128)">*)</SPAN>data {
+&nbsp;&nbsp;&nbsp;&nbsp;SecKeyRef key = [self getPublicKey];
+&nbsp;&nbsp;&nbsp;&nbsp;size_tcipherBufferSize = SecKeyGetBlockSize(key);
+&nbsp;&nbsp;&nbsp;&nbsp;uint8_t<SPAN class=variable style="COLOR: rgb(0,128,128)">*cipherBuffer</SPAN> = malloc(cipherBufferSize* sizeof(uint8_t));
+&nbsp;&nbsp;&nbsp;&nbsp;size_tblockSize = cipherBufferSize - <SPAN class=number style="COLOR: rgb(0,153,153)">11</SPAN>;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;size_tblockCount = (size_t)ceil([datalength] / (double)blockSize);
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NSMutableData <SPAN class=variable style="COLOR: rgb(0,128,128)">*encryptedData</SPAN> = [[NSMutableData alloc]init];
+&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> i=<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>; i
+</PRE></DIV>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>–</P>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'><PRE class="prettyprint perl" style='WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'>- (NSData<SPAN class=variable style="COLOR: rgb(0,128,128)">*)</SPAN>rsaDecryptData:(NSData<SPAN class=variable style="COLOR: rgb(0,128,128)">*)</SPAN>data {
+SecKeyRef key = [self getPrivatKey];
+&nbsp;
+size_tcipherBufferSize = SecKeyGetBlockSize(key);
+size_tblockSize = cipherBufferSize;
+size_tblockCount = (size_t)ceil([datalength] / (double)blockSize);
+&nbsp;
+NSMutableData <SPAN class=variable style="COLOR: rgb(0,128,128)">*decryptedData</SPAN> = [[NSMutableData alloc]init];
+&nbsp;
+<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">for</SPAN> (<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> i = <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>; i
+</PRE></DIV>
+<H4 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>RSA加密中的Padding</H4>
+<UL 
+style='LIST-STYLE-TYPE: none; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0px; PADDING-TOP: 0px; FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; WIDOWS: 1; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">RSA_PKCS1_PADDING 
+  填充模式，最常用的模式<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>要求: 输入：必须 比 RSA 
+  钥模长(modulus) 短至少11个字节, 也就是 RSA_size(rsa) – 11 如果输入的明文过长，必须切割，然后填充。<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>输出：和modulus一样长<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>根据这个要求，对于1024bit的密钥，block length 
+  = 1024/8 – 11 = 117 字节</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">RSA_PKCS1_OAEP_PADDING<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>输入：RSA_size(rsa) – 41<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>输出：和modulus一样长</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">RSA_NO_PADDING 
+  不填充<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><BR>输入：可以和RSA钥模长一样长，如果输入的明文过长，必须切割， 
+  然后填充<SPAN class=Apple-converted-space>&nbsp;</SPAN><BR>输出：和modulus一样长</LI></UL>
+<H2 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 18px/1.6em "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility'>签名与验证</H2>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'><PRE class="prettyprint php" style='WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//对数据进行sha256签名</SPAN>
+&nbsp;&nbsp;- (NSData *)rsaSHA256SignData:(NSData *)plainData {
+&nbsp;&nbsp;SecKeyRef key = [<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">self</SPAN> getPrivatKey];
+&nbsp;
+&nbsp;&nbsp;size_tsignedHashBytesSize = SecKeyGetBlockSize(key);
+&nbsp;&nbsp;uint8_t* signedHashBytes = malloc(signedHashBytesSize);
+&nbsp;&nbsp;memset(signedHashBytes, <SPAN class=number style="COLOR: rgb(0,153,153)">0x0</SPAN>, signedHashBytesSize);
+&nbsp;
+&nbsp;&nbsp;size_thashBytesSize = CC_SHA256_DIGEST_LENGTH;
+&nbsp;&nbsp;uint8_t* hashBytes = malloc(hashBytesSize);
+&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (!CC_SHA256([plainDatabytes], (CC_LONG)[plainDatalength], hashBytes)) {
+&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> nil;
+}
+&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SecKeyRawSign(key,
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;kSecPaddingPKCS1SHA256,
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hashBytes,
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hashBytesSize,
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;signedHashBytes,
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&amp;signedHashBytesSize);
+&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;NSData* signedHash = [NSDatadataWithBytes:signedHashBytes
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;length:(NSUInteger)signedHashBytesSize];
+&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (hashBytes)
+&nbsp;&nbsp;&nbsp;&nbsp;free(hashBytes);
+&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (signedHashBytes)
+&nbsp;&nbsp;&nbsp;&nbsp;free(signedHashBytes);
+&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> signedHash;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+</PRE></DIV>
+<P 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px'>–</P>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'><PRE class="prettyprint cs" style='WORD-WRAP: break-word; FONT-SIZE: 12px; BORDER-TOP: 1px solid; FONT-FAMILY: Monaco, Menlo, Consolas, "Courier New", monospace; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//这边对签名的数据进行验证 验签成功，则返回YES</SPAN>
+&nbsp;&nbsp;&nbsp;&nbsp;- (BOOL)rsaSHA256VerifyData:(NSData *)plainData&nbsp;&nbsp;&nbsp;&nbsp; withSignature:(NSData *)signature {
+&nbsp;&nbsp;&nbsp;&nbsp;SecKeyRef key = [self getPublicKey];
+&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;size_tsignedHashBytesSize = SecKeyGetBlockSize(key);
+&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">const</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN>* signedHashBytes = [signaturebytes];
+&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;size_thashBytesSize = CC_SHA256_DIGEST_LENGTH;
+&nbsp;&nbsp;&nbsp;&nbsp;uint8_t* hashBytes = malloc(hashBytesSize);
+&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN> (!CC_SHA256([plainDatabytes], (CC_LONG)[plainDatalength], hashBytes)) {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> NO;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OSStatus status = SecKeyRawVerify(key,
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;kSecPaddingPKCS1SHA256,
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hashBytes,
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hashBytesSize,
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;signedHashBytes,
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;signedHashBytesSize);
+&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> status == errSecSuccess;
+&nbsp;&nbsp;&nbsp;&nbsp;}
+</PRE></DIV>
+<DIV 
+style='WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px'><BR 
+class=Apple-interchange-newline></DIV></body>
+</html>

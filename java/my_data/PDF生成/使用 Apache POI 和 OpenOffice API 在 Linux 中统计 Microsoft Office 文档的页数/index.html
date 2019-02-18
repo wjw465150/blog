@@ -1,0 +1,615 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html class="dj_gecko dj_contentbox" xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-CN" lang="zh-CN"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>使用 Apache POI 和 OpenOffice API 在 Linux 中统计 Microsoft Office 文档的页数</title>
+<link rel="schema.DC" href="http://purl.org/DC/elements/1.0/">
+<link rel="SHORTCUT ICON" href="index_files/favicon.ico">
+<meta name="DC.Rights" content="© Copyright IBM Corporation 2012">
+<meta name="Keywords" content="Apache POI, OpenOffice, API, Microsoft Office, 页数统计, tttosca">
+<meta name="DC.Date" scheme="iso8601" content="2012-10-25">
+<meta name="Source" content="v17 delivery:developerWorks">
+<meta name="Security" content="Public">
+<meta name="Abstract" content="在实际的项目开发中经常会遇到需要在不同的操作系统平台上统计 Microsoft Office 系列文档页数的要求。Apache POI 提供了一套完整的用于访问微软格式文档的 Java API。但是 Apache POI 在计算微软的 word 文档的时候只能从 Word 文档的摘要中取得页数， 而实际上 word 文档中摘要位置显示页数大部分都是错误的，而微软也没有提供针对摘要位置页数进行修正的 API。这常常会导致用户无法获得正确的 Word 文档页数。对此，我们对 Apache POI 和 OpenOffice API 进行简要的介绍，并结合使用 Apache POI 和 OpenOffice API 开发了一套获取微软 Office 系列文档（WORD, EXCEL and POWERPOINT）的页数的解决方案，以方便广大的开发人员快速方便地应用到自己的项目中。">
+<meta name="Description" content="在实际的项目开发中经常会遇到需要在不同的操作系统平台上统计 Microsoft Office 系列文档页数的要求。Apache POI 提供了一套完整的用于访问微软格式文档的 Java API。但是 Apache POI 在计算微软的 word 文档的时候只能从 Word 文档的摘要中取得页数， 而实际上 word 文档中摘要位置显示页数大部分都是错误的，而微软也没有提供针对摘要位置页数进行修正的 API。这常常会导致用户无法获得正确的 Word 文档页数。对此，我们对 Apache POI 和 OpenOffice API 进行简要的介绍，并结合使用 Apache POI 和 OpenOffice API 开发了一套获取微软 Office 系列文档（WORD, EXCEL and POWERPOINT）的页数的解决方案，以方便广大的开发人员快速方便地应用到自己的项目中。">
+<meta name="IBM.Effective" scheme="W3CDTF" content="2012-10-25">
+<meta name="Owner" content="developerWorks/China/IBM">
+<meta name="DC.Language" scheme="rfc1766" content="zh-CN">
+<meta name="IBM.SpecialPurpose" content="SP001">
+<meta name="IBM.Country" content="CN">
+<meta name="Robots" content="index,follow">
+<meta name="DC.Type" scheme="IBM_ContentClassTaxonomy" content="CT316">
+<meta name="DC.Subject" scheme="IBM_SubjectTaxonomy" content="TT400">
+<meta name="dW.ContentArea" content="7">
+<meta name="dW.Topic" content="83">
+
+<meta scheme="IBM_WTMCategory" name="IBM.WTMCategory" content="SOFDCOSRCN">
+
+<link rel="canonical" href="http://www.ibm.com/developerworks/cn/opensource/os-cn-docpages-count/index.html">
+<!-- HEADER_SCRIPTS_AND_CSS_INCLUDE -->
+<link href="index_files/www.css" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/cnzh.css" rel="stylesheet" title="www" type="text/css">
+<!-- Masthead/footer -->
+<link href="index_files/dw-mfN2015-01.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/dw-article-6.css" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/dw-common-features.css" rel="stylesheet" title="www" type="text/css">
+<link href="index_files/dw-local-site-v17-N2014-05.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+        <link href="index_files/dw-bluemix-regbar.css" media="screen,projection" rel="stylesheet" title="www" type="text/css">
+<script async="" type="text/javascript" src="index_files/utag.js"></script><script type="text/javascript" src="index_files/www.js">//</script><script src="index_files/eluminate.js" type="text/javascript"></script>
+<script type="text/javascript" src="index_files/dw-www-v2.js">//</script><script src="index_files/Dialog.xd.js" charset="utf-8" type="text/javascript"></script>   
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script><script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script>
+<script type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script><!-- LEADSPACE_STYLES -->
+
+<script charset="utf-8" id="dojoIoScript2" src="index_files/cnzh-utf8.js" type="text/javascript"></script><script charset="utf-8" id="dojoIoScript3" src="index_files/gateway.js" type="text/javascript"></script><script charset="utf-8" id="dojoIoScript4" src="index_files/profiling.js" type="text/javascript"></script><script src="index_files/eluminate-1.js" type="text/javascript"></script><script src="index_files/move.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/TimedMoveable.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/_CssStateMixin.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/_FormMixin.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/_DialogMixin.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/DialogUnderlay.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/ContentPane.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/common.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/TooltipDialog.xd.js" charset="utf-8" type="text/javascript"></script><script charset="utf-8" id="dojoIoScript5" src="index_files/blackwhite_lists.json.js" type="text/javascript"></script><script src="index_files/Mover.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/Moveable.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/_ContentPaneResizeMixin.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/html.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/loading.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/common.xd-1.js" charset="utf-8" type="text/javascript"></script><script src="index_files/autoscroll.xd.js" charset="utf-8" type="text/javascript"></script><script src="index_files/_LayoutWidget.xd.js" charset="utf-8" type="text/javascript"></script><script id="utag_ibm.main_694" src="index_files/utag.694.js" charset="utf-8" async="" type="text/javascript"></script><script id="utag_ibm.main_699" src="index_files/utag.699.js" charset="utf-8" async="" type="text/javascript"></script><script id="utag_ibm.main_752" src="index_files/utag.752.js" charset="utf-8" async="" type="text/javascript"></script><script id="utag_ibm.main_763" src="index_files/utag.763.js" charset="utf-8" async="" type="text/javascript"></script><script id="utag_ibm.main_797" src="index_files/utag.797.js" charset="utf-8" async="" type="text/javascript"></script><script charset="utf-8" id="dojoIoScript6" src="index_files/atrk.js" type="text/javascript"></script><script id="tiqapp" src="index_files/utag.v.js" charset="utf-8" async="" type="text/javascript"></script><script src="index_files/50200000.js" type="text/javascript" language="javascript"></script><script src="index_files/cookie-id.js" type="text/javascript" language="javascript"></script><script src="index_files/rules_50200000.js" type="text/javascript" language="javascript"></script><script src="index_files/dispatcher-v3.js" type="text/javascript" language="javascript"></script><script type="text/javascript" src="index_files/yahoo-min.js"></script><script type="text/javascript" src="index_files/cp-v3.js"></script><script type="text/javascript" src="index_files/json-min.js"></script></head>
+<body aria-busy="false" class="v17" id="ibm-com">
+<div style="opacity: 1; top: 0px;" id="dw-regbar" class="dw-home-band" aria-labelledby="dw-regbar-vp" role="complementary">
+    <div class="ibm-columns">
+        <div class="ibm-col-6-6">
+            <span id="dw-regbar-bluemix">IBM <strong>Bluemix</strong></span>
+            <span id="dw-regbar-vp">点击按钮，开始云上的开发！</span>
+            <p class="ibm-button-link-alternate dw-button-green">
+                <a id="article-rbar-bmix-home-regbar" class="dw-button-large dw-regbar-btn" href="https://developer.ibm.com/sso/bmregistration?lang=zh_CN&amp;ca=dwchina-_-bluemix-_-os-cn-docpages-count-_-regbar-article">开始您的试用</a>
+            </p>
+        </div>
+    </div>
+    <span>
+        <a onclick="" role="button">
+            <span id="dw-close-regbar" aria-label="Close the registration bar" title="Close the registration bar" role="button">
+        </span></a>
+    </span>
+</div>
+	<div style="margin-top: 42px;" id="ibm-top" class="ibm-landing-page ibm-no-scroll"><img src="index_files/ibm_logo_print.png" id="ibm-print-masthead" alt="IBM Print" height="15" width="43">
+
+<!-- MASTHEAD_BEGIN -->		
+<div role="banner" id="ibm-masthead">
+
+    <!-- TOP ROW -->    
+	<div id="dw-masthead-top-row">
+		<ul id="ibm-mast-options-dw" role="toolbar" aria-label="Masthead navigation">
+			<li id="dw-mast-top-4" role="presentation">
+				<a href="http://www.ibm.com/developerworks/cn/" tabindex="0"><img src="index_files/dwn-dw-badge.png" alt="dW" aria-label="dW" height="22" width="43"></a>
+			</li>
+			<li id="dw-mast-top-0" role="presentation">
+				<div id="dw-mast-signin">
+					<a id="dw-mf-signin-link" class="" href="http://www.ibm.com/developerworks/dwwi/jsp/ssologin.jsp?d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F&amp;lang=zh_CN&amp;a=dwmav" title="" tabindex="2">登录</a>
+					<span class="dw-mf-signin-spacer">|</span>
+					<a id="dw-mf-reg-link" class="" href="http://www.ibm.com/developerworks/dwwi/jsp/ssoregister.jsp?d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F&amp;lang=zh_CN&amp;a=dwmav" title="" tabindex="3">注册</a>
+				</div>
+				<div id="dw-mast-auth-link" class="dw-mf-hide">
+					<a class="authenticated ibm-active" href="#" role="button" tabindex="2"></a>
+					<ul id="dw-mast-auth-menu" class="dw-mf-hide">
+						<li class="dw-mast-auth-menu-title" aria-hidden="true">developerWorks 社区</li>
+						<li>
+							<span class="dw-mast-auth-menu-arrow" aria-hidden="true">›</span><a href="http://www.ibm.com/developerworks/community/profiles/html/myProfileView.do?lang=zh" tabindex="3">我的概要信息</a>
+						</li>
+						<li>
+							<span class="dw-mast-auth-menu-arrow" aria-hidden="true">›</span><a href="http://www.ibm.com/developerworks/community/groups/service/html/mycommunities?lang=zh" tabindex="4">我的社区</a>
+						</li>
+						<li>
+							<span class="dw-mast-auth-menu-arrow" aria-hidden="true">›</span><a href="http://www.ibm.com/developerworks/community/news/?lang=zh" tabindex="5">设置</a>
+						</li>
+						<li class="dw-mast-auth-menu-divider"><hr></li>
+						<li>
+							<span class="dw-mast-auth-menu-arrow" aria-hidden="true">›</span><a id="dw-mast-signout-link" href="http://www.ibm.com/developerworks/dwwi/jsp/ssologout.jsp?d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2F&amp;a=dwmav" tabindex="6">退出</a>
+						</li>
+					</ul>				
+				</div>
+			</li>
+			<li id="dw-mast-top-1">
+				<div></div>
+			</li>
+			<li id="dw-mast-top-3" role="presentation">
+				<a href="http://www.ibm.com/cn/zh/" tabindex="1">IBM</a>
+			</li>
+		</ul>
+	</div>
+
+    <!-- BOTTOM ROW -->
+	<div id="ibm-universal-nav-dw" aria-label="Site map">
+		<ul id="ibm-unav-links-dw">
+			<li id="ibm-unav-home-dwlogo">
+				<a href="http://www.ibm.com/developerworks/cn/"><img src="index_files/dwn-dw-wordmark.png" alt="developerWorks®" height="28" width="225"></a>
+			</li>
+		</ul>
+		<ul id="ibm-menu-links-dw" class="ibm-menu-links-dw-cn" role="toolbar" aria-label="Site map">
+			<li id="dw-mast-nav-0" role="presentation"><a href="http://www.ibm.com/developerworks/cn/topics/" tabindex="0">技术主题</a></li>
+			<li id="dw-mast-nav-1" role="presentation"><a href="http://www.ibm.com/developerworks/cn/downloads/" tabindex="0">软件下载</a></li>
+			<li id="dw-mast-nav-2" role="presentation"><a href="http://www.ibm.com/developerworks/community/?lang=zh" tabindex="0">社区</a></li>
+			<li id="dw-mast-nav-3" role="presentation"><a href="https://www.ibm.com/developerworks/community/groups/service/html/communityview?communityUuid=6d7f9e5d-5f89-4767-a006-a81b8d186370&amp;lang=zh" tabindex="0">技术讲座</a></li>
+		</ul>
+		<form id="ibm-search-form" action="http://www.ibm.com/search/csass/search/" method="get" name="form1" aria-label="搜索 developerWorks" role="search">
+			<p>
+				<label for="q"><span class="ibm-access">搜索 developerWorks</span></label>
+				<input id="q" name="q" value="搜索 developerWorks" maxlength="100" type="text">
+				<input name="sn" value="dw" type="hidden">
+				<input name="lang" value="zh" type="hidden">
+				<input name="cc" value="CN" type="hidden">
+				<input name="en" value="utf" type="hidden">
+				<input name="hpp" value="20" type="hidden">
+				<input name="dws" value="cndw" type="hidden">
+				<input name="lo" value="zh" type="hidden">
+				<input id="ibm-search" class="ibm-btn-search" value="提交" type="submit">
+			</p>
+		</form>
+	</div>    
+	
+<div aria-label="社交工具" role="navigation" style="display: block;" id="ibm-social-tools"><ul aria-label="Social tool list" role="toolbar"><li><a tabindex="0" role="button" dojoattrid="0" rel="print" href="#" title="打印本页面" class="ibm-share-print">打印本页面</a></li><li><a tabindex="-1" role="button" dojoattrid="1" rel="email" href="#" title="用电子邮件发送本页面" class="ibm-share-email">用电子邮件发送本页面</a></li><li></li><li></li><li><a class="ibm-share-weibo" tabindex="-1" role="button" dojoattrid="2" rel="新浪微博" title="新浪微博" href="http://service.weibo.com/share/share.php?title=%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0&amp;url=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F&amp;language=zh_cn" onclick="">新浪微博</a></li><li><a class="ibm-share-renren" tabindex="-1" role="button" dojoattrid="3" rel="人人网" title="人人网" href="http://share.renren.com/share/buttonshare?title=%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0&amp;link=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F" onclick="">人人网</a></li><li><a class="dwcn-tencent-link" tabindex="-1" role="button" dojoattrid="4" rel="腾讯微博" title="腾讯微博" href="http://v.t.qq.com/share/share.php?title=%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0&amp;url=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F" onclick="">腾讯微博</a></li><li><a class="dwcn-sohu-link" tabindex="-1" role="button" dojoattrid="5" rel="搜狐微博" title="搜狐微博" href="http://t.sohu.com/third/post.jsp?title=%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0%20&amp;link=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F" onclick="">搜狐微博</a></li><li><a class="dwcn-netease-link" tabindex="-1" role="button" dojoattrid="6" rel="网易微博" title="网易微博" href="http://t.163.com/article/user/checkLogin.do?info=%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0%20http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F" onclick="">网易微博</a></li><li><a class="ibm-share-digg" title="Digg" href="http://digg.com/submit?phase=2&amp;url=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F&amp;title=%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0" rel="digg" dojoattrid="7" role="button" tabindex="-1" onclick="">Digg</a></li><li><a class="ibm-share-facebook" title="Facebook" href="http://www.facebook.com/sharer.php?u=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F&amp;t=%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0" rel="facebook" dojoattrid="8" role="button" tabindex="-1" onclick="">Facebook</a></li><li><a class="ibm-share-twitter" title="Twitter" href="http://twitter.com/?status=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F%20-%20%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0" rel="twitter" dojoattrid="9" role="button" tabindex="-1" onclick="">Twitter</a></li><li><a class="ibm-share-delicious" title="Delicious" href="http://delicious.com/post?url=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F&amp;title=%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0" rel="delicious" dojoattrid="10" role="button" tabindex="-1" onclick="">Delicious</a></li><li><a class="ibm-share-linkedin" title="Linked In" href="http://www.linkedin.com/shareArticle?mini=true&amp;url=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F&amp;title=%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0" rel="linkedin" dojoattrid="11" role="button" tabindex="-1" onclick="">Linked In</a></li></ul></div></div>
+<div id="fdiv" class="ibm-access"></div><!-- MASTHEAD_END -->
+	    
+<!-- LAYOUT -->
+<!-- LEADSPACE_BEGIN --> 
+<div role="main" id="ibm-access-cntr"><div id="ibm-leadspace-head">
+	<!-- LEADSPACE_BODY_BEGIN --> 
+	<div id="ibm-leadspace-body">
+		<!-- Navigation_Trail_BEGIN -->
+      <ul aria-label="Bread Crumbs" role="navigation" id="ibm-navigation-trail"><li><a href="http://www.ibm.com/developerworks/cn/">developerWorks 中国</a></li><li><a href="http://www.ibm.com/developerworks/cn/topics/">技术主题</a></li><li><a href="http://www.ibm.com/developerworks/cn/opensource/">Open source</a></li><li><a href="http://www.ibm.com/developerworks/cn/views/opensource/libraryview.jsp">文档库</a></li></ul>
+		<!-- END_Navigation_Trail -->
+			<!-- Title_Subtitle -->
+			<h1>使用 Apache POI 和 OpenOffice API 在 Linux 中统计 Microsoft Office 文档的页数</h1>
+	</div>
+	<!-- LEADSPACE_BODY_END --> 
+	<!-- SUMMARY_BEGIN -->
+	<div id="dw-summary-area" class="dw-summary-columns">
+		<div class="ibm-col-6-4">
+		<p>在实际的项目开发中经常会遇到需要在不同的操作系统平台上统计 Microsoft Office 系列文档页数的要求。Apache POI 提供了一套完整的用于访问微软格式文档的 Java API。但是 Apache POI 在计算微软的 word 文档的时候只能从 Word 文档的摘要中取得页数， 而实际上 word 文档中摘要位置显示页数大部分都是错误的，而微软也没有提供针对摘要位置页数进行修正的 API。这常常会导致用户无法获得正确的 Word 文档页数。对此，我们对 Apache POI 和 OpenOffice API 进行简要的介绍，并结合使用 Apache POI 和 OpenOffice API 开发了一套获取微软 Office 系列文档（WORD, EXCEL and POWERPOINT）的页数的解决方案，以方便广大的开发人员快速方便地应用到自己的项目中。</p>
+		<p class="ibm-no-print ibm-ind-link">
+
+			
+			<span id="nCmts"><span>4</span><img class="dw-cmts-arrow" alt="" src="index_files/dw-cmts-arrow.png" height="7" width="7"> <a href="#icomments" class="dw-cmt-link">评论：</a></span>
+		</p>
+		</div>
+		<div class="ibm-col-6-2 dw-toc-margin">
+			<p class="dw-summary-author"><a role="button" href="#authorN1001C" class="ibm-popup-link" onclick="">赵 迎威</a> (<a href="mailto:yingweiz@cn.ibm.com?subject=%E4%BD%BF%E7%94%A8%20Apache%20POI%20%E5%92%8C%20OpenOffice%20API%20%E5%9C%A8%20Linux%20%E4%B8%AD%E7%BB%9F%E8%AE%A1%20Microsoft%20Office%20%E6%96%87%E6%A1%A3%E7%9A%84%E9%A1%B5%E6%95%B0">yingweiz@cn.ibm.com</a>), 软件工程师, IBM</p>
+<div id="authorN1001C" class="ibm-common-overlay"><div class="ibm-head"><p><a href="#close" class="ibm-common-overlay-close">关闭 [x]</a></p></div><div class="ibm-body"><div class="ibm-main"><div class="ibm-title"><!--this is where the h2 usually goes--></div><div class="ibm-container ibm-alternate"><div class="ibm-container-body">
+<p><!--.-->
+赵迎威，现在 IBM 中国软件开发中心工作，目前从事 web solution 方面的开发工作。</p><br><br></div></div></div></div><div class="ibm-footer"><!----></div></div>
+			<p class="dw-summary-date">2012 年 10 月 25 日</p>
+			
+
+
+			<div aria-hidden="true" class="ibm-container" id="dw-toc"><div class="ibm-container-body"><ul class="ibm-twisty"><li><a href="#toggle" class="ibm-twisty-trigger ibm-twisty-trigger-closed"><img src="index_files/c.gif" alt="+"></a><span class="ibm-twisty-head">内容</span><div style="display: none;" class="ibm-twisty-body"><ul style="font-size:0.8em" class="ibm-link-list">
+<li><a class="ibm-anchor-down-em-link" href="#major1">Apache POI 介绍</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#major2">OpenOffice 介绍</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#major3">用 Apache POI 和 OpenOffice API 来读取 office 文档页数</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#major4">Apache POI 和 OpenOffice API 的优缺点</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#major5">结束语</a></li>
+<li><a class="ibm-anchor-down-em-link" href="#resources">参考资料 </a></li>
+<li><a class="ibm-anchor-down-em-link" href="#icomments">评论</a></li></ul></div></li></ul></div></div>
+		</div>
+	</div>
+	<!-- SUMMARY_END -->
+</div><div id="ibm-pcon">
+
+<!-- BEGIN_IBM-CONTENT -->
+<div id="ibm-content">
+
+<!-- BEGIN_IBM-CONTENT-BODY -->
+<div id="ibm-content-body">
+
+<!-- BEGIN_IBM-CONTENT-MAIN -->
+<div id="ibm-content-main">
+
+<!-- 1_1_COLUMN_BEGIN -->
+<div class="ibm-columns">
+<div class="ibm-col-1-1"><div class="dw-article-sidebar dw-bluemix" id="dwc-exp-a"><img src="index_files/bluemix-graphic.png" alt="" height="64" width="64"><p>在 IBM Bluemix 云平台上开发并部署您的下一个应用。</p><p class="ibm-button-link-alternate dw-button-green"><a id="tutc-sbar-bmix-home-btn-ABa" href="https://developer.ibm.com/sso/bmregistration?lang=zh_CN&amp;ca=dwchina-_-bluemix-_-os-cn-docpages-count-_-sidebar" class="dw-button-large">开始您的试用</a></p></div>
+
+<h2 id="major1">Apache POI 介绍</h2><p>Apache POI 是一套用于访问微软 Office 格式文档 (Word, Excel and PowerPoint) 的 Java API。其中用于操作 Excel 格式文件的 API 是 HSSF，用于操作 Word 格式文件的 API 是 HWPF 以及用于操作 PowerPoint 格式文件的 API 是 HSLF。</p><p>POI 的官方网站是 http://poi.apache.org，用户可以先从这里下载最新的版本 3.6，下载解压后里面有三个 jar 包（poi-3.6-20091214.jar，poi-contrib-3.6-20091214.jar 和 poi-scratchpad-3.6-20091214.jar）将这三个 jar 包拷贝至 Eclipse 工程的 lib 目录中，然后刷新工程即可加载 POI 的类库。</p><h3 id="minor1.1">POI 主要组成部分</h3><p>POIFS：POIFS 是该项目的最古老，最稳定的一部分，它同时支持读写功能，所有的组件最终都依赖于它的定义。</p><p>POIFS 对于 OLE 2 文件操作： POIFS 的基础是最古老和最稳定的项目的一部分。这是我们的 OLE 2 复合文档格式的纯 Java 实现。它同时支持阅读和书写功能。我们的组成部分都最终依赖于它的定义。更多信息请参阅 POIFS 项目页。</p><p>HSSF 对于 Excel 文件操作：HSSF 是针对 Microsoft Excel 97（-2003）文件格式（BIFF8）的文档操作的纯 Java 实现。它支持阅读和书写能力。更多信息请参阅 HSSF 项目页。</p><p>HWPF 对于 Word 文件操作：HWPF 是针对 Microsoft Word 97 文件格式的文档操作的纯 Java 接口。该组件是在发展的初期阶段，对 word 文档的读写能力有限，仅仅可以阅读和书写简单的 word 文件，更多信息 HWPF 请参阅 HWPF 的项目页。</p><p>HSLF 对于 PowerPoint 文件操作：HSLF 是针对 Microsoft PowerPoint 97（-2003）文件格式的文档操作的纯 Java 接口。它支持阅读和书写能力。更多信息请参阅 HSLF 项目页。</p><p>HDGF 对于 Visio 文件操作：除此之外 POI 还提供了 HDGF 对微软 Visio97（-2003）文件格式的文档操作的纯 Java 接口。它目前只支持读取操作，在一个很低的水平，只支持简单的文本提取。更多信息请参阅 HDGF 项目页。</p><p>HPSF 文档属性：HPSF 是这对 OLE 2 设置格式的纯 Java 接口。主要是用来存储文件的属性集（如：标题，作者，最后修改日期等属性），他们可以为特定应用目的所使用。更多信息请参阅 HPSF 项目页。</p><p>下面我们简单的介绍一下项目中经常会使用到的对于 Excel 和 Word 格式文件进行操作的接口：</p><p><strong>HSSF 接口</strong></p><p>目前 POI 比较成熟的部分是 HSSF 接口，处理 MS Excel（97-2003）对象。它不像我们仅仅使用 csv 生成的没有格式的可以由 Excel 转换的东西，而是真正的 Excel 对象，你可以控制一些属性如 cell，sheet 等等。当然，HSSF 也有一些缺点，比如不能直接支持 Excel 图表，包与包之间依赖关系比较复杂等等。</p><p>对于统计页数 (sheet 个数 ) 来说，HSSF 接口可以很简单的完成这一功能。下面我们简单的介绍一下 HSSF 接口：</p><p>HSSF 提供给我们使用的对象在 org.apache.poi.hssf.usermodel 包中，主要部分包括 Excel 对象，样式和格式，还有辅助操作。主要有以下几种对象：</p><p>HSSFWorkbook： 对应于 Excel 的文档对象</p><p>HSSFSheet： 对应于 Excel 的表单</p><p>HSSFRow： 对应于 Excel 的行</p><p>HSSFCell： 对应于 Excel 的格子单元</p><p>HSSFFont： 对应于 Excel 字体</p><p>HSSFName： 对应于 Excel 名称</p><p>HSSFDataFormat： 对应于日期格式</p><p>HSSFHeader： 对应于 Sheet 头</p><p>HSSFFooter： 对应于 Sheet 尾</p><p>HSSFCellStyle： 对应于 Cell 样式</p><p>辅助操作包括：</p><p>HSSFDateUtil 日期</p><p>HSSFPrintSetup 打印</p><p>HSSFErrorConstants 错误信息表</p><p><strong>HWPF 接口</strong></p><p>HWPF 主要用来处理 MS Word（97-2003）对象，是 POI 中相对不太成熟的部分。但可以做一些基本的对于对 word 文档的读写操作。对于统计页数来说，HWPF 中 WordExtractor 的 SummaryInformation 提供了一个 getPageCount 的方法，但并不是特别的好用。下面我们先简单的介绍一下 HWPF 接口：</p><p>HSSF 提供给我们使用的对象在 org.apache.poi.hwpf.extractor 和 org.apache.poi.hwpf.usermodel 包中，主要部分包括 Word 对象，表格等。主要有以下几种对象：</p><p>WordExtractor 从 Word 文档中提取出文本的类。</p><p>Paragraph 对应于 Word 的一个段落范围。</p><p>Table 对应于 Word 的一个表格范围。</p><p>TableCell 对应于 Word 的一个表格的 cell 范围。</p><p>Range : 这个类是 HWPF 对象模型的核心类。适用于在 Word 文档中的字符的范围的所有属性扩展这个类。它可以插入文字或者选定一定范围的属性。</p><p>注：对于 HWPF 组件，经过我们的测试，发现其无法正确地读取 word 文件页数，所以我们使用 OpenOffice API 来替代这一部分。后面我们将会对这一部分进行详细地介绍。</p><div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><h2 id="major2">OpenOffice 介绍</h2><p>OpenOffice 原是 Sun 公司的一套商业级 Office 软件（StarOffice），经过 Sun 公司公开程序源码之后，正式命名为 OpenOffice 发展计划，并由许许多多热心于自由软件的人士共同来维护。让大家能在 MS OFFICE 之外，还能有免费的 Office 可以使用。OpenOffice 是个整合性的软件，里面包含了许许多多的工具，其功能绝对不比微软的 MS Office 差，不但可以有 Word 一样的字体处理，制作简单的图形，更有功能强大的图表功能，也能编写网页，还可以做出 MS Office 中很难处理的数学符号等等，支持了 XML、微软的 Word、Excel 和 PowerPoint 文件等格式。</p><h3 id="minor2.1">OpenOffice 的安装</h3><p>我们可以从 OpenOffice 的官方网站：http://download.openoffice.org/ 上下载最新版本的 OpenOffice，Windows 下按照默认的向导安装就可以，下面我们着种介绍一下 Linux 下 OpenOffice 的安装步骤：</p><p>首先把安装文件上传到 linux 服务器上，然后顺序执行下面的步骤：</p><p>a) 展开安装包 : OOo_3.2.0_LinuxIntel_install_wJRE_en-US.tar.gz</p><div class="codesection"><pre class="displaycode"> # tar -zxvf  OOo_3.2.0_LinuxIntel_install_wJRE_en-US.tar.gz</pre></div><p>b) 安装 Java-runtime 支持包 jre-6-linux-i586.rpm</p><div class="codesection"><pre class="displaycode"> # cd OOo_3.2.0_LinuxIntel_install_wJRE_en-US /RPMS 
+ # rpm -ivh jre-6u18-linux-i586.rpm</pre></div><p>注：如果 JRE Runtime 在这一步之前就已经安装完成，这一步可以跳过。</p><p>c) 安装所有 OpenOffice 组件</p><div class="codesection"><pre class="displaycode"> # rpm -ivh openoffice*.rpm</pre></div><p>注意事项：应切记千万不可单个软件包安装，否则就一定会陷入死循环的怪圈。安装完成后，必须进入 x-window 的设置界面。打开 OpenOffice，进行相关设置，看到如下界面（图 1）后，即表示安装成功。</p><h5 id="fig1">图 1. OpenOffice 安装成功界面</h5><img alt="图 1. OpenOffice 安装成功界面" src="index_files/image001.jpg" width="554"><h3 id="minor2.2">UNO 组件模型</h3><p>OpenOffice.org API 是在 UNO 组件技术基础上实现的。因此 OpenOffice.org API 是程序语言无关的，可以在 C/C++、Java 和好几种脚本语言中使用。对于其它语言来讲，只需要一个语言绑定就能够提供对整个 OpenOffice.org API 的访问。在此我们使用其中的 Java 接口来完成访问 OpenOffice 的功能。</p><h5 id="fig2">图 2. UNO 组件模型</h5><img alt="图 2. UNO 组件模型" src="index_files/image002.jpg" width="484"><div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><h2 id="major3">用 Apache POI 和 OpenOffice API 来读取 office 文档页数</h2><p>对于 POI 统计文档页数来说，我们主要使用以下几个开发包：</p><p>HSSF：MS－Excel 97-2003(.xls)，基于 BIFF8 格式的 JAVA 接口。</p><p>XSSF：MS－Excel 2007+(.xlsx)，基于 OOXML 格式的 JAVA 接口。</p><p>HWPF：MS－Word 97-2003(.doc)，基于 BIFF8 格式的 JAVA 接口。只支持 .doc 文件简单的操作，读写能力有限。</p><p>XWPF：MS－Word 2007+(.docx)，基于 OOXML 格式的 JAVA 接口，较 HWPF 功能完善。</p><p>HSLF：MS－PowerPoint97-2003(.ppt)，支持 Microsoft PowerPoint 97（-2003）的简单操作。</p><p>首先从官方网站下载最新版的 jar 包（poi-3.6-20091214.jar，poi-contrib-3.6-20091214.jar 和 poi-scratchpad-3.6-20091214.jar），拷贝到工程中 lib 中，即可使用我们需要的 POI 相关类。</p><h3 id="minor3.1">读取 excel 页数</h3><p>对于 excel 操作，我们使用 org.apache.poi.hssf.usermodel.HSSFWorkbook 类</p><p>类定义如下：</p><div class="codesection"><pre class="displaycode"> java.lang.Object 
+ |_org.apache.poi.POIDocument 
+    |_org.apache.poi.hssf.usermodel.HSSFWorkbook</pre></div><p>它有六个构造方法：</p><p>HSSFWorkbook()</p><p>创建一个空的 workbook。</p><p>HSSFWorkbook(DirectoryNode directory, POIFSFileSystem fs, boolean preserveNodes)</p><p>给定一个 POIFSFileSystem 对象，并在其中指定一个特定的工作目录，和读取 workbook 的级别。</p><p>HSSFWorkbook(java.io.InputStream s)</p><p>通过输入流来创建 wordbook。</p><p>HSSFWorkbook(java.io.InputStream s, boolean preserveNodes)</p><p>这个构造方法会构造出一个 POI filesystem 围绕指定的输入流。</p><p>HSSFWorkbook(POIFSFileSystem fs)</p><p>根据给定的 POIFSFileSystem 创建 workbook。</p><p>HSSFWorkbook(POIFSFileSystem fs, boolean preserveNodes)</p><p>根据给定的 POIFSFileSystem 并且制定读取 workbook 的级别，来创建 workbook。</p><p>在这里，我们使用第三种方法来创建 workbook，通过其 getNumberOfSheets() 方法，可以很容易的得到该文件的 sheet 数。</p><h5 id="listing1">清单 1. 用 poi 读取 excel 页数代码</h5><div class="codesection"><pre class="displaycode"> public int countExcelPage(String filePath){ 
+   try{ 
+     InputStream myxls = new FileInputStream(filePath); 
+     HSSFWorkbook wb     = new HSSFWorkbook(myxls); 
+    
+     int result = wb.getNumberOfSheets() ; 
+       return result ; 
+    
+   }catch(Exception e){ 
+     e.printStackTrace() ; 
+     return -1 ; 
+   } 
+    
+ }</pre></div><h3 id="minor3.2">读取 PowerPoint 页数</h3><p>对于 PowerPoint 操作，我们使用 org.apache.poi.hslf.usermodel.SlideShow 类</p><p>类定义如下：</p><div class="codesection"><pre class="displaycode"> java.lang.Object 
+ |_org.apache.poi.hslf.usermodel.SlideShow</pre></div><p>它有三个构造方法：</p><p>SlideShow()</p><p>创建一个空的 PowerPoint 文档。</p><p>SlideShow(HSLFSlideShow hslfSlideShow)</p><p>通过 HSLFSlideShow 来创建 PowerPoint 文档。</p><p>SlideShow(java.io.InputStream inputStream)</p><p>通过输入流来创建 PowerPoint 文档。</p><p>在这里，我们使用第三种方法来创建 PowerPoint 文档，通过其 getSlides () 方法，可以很容易的得到该文件的页数。</p><h5 id="listing2">清单 2. 用 poi 读取 PowerPoint 页数代码</h5><div class="codesection"><pre class="displaycode"> public int countPPTPage(String filePath){ 
+   try{ 
+     InputStream myppt = new FileInputStream(filePath); 
+     SlideShow ppt = new SlideShow(myppt); 
+    
+     int result = ppt.getSlides().length ; 
+     return result ; 
+   }catch(Exception e){ 
+     e.printStackTrace() ; 
+     return -1 ; 
+   } 
+ }</pre></div><h3 id="minor3.3">读取 Word 页数</h3><p><strong>用 POI 统计 word 页数</strong></p><p>我们先看一下 POI 提供的读取 word 页数的接口：</p><p>对于 Word 操作，POI 提供了 org.apache.poi.hwpf.extractor.WordExtractor 类</p><p>类定义如下：</p><div class="codesection"><pre class="displaycode"> java.lang.Object 
+ |_ org.apache.poi.POITextExtractor 
+     |_ org.apache.poi.POIOLE2TextExtractor 
+         |_ org.apache.poi.hwpf.extractor.WordExtractor</pre></div><p>它有四个构造方法：</p><p>WordExtractor(DirectoryNode dir, POIFSFileSystem fs)</p><p>给定一个 POIFSFileSystem 对象，并在其中指定一个特定的工作目录来构造 WordExtractor 对象。</p><p>WordExtractor(HWPFDocument doc)</p><p>根据 HWPFDocument 对象来构造 WordExtractor 对象。</p><p>WordExtractor(java.io.InputStream is)</p><p>根据给定的输入流来构造 WordExtractor 对象。</p><p>WordExtractor(POIFSFileSystem fs)</p><p>根据给定的 POIFSFileSystem 对象来构造 WordExtractor 对象。</p><p>在这里，我们使用第三种方法来创建 WordExtractor 文档，通过其 SummaryInformation 的 getSummaryInformation () 方法，可以很得到该文件的页数。</p><h5 id="listing3">清单 3. 用 poi 读取 word 页数代码</h5><div class="codesection"><pre class="displaycode"> public int countWordPage(String filePath){ 
+   try{ 
+     FileInputStream fis = new FileInputStream(filePath);       
+     WordExtractor word = new WordExtractor(fis); 
+    
+     SummaryInformation if = word.getSummaryInformation() ; 
+     int result = if.getPageCount() ; 
+     return result ; 
+   }catch(Exception e){ 
+     e.printStackTrace() ; 
+     return -1 ; 
+   } 
+ }</pre></div><p>测试结果显示以上方法读取的页数来自 word 文档的摘要部分，并不是实际的页数。</p><p>比如：对于如下的 word 文档，实际页数是 3 页 （如图 3 所示）， 而摘要中显示的页数是 1 页（如图 4 所示）。</p><h5 id="fig3">图 3. Word 文档实际页数</h5><img alt="图 3. Word 文档实际页数" src="index_files/image003.jpg" width="553"><h5 id="fig4">图 4. 摘要中显示的 Word 文档页数</h5><img alt="图 4. 摘要中显示的 Word 文档页数" src="index_files/image004.jpg" width="367"><p>用上述方法计算出的页数为 1 页（摘要显示的页数）。</p><p>显然这并不是我们想要的结果。</p><p>针对这个问题，我们提供了两种解决方案：</p><p>方案 1：用 OpenOffice API 统计 Word 文档页数。</p><p>方案 2：用 VBS 统计 Word 文档页数。</p><p>方案 1 适用于 Windows 和 Linux 操作系统。</p><p>方案 2 仅适用于 Windows 操作系统。</p><p>下面我们分别介绍一下这两种方案。</p><p><strong>用 OpenOffice API 读取 Word 文档页数</strong></p><p>安装完 OpenOffice 后，我们将使用在 OpenOffice.org 的安装目录下的四个 JAR 文件，您可以在 OpenOffice.org 安装目录中分别找到以下四个 JAR 文件：juh.jar、jurt.jar、ridl.jar 和 unoil.jar。</p><p>我们主要是用 com.sun.star 开发包的 com.sun.star.text.TextField.PageCount 类来完成统计 Word 文档页数的功能。</p><p>具体流程如下：</p><p>a) 连接到一个 OpenOffice 实例。</p><p>b) 获得 Word 文档的实例。</p><p>c) 初始化 PageCount 类。</p><p>d) 获得该实例的总页数。</p><p>e) 关闭该实例。</p><p>实现代码如清单 4：</p><h5 id="listing4">清单 4. 用 openOffice api 读取 word 页数代码</h5><div class="codesection"><pre class="displaycode"> public String countWordPage(String filePath){ 
+ try{ 
+     // get the remote office component context 
+     XComponentContext xContext = null; 
+      
+     String oooExeFolder = "C:/Program Files/OpenOffice.org 3/program/"; 
+     //String oooExeFolder = "/opt/openoffice.org3/program/"; 
+     System.out.println("Connecting ..."); 
+
+     xContext = BootstrapSocketConnector.bootstrap(oooExeFolder); 
+ System.out.println("Connected to a running office ..."); 
+
+ // get the remote office service manager 
+ com.sun.star.lang.XMultiComponentFactory xMCF = xContext.getServiceManager();
+    
+ Object oDesktop = 
+ xMCF.createInstanceWithContext("com.sun.star.frame.Desktop", xContext);
+
+ com.sun.star.frame.XComponentLoader xCompLoader = 
+     (com.sun.star.frame.XComponentLoader)UnoRuntime.queryInterface( 
+       com.sun.star.frame.XComponentLoader.class, oDesktop); 
+
+ java.io.File sourceFile = new java.io.File(filePath); 
+ StringBuffer sLoadUrl = new StringBuffer("file:///"); 
+ sLoadUrl.append(sourceFile.getCanonicalPath().replace('\\', '/')); 
+    
+ com.sun.star.beans.PropertyValue[] propertyValue = 
+       new com.sun.star.beans.PropertyValue[1]; 
+ propertyValue[0] = new com.sun.star.beans.PropertyValue(); 
+ propertyValue[0].Name = "Hidden"; 
+ propertyValue[0].Value = new Boolean(true); 
+      
+ XComponent oDocToStore = xCompLoader.loadComponentFromURL( 
+       sLoadUrl.toString(), "_blank", 0, propertyValue ); 
+ XTextDocument mxDoc =
+ (XTextDocument) UnoRuntime.queryInterface(XTextDocument.class,oDocToStore);
+ XMultiServiceFactory mxDocFactory = 
+ (XMultiServiceFactory) UnoRuntime.queryInterface(XMultiServiceFactory.class, mxDoc ); 
+
+ XTextField xtf = 
+ (com.sun.star.text.XTextField) UnoRuntime.queryInterface (XTextField.class, 
+ mxDocFactory.createInstance("com.sun.star.text.TextField.PageCount")); 
+
+ XTextContent xtc = 
+ (com.sun.star.text.XTextContent) UnoRuntime.queryInterface (XTextField.class, xtf);
+
+ XPropertySet pageCountPS = 
+ (XPropertySet) UnoRuntime.queryInterface(XPropertySet.class, xtc ); 
+    
+ pageCountPS.setPropertyValue("NumberingType", 
+         new Short(NumberingType.NATIVE_NUMBERING) );
+      
+    
+ XText xText = mxDoc.getText();  
+ xText.insertTextContent( mxDoc.getText().getEnd(),xtc,false); 
+
+ String result = xtf.getAnchor().getString() ; 
+ System.out.println("debug:"+result) ; 
+ mxDoc.dispose() ; 
+ System.exit(0) ; 
+ return result ; 
+    
+ }catch(Exception e){ 
+     e.printStackTrace() ; 
+     System.exit(0) ; 
+     return "-1" ; 
+ } 
+ }</pre></div><p>运行结果为该 word 文档的实际页数：3</p><p><strong>关于 windows 下 word 页数的读取</strong></p><p>关于 Windows 下 Word 文档页数的读取，我们可以用 JAVA 调用 VBS 的方式来实现。</p><p>我们通过 VBS 中 doc.Selection.Information(4) 方法来得到 word 的实际页数。然后用 JAVA 来读取该结果。</p><p>对于 JAVA 读取 VBS 结果的方法，我们采用写标志文件的方法来读取。即：在 VBS 中将得到的 Word 页数写入文件 a 中，写入完成后，生成另一个文件 b 作为操作结束的标志文件。在 JAVA 中，首先通过 Runtime.getRuntime().exec() 方法来调起该 VBS，然后等待操作结束文件 b 的生成。得到结束标志文件后，读取存有页数的文件来获得实际页数，最后清空 VBS 生成的文件。</p><p>程序流程如下：</p><p><strong>VBS（具体示例代码见清单 5）</strong>:</p><ol type="1"><li>
+得到 Scripting.FileSystemObject 对象，用于生成文件</li><li>
+得到 Word.Application 对象，用于操作 word</li><li>
+打开 word 文件，获得页数</li><li>
+将页数写入文件</li><li>
+关闭 word</li><li>
+关闭文件</li><li>
+生成执行完毕标志文件</li></ol><h5 id="listing5">清单 5. 用 VBS 读取 Word 文档页数示例代码</h5><div class="codesection"><pre class="displaycode"> Set fso=CreateObject("Scripting.FileSystemObject") 
+ Set TestFile1=fso.CreateTextFile("C:\" &amp; WScript.Arguments(0) &amp; ".txt", Ture) 
+
+ Set doc = CreateObject("Word.Application") 
+ 
+ doc.Visible = false   
+ doc.Documents.open("C:\" &amp; WScript.Arguments(0)) 
+ TestFile1.WriteLine(doc.Selection.Information(4)) 
+ doc.Documents.close 
+ doc.quit 
+ TestFile1.Close 
+
+ Set TestFile2=fso.CreateTextFile("C: \" &amp; WScript.Arguments(0) &amp; ".over", Ture) 
+ TestFile2.Close</pre></div><p><strong>JAVA</strong><strong>（具体示例代码见清单 6）</strong>:</p><ol type="1"><li>
+执行 vbs</li><li>
+等待执行完毕标志文件</li><li>
+读取页数</li><li>
+删除 vbs 生成的文件</li></ol><h5 id="listing6">清单 6. 用 JAVA 调用 VBS 读取 Word 文档页数示例代码</h5><div class="codesection"><pre class="displaycode"> try { 
+ String fileName = "128.doc"; 
+   Process process = Runtime.getRuntime().exec("cscript C: /countword.vbs " + fileName);  
+
+ // wait for the process end 
+ String pageNumber = ""; 
+ while(true){ 
+ File f = new File("c:/”+ fileName +”.txt"); 
+   File f_over = new File("c:/”+ fileName +”.over"); 
+
+   if(f_over.canRead()){ 
+     FileInputStream fis1 = new FileInputStream(f); 
+     InputStreamReader isr1 = new InputStreamReader(fis1); 
+     BufferedReader br1 = new BufferedReader(isr1); 
+
+     pageNumber = br1.readLine(); 
+     br1.close(); 
+     isr1.close(); 
+     fis1.close(); 
+     f.delete(); 
+     f_over.delete(); 
+     break; 
+   }         
+   Thread.sleep(100); 
+ } 
+ System.out.println("Page Number:" + pageNumber); 
+ } catch (Exception e) { 
+   e.printStackTrace(); 
+ }</pre></div><div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><h2 id="major4">Apache POI 和 OpenOffice API 的优缺点</h2><p>Apache POI: 对于操作 MS 的文档，Apache POI 提供了比较丰富的接口供开发者调用。但对于其中操作 Word 文档的 HWPF。只支持 Word 文档简单的操作，读写能力有限。而且该 API 为 POI 项目早期开发，很不幸的是主要负责 HWPF 模块开发的工程师 “Ryan Ackley”已经离开 Apache 组织，现在该模块没有人维护、更新、完善。下面是 POI 主要部分和对应操作的 MS 文档格式：</p><p>POIFS：POIFS 是该项目的最古老，最稳定的一部分，它同时支持读写功能，所有的组件最终都依赖于它的定义。</p><p>HSSF 和 XSSF：</p><p>HSSF：MS－Excel 97-2003(.xls)，基于 BIFF8 格式的 JAVA 接口。</p><p>XSSF：MS－Excel 2007+(.xlsx)，基于 OOXML 格式的 JAVA 接口。</p><p>HWPF 和 XWPF：</p><p>HWPF：MS－Word 97-2003(.doc)，基于 BIFF8 格式的 JAVA 接口。只支持 .doc 文件简单的操作，读写能力有限。</p><p>XWPF：MS－Word 2007+(.docx)，基于 OOXML 格式的 JAVA 接口，较 HWPF 功能完善。</p><p>OpenOffice API: 使大家能在 Linux 下操作微软 Office 系列的文档。OpenOffice 是个整合性软件，里面包含了许多的工具，并且其功能不比微软的 MS Office 差。但是和 MS Office 的兼容性还是有一些小问题，比如当 Word 文档很大的时候 ,  OpenOffice API 读取的页数和 Word 读取的页数就会有几页的误差。</p><div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p><h2 id="major5">结束语</h2><p>本文对 Apache POI 和 OpenSource API 进行了简要介绍，同时给出了如何使用 Apache POI 和 OpenOffice API 实现了一套可以快速重用的微软 Office 系列文档页数统计解决方案。但正如本文之前所提到的，对于很大的文档，该解决方案的准确率会有所下降 （可能会有几页的误差）。这个问题相信 OpenOffice 会很快的解决并发布最新的版本。当然 Apache POI 和 OpenOffice API 的功能并不局限于文档页数统计，他们还有非常强大的功能等待我们去研究、探索以及应用。</p><!--CMA ID: 842850--><!--Site ID: 10--><!--XSLT stylesheet used to transform this file: dw-document-html-7.0.xsl-->
+
+
+</div>
+</div>
+<!-- 1_1_COLUMN_END -->
+
+<!-- SPLIT_COLUMNS_BEGIN -->
+<div class="ibm-columns">
+
+<!-- 6_4_COLUMN_BEGIN -->
+<div class="ibm-col-6-4">
+
+<h2 id="resources" class="ibm-rule">参考资料 </h2><h3 class="dw-resources-category-heading">学习</h3><ul class="ibm-bullet-list"><li>
+        参考 <a href="http://www.ibm.com/developerworks/cn/">developerWorks 中国</a>首页，查看 IBM 软件和开放技术的最新信息。
+      </li><li><a href="http://www.oooforum.org/">OpenOffice 社区</a>，可以在上面得到 OpenOffice 的丰富的开发使用技巧。
+      </li><li><a href="http://poi.apache.org/apidocs/index.html">P</a><a href="http://poi.apache.org/apidocs/index.html">OI 官方文档</a>，可以在上面得到 POI 的最新开发文档。
+      </li><li><a href="http://api.openoffice.org/">OpenOffice</a><a href="http://api.openoffice.org/">官方文档</a>， 可以在上面得到最新的官方 OpenOffice 开发文档。
+      </li><li>随时关注 developerWorks <a href="http://www.ibm.com/developerworks/cn/offers/techbriefings/">技术活动</a>和<a href="http://www.ibm.com/developerworks/cn/swi/">网络广播</a>。 </li><li> 访问 developerWorks <a href="http://www.ibm.com/developerworks/cn/opensource/">Open source 专区</a>获得丰富的 how-to 信息、工具和项目更新以及<a href="http://www.ibm.com/developerworks/cn/opensource/best2009/index.html">最受欢迎的文章和教程</a>，帮助您用开放源码技术进行开发，并将它们与 IBM 产品结合使用。</li></ul><h3 class="dw-resources-category-heading">讨论</h3><ul class="ibm-bullet-list"><li>加入 <a href="http://www.ibm.com/developerworks/cn/community/">developerWorks 中文社区</a>，developerWorks 社区是一个面向全球 IT 专业人员，可以提供博客、书签、wiki、群组、联系、共享和协作等社区功能的专业社交网络社区。</li><li>加入 <a href="https://www.ibm.com/developerworks/mydeveloperworks/groups/service/html/communityview?communityUuid=38997896-bb16-451a-aa97-189a27a3cd5a/?lang=zh">IBM 软件下载与技术交流群组</a>，参与在线交流。</li></ul>
+
+<!-- INLINE_COMMENTS_BEGIN -->
+<h2 id="icomments" class="ibm-alternate-rule ibm-no-print">条评论</h2>
+    
+<div class="ibm-no-print" id="dw-icomments-container">	
+	<div id="threadShow"><img style="display: none;" id="imgPlHdr" src="index_files/animated-progress-38x38c.gif" alt=""><div id="cmtTog" style=""><div class="ibm-container ibm-alternate-two dw-commentbox dw-noborder"><div class="ibm-container-body dw-commentbox dw-noborder"><p id="signInSect">请 <a onclick="" href="#">登录</a> 或 <a href="http://www.ibm.com/developerworks/dwwi/jsp/ssoregister.jsp?d=http%3A%2F%2Fwww.ibm.com%2Fdeveloperworks%2Fcn%2Fopensource%2Fos-cn-docpages-count%2F%23icomments&amp;lang=cn&amp;a=dwmav">注册</a>  后发表评论。</p><p id="cmtHead"><label for="newCmt"><strong>添加评论:</strong></label></p><p>注意：评论中不支持 HTML 语法</p><div id="infoCmt"></div><form focus="name" enctype="multipart/form-data" method="post" action="" name="form" class="ibm-column-form ibm-styled-form"><p class="6-4-textarea"><textarea rows="5" name="newCmt" id="newCmt" class="dw-inoperable" disabled="disabled"></textarea><br></p><span class="ibm-input-group"><input value="1" name="comment_notification" id="comment_notification" disabled="disabled" type="checkbox"><label id="notifyText" class="ibm-form-note dw-btn-cancel-sec" for="comment_notification">有新评论时提醒我</label></span><span class="ibm-form-note dw-btn-cancel-sec notifySection" id="maxCharsCount">剩余 <span id="charCount">1000</span> 字符</span><p class="ibm-buttons-row"><input value="发布" name="postCmt" id="postCmt" class="ibm-btn-sec ibm-btn-small ibm-disabled" disabled="disabled" type="button"></p></form></div></div><div class="ibm-alternate-rule"><hr></div><div id="topControl" class="ibm-container ibm-alternate-two dw-comment-totals" style=""><div class="ibm-container-body"><form id="selectComments" method="get" action=""><p> <span class="dw-comment-totals-label"><strong>共有评论 (<span id="numCmts">4</span>)</strong></span><span class="dw-how-many-comments-label" style="display:none" id="dropdownCmts"><label for="howManyComments"><strong>显示：</strong></label> <select name="comments" id="howManyComments" class="dw-how-many-comments"><option selected="selected" value="recent">最新评论 </option></select><input class="ibm-btn-go" name="ibm-go" value="Go" src="index_files/short-btn.gif" alt="Go" type="image"><br></span></p></form></div></div><div id="cmtSect"><div class="comment"><div class="dw-icomment-container"><div class="dw-icomment-body dw-noborder"><div class="dw-icomment-body dw-noborder"><p>如果用openoffice的接口取得 word总页数，需要用 XPageCursor curPage =<br>\t\t (XPageCursor) UnoRuntime.queryInterface(<br>\t\t XPageCursor.class, curTextView);<br>因为作者的方法，有2个问题，一个是2007的文档，取到的为空 另外一个是会在文章的末尾插入这个页数。<br>希望对大家有用<br>同时也感谢原作者对我的帮助</p><p class="ibm-item-note-alternate dw-item-note-alternate-left">由 <strong><a href="https://www.ibm.com/developerworks/community/profiles/user/%E5%90%83%E6%96%8B%E8%80%81%E8%99%8E">吃斋老虎</a></strong>  于 2013年01月10日发布 </p><p class="ibm-ind-link ibm-item-note-alternate dw-item-note-alternate-right"><a class="ibm-caution-link dw-report-abuse" href="http://www.ibm.com/developerworks/community/report?lang=zh&amp;referingURL=http://www.ibm.com/developerworks/cn/opensource/os-cn-docpages-count/&amp;mymessage=%E8%AF%84%E8%AE%BA%EF%BC%9A%20%E5%A6%82%E6%9E%9C%E7%94%A8openoffice%E7%9A%84%E6%8E%A5%E5%8F%A3%E5%8F%96%E5%BE%97%20word%E6%80%BB%E9%A1%B5%E6%95%B0%EF%BC%8C%E9%9C%80%E8%A6%81%E7%94%A8%20XPageCursor%20curPage%20%3D%5Ct%5Ct%20%28XPageCursor%29%20UnoRuntime.queryInterface%28%5Ct%5Ct%20XPageCursor.class%2C%20curTextView%29%3B%E5%9B%A0%E4%B8%BA%E4%BD%9C%E8%80%85%E7%9A%84%E6%96%B9%E6%B3%95%EF%BC%8C%E6%9C%892%E4%B8%AA%E9%97%AE%E9%A2%98%EF%BC%8C%E4%B8%80%E4%B8%AA%E6%98%AF2007%E7%9A%84%E6%96%87%E6%A1%A3%EF%BC%8C%E5%8F%96%E5%88%B0%E7%9A%84%E4%B8%BA%E7%A9%BA%20%E5%8F%A6%E5%A4%96%E4%B8%80%E4%B8%AA%E6%98%AF%E4%BC%9A%E5%9C%A8%E6%96%87%E7%AB%A0%E7%9A%84%E6%9C%AB%E5%B0%BE%E6%8F%92%E5%85%A5%E8%BF%99%E4%B8%AA%E9%A1%B5%E6%95%B0%E3%80%82%E5%B8%8C%E6%9C%9B%E5%AF%B9%E5%A4%A7%E5%AE%B6%E6%9C%89%E7%94%A8%E5%90%8C%E6%97%B6%E4%B9%9F%E6%84%9F%E8%B0%A2%E5%8E%9F%E4%BD%9C%E8%80%85%E5%AF%B9%E6%88%91%E7%9A%84%E5%B8%AE%E5%8A%A9%0D%E7%94%B1%20%E5%90%83%E6%96%8B%E8%80%81%E8%99%8E%20%20%E4%BA%8E%202013%E5%B9%B401%E6%9C%8810%E6%97%A5%E5%8F%91%E5%B8%83%20%0D%0D--%E5%9C%A8%E4%B8%8B%E6%96%B9%E6%B7%BB%E5%8A%A0%E8%AF%84%E8%AE%BA--" target="_self">报告滥用</a></p><div class="dw-clear-both"></div></div></div></div></div><div class="ibm-rule"><hr></div><div class="comment"><div class="dw-icomment-container"><div class="dw-icomment-body dw-noborder"><div class="dw-icomment-body dw-noborder"><p>同时，2007的文档和2003的文档，调用的接口都不一样，这个需要注意呀</p><p class="ibm-item-note-alternate dw-item-note-alternate-left">由 <strong><a href="https://www.ibm.com/developerworks/community/profiles/user/%E5%90%83%E6%96%8B%E8%80%81%E8%99%8E">吃斋老虎</a></strong>  于 2013年01月10日发布 </p><p class="ibm-ind-link ibm-item-note-alternate dw-item-note-alternate-right"><a class="ibm-caution-link dw-report-abuse" href="http://www.ibm.com/developerworks/community/report?lang=zh&amp;referingURL=http://www.ibm.com/developerworks/cn/opensource/os-cn-docpages-count/&amp;mymessage=%E8%AF%84%E8%AE%BA%EF%BC%9A%20%E5%90%8C%E6%97%B6%EF%BC%8C2007%E7%9A%84%E6%96%87%E6%A1%A3%E5%92%8C2003%E7%9A%84%E6%96%87%E6%A1%A3%EF%BC%8C%E8%B0%83%E7%94%A8%E7%9A%84%E6%8E%A5%E5%8F%A3%E9%83%BD%E4%B8%8D%E4%B8%80%E6%A0%B7%EF%BC%8C%E8%BF%99%E4%B8%AA%E9%9C%80%E8%A6%81%E6%B3%A8%E6%84%8F%E5%91%80%0D%E7%94%B1%20%E5%90%83%E6%96%8B%E8%80%81%E8%99%8E%20%20%E4%BA%8E%202013%E5%B9%B401%E6%9C%8810%E6%97%A5%E5%8F%91%E5%B8%83%20%0D%0D--%E5%9C%A8%E4%B8%8B%E6%96%B9%E6%B7%BB%E5%8A%A0%E8%AF%84%E8%AE%BA--" target="_self">报告滥用</a></p><div class="dw-clear-both"></div></div></div></div></div><div class="ibm-rule"><hr></div><div class="comment"><div class="dw-icomment-container"><div class="dw-icomment-body dw-noborder"><div class="dw-icomment-body dw-noborder"><p>对不起，写完了，觉得过重了，毕竟辛苦些了这么多，并且我也用了其中一些</p><p class="ibm-item-note-alternate dw-item-note-alternate-left">由 <strong><a href="https://www.ibm.com/developerworks/community/profiles/user/%E5%90%83%E6%96%8B%E8%80%81%E8%99%8E">吃斋老虎</a></strong>  于 2013年01月10日发布 </p><p class="ibm-ind-link ibm-item-note-alternate dw-item-note-alternate-right"><a class="ibm-caution-link dw-report-abuse" href="http://www.ibm.com/developerworks/community/report?lang=zh&amp;referingURL=http://www.ibm.com/developerworks/cn/opensource/os-cn-docpages-count/&amp;mymessage=%E8%AF%84%E8%AE%BA%EF%BC%9A%20%E5%AF%B9%E4%B8%8D%E8%B5%B7%EF%BC%8C%E5%86%99%E5%AE%8C%E4%BA%86%EF%BC%8C%E8%A7%89%E5%BE%97%E8%BF%87%E9%87%8D%E4%BA%86%EF%BC%8C%E6%AF%95%E7%AB%9F%E8%BE%9B%E8%8B%A6%E4%BA%9B%E4%BA%86%E8%BF%99%E4%B9%88%E5%A4%9A%EF%BC%8C%E5%B9%B6%E4%B8%94%E6%88%91%E4%B9%9F%E7%94%A8%E4%BA%86%E5%85%B6%E4%B8%AD%E4%B8%80%E4%BA%9B%0D%E7%94%B1%20%E5%90%83%E6%96%8B%E8%80%81%E8%99%8E%20%20%E4%BA%8E%202013%E5%B9%B401%E6%9C%8810%E6%97%A5%E5%8F%91%E5%B8%83%20%0D%0D--%E5%9C%A8%E4%B8%8B%E6%96%B9%E6%B7%BB%E5%8A%A0%E8%AF%84%E8%AE%BA--" target="_self">报告滥用</a></p><div class="dw-clear-both"></div></div></div></div></div><div class="ibm-rule"><hr></div><div class="comment"><div class="dw-icomment-container"><div class="dw-icomment-body dw-noborder"><div class="dw-icomment-body dw-noborder"><p>大哥，写文件，不要误导人，搞得我以为自己搞错了，<br>那个不是取得execl，是取得sheet数，不是页数。不要混淆概念，页数和sheet数有点差别</p><p class="ibm-item-note-alternate dw-item-note-alternate-left">由 <strong><a href="https://www.ibm.com/developerworks/community/profiles/user/%E5%90%83%E6%96%8B%E8%80%81%E8%99%8E">吃斋老虎</a></strong>  于 2013年01月10日发布 </p><p class="ibm-ind-link ibm-item-note-alternate dw-item-note-alternate-right"><a class="ibm-caution-link dw-report-abuse" href="http://www.ibm.com/developerworks/community/report?lang=zh&amp;referingURL=http://www.ibm.com/developerworks/cn/opensource/os-cn-docpages-count/&amp;mymessage=%E8%AF%84%E8%AE%BA%EF%BC%9A%20%E5%A4%A7%E5%93%A5%EF%BC%8C%E5%86%99%E6%96%87%E4%BB%B6%EF%BC%8C%E4%B8%8D%E8%A6%81%E8%AF%AF%E5%AF%BC%E4%BA%BA%EF%BC%8C%E6%90%9E%E5%BE%97%E6%88%91%E4%BB%A5%E4%B8%BA%E8%87%AA%E5%B7%B1%E6%90%9E%E9%94%99%E4%BA%86%EF%BC%8C%E9%82%A3%E4%B8%AA%E4%B8%8D%E6%98%AF%E5%8F%96%E5%BE%97execl%EF%BC%8C%E6%98%AF%E5%8F%96%E5%BE%97sheet%E6%95%B0%EF%BC%8C%E4%B8%8D%E6%98%AF%E9%A1%B5%E6%95%B0%E3%80%82%E4%B8%8D%E8%A6%81%E6%B7%B7%E6%B7%86%E6%A6%82%E5%BF%B5%EF%BC%8C%E9%A1%B5%E6%95%B0%E5%92%8Csheet%E6%95%B0%E6%9C%89%E7%82%B9%E5%B7%AE%E5%88%AB%0D%E7%94%B1%20%E5%90%83%E6%96%8B%E8%80%81%E8%99%8E%20%20%E4%BA%8E%202013%E5%B9%B401%E6%9C%8810%E6%97%A5%E5%8F%91%E5%B8%83%20%0D%0D--%E5%9C%A8%E4%B8%8B%E6%96%B9%E6%B7%BB%E5%8A%A0%E8%AF%84%E8%AE%BA--" target="_self">报告滥用</a></p><div class="dw-clear-both"></div></div></div></div></div></div></div><div id="bottomControl" class="ibm-container ibm-alternate-two dw-comment-totals" style="display:none"><div class="ibm-container-body"><form id="selectComments2" method="get" action=""><p> <span class="dw-comment-totals-label"><strong>共有评论 (<span id="numCmts2">4</span>)</strong></span><span class="dw-how-many-comments-label" style="display:none" id="dropdownCmts2"><label for="howManyComments2"><strong>显示：</strong></label> <select name="comments" id="howManyComments2" class="dw-how-many-comments"><option selected="selected" value="recent">最新评论 </option></select><input class="ibm-btn-go" name="ibm-go" value="Go" src="index_files/short-btn.gif" alt="Go" type="image"><br></span></p></form></div></div></div>
+</div>
+<!-- Sign in OVERLAY STARTS HERE -->
+    
+<!-- Sign in OVERLAY STARTS HERE -->
+<div class="ibm-common-overlay" id="signin_overlay">
+<div class="ibm-head">
+<p><a class="ibm-common-overlay-close" href="#" onclick="">关闭 [x]</a></p>
+</div>
+<div class="ibm-body">
+<div class="ibm-main">
+
+ <div class="ibm-title">
+<h2>developerWorks: 登录</h2>
+<div id="ibm-overlay-error-signin" class="no-display"></div>
+</div>
+<div class="ibm-container ibm-alternate ibm-buttons-last">
+<div class="ibm-container-body">
+<p class="ibm-overlay-intro">标有星（<span class="ibm-required">*</span>）号的字段是必填字段。</p> 
+<form class="ibm-column-form" id="sFormId" action="" method="post" name="sForm" onsubmit="">
+<p><label for="ibmid">IBM ID:<span class="ibm-required">*</span></label><span>
+    <input aria-required="true" name="ibm-id" id="ibmid" size="25" class="required" onkeypress="" type="text">
+    <br><a onclick="" href="#" class="ibm-forward-link">需要一个 IBM ID？</a> <br>
+    <a class="ibm-forward-link" href="http://www.ibm.com/developerworks/dwwi/jsp/WSHelp.jsp?lang=zh_CN">忘记 IBM ID？</a> 
+</span>
+</p> 
+<p><label for="password">密码：<span class="ibm-required">*</span></label><span>
+    <input name="password" id="password" size="25" value="" class="required" onkeypress="" type="password">
+    <br><a class="ibm-forward-link" href="#" onclick="">忘记密码？</a>
+    <br><a class="ibm-forward-link" href="#" onclick="">更改您的密码</a></span></p> 
+<p class="dw-perm-box">
+	<span><input id="perm" name="perm_name" type="checkbox"><label for="perm"> 保持登录。</label></span>
+</p>
+<p>单击提交则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/community/terms?lang=zh">查看条款和条件</a>。</p>
+<div class="ibm-buttons-row">
+   <p><input class="ibm-btn-arrow-pri" name="ibm-submit" value="提交" onclick="" type="submit"><span class="ibm-sep"> </span>
+<input value="取消" name="ibm-cancel" class="ibm-btn-cancel-sec" onclick="" type="button"></p>
+</div>
+</form>
+ <div class="ibm-overlay-rule"><hr></div> 
+
+<p>在您首次登录 developerWorks 时，会为您创建一份个人概要。<strong>您的个人概要中的信息（您的姓名、国家/地区，以及公司名称）是公开显示的，而且会随着您发布的任何内容一起显示，除非您选择隐藏您的公司名称。</strong>您可以随时更新您的 IBM 帐户。</p>
+<div><p class="dw-c-overlay-secure">所有提交的信息确保安全。</p></div>
+</div>
+</div>
+</div>
+</div>
+<div class="ibm-footer"></div>
+</div>
+<!-- Display name OVERLAY STARTS HERE -->
+<div class="ibm-common-overlay" id="displayname_overlay">
+<div class="ibm-head">
+<p><a class="ibm-common-overlay-close" href="#" onclick="">关闭 [x]</a></p>
+</div>
+<div class="ibm-body">
+<div class="ibm-main">
+<div class="ibm-title">
+<h2>选择您的昵称</h2><br><br>
+<div id="ibm-overlay-error-dname" class="no-display"></div>
+</div>
+<div class="ibm-container ibm-alternate ibm-buttons-last">
+<div class="ibm-container-body">
+<p class="ibm-overlay-intro">当您初次登录到 developerWorks 时，将会为您创建一份概要信息，您需要指定一个昵称。您的昵称将和您在 developerWorks 发布的内容显示在一起。</p><p><strong>昵称长度在 3 至 31 个字符之间</strong>。 
+    您的昵称在 developerWorks 社区中必须是唯一的，并且出于隐私保护的原因，不能是您的电子邮件地址。</p>
+<p class="ibm-overlay-intro">标有星（<span class="ibm-required">*</span>）号的字段是必填字段。</p> 
+<form id="dFormId" method="post" action="" name="dForm" onsubmit="" class="ibm-column-form">
+<p><label for="displayname">昵称：<span class="ibm-required">*</span></label><span>
+    <input aria-required="true" name="displayname" id="displayname" size="25" onkeypress="" type="text"></span>
+    <span class="ibm-form-note">(昵称长度在 3 至 31 个字符之间)</span>
+</p>
+<p>单击<strong>提交</strong>则表示您同意developerWorks 的条款和条件。 <a href="http://www.ibm.com/developerworks/community/terms?lang=zh">查看条款和条件</a>.</p>
+<div class="ibm-buttons-row">
+   <p><input class="ibm-btn-arrow-pri" name="ibm-submit" value="提交" onclick="" type="submit"><span class="ibm-sep"> </span>
+<input value="取消" name="ibm-cancel" class="ibm-btn-cancel-sec" onclick="" type="button"></p>
+</div>
+</form>
+<div class="ibm-overlay-rule"><hr></div>
+<div><p class="dw-c-overlay-secure">所有提交的信息确保安全。</p></div>
+</div>
+</div>
+</div>
+</div>
+<div class="ibm-footer"></div>
+</div>
+
+
+<!-- INLINE_COMMENTS_END -->
+
+</div>
+<!-- 6_4_COLUMN_END -->
+
+<!-- 6_2_COLUMN_BEGIN -->
+<div class="ibm-col-6-2">
+
+<!-- Next_Steps -->
+<!-- Dig_Deeper -->
+
+
+<!-- Promotion_Module -->
+    
+<!-- PROMOTION_MODULE_START -->
+<div class="ibm-alternate-rule"><hr></div>
+<ul class="ibm-portrait-module-list">
+<li><a role="presentation" tabindex="-1" class="" href="http://www.ibm.com/developerworks/cn/cloud/bluemix/"><img src="index_files/sm-f-bluemixrobot60.png" alt="IBM Bluemix 资源中心" height="60" width="60"></a>
+<h3><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/cloud/bluemix/">IBM Bluemix 资源中心</a></h3>
+<p>文章、教程、演示，帮助您构建、部署和管理云应用。</p></li>
+<li><a role="presentation" tabindex="-1" class="" href="http://www.ibm.com/developerworks/cn/community/"><img src="index_files/sm-f-comcommunity60.png" alt="developerWorks 中文社区" height="60" width="60"></a>
+<h3><a class="ibm-feature-link" href="http://www.ibm.com/developerworks/cn/community/">developerWorks 中文社区</a></h3>
+<p>立即加入来自 IBM 的专业 IT 社交网络。</p></li>
+<li><a role="presentation" tabindex="-1" class="" href="http://bluemixathon.devpost.com/"><img src="index_files/sm-f-bluemixathon60.png" alt="Bluemixathon 挑战赛" height="60" width="60"></a>
+<h3><a class="ibm-feature-link" href="http://bluemixathon.devpost.com/">Bluemixathon 挑战赛</a></h3>
+<p>为灾难恢复构建应用，赢取现金大奖。</p></li>
+</ul>
+<!-- PROMOTION_MODULE_END -->
+</div>
+<!-- 6_2_COLUMN_END -->
+
+</div>
+<!-- SPLIT_COLUMNS_END -->
+
+<!-- BOTTOM_BACK_TO_TOP -->
+<div class="ibm-columns">
+<div class="ibm-col-1-1">
+	<div class="ibm-alternate-rule"><hr></div><p class="ibm-ind-link ibm-back-to-top"><a href="#ibm-pcon" class="ibm-anchor-up-link">回页首</a></p>
+</div>
+</div>
+
+<!-- Rating_Meta_BEGIN -->
+<!--Rating_Meta_BEGIN--><div class="metavalue">static.content.url=http://www.ibm.com/developerworks/js/artrating/</div><div class="metavalue">SITE_ID=10</div><div class="metavalue">Zone=Open source</div><div class="metavalue">ArticleID=842850</div><div class="metavalue">ArticleTitle=使用 Apache POI 和 OpenOffice API 在 Linux 中统计 Microsoft Office 文档的页数</div><div class="metavalue">publish-date=10252012</div><script language="javascript" type="text/javascript"><!--
+/* Script removed by snapshot save */
+--></script><div class="metavalue">url=http://www.ibm.com/developerworks/cn/opensource/os-cn-docpages-count/</div><!--Rating_Meta_END-->
+<!-- Rating_Meta_END -->
+
+</div>
+<!-- END_IBM_CONTENT_MAIN -->
+
+</div>
+<!-- END_IBM_CONTENT_BODY -->
+
+</div>
+<!-- END_IBM_CONTENT -->
+
+</div></div>
+<!-- LEADSPACE_END -->
+
+
+<!-- END_IBM_PCON -->
+<!-- FOOTER_BEGIN -->
+<div aria-label="页脚" id="ibm-footer"><!-- IBM footer container; disabled --></div>
+
+<div id="ibm-footer-module-dwwrapper" role="contentinfo" aria-label="developerWorks Footer">
+
+<div id="ibm-footer-module-dw">
+	<div class="dw-footer-columns">
+		<div class="dw-footer-col-6-1 dw-footer-col-6-1-cn">
+			<ul>
+				<li><a href="https://www.ibm.com/developerworks/secure/feedback.jsp?domain=dwchina" tabindex="0">帮助</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/author/" tabindex="0">联系编辑</a></li>
+				<li><a href="https://www.ibm.com/developerworks/secure/myideas2.jsp?domain=dwchina" tabindex="0">提交内容</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/rss/" tabindex="0">订阅源</a></li>
+			</ul>
+        </div>
+		<div class="dw-footer-col-6-2">
+			<ul>
+				<li><a href="http://www.ibm.com/vrm/newsletter/10104?S_TACT=105AGX52&amp;S_CMP=dwcntop" tabindex="0">在线浏览每周时事通讯</a></li>
+				<li><a class="dwcn-sina-link" href="http://weibo.com/ibmdw/" target="_blank" tabindex="0">新浪微博</a></li>
+				<li><a href="https://www.ibm.com/developerworks/community/report?lang=zh" tabindex="0">报告滥用</a></li>
+				<li><a href="https://www.ibm.com/developerworks/community/terms?lang=zh" tabindex="0">使用条款</a></li>
+				<li><a href="https://www.ibm.com/developerworks/cn/community/terms/thirdparty/" tabindex="0">第三方提示</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-3">
+			<ul>
+				<li><a href="http://www.ibm.com/privacy/cn/zh/" tabindex="0">隐私条约</a></li>
+				<li><a href="http://www.ibm.com/ibm/accessibility/cn/" tabindex="0">浏览辅助</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/academic/" tabindex="0">IBM 教育学院教育培养计划</a></li><li><a href="http://www.ibm.com/developerworks/cn/gep/">IBM 创业企业全球扶持计划</a></li><li><a href="http://www.ibm.com/partnerworld/isv/">ISV 资源 (英语)</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-4"> 
+			<ul>
+				<li><a href="http://www.ibm.com/developerworks/cn/newsletter/" tabindex="0">dW 中国每周时事通讯</a></li>
+			</ul>
+			
+		</div>
+		<div class="dw-footer-col-6-5">
+			<ul>
+				<li class="dw-footer-lang-head">选择语言：</li>
+				<li><a href="http://www.ibm.com/developerworks/" tabindex="0">English</a></li>
+				<li><a href="http://www.ibm.com/developerworks/cn/" tabindex="0" lang="zh">中文</a></li>
+				<li><a href="http://www.ibm.com/developerworks/jp/" tabindex="0" lang="ja">日本語</a></li>
+				<li><a href="http://www.ibm.com/developerworks/ru/" tabindex="0" lang="ru">Русский</a></li>
+				<li><a href="http://www.ibm.com/developerworks/br/" tabindex="0" lang="pt">Português (Brasil)</a></li>
+				<li><a href="http://www.ibm.com/developerworks/ssa/" tabindex="0" lang="es">Español</a></li>
+				<li><a href="http://www.ibm.com/developerworks/vn/" tabindex="0" lang="vi">Việt</a></li>
+			</ul>
+		</div>
+		<div class="dw-footer-col-6-6">
+			<img alt="IBM®" src="index_files/dwn-ibm-logo-v17.png" height="46" width="223">
+			<img class="dw-preload" src="index_files/ibm_sprite_social_blue_ON.png" alt="" height="1" width="1">
+		</div>
+	</div>
+</div>
+
+</div><!-- FOOTER_END -->
+
+<!-- END_IBM-TOP -->
+</div>
+
+<!-- SCRIPTS_INCLUDE_BEGIN -->
+<script type="text/javascript" src="index_files/dw-comments.js">//</script>
+<script type="text/javascript" language="JavaScript"><!--
+/* Script removed by snapshot save */
+--></script>
+
+
+
+<!-- BEGIN: Use this section to set page specific variables for the Unica Page Tag -->
+<script language="JavaScript"><!--
+/* Script removed by snapshot save */
+--></script>
+<!--END --><!-- SCRIPTS_INCLUDE_END -->
+
+<div id="ibm-metrics">
+<script src="index_files/stats.js" type="text/javascript">//</script>
+</div>
+
+
+
+</body></html>

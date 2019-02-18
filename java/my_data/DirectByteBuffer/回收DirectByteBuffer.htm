@@ -1,0 +1,38 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>回收DirectByteBuffer</title>
+</head>
+<body>
+<P>为避免GC的负效应, 使用DirectByteBuffer管理原始(Raw)数据会为高负载的系统带来性能的提升. 
+DirectByteBuffer默认是由GC来回收的, 这通常能够满足需求, 若要想自己控制回收的时机, 可以使用这段代码.</P>
+<P>&nbsp;</P>
+<P>import java.lang.reflect.Method;<BR>import java.nio.ByteBuffer;<BR>import 
+java.security.AccessController;<BR>import java.security.PrivilegedAction;</P>
+<P>/**<BR>&nbsp;* <A href="mailto:{@link">{@link</A> 
+DirectByteBufferCleaner}<BR>&nbsp;*<BR>&nbsp;* @author zhongl<BR>&nbsp;* 
+@created 2011-1-14<BR>&nbsp;*/<BR>public final class DirectByteBufferCleaner 
+{<BR>&nbsp; private DirectByteBufferCleaner() {}</P>
+<P>&nbsp; public static void clean(final ByteBuffer byteBuffer) 
+{<BR>&nbsp;&nbsp;&nbsp; if (!byteBuffer.isDirect()) 
+return;<BR>&nbsp;&nbsp;&nbsp; try {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Object 
+cleaner = invoke(byteBuffer, "cleaner");<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+invoke(cleaner, "clean");<BR>&nbsp;&nbsp;&nbsp; } catch (Exception e) { /* 
+ignore */ }<BR>&nbsp; }</P>
+<P>&nbsp; private static Object invoke(final Object target, String methodName) 
+throws Exception {<BR>&nbsp;&nbsp;&nbsp; final Method method = 
+target.getClass().getMethod(methodName);<BR>&nbsp;&nbsp;&nbsp; return 
+AccessController.doPrivileged(new PrivilegedAction() 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; @Override<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+public Object run() {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; try 
+{<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; return 
+method.invoke(target);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; } catch 
+(Exception e) {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; throw 
+new RuntimeException(e);<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+}<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<BR>&nbsp;&nbsp;&nbsp; });<BR>&nbsp; }</P>
+<P>}</P>
+<P>&nbsp;</P>
+
+</body>
+</html>

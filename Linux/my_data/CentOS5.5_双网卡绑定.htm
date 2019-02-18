@@ -1,0 +1,325 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>CentOS5.5 双网卡绑定</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: 宋体, Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px">Linux双网卡绑定实现就是使用两块网卡虚拟成为一块网卡，这个聚合起来的设备看起来是一个单独的以太网接口设备，通俗点讲就是两块网卡具有相同的IP地址而并行链接聚合成一个逻辑链路工作。</SPAN></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">首先要看linux是否支持bonding,RHEL4已经默认支持了。</P><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">[root@localhost 
+~]# modinfo bonding</SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"></SPAN>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">filename:&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>/lib/modules/2.6.18-238.9.1.el5/kernel/drivers/net/bonding/bonding.ko<BR>author:&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>Thomas Davis, tadavis@lbl.gov and many 
+others<BR>description:&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>Ethernet Channel Bonding Driver, 
+v3.4.0-1<BR>version:&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>3.4.0-1<BR>license:&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>GPL<BR>srcversion:&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>358EAAF5610876F44387AEF<BR>depends:&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>ipv6<BR>vermagic:&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>2.6.18-238.9.1.el5 SMP mod_unload 
+gcc-4.1</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">………………</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">………………</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">如果有类似上面的信息输出,说明已经支持了。</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">绑定步骤：</STRONG></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">1.修改/etc/sysconfig/network-scripts/ifcfg-eth0 
+配置文档</STRONG></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">修改后的内容如下：</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　DEVICE=eth0</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　ONBOOT=yes&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>#系统启动时自动启用该设备</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　BOOTPROTO=none&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>　　　#启动时不使用任何协议</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">2.修改/etc/sysconfig/network-scripts/ifcfg-eth1 
+配置文档</STRONG></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">修改后的内容如下：</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　DEVICE=eth1</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　ONBOOT=yes&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>#系统启动时自动启用该设备</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　BOOTPROTO=none&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>　　　#启动时不使用任何协议</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">3.创建一个绑定网络口的配置文档/etc/sysconfig/network-scripts/ifcfg-bond0</STRONG></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">内容如下：</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　DEVICE=bond0&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>#虚拟网卡名称</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　BOOTPROTO=static</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　IPADDR=192.168.0.2 
+&nbsp;<WBR><SPAN class=Apple-converted-space>&nbsp;</SPAN>#IP地址</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　NETMASK=255.255.255.0&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>#子网掩码</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　GATEWAY=192.168.0.1&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>#网关</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　BORADCAST=192.168.0.255&nbsp;<WBR>#广播地址</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　ONBOOT=yes</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　TYPE=Ethernet</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">也可这样配置：</STRONG></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">（1）<SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px">编辑虚拟网络接口配置文件（bond0），并指定网卡IP<BR>vi 
+&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>/etc/sysconfig/network-scripts/ifcfg-bond0<BR>DEVICE=bond0<BR>ONBOOT=yes<BR>BOOTPROTO=static<BR>IPADDR=192.168.0.254<BR>BROADCAST=192.168.0.255<BR>NETMASK=255.255.255.0<BR>NETWORK=192.168.0.0<BR>GATEWAY=192.168.0.1<BR>USERCTL=no<BR>TYPE=Ethernet<BR>注意：建议不要指定MAC地址<BR><BR></SPAN><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px">vi 
+&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>/etc/sysconfig/network-scripts/ifcfg-eth0</SPAN><BR><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px">DEVICE=eth0<BR>BOOTPROTO=none<BR>ONBOOT=yes<BR>USERCTL=no<BR>MASTER=bond0<BR>SLAVE=yes<BR></SPAN><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px">注意：建议不要指定MAC地址</SPAN><BR><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px"><BR></SPAN><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px">vi 
+&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>/etc/sysconfig/network-scripts/ifcfg-eth1</SPAN><BR><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px">DEVICE=eth1<BR>BOOTPROTO=none<BR>ONBOOT=yes<BR></SPAN><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px">USERCTL=no</SPAN><BR>MASTER=bond0<BR>SLAVE=yes<BR><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px">注意：建议不要指定MAC地址</SPAN></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px">这样配置完就不需要第5步了。<BR></SPAN></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">4.修改/etc/modprobe.conf，配置绑定模型</STRONG></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">加入以下内容：</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　alias 
+bond0 bonding</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　options 
+bond0 millmon=100 mode=0</P><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>说明：</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>miimon=100</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>miimon是指多久时间要检查网路一次，单位是ms(毫秒)</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>这边的100，是100ms，即是0.1秒</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>意思是假设其中有一条网路断线，会在0.1秒内自动备援</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>mode共有七种(0~6)</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>mode=0：平衡负载模式，有自动备援，但需要"Switch"支援及设定。</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</SPAN><WBR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>mode=1：自动备援模式，其中一条线若断线，其他线路将会自动备援。</SPAN><BR 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(50,62,50); TEXT-ALIGN: left; FONT: 12px/18px Verdana, 宋体, sans-serif; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>mode=6：平衡负载模式，有自动备援，不必"Switch"支援及设定。</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WORD-WRAP: normal; FONT-SIZE: 18px; WORD-BREAK: normal; COLOR: rgb(51,153,102); LINE-HEIGHT: 27px"><SPAN 
+style="WORD-WRAP: normal; FONT-SIZE: 14px; WORD-BREAK: normal; COLOR: rgb(255,0,0); LINE-HEIGHT: 21px">PS：</SPAN></SPAN>RHEL4 
+（centos4）及以下的版本options加在/etc/modprobe.conf中；<BR> 
+RHEL5（centos5）可以在ifcfg-bond0中加BONDING_OPTS="mode=1 arp_interval=100 
+arp_ip_target=192.168.0.1"</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">5.修改/etc/rc.local，负责在系统启动时将虚拟网卡和两张物理网卡相绑定</STRONG></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">增加以下内容：</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　ifenslave 
+bond0 eth0 eth1</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">这样配置完成，重启机器，就可以看到有一张bond0的新网卡。</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">可以查看bond0来得知当前状态：</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;<WBR></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">[root@localhost 
+~]# cat /proc/net/bonding/bond0<BR>Ethernet Channel Bonding Driver: v3.4.0-1 
+(October 7, 2008)<BR><BR>Bonding Mode: load balancing (round-robin)<BR>MII 
+Status: up<BR>MII Polling Interval (ms): 100<BR>Up Delay (ms): 0<BR>Down Delay 
+(ms): 0<BR><BR>Slave Interface: eth0<BR>MII Status: up<BR>Speed: 100 
+Mbps<BR>Duplex: full<BR>Link Failure Count: 0<BR>Permanent HW addr: 
+00:24:XXXXXXXX<BR><BR>Slave Interface: eth1<BR>MII Status: up<BR>Speed: 100 
+Mbps<BR>Duplex: full<BR>Link Failure Count: 1<BR>Permanent HW addr: 
+00:24:XXXXXXXX</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">[ubuntu 10.04配置]</STRONG></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WORD-WRAP: normal; FONT-SIZE: 12px; FONT-FAMILY: Verdana, Arial, sans-serif, 宋体; WORD-BREAK: normal; COLOR: rgb(0,128,0); LINE-HEIGHT: 19px"><FONT style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px" face="">apt-get 
+install ifenslave-2.6</FONT></SPAN></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WORD-WRAP: normal; FONT-SIZE: 12px; FONT-FAMILY: Verdana, Arial, sans-serif, 宋体; WORD-BREAK: normal; COLOR: rgb(0,128,0); LINE-HEIGHT: 19px"><FONT style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px" face=""><SPAN 
+style="WORD-WRAP: normal; FONT-SIZE: 12px; FONT-FAMILY: Verdana, Arial, sans-serif, 宋体; WORD-BREAK: normal; COLOR: rgb(0,128,0); LINE-HEIGHT: 19px">vi 
+/etc/network/interfaces</SPAN><BR></FONT></SPAN></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WORD-WRAP: normal; FONT-SIZE: 12px; FONT-FAMILY: Verdana, Arial, sans-serif, 宋体; WORD-BREAK: normal; COLOR: rgb(0,128,0); LINE-HEIGHT: 19px"><FONT style="WORD-WRAP: normal; WORD-BREAK: normal; LINE-HEIGHT: 18px" face="">auto 
+bond0<BR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>iface bond0 inet 
+static<BR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>address 
+192.168.xx.xx<BR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>gateway 
+192.168.x.x<BR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>netmask 
+255.255.255.0<BR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>slaves eth1 eth2<BR>##slaves eth0 eth1 
+eth2 eth3 eth4<BR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>bond-mode 
+0<BR>&nbsp;<WBR>&nbsp;<WBR>&nbsp;<WBR><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>bond-miimon 100</FONT></SPAN></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+style="WORD-WRAP: normal; FONT-SIZE: 12px; FONT-FAMILY: Verdana, Arial, sans-serif, 宋体; WORD-BREAK: normal; COLOR: rgb(0,128,0); LINE-HEIGHT: 19px"><BR></SPAN></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">如果要绑定全部网卡， 
+用slaves all</P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG 
+style="FONT-WEIGHT: bold">七种bond模式说明：</STRONG></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">第一种模式：mod=0 
+，即：(balance-rr) Round-robin policy（平衡抡循环策略）<BR>特点：传输数据包顺序是依次传输<SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; COLOR: rgb(102,0,0); LINE-HEIGHT: 18px">（即：第1个包走eth0，下一个包就走eth1....一直循环下去，直到最后一个传输完毕）</SPAN>，<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><STRONG 
+style="FONT-WEIGHT: bold">此模式提供负载平衡和容错能力；</STRONG>但是我们知道如果一个连接或者会话的数据包从不同的接口发出的话，中途再经过不同的链路，在客户端很有可能会出现数据包无序到达的问题，而无序到达的数据包需要重新要求被发送，这样网络的吞吐量就会下降<BR><BR>第二种模式：mod=1，即： 
+(active-backup) Active-backup 
+policy（主-备份策略）<BR>特点：只有一个设备处于活动状态，当一个宕掉另一个马上由备份转换为主设备。mac地址是外部可见得，从外面看来，bond的MAC地址是唯一的，以避免switch(交换机)发生混乱。<STRONG 
+style="FONT-WEIGHT: bold">此模式只提供了容错能力；</STRONG>由此可见此算法的优点是可以提供高网络连接的可用性，但是它的资源利用率较低，只有一个接口处于工作状态，在有 
+N 个网络接口的情况下，资源利用率为1/N<BR><BR>第三种模式：mod=2，即：(balance-xor) XOR 
+policy（平衡策略）<BR>特点：基于指定的传输HASH策略传输数据包。缺省的策略是：(源MAC地址 XOR 目标MAC地址) % 
+slave数量。其他的传输策略可以通过xmit_hash_policy选项指定，此模式提供负载平衡和容错能力<BR><BR>第四种模式：mod=3，即：broadcast（广播策略）<BR>特点：在每个slave接口上传输每个数据包，此模式提供了容错能力<BR><BR>第五种模式：mod=4，即：(802.3ad) 
+IEEE 802.3ad Dynamic link aggregation（IEEE 802.3ad 
+动态链接聚合）<BR>特点：创建一个聚合组，它们共享同样的速率和双工设定。根据802.3ad规范将多个slave工作在同一个激活的聚合体下。<BR>外出流量的slave选举是基于传输hash策略，该策略可以通过xmit_hash_policy选项从缺省的XOR策略改变到其他策略。需要注意的是，并不是所有的传输策略都是802.3ad适应的，尤其考虑到在802.3ad标准43.2.4章节提及的包乱序问题。不同的实现可能会有不同的适应性。<BR>必要条件：<BR>条件1：ethtool支持获取每个slave的速率和双工设定<BR>条件2：switch(交换机)支持IEEE 
+802.3ad Dynamic link 
+aggregation<BR>条件3：大多数switch(交换机)需要经过特定配置才能支持802.3ad模式<BR><BR>第六种模式：mod=5，即：(balance-tlb) 
+Adaptive transmit load 
+balancing（适配器传输负载均衡）<BR>特点：不需要任何特别的switch(交换机)支持的通道bonding。在每个slave上根据当前的负载（根据速度计算）分配外出流量。如果正在接受数据的slave出故障了，另一个slave接管失败的slave的MAC地址。<BR>该模式的必要条件：ethtool支持获取每个slave的速率<BR><BR>第七种模式：mod=6，即：(balance-alb) 
+Adaptive load 
+balancing（适配器适应性负载均衡）<BR>特点：该模式包含了balance-tlb模式，同时加上针对IPV4流量的接收负载均衡(receive load 
+balance, rlb)，而且<STRONG 
+style="FONT-WEIGHT: bold">不需要任何switch(交换机)的支持</STRONG>。接收负载均衡是通过ARP协商实现的。bonding驱动截获本机发送的ARP应答，并把源硬件地址改写为bond中某个slave的唯一硬件地址，从而使得不同的对端使用不同的硬件地址进行通信。<BR>来自服务器端的接收流量也会被均衡。当本机发送ARP请求时，bonding驱动把对端的IP信息从ARP包中复制并保存下来。当ARP应答从对端到达时，bonding驱动把它的硬件地址提取出来，并发起一个ARP应答给bond中的某个slave。使用ARP协商进行负载均衡的一个问题是：每次广播 
+ARP请求时都会使用bond的硬件地址，因此对端学习到这个硬件地址后，接收流量将会全部流向当前的slave。这个问题可以通过给所有的对端发送更新（ARP应答）来解决，应答中包含他们独一无二的硬件地址，从而导致流量重新分布。当新的slave加入到bond中时，或者某个未激活的slave重新激活时，接收流量也要重新分布。接收的负载被顺序地分布（round 
+robin）在bond中最高速的slave上<BR>当某个链路被重新接上，或者一个新的slave加入到bond中，接收流量在所有当前激活的slave中全部重新分配，通过使用指定的MAC地址给每个 
+client发起ARP应答。下面介绍的updelay参数必须被设置为某个大于等于switch(交换机)转发延时的值，从而保证发往对端的ARP应答不会被switch(交换机)阻截。<BR>必要条件：<BR>条件1：ethtool支持获取每个slave的速率；<BR>条件2：底层驱动支持设置某个设备的硬件地址，从而使得总是有个slave(curr_active_slave)使用bond的硬件地址，同时保证每个bond 
+中的slave都有一个唯一的硬件地址。如果curr_active_slave出故障，它的硬件地址将会被新选出来的 
+curr_active_slave接管<BR><STRONG style="FONT-WEIGHT: bold"><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; COLOR: rgb(102,0,0); LINE-HEIGHT: 18px">其实mod=6与mod=0的区别：</SPAN><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; COLOR: rgb(102,0,0); LINE-HEIGHT: 18px">mod=6，先把eth0流量占满，再占eth1，....ethX；而mod=0的话，会发现2个口的流量都很稳定，基本一样的带宽。而mod=6，会发现第一个口流量很高，第2个口只占了小部分流量</SPAN></STRONG></P>
+<P 
+style="LIST-STYLE-TYPE: none; WORD-WRAP: normal; BORDER-TOP: 0px; BORDER-RIGHT: 0px; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-BOTTOM: 0px; TEXT-TRANSFORM: none; WORD-BREAK: normal; COLOR: rgb(50,62,50); PADDING-BOTTOM: 0px; TEXT-ALIGN: left; PADDING-TOP: 0px; FONT: 12px/18px Verdana, 宋体, sans-serif; PADDING-LEFT: 0px; MARGIN: 0px 0px 5px; BORDER-LEFT: 0px; LETTER-SPACING: normal; PADDING-RIGHT: 0px; BACKGROUND-COLOR: rgb(191,205,172); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG style="FONT-WEIGHT: bold"><SPAN 
+style="WORD-WRAP: normal; WORD-BREAK: normal; COLOR: rgb(102,0,0);LINE-HEIGHT:18px"></SPAN></STRONG>&nbsp;</P></body>
+</html>

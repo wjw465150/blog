@@ -1,0 +1,62 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>hbase中region的规划与硬盘配置分析</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">Hbase在逻辑上的存储最小单位是Region，物理上来说事HFile。每个Region由多个HFile组成。那么，是否有一个推荐值，确定每台regionserver上运行多少个region，，每个region的size多大是最合适的呢？</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; 看到《Hbase权威指南》中有一段话写道：</P>
+<P 
+style="BACKGROUND: rgb(242,242,213); WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+lang=EN-US>&nbsp; &nbsp; &nbsp; It is noted in the Bigtablepaper that the aim is 
+to keep the region count between 10 to 1000 per serverand each at roughly 
+100-200MB in size. This refers to the hardware in use in2006 (and earlier). For 
+HBase and modern hardware, the number would be morelike 10 to 1000 regions per 
+server, but each between 1GB to 2GB in size.</SPAN></P>
+<P 
+style="BACKGROUND: rgb(242,242,213); WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+lang=EN-US>But while the numbers haveincreased, the basic principle is the same: 
+the number of regions per server,and their respective sizes, depends on what can 
+be handled sufficiently by asingle server.</SPAN></P>
+<P 
+style="BACKGROUND: rgb(242,242,213); WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+lang=EN-US>&nbsp; &nbsp; &nbsp; 
+以目前主流服务器的能力计算，该文章给出了以下推荐值：每台regionserver管理10到1000个regions，每个region大小在1GB~2GB。对应于hbase-site.xml中的一个配置项为hbase.hregion.max.filesize。如果按推荐值计算每台regionserver管理的数据量最少可以到10*1GB=10GB，最大可以到1000*2GB=2TB。考虑到3份备份总数据量在6TB左右。通常来讲这里磁盘的配置就有两种方案。1、4块2TB的硬盘；2、12块500GB的硬盘。两种硬盘容量一样，后者硬盘块数增加，如果硬盘总线带宽够用，后一种能提供更大的吞吐率，更细粒度的磁盘冗余备份，更块的单盘故障恢复时间。</SPAN></P>
+<P 
+style="BACKGROUND: rgb(242,242,213); WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+lang=EN-US>&nbsp; &nbsp; 
+&nbsp;此外，关于硬件中硬盘的配置，对于hadoop和hbase分布式应用来说，具有自己的特点。</SPAN>目前主流的服务器厂商都在主板上集成了raid卡，而raid对于hadoop，hbase应用来说是不必要的，官方推荐的是采用JBOD的方式来单独挂载每块硬盘。《hadoop权威指南》中写道：</P>
+<P 
+style="BACKGROUND: rgb(242,242,213); WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><SPAN 
+lang=EN-US><SPAN style="FONT-SIZE: 16px"></SPAN></SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; 
+HDFS集群没有采用RAID(冗余磁盘阵列)作为datanodes的存储设备(尽管namenode使用RAID来保护元数据不会丢失)。由于HDFS是采用在节点之间块复制的方法，所以RAID提供的冗余机制对HDFS来说是多余的。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; 此外，RAID条带(RAID 0)常用于增加性能，但却比HDFS中用到的JBOD(Just a Bunch Of 
+Disks)要慢，而且JBOD在所有的磁盘之间对HDFS块进行时间片的轮转。具体说，RAID 
+0读写操作受限于冗余磁盘阵列中最慢的那个磁盘的速度。在JBOD中，磁盘的操作是独立的，所以读写操作的平均速度要大于最慢磁盘的速度。实际应用中，磁盘性能多是可以改变的，即使是同一型号的磁盘。在Yahoo 
+Hadoop Cluster的Benchmark中，测试Gridmix显示JBOD要比RAID 
+0快10%，另一个测试显示快30%(这里的测试指的是HDFS的写能力。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">最后，当一个JBOD配置中的一个磁盘失效，HDFS可以继续操作；但是在RAID中，一个磁盘的失效将会导致整个阵列(节点也一样)变得不再可用。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); TEXT-ALIGN: left; FONT: 14px/26px Arial; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp; 
+&nbsp; &nbsp; 所以，如果今后有硬件厂家愿意生产JBOD配置的服务器作为云计算标配机器，那将是最好的选择。</P></body>
+</html>

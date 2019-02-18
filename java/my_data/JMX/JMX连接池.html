@@ -1,0 +1,159 @@
+<html>
+<head>
+  <title>Evernote Export</title>
+  <basefont face="Tahoma" size="2" />
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name="exporter-version" content="Evernote Windows/274870; Windows/6.1.7601 Service Pack 1;"/>
+  <style>
+    body, td {
+      font-family: Tahoma;
+      font-size: 10pt;
+    }
+  </style>
+</head>
+<body>
+<a name="2351"/>
+
+<div><span><br/><div style="font-size: 16px"><div style="font-size:14px;background-color:rgb(244, 246, 248);"><div style="font-family:'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif;font-size:1em;line-height:1.5em;color:rgb(51, 51, 51);background-color:rgb(244, 246, 248);box-shadow:none;"><div><div><div style="box-shadow:rgba(0, 0, 0, 0.0980392) 0px 4px 10px;background:white;box-sizing:border-box;">
+        <h1 style="margin:0px 0px 0.5em;font-family:inherit;font-weight:normal;line-height:1.5em;color:inherit;text-rendering:optimizelegibility;font-size:24px;margin-bottom:5px;">JMX连接池</h1>
+        <div style="color:rgb(153, 153, 153);padding-bottom:5px;border-bottom-width:1px;border-bottom-style:dashed;border-bottom-color:rgb(211, 211, 211);font-size:14px;">
+            <span style="margin-right:15px;">时间 2014-12-11 20:14:36
+            </span>
+            <span style="margin-right:15px;">
+                <i style="font-style:normal;font-family:FontAwesome;font-weight:normal;text-decoration:inherit;-webkit-font-smoothing:antialiased;display:inline;width:auto;height:auto;line-height:normal;vertical-align:baseline;margin-top:0px;background-image:none;background-position:0px 0px;background-repeat:repeat;margin-right:0px;"><span style="font-style:normal;font-family:FontAwesome;font-weight:normal;line-height:normal;text-decoration:inherit;display:inline-block;speak:none;"></span></i>
+                    <a href="http://www.tuicool.com/sites/UNfYby" style="color:rgb(51, 51, 51);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:28%;display:inline;" target="_blank">田加国的博客
+                    </a>
+            </span>
+            
+            <span style="margin-right:15px;display:block;"><i style="font-style:normal;float:left;">原文</i>  
+                <a href="http://www.tianjiaguo.com/programming-language/scala/jmx%E8%BF%9E%E6%8E%A5%E6%B1%A0/" style="color:rgb(51, 51, 51);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:69%;display:inline-block;">http://www.tianjiaguo.com/programming-language/scala/jmx连接池/</a>
+            </span>
+        </div>
+        <div style="padding:20px 5px 40px;margin-bottom:10px;overflow-x:hidden;word-wrap:break-word;min-height:340px;font-size:16px;line-height:1.8em;">
+            <div style="font-size:16px;line-height:1.8em;">
+  <p style="margin:0px 0px 0.75em;font-size:16px;line-height:1.8em;text-indent:1em;">jmx连接断开后无法直接连接，而在每次使用都创建的话性能会比较差，我们可以使用apache的pool组件，它有检测连接的功能，当每次从连接池中请求连接后它会调用validateObject方法，检测这个连接是否正常，如果不正常的话会再调用makeObject方法生成新的连接，同时丢掉断开的连接。</p>
+  <p style="margin:0px 0px 0.75em;font-size:16px;line-height:1.8em;text-indent:1em;">我们先需要创建一个连接工厂，代码如下：</p>
+  <pre style="padding:0.3em;font-family:Monaco, Menlo, Consolas, 'Courier New', monospace;color:rgb(51, 51, 51);border-radius:4px;display:block;margin:0px 0px 0.75em;font-size:13px;line-height:1.5em;word-break:break-all;word-wrap:break-word;white-space:pre-wrap;border:1px solid rgba(0, 0, 0, 0.14902);background-color:rgb(246, 246, 246);overflow-y:auto;margin-bottom:1.5em;"><span style="color:rgb(68, 85, 136);font-weight:bold;"><span style="color:rgb(51, 51, 51);font-weight:bold;">class</span> <span style="color:rgb(68, 85, 136);font-weight:bold;">JMXConnectionFactory</span></span>
+  extends <span>KeyedPooledObjectFactory</span>[<span>String</span>, <span>JMXConnector</span>] {
+
+  <span style="color:rgb(0, 128, 128);">@Override</span>
+  <span><span style="color:rgb(51, 51, 51);font-weight:bold;">def</span> <span style="color:rgb(153, 0, 0);font-weight:bold;">makeObject</span><span>(<span style="color:rgb(153, 0, 115);">config:</span> <span>String</span>)</span>: </span><span>PooledObject</span>[<span>JMXConnector</span>] = {
+    val <span style="color:rgb(153, 0, 115);">json:</span> <span>JsonObject</span> = new <span>JsonParser</span>().parse(config).getAsJsonObject
+    val host = json.getAsJsonPrimitive(<span style="color:rgb(221, 17, 68);">&quot;host&quot;</span>).getAsString
+    val port = json.getAsJsonPrimitive(<span style="color:rgb(221, 17, 68);">&quot;port&quot;</span>).getAsString
+    val url = new <span>JMXServiceURL</span>(<span style="color:rgb(221, 17, 68);">&quot;service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi&quot;</span>.format(host, port))
+    val environment = <span>Maps</span>.newHashMap[<span>String</span>, <span>Array</span>[<span>String</span>]]()
+    <span style="color:rgb(51, 51, 51);font-weight:bold;">if</span> (json.has(<span style="color:rgb(221, 17, 68);">&quot;username&quot;</span>) &amp;&amp; json.has(<span style="color:rgb(221, 17, 68);">&quot;password&quot;</span>)) {
+      val credentials = <span>Array</span>(json.getAsJsonPrimitive(<span style="color:rgb(221, 17, 68);">&quot;username&quot;</span>).getAsString,
+                              json.getAsJsonPrimitive(<span style="color:rgb(221, 17, 68);">&quot;password&quot;</span>).getAsString)
+      environment.put(<span>JMXConnector</span>.<span>CREDENTIALS</span>, credentials)
+    }
+    val connect = <span>JMXConnectorFactory</span>.connect(url, environment)
+    new <span>DefaultPooledObject</span>[<span>JMXConnector</span>](connect)
+  }
+
+  <span style="color:rgb(0, 128, 128);">@Override</span>
+  <span><span style="color:rgb(51, 51, 51);font-weight:bold;">def</span> <span style="color:rgb(153, 0, 0);font-weight:bold;">destroyObject</span><span>(<span style="color:rgb(153, 0, 115);">key:</span> <span>String</span>, <span style="color:rgb(153, 0, 115);">obj:</span> <span>PooledObject</span>[<span>JMXConnector</span>])</span> </span>= obj.getObject.close()
+
+  <span style="color:rgb(0, 128, 128);">@Override</span>
+  <span><span style="color:rgb(51, 51, 51);font-weight:bold;">def</span> <span style="color:rgb(153, 0, 0);font-weight:bold;">validateObject</span><span>(<span style="color:rgb(153, 0, 115);">key:</span> <span>String</span>, <span style="color:rgb(153, 0, 115);">obj:</span> <span>PooledObject</span>[<span>JMXConnector</span>])</span>: </span><span>Boolean</span> = {
+    var ret = <span style="color:rgb(51, 51, 51);font-weight:bold;">false</span>
+    try {
+      obj.getObject.getConnectionId
+      ret = <span style="color:rgb(51, 51, 51);font-weight:bold;">true</span>
+    } catch {
+      <span style="color:rgb(51, 51, 51);font-weight:bold;">case</span> <span style="color:rgb(153, 0, 115);">e:</span> <span>Throwable</span> =&gt; {}
+    }
+    ret
+  }
+
+  <span style="color:rgb(0, 128, 128);">@Override</span>
+  <span><span style="color:rgb(51, 51, 51);font-weight:bold;">def</span> <span style="color:rgb(153, 0, 0);font-weight:bold;">activateObject</span><span>(<span style="color:rgb(153, 0, 115);">key:</span> <span>String</span>, <span style="color:rgb(153, 0, 115);">p:</span> <span>PooledObject</span>[<span>JMXConnector</span>])</span> </span>= {}
+
+  <span style="color:rgb(0, 128, 128);">@Override</span>
+  <span><span style="color:rgb(51, 51, 51);font-weight:bold;">def</span> <span style="color:rgb(153, 0, 0);font-weight:bold;">passivateObject</span><span>(<span style="color:rgb(153, 0, 115);">key:</span> <span>String</span>, <span style="color:rgb(153, 0, 115);">p:</span> <span>PooledObject</span>[<span>JMXConnector</span>])</span> </span>= {}
+}</pre>
+  <p style="margin:0px 0px 0.75em;font-size:16px;line-height:1.8em;text-indent:1em;">然后需要创建一个pool</p>
+  <pre style="padding:0.3em;font-family:Monaco, Menlo, Consolas, 'Courier New', monospace;color:rgb(51, 51, 51);border-radius:4px;display:block;margin:0px 0px 0.75em;font-size:13px;line-height:1.5em;word-break:break-all;word-wrap:break-word;white-space:pre-wrap;border:1px solid rgba(0, 0, 0, 0.14902);background-color:rgb(246, 246, 246);overflow-y:auto;margin-bottom:1.5em;"><span style="color:rgb(51, 51, 51);font-weight:bold;">private</span> val jmxPool = <span style="color:rgb(51, 51, 51);font-weight:bold;">new</span> GenericKeyedObjectPool[String, JMXConnector](<span style="color:rgb(51, 51, 51);font-weight:bold;">new</span> JMXConnectionFactory)
+jmxPool.setTestOnBorrow(<span style="color:rgb(51, 51, 51);font-weight:bold;">true</span>)
+jmxPool.setMaxIdlePerKey(-<span style="color:rgb(0, 153, 153);">1</span>)
+jmxPool.setMinIdlePerKey(-<span style="color:rgb(0, 153, 153);">1</span>)
+jmxPool.setMaxTotalPerKey(<span style="color:rgb(0, 153, 153);">5</span>)
+jmxPool.setMaxTotal(<span style="color:rgb(0, 153, 153);">100</span>)
+jmxPool.setTimeBetweenEvictionRunsMillis(<span style="color:rgb(0, 153, 153);">1000</span> * <span style="color:rgb(0, 153, 153);">60</span> * <span style="color:rgb(0, 153, 153);">5</span>)
+jmxPool.setMinEvictableIdleTimeMillis(<span style="color:rgb(0, 153, 153);">1000</span> * <span style="color:rgb(0, 153, 153);">60</span> * <span style="color:rgb(0, 153, 153);">5</span>)</pre>
+  <p style="margin:0px 0px 0.75em;font-size:16px;line-height:1.8em;text-indent:1em;">在gradle配置中需要添加相关的依赖</p>
+  <pre style="padding:0.3em;font-family:Monaco, Menlo, Consolas, 'Courier New', monospace;color:rgb(51, 51, 51);border-radius:4px;display:block;margin:0px 0px 0.75em;font-size:13px;line-height:1.5em;word-break:break-all;word-wrap:break-word;white-space:pre-wrap;border:1px solid rgba(0, 0, 0, 0.14902);background-color:rgb(246, 246, 246);overflow-y:auto;margin-bottom:1.5em;">...
+compile 'org.apache.commons:commons-pool2:2.2'
+compile 'com.google.code.gson:gson:2.2.4'
+...</pre>
+</div>
+
+        </div>
+        <div style="margin-bottom:10px;">
+        <div style="min-height:50px;margin:0px auto;width:280px;">
+                
+                
+        </div>
+          <div style="margin:0px auto 70px;padding-left:0px;padding-right:20px;clear:both;">
+    <div style="zoom:1;float:right;"> 
+         <a href="http://www.tuicool.com/articles/EF3yUb#" style="color:rgb(51, 51, 51);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;float:left;font-size:18px;padding-left:25px;line-height:24px;height:24px;cursor:pointer;margin:6px 6px 6px 0px;background-image:url(http://bdimg.share.baidu.com/static/api/img/share/icons_1_24.png?v=7314c5f6.png);background-repeat:no-repeat;background-position:0px -104px;" title="分享到新浪微博"></a>
+        <a href="http://www.tuicool.com/articles/EF3yUb#" style="color:rgb(51, 51, 51);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;float:left;font-size:18px;padding-left:25px;line-height:24px;height:24px;cursor:pointer;margin:6px 6px 6px 0px;background-image:url(http://bdimg.share.baidu.com/static/api/img/share/icons_1_24.png?v=7314c5f6.png);background-repeat:no-repeat;background-position:0px -52px;" title="分享到QQ空间"></a>
+        <a href="http://www.tuicool.com/articles/EF3yUb#" style="color:rgb(51, 51, 51);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;float:left;font-size:18px;padding-left:25px;line-height:24px;height:24px;cursor:pointer;margin:6px 6px 6px 0px;background-image:url(http://bdimg.share.baidu.com/static/api/img/share/icons_1_24.png?v=7314c5f6.png);background-repeat:no-repeat;background-position:0px -260px;" title="分享到腾讯微博"></a>
+        <a href="http://www.tuicool.com/articles/EF3yUb#" style="color:rgb(51, 51, 51);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;float:left;font-size:18px;padding-left:25px;line-height:24px;height:24px;cursor:pointer;margin:6px 6px 6px 0px;background-image:url(http://bdimg.share.baidu.com/static/api/img/share/icons_1_24.png?v=7314c5f6.png);background-repeat:no-repeat;background-position:0px -208px;" title="分享到人人网"></a>
+        <a href="http://www.tuicool.com/articles/EF3yUb#" style="color:rgb(51, 51, 51);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;float:left;font-size:18px;padding-left:25px;line-height:24px;height:24px;cursor:pointer;margin:6px 6px 6px 0px;background-image:url(http://bdimg.share.baidu.com/static/api/img/share/icons_1_24.png?v=7314c5f6.png);background-repeat:no-repeat;background-position:0px -1612px;" title="分享到微信"></a>
+        <a href="http://www.tuicool.com/articles/EF3yUb#" style="color:rgb(51, 51, 51);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;float:left;font-size:18px;padding-left:25px;line-height:24px;height:24px;cursor:pointer;margin:6px 6px 6px 0px;background-image:url(http://bdimg.share.baidu.com/static/api/img/share/icons_1_24.png?v=7314c5f6.png);background-repeat:no-repeat;background-position:0px 0px;"></a>
+     <span style="visibility:hidden;display:block;height:0px;clear:both;">.</span></div>
+    
+</div>
+
+        </div>
+           <div>
+              <div style="border-bottom-width:1px;border-bottom-style:solid;border-bottom-color:rgb(227, 227, 227);color:rgb(0, 0, 0);font-size:18px;padding-bottom:5px;font-weight:bold;margin-left:6px;margin-right:6px;padding-left:5px;">
+                <span style="text-decoration:none;display:inline-block;">推荐文章</span>
+              </div>
+          <ul style="padding:0px;margin:0px 0px 0.75em 25px;list-style-type:none;margin-left:5px;">
+                <li style="line-height:1.5em;list-style-type:none;padding-top:6px;padding-bottom:6px;font-size:14px;padding-left:0px;border-bottom-width:1px;border-bottom-style:dashed;border-bottom-color:rgb(204, 204, 204);">
+                    1.<a href="http://www.tuicool.com/articles/niUZvu" style="color:rgb(22, 160, 133);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;font-size:1.2em;" target="_blank" title="octopress 如何添加视频（octopress how to add a youku video）">
+                    octopress 如何添加视频（octopress how to add a youku video）
+                </a>
+                </li>
+                <li style="line-height:1.5em;list-style-type:none;padding-top:6px;padding-bottom:6px;font-size:14px;padding-left:0px;border-bottom-width:1px;border-bottom-style:dashed;border-bottom-color:rgb(204, 204, 204);">
+                    2.<a href="http://www.tuicool.com/articles/jqYz63j" style="color:rgb(22, 160, 133);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;font-size:1.2em;" target="_blank" title="私有包托管的服务站点Gemfury">
+                    私有包托管的服务站点Gemfury
+                </a>
+                </li>
+                <li style="line-height:1.5em;list-style-type:none;padding-top:6px;padding-bottom:6px;font-size:14px;padding-left:0px;border-bottom-width:1px;border-bottom-style:dashed;border-bottom-color:rgb(204, 204, 204);">
+                    3.<a href="http://www.tuicool.com/articles/AnEJFzv" style="color:rgb(22, 160, 133);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;font-size:1.2em;" target="_blank" title="什么是最适合初学者的编程语言？">
+                    什么是最适合初学者的编程语言？
+                </a>
+                </li>
+                <li style="line-height:1.5em;list-style-type:none;padding-top:6px;padding-bottom:6px;font-size:14px;padding-left:0px;border-bottom-width:1px;border-bottom-style:dashed;border-bottom-color:rgb(204, 204, 204);">
+                    4.<a href="http://www.tuicool.com/articles/2UNVjqa" style="color:rgb(22, 160, 133);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;font-size:1.2em;" target="_blank" title="SegmentFault D-Day 北京站：Ruby 专场">
+                    SegmentFault D-Day 北京站：Ruby 专场
+                </a>
+                </li>
+         </ul>
+        </div>
+
+        <div style="padding-left:5px;margin-bottom:10px;"></div>
+        
+        <div style="float:left;width:100%;padding-top:20px;">
+    <div>
+    <div style="padding:10px;background:rgb(241, 241, 241);">
+        <h5 style="margin:0px 0px 0.5em;font-family:inherit;font-weight:bold;line-height:1.5em;color:inherit;text-rendering:optimizelegibility;font-size:18px;margin-left:10px;">我来评几句</h5>
+        
+           
+          <a href="#" style="color:rgb(102, 102, 102);text-decoration:none;transition:0.25s;-webkit-transition:0.25s;display:inline-block;padding:5px 10px;margin-bottom:0px;font-size:14px;line-height:20px;text-align:center;text-shadow:rgba(255, 255, 255, 0.74902) 0px 1px 1px;vertical-align:top;cursor:pointer;border-width:1px;border-style:solid;border-color:rgb(204, 204, 204);border-radius:4px;-webkit-box-shadow:rgba(255, 255, 255, 0.2) 0px 1px 0px inset, rgba(0, 0, 0, 0.0470588) 0px 1px 2px;box-shadow:rgba(255, 255, 255, 0.2) 0px 1px 0px inset, rgba(0, 0, 0, 0.0470588) 0px 1px 2px;background:rgb(255, 255, 255);float:right;">发表评论</a>
+        <p style="margin:0px 0px 0.75em;margin-top:5px;margin-left:10px;">
+            已发表评论数(<span style="font-weight:bold;">0</span>)
+        </p>
+    </div>
+    
+    
+    
+    </div>
+</div>
+
+    </div></div></div></div></div></div><br/></span>
+</div></body></html> 

@@ -1,0 +1,359 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+<META name="GENERATOR" content="IBM HomePage Builder 2001 V5.0.0 for Windows">
+<TITLE>用Socket类实现HTTP协议客户端应用</TITLE>
+</HEAD>
+<BODY bgcolor="#e4ebf1">
+<P align="center"><FONT size="+2">用Socket类实现HTTP协议客户端应用</FONT><BR>
+</P>
+<P align="left">Http客户端程序已集成在Java语言中，可以通过URLConnection类调用。遗憾的<BR>
+是，由于SUN没有公布Http客户程序的源码，它实现的细节仍是一个谜。本文根据HTTP<BR>
+协议规范，用Java.net.Socket类实现一个HTTP协议客户端程序。<BR>
+<BR>
+1.Socket类:<BR>
+了解TCP/IP协议集通信的读者知道，协议间的通信是通过Socket完成的。在<BR>
+Java.net包中，Socket类就是对Socket的具体实现。它通过连接到主机后，返回一个<BR>
+I/O流，实现协议间的信息交换。<BR>
+<BR>
+2 . HTTP协议<BR>
+HTTP协议同其它TCP/IP协议集中的协议一样，是遵循客户/服务器模型工作的。客<BR>
+户端发往服务端的信息格式如下:<BR>
+------------------------------<BR>
+请求方法 URL HTTP协议的版本号<BR>
+提交的元信息<BR>
+**空行**<BR>
+实体<BR>
+------------------------------<BR>
+请求方法是对这次连接工作的说明，目前HTTP协议已经发展到1.1版，它包括GET、<BR>
+HEAD、POST、DELETE、OPTIONS、TRACE、PUT七种。元信息是关于当前请求的信息。通<BR>
+过分析元信息，可以检查实体数据是否完整，接收过程是否出错，类型是否匹配等。元<BR>
+信息的引入使HTTP协议通信更加稳妥可靠。实体是请求的具体内容。<BR>
+将上述报文发往Web服务器，如果成功，应答格式如下:<BR>
+--------------------------------<BR>
+HTTP协议的版本号 应答状态码 应答状态码说明<BR>
+接收的元信息<BR>
+**空行**<BR>
+实体<BR>
+--------------------------------<BR>
+以上报文发向客户端，并且接收成功，彼此间关闭连接，完成一次握手。<BR>
+下面用最常用的GET方法，来说明具体的报文应用<BR>
+----------------------------------<BR>
+GET http://www.youhost.com HTTP/1.0<BR>
+accept: www/source; text/html; image/gif;
+image/jpeg; */*<BR>
+User_Agent: myAgent<BR>
+**空行**<BR>
+-----------------------------------<BR>
+这个报文是向www.youhost.com主机请求一个缺省HTML文档。客户端HTTP协议版本<BR>
+号是1.0版，元信息包括可接收的文件格式，用户代理，每一段之间用回车换行符分<BR>
+隔，最后以一个空行结束。发向服务器后，如果执行过程正常，服务器返回以下代码:<BR>
+------------------------------------<BR>
+HTTP/1.1 200 OK<BR>
+Date: Tue, 14 Sep 1999 02:19:57 GMT<BR>
+Server: Apache/1.2.6<BR>
+Connection: close<BR>
+Content-Type: text/html<BR>
+**空行**<BR>
+&lt;html&gt;&lt;head&gt;...&lt;/head&gt;&lt;body&gt;...&lt;/body&gt;&lt;/html&gt;<BR>
+------------------------------------<BR>
+HTTP/1.1表示这个HTTP服务器是1.1版，200是服务器对客户请求的应答状态码，OK<BR>
+是对应答状态码的解释，之后是这个文档的元信息和文档正文。(相关应答状态码和元<BR>
+信息的解释请参阅Inetrnet标准草案:RFC2616)。<BR>
+<BR>
+3. HTTP客户端程序:<BR>
+<BR>
+import java.net.*;<BR>
+import java.io.*;<BR>
+import java.util.Properties;<BR>
+import java.util.Enumeration;<BR>
+public class Http {<BR>
+protected Socket client;<BR>
+protected BufferedOutputStream sender;<BR>
+protected BufferedInputStream receiver;<BR>
+protected ByteArrayInputStream byteStream;<BR>
+protected URL target;<BR>
+private int responseCode=-1;<BR>
+private String responseMessage=&quot;&quot;;<BR>
+private String serverVersion=&quot;&quot;;<BR>
+private Properties header = new Properties();<BR>
+public Http() { }<BR>
+public Http(String url) {<BR>
+GET(url) ;<BR>
+}<BR>
+/* GET方法根据URL，会请求文件、数据库查询结果、程序运行结果等多种内容
+*/<BR>
+public void GET(String url) {<BR>
+try {<BR>
+checkHTTP(url);<BR>
+openServer(target.getHost(),target.getPort()
+);<BR>
+String cmd = &quot;GET &quot;+ getURLFormat(target)
++&quot; HTTP/1.0\r\n&quot;<BR>
++ getBaseHeads()+&quot;\r\n&quot;;<BR>
+sendMessage(cmd);<BR>
+receiveMessage();<BR>
+}catch(ProtocolException p) {<BR>
+p.printStackTrace();<BR>
+return;<BR>
+}catch(UnknownHostException e) {<BR>
+e.printStackTrace();<BR>
+return;<BR>
+}catch(IOException i)<BR>
+<BR>
+i.printStackTrace();<BR>
+return;<BR>
+}<BR>
+}<BR>
+<BR>
+/*<BR>
+* HEAD方法只请求URL的元信息，不包括URL本身。若怀疑本机和服务器上的<BR>
+* 文件相同，用这个方法检查最快捷有效。<BR>
+*/<BR>
+public void HEAD(String url) {<BR>
+try {<BR>
+checkHTTP(url);<BR>
+openServer(target.getHost(),target.getPort()
+);<BR>
+String cmd = &quot;HEAD &quot;+getURLFormat(target)+&quot;
+HTTP/1.0\r\n&quot;<BR>
++getBaseHeads()+&quot;\r\n&quot;;<BR>
+sendMessage(cmd);<BR>
+receiveMessage();<BR>
+}catch(ProtocolException p) {<BR>
+p.printStackTrace();<BR>
+return;<BR>
+}catch(UnknownHostException e) {<BR>
+e.printStackTrace();<BR>
+return;<BR>
+}catch(IOException i)<BR>
+<BR>
+i.printStackTrace();<BR>
+return;<BR>
+}<BR>
+}<BR>
+/*<BR>
+* POST方法是向服务器传送数据，以便服务器做出相应的处理。例如网页上常用的<BR>
+* 提交表格。<BR>
+*/<BR>
+public void POST(String url,String content)
+{<BR>
+try {<BR>
+checkHTTP(url);<BR>
+openServer(target.getHost(),target.getPort()
+);<BR>
+String cmd = &quot;POST &quot;+ getURLFormat(target)
++&quot;<BR>
+HTTP/1.0\r\n&quot;+getBaseHeads();<BR>
+cmd += &quot;Content-type: application/x-www-form-urlencoded\r\n&quot;;<BR>
+cmd += &quot;Content-length: &quot; + content.length()
++ &quot;\r\n\r\n&quot;;<BR>
+cmd += content+&quot;\r\n&quot;;<BR>
+sendMessage(cmd);<BR>
+receiveMessage();<BR>
+}catch(ProtocolException p) {<BR>
+p.printStackTrace();<BR>
+return;<BR>
+}catch(UnknownHostException e) {<BR>
+e.printStackTrace();<BR>
+return;<BR>
+}catch(IOException i)<BR>
+<BR>
+i.printStackTrace();<BR>
+return;<BR>
+}<BR>
+<BR>
+}<BR>
+protected void checkHTTP(String url) throws
+ProtocolException {<BR>
+try {<BR>
+URL target = new URL(url);<BR>
+if(target==null || !target.getProtocol().toUpperCase().equals(&quot;HTTP&quot;)
+)<BR>
+throw new ProtocolException(&quot;这不是HTTP协议&quot;);<BR>
+this.target = target;<BR>
+}catch(MalformedURLException m) {<BR>
+throw new ProtocolException(&quot;协议格式错误&quot;);<BR>
+}<BR>
+}<BR>
+/*<BR>
+* 与Web服务器连接。若找不到Web服务器，InetAddress会引发UnknownHostException<BR>
+* 异常。若Socket连接失败，会引发IOException异常。<BR>
+*/<BR>
+protected void openServer(String host,int
+port) throws<BR>
+UnknownHostException,IOException {<BR>
+header.clear();<BR>
+responseMessage=&quot;&quot;; responseCode=-1;<BR>
+try {<BR>
+if(client!=null) closeServer();<BR>
+if(byteStream != null) {<BR>
+byteStream.close(); byteStream=null;<BR>
+}<BR>
+InetAddress address = InetAddress.getByName(host);<BR>
+client = new Socket(address,port==-1?80:port);<BR>
+sender = new BufferedOutputStream(client.getOutputStream());<BR>
+receiver = new BufferedInputStream(client.getInputStream());<BR>
+}catch(UnknownHostException u) {<BR>
+throw u;<BR>
+}catch(IOException i) {<BR>
+throw i;<BR>
+}<BR>
+}<BR>
+/* 关闭与Web服务器的连接 */<BR>
+protected void closeServer() throws IOException
+{<BR>
+if(client==null) return;<BR>
+try {<BR>
+client.close(); sender.close(); receiver.close();<BR>
+}catch(IOException i) {<BR>
+throw i;<BR>
+}<BR>
+client=null; sender=null; receiver=null;<BR>
+}<BR>
+protected String getURLFormat(URL target)
+{<BR>
+String spec = &quot;http://&quot;+target.getHost();<BR>
+if(target.getPort()!=-1)<BR>
+spec+=&quot;:&quot;+target.getPort();<BR>
+return spec+=target.getFile();<BR>
+}<BR>
+<BR>
+/* 向Web服务器传送数据 */<BR>
+protected void sendMessage(String data) throws
+IOException{<BR>
+sender.write(data.getBytes(),0,data.length());<BR>
+sender.flush();<BR>
+}<BR>
+/* 接收来自Web服务器的数据 */<BR>
+protected void receiveMessage() throws IOException{<BR>
+byte data[] = new byte[1024];<BR>
+int count=0;<BR>
+int word=-1;<BR>
+// 解析第一行<BR>
+while( (word=receiver.read())!=-1 ) {<BR>
+if(word=='\r'||word=='\n') {<BR>
+word=receiver.read();<BR>
+if(word=='\n') word=receiver.read();<BR>
+break;<BR>
+}<BR>
+if(count == data.length) data = addCapacity(data);<BR>
+data[count++]=(byte)word;<BR>
+}<BR>
+String message = new String(data,0,count);<BR>
+int mark = message.indexOf(32);<BR>
+serverVersion = message.substring(0,mark);<BR>
+while( mark&lt;message.length() &amp;&amp;
+message.charAt(mark+1)==32 ) mark++;<BR>
+responseCode = Integer.parseInt(message.substring(mark+1,mark+=4));<BR>
+responseMessage = message.substring(mark,message.length()).trim();<BR>
+<BR>
+// 应答状态码和处理请读者添加<BR>
+switch(responseCode) {<BR>
+case 400:<BR>
+throw new IOException(&quot;错误请求&quot;);<BR>
+case 404:<BR>
+throw new FileNotFoundException( getURLFormat(target)
+);<BR>
+case 503:<BR>
+throw new IOException(&quot;服务器不可用&quot;
+);<BR>
+}<BR>
+if(word==-1) throw new ProtocolException(&quot;信息接收异常终止&quot;);<BR>
+int symbol=-1;<BR>
+count=0;<BR>
+// 解析元信息<BR>
+while( word!='\r' &amp;&amp; word!='\n' &amp;&amp;
+word&gt;-1) {<BR>
+if(word=='\t') word=32;<BR>
+if(count==data.length) data = addCapacity(data);<BR>
+data[count++] = (byte)word;<BR>
+parseLine: {<BR>
+while( (symbol=receiver.read()) &gt;-1 )
+{<BR>
+switch(symbol) {<BR>
+case '\t':<BR>
+symbol=32; break;<BR>
+case '\r':<BR>
+case '\n':<BR>
+word = receiver.read();<BR>
+if( symbol=='\r' &amp;&amp; word=='\n') {<BR>
+word=receiver.read();<BR>
+if(word=='\r') word=receiver.read();<BR>
+}<BR>
+if( word=='\r' || word=='\n' || word&gt;32)
+break parseLine;<BR>
+symbol=32; break;<BR>
+}<BR>
+if(count==data.length) data = addCapacity(data);<BR>
+data[count++] = (byte)symbol;<BR>
+}<BR>
+word=-1;<BR>
+}<BR>
+message = new String(data,0,count);<BR>
+mark = message.indexOf(':');<BR>
+String key = null;<BR>
+if(mark&gt;0) key = message.substring(0,mark);<BR>
+mark++;<BR>
+while( mark&lt;message.length() &amp;&amp;
+message.charAt(mark)&lt;=32 ) mark++;<BR>
+String value = message.substring(mark,message.length()
+);<BR>
+header.put(key,value);<BR>
+count=0;<BR>
+}<BR>
+// 获得正文数据<BR>
+while( (word=receiver.read())!=-1) {<BR>
+if(count == data.length) data = addCapacity(data);<BR>
+data[count++] = (byte)word;<BR>
+}<BR>
+if(count&gt;0) byteStream = new ByteArrayInputStream(data,0,count);<BR>
+data=null;<BR>
+closeServer();<BR>
+}<BR>
+public String getResponseMessage() {<BR>
+return responseMessage;<BR>
+}<BR>
+public int getResponseCode() {<BR>
+return responseCode;<BR>
+}<BR>
+public String getServerVersion() {<BR>
+return serverVersion;<BR>
+}<BR>
+public InputStream getInputStream() {<BR>
+return byteStream;<BR>
+}<BR>
+public synchronized String getHeaderKey(int
+i) {<BR>
+if(i&gt;=header.size()) return null;<BR>
+Enumeration enum = header.propertyNames();<BR>
+String key = null;<BR>
+for(int j=0; j&lt;=i; j++)<BR>
+key = (String)enum.nextElement();<BR>
+return key;<BR>
+}<BR>
+public synchronized String getHeaderValue(int
+i) {<BR>
+if(i&gt;=header.size()) return null;<BR>
+return header.getProperty(getHeaderKey(i));<BR>
+}<BR>
+public synchronized String getHeaderValue(String
+key) {<BR>
+return header.getProperty(key);<BR>
+}<BR>
+protected String getBaseHeads() {<BR>
+String inf = &quot;User-Agent: myselfHttp/1.0\r\n&quot;+<BR>
+&quot;Accept: www/source; text/html; image/gif;
+*/*\r\n&quot;;<BR>
+return inf;<BR>
+}<BR>
+private byte[] addCapacity(byte rece[]){<BR>
+byte temp[] = new byte[rece.length+1024];<BR>
+System.arraycopy(rece,0,temp,0,rece.length);<BR>
+return temp;<BR>
+}<BR>
+}<BR>
+<BR>
+注: 程序中只实现GET、HEAD、POST三种方法。其他几种因不常使用，暂且忽略。</P>
+</BODY>
+</HTML>

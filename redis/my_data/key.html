@@ -1,0 +1,1090 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from redis.readthedocs.org/en/2.4/key.html by HTTrack Website Copier/3.x [XR&CO'2010], Tue, 22 Nov 2011 10:08:48 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>键(Key) &mdash; Redis命令参考简体中文版 v2.4 documentation</title>
+    <link rel="stylesheet" href="static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="static/jquery.js"></script>
+    <script type="text/javascript" src="static/underscore.js"></script>
+    <script type="text/javascript" src="static/doctools.js"></script>
+    <script type="text/javascript" src="static/translations.js"></script>
+    <link rel="author" title="关于这些文档" href="about.html" />
+    <link rel="top" title="Redis命令参考简体中文版 v2.4 documentation" href="index.html" />
+    <link rel="next" title="字符串(String)" href="string.html" />
+    <link rel="prev" title="Redis命令参考简体中文版" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>导航</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="总目录"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="string.html" title="字符串(String)"
+             accesskey="N">下一页</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Redis命令参考简体中文版"
+             accesskey="P">上一页</a> |</li>
+        <li><a href="index.html">Redis命令参考简体中文版 v2.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="key">
+<span id="key-strcut"></span><h1>键(Key)<a class="headerlink" href="#key" title="永久链接至标题">¶</a></h1>
+<div class="section" id="del">
+<span id="id1"></span><h2>DEL<a class="headerlink" href="#del" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">DEL key [key ...]</tt></dt>
+<dd></dd></dl>
+
+<p>移除给定的一个或多个<tt class="docutils literal"><span class="pre">key</span></tt>。</p>
+<p>如果<tt class="docutils literal"><span class="pre">key</span></tt>不存在，则忽略该命令。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd><div class="first line-block">
+<div class="line">O(N)，<tt class="docutils literal"><span class="pre">N</span></tt>为要移除的<tt class="docutils literal"><span class="pre">key</span></tt>的数量。</div>
+</div>
+<div class="last line-block">
+<div class="line">移除单个字符串类型的<tt class="docutils literal"><span class="pre">key</span></tt>，时间复杂度为O(1)。</div>
+<div class="line">移除单个列表、集合、有序集合或哈希表类型的<tt class="docutils literal"><span class="pre">key</span></tt>，时间复杂度为O(M)，<tt class="docutils literal"><span class="pre">M</span></tt>为以上数据结构内的元素数量。</div>
+</div>
+</dd>
+<dt><strong>返回值：</strong></dt>
+<dd>被移除<tt class="docutils literal"><span class="pre">key</span></tt>的数量。</dd>
+</dl>
+<div class="highlight-python"><pre># 情况1： 删除单个key
+
+redis&gt; SET name huangz # 设置一个值
+OK
+
+redis&gt; DEL name  # 将其删除
+(integer) 1
+
+
+# 情况2： 删除一个不存在的key
+
+redis&gt; EXISTS phone  # 检查一个不存在的key
+(integer) 0
+
+redis&gt; DEL phone # 试图删除一个不存在的key，失败
+(integer) 0
+
+
+# 情况3： 同时删除多个key
+
+redis&gt; MSET name huangz age 20 blog huangz.iteye.com # 同时设置多个key-value对
+OK
+
+redis&gt; DEL name age blog # 同时删除三个key
+(integer) 3</pre>
+</div>
+</div>
+<div class="section" id="keys">
+<span id="id2"></span><h2>KEYS<a class="headerlink" href="#keys" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">KEYS pattern</tt></dt>
+<dd></dd></dl>
+
+<p>查找符合给定模式的<tt class="docutils literal"><span class="pre">key</span></tt>。</p>
+<div class="line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">KEYS</span> <span class="pre">*</span></tt>命中数据库中所有<tt class="docutils literal"><span class="pre">key</span></tt>。</div>
+<div class="line"><tt class="docutils literal"><span class="pre">KEYS</span> <span class="pre">h?llo</span></tt>命中<tt class="docutils literal"><span class="pre">hello</span></tt>， <tt class="docutils literal"><span class="pre">hallo</span> <span class="pre">and</span> <span class="pre">hxllo</span></tt>等。</div>
+<div class="line"><tt class="docutils literal"><span class="pre">KEYS</span> <span class="pre">h*llo</span></tt>命中<tt class="docutils literal"><span class="pre">hllo</span></tt>和<tt class="docutils literal"><span class="pre">heeeeello</span></tt>等。</div>
+<div class="line"><tt class="docutils literal"><span class="pre">KEYS</span> <span class="pre">h[ae]llo</span></tt>命中<tt class="docutils literal"><span class="pre">hello</span></tt>和<tt class="docutils literal"><span class="pre">hallo</span></tt>，但不命中<tt class="docutils literal"><span class="pre">hillo</span></tt>。</div>
+</div>
+<p>特殊符号用<tt class="docutils literal"><span class="pre">&quot;\&quot;</span></tt>隔开</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(N)，<tt class="docutils literal"><span class="pre">N</span></tt>为数据库中<tt class="docutils literal"><span class="pre">key</span></tt>的数量。</dd>
+<dt><strong>返回值：</strong></dt>
+<dd>符合给定模式的<tt class="docutils literal"><span class="pre">key</span></tt>列表。</dd>
+</dl>
+<div class="admonition warning">
+<p class="first admonition-title">警告</p>
+<p class="last"><a class="reference internal" href="#keys">KEYS</a>的速度非常快，但在一个大的数据库中使用它仍然可能造成性能问题，如果你需要从一个数据集中查找特定的<tt class="docutils literal"><span class="pre">key</span></tt>，你最好还是用<a class="reference internal" href="set.html#set-struct"><em>集合(Set)</em></a>。</p>
+</div>
+<div class="highlight-python"><pre>redis&gt; mset one 1 two 2 three 3 four 4  # 一次设置4个key
+OK
+
+redis&gt; keys *o*
+1) "four"
+2) "two"
+3) "one"
+
+redis&gt; keys t??
+1) "two"
+
+redis&gt; keys t[w]*
+1) "two"
+
+redis&gt; keys *  # 匹配数据库内所有key
+1) "four"
+2) "three"
+3) "two"
+4) "one"</pre>
+</div>
+</div>
+<div class="section" id="randomkey">
+<span id="id3"></span><h2>RANDOMKEY<a class="headerlink" href="#randomkey" title="永久链接至标题">¶</a></h2>
+<p><strong>RANDOMKEY</strong></p>
+<p>从当前数据库中随机返回(不删除)一个<tt class="docutils literal"><span class="pre">key</span></tt>。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">当数据库不为空时，返回一个<tt class="docutils literal"><span class="pre">key</span></tt>。</div>
+<div class="line">当数据库为空时，返回<tt class="docutils literal"><span class="pre">nil</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre># 情况1：数据库不为空
+
+redis&gt; mset fruit "apple" drink "beer" food "cookies"   # 设置多个key
+OK
+
+redis&gt; randomkey
+"fruit"
+
+redis&gt; randomkey
+"food"
+
+redis&gt; keys *    # 查看数据库内所有key，证明RANDOMKEY并不删除key
+1) "food"
+2) "drink"
+3) "fruit"
+
+
+# 情况2：数据库为空
+
+redis&gt; flushdb  # 删除当前数据库所有key
+OK
+
+redis&gt; randomkey
+(nil)</pre>
+</div>
+</div>
+<div class="section" id="ttl">
+<span id="id4"></span><h2>TTL<a class="headerlink" href="#ttl" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">TTL key</tt></dt>
+<dd></dd></dl>
+
+<p>返回给定<tt class="docutils literal"><span class="pre">key</span></tt>的剩余生存时间(time to live)(以秒为单位)。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">key</span></tt>的剩余生存时间(以秒为单位)。</div>
+<div class="line">当<tt class="docutils literal"><span class="pre">key</span></tt>不存在或没有设置生存时间时，返回<tt class="docutils literal"><span class="pre">-1</span></tt> 。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre># 情况1：带TTL的key
+
+redis&gt; set name "huangz"    # 设置一个key
+OK
+
+redis&gt; expire name 30  # 设置生存时间为30秒
+(integer) 1
+
+redis&gt; get name
+"huangz"
+
+redis&gt; ttl name
+(integer) 25
+
+redis&gt; ttl name # 30秒过去，name过期
+(integer) -1
+
+redis&gt; get name # 过期的key将被删除
+(nil)
+
+
+# 情况2：不带TTL的key
+
+redis&gt; SET site wikipedia.org
+OK
+
+redis&gt; TTL wikipedia.org
+(integer) -1
+
+
+# 情况3：不存在的key
+
+redis&gt; EXISTS not_exists_key
+(integer) 0
+
+redis&gt; TTL not_exists_key
+(integer) -1</pre>
+</div>
+</div>
+<div class="section" id="exists">
+<span id="id5"></span><h2>EXISTS<a class="headerlink" href="#exists" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">EXISTS key</tt></dt>
+<dd></dd></dl>
+
+<p>检查给定<tt class="docutils literal"><span class="pre">key</span></tt>是否存在。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd>若<tt class="docutils literal"><span class="pre">key</span></tt>存在，返回<tt class="docutils literal"><span class="pre">1</span></tt>，否则返回<tt class="docutils literal"><span class="pre">0</span></tt>。</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; set db "redis"
+OK
+
+redis&gt; exists db  # key存在
+(integer) 1
+
+redis&gt; del db   # 删除key
+(integer) 1
+
+redis&gt; exists db  # key不存在
+(integer) 0</pre>
+</div>
+</div>
+<div class="section" id="move">
+<span id="id6"></span><h2>MOVE<a class="headerlink" href="#move" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">MOVE key db</tt></dt>
+<dd></dd></dl>
+
+<p>将当前数据库(默认为<tt class="docutils literal"><span class="pre">0</span></tt>)的<tt class="docutils literal"><span class="pre">key</span></tt>移动到给定的数据库<tt class="docutils literal"><span class="pre">db</span></tt>当中。</p>
+<p>如果当前数据库(源数据库)和给定数据库(目标数据库)有相同名字的给定<tt class="docutils literal"><span class="pre">key</span></tt>，或者<tt class="docutils literal"><span class="pre">key</span></tt>不存在于当前数据库，那么<tt class="docutils literal"><span class="pre">MOVE</span></tt>没有任何效果。</p>
+<p>因此，也可以利用这一特性，将<a class="reference internal" href="#move">MOVE</a>当作锁(locking)原语。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd>移动成功返回<tt class="docutils literal"><span class="pre">1</span></tt>，失败则返回<tt class="docutils literal"><span class="pre">0</span></tt>。</dd>
+</dl>
+<div class="highlight-python"><pre># 情况1： key存在于当前数据库
+
+redis&gt; SELECT 0  # redis默认使用数据库0，为了清晰起见，这里再显式指定一次。
+OK
+
+redis&gt; SET song "secret base - Zone"
+OK
+
+redis&gt; MOVE song 1  # 将song移动到数据库1
+(integer) 1
+
+redis&gt; EXISTS song  # song已经被移走
+(integer) 0
+
+redis&gt; SELECT 1  # 使用数据库1
+OK
+
+redis:1&gt; EXISTS song  # 证实song被移到了数据库1(注意命令提示符变成了"redis:1"，表明正在使用数据库1)
+(integer) 1
+
+
+# 情况2：当key不存在的时候
+
+redis:1&gt; EXISTS fake_key
+(integer) 0
+
+redis:1&gt; MOVE fake_key 0  # 试图从数据库1移动一个不存在的key到数据库0，失败
+(integer) 0
+
+redis:1&gt; select 0  # 使用数据库0
+OK
+
+redis&gt; EXISTS fake_key  # 证实fake_key不存在
+(integer) 0
+
+
+# 情况3：当源数据库和目标数据库有相同的key时
+
+redis&gt; SELECT 0  # 使用数据库0
+OK
+
+redis&gt; SET favorite_fruit "banana"
+OK
+
+redis&gt; SELECT 1  # 使用数据库1
+OK
+redis:1&gt; SET favorite_fruit "apple"
+OK
+
+redis:1&gt; SELECT 0  # 使用数据库0，并试图将favorite_fruit移动到数据库1
+OK
+
+redis&gt; MOVE favorite_fruit 1  # 因为两个数据库有相同的key，MOVE失败
+(integer) 0
+
+redis&gt; GET favorite_fruit  # 数据库0的favorite_fruit没变
+"banana"
+
+redis&gt; SELECT 1
+OK
+
+redis:1&gt; GET favorite_fruit  # 数据库1的favorite_fruit也是
+"apple"</pre>
+</div>
+</div>
+<div class="section" id="rename">
+<span id="id7"></span><h2>RENAME<a class="headerlink" href="#rename" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">RENAME key newkey</tt></dt>
+<dd></dd></dl>
+
+<p>将<tt class="docutils literal"><span class="pre">key</span></tt>改名为<tt class="docutils literal"><span class="pre">newkey</span></tt>。</p>
+<p>当<tt class="docutils literal"><span class="pre">key</span></tt>和<tt class="docutils literal"><span class="pre">newkey</span></tt>相同或者<tt class="docutils literal"><span class="pre">key</span></tt>不存在时，返回一个错误。</p>
+<p>当<tt class="docutils literal"><span class="pre">newkey</span></tt>已经存在时，<a class="reference internal" href="#rename">RENAME</a>命令将覆盖旧值。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd>改名成功时提示<tt class="docutils literal"><span class="pre">OK</span></tt>，失败时候返回一个错误。</dd>
+</dl>
+<div class="highlight-python"><pre># 情况1：key存在且newkey不存在
+
+redis&gt; SET message "hello world"
+OK
+
+redis&gt; RENAME message greeting
+OK
+
+redis&gt; EXISTS message  # message不复存在
+(integer) 0
+
+redis&gt; EXISTS greeting  # greeting取而代之
+(integer) 1
+
+
+# 情况2：当key不存在时，返回错误
+
+redis&gt; RENAME fake_key never_exists
+(error) ERR no such key
+
+
+# 情况3：newkey已存在时，RENAME会覆盖旧newkey
+
+redis&gt; SET pc "lenovo"
+OK
+
+redis&gt; SET personal_computer "dell"
+OK
+
+redis&gt; RENAME pc personal_computer
+OK
+
+redis&gt; GET pc
+(nil)
+
+redis:1&gt; GET personal_computer  # dell“没有”了
+"lenovo"</pre>
+</div>
+</div>
+<div class="section" id="type">
+<span id="id8"></span><h2>TYPE<a class="headerlink" href="#type" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">TYPE key</tt></dt>
+<dd></dd></dl>
+
+<p>返回<tt class="docutils literal"><span class="pre">key</span></tt>所储存的值的类型。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">none</span></tt>(key不存在)</div>
+<div class="line"><tt class="docutils literal"><span class="pre">string</span></tt>(字符串)</div>
+<div class="line"><tt class="docutils literal"><span class="pre">list</span></tt>(列表)</div>
+<div class="line"><tt class="docutils literal"><span class="pre">set</span></tt>(集合)</div>
+<div class="line"><tt class="docutils literal"><span class="pre">zset</span></tt>(有序集)</div>
+<div class="line"><tt class="docutils literal"><span class="pre">hash</span></tt>(哈希表)</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SET weather "sunny"  # 构建一个字符串
+OK
+
+redis&gt; TYPE weather
+string
+
+redis&gt; LPUSH book_list "programming in scala"  # 构建一个列表
+(integer) 1
+
+redis&gt; TYPE book_list
+list
+
+redis&gt; SADD pat "dog"  # 构建一个集合
+(integer) 1
+
+redis&gt; TYPE pat
+set</pre>
+</div>
+</div>
+<div class="section" id="expire">
+<span id="id9"></span><h2>EXPIRE<a class="headerlink" href="#expire" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">EXPIRE key seconds</tt></dt>
+<dd></dd></dl>
+
+<p>为给定<tt class="docutils literal"><span class="pre">key</span></tt>设置生存时间。</p>
+<p>当<tt class="docutils literal"><span class="pre">key</span></tt>过期时，它会被自动删除。</p>
+<p>在Redis中，带有生存时间的<tt class="docutils literal"><span class="pre">key</span></tt>被称作“易失的”(volatile)。</p>
+<div class="line-block">
+<div class="line">在低于2.1.3版本的Redis中，已存在的生存时间不可覆盖。</div>
+<div class="line">从2.1.3版本开始，<tt class="docutils literal"><span class="pre">key</span></tt>的生存时间可以被更新，也可以被<a class="reference internal" href="#persist">PERSIST</a>命令移除。(详情参见 <a class="reference external" href="http://redis.io/topics/expire">http://redis.io/topics/expire</a>)。</div>
+</div>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">设置成功返回<tt class="docutils literal"><span class="pre">1</span></tt>。</div>
+<div class="line">当<tt class="docutils literal"><span class="pre">key</span></tt>不存在或者不能为<tt class="docutils literal"><span class="pre">key</span></tt>设置生存时间时(比如在低于2.1.3中你尝试更新<tt class="docutils literal"><span class="pre">key</span></tt>的生存时间)，返回<tt class="docutils literal"><span class="pre">0</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SET cache_page "www.twitter.com/huangz1990"
+OK
+
+redis&gt; EXPIRE cache_page 30  # 设置30秒后过期
+(integer) 1
+
+redis&gt; TTL cache_page   # 查看给定key的剩余生存时间
+(integer) 24
+
+redis&gt; EXPIRE cache_page 30000  # 更新生存时间，30000秒
+(integer) 1
+
+redis&gt; TTL cache_page
+(integer) 29996</pre>
+</div>
+</div>
+<div class="section" id="object">
+<span id="id10"></span><h2>OBJECT<a class="headerlink" href="#object" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">OBJECT subcommand [arguments [arguments]]</tt></dt>
+<dd></dd></dl>
+
+<p><a class="reference internal" href="#object">OBJECT</a>命令允许从内部察看给定<tt class="docutils literal"><span class="pre">key</span></tt>的Redis对象。</p>
+<div class="line-block">
+<div class="line">它通常用在除错(debugging)或者了解为了节省空间而对<tt class="docutils literal"><span class="pre">key</span></tt>使用特殊编码的情况。</div>
+<div class="line">当将Redis用作缓存程序时，你也可以通过<a class="reference internal" href="#object">OBJECT</a>命令中的信息，决定<tt class="docutils literal"><span class="pre">key</span></tt>的驱逐策略(eviction policies)。</div>
+</div>
+<p>OBJECT命令有多个子命令：</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">OBJECT</span> <span class="pre">REFCOUNT</span> <span class="pre">&lt;key&gt;</span></tt>返回给定<tt class="docutils literal"><span class="pre">key</span></tt>引用所储存的值的次数。此命令主要用于除错。</li>
+<li><tt class="docutils literal"><span class="pre">OBJECT</span> <span class="pre">ENCODING</span> <span class="pre">&lt;key&gt;</span></tt>返回给定<tt class="docutils literal"><span class="pre">key</span></tt>锁储存的值所使用的内部表示(representation)。</li>
+<li><tt class="docutils literal"><span class="pre">OBJECT</span> <span class="pre">IDLETIME</span> <span class="pre">&lt;key&gt;</span></tt>返回给定<tt class="docutils literal"><span class="pre">key</span></tt>自储存以来的空转时间(idle， 没有被读取也没有被写入)，以秒为单位。</li>
+</ul>
+<div class="line-block">
+<div class="line">对象可以以多种方式编码：</div>
+</div>
+<ul class="simple">
+<li>字符串可以被编码为<tt class="docutils literal"><span class="pre">raw</span></tt>(一般字符串)或<tt class="docutils literal"><span class="pre">int</span></tt>(用字符串表示64位数字是为了节约空间)。</li>
+<li>列表可以被编码为<tt class="docutils literal"><span class="pre">ziplist</span></tt>或<tt class="docutils literal"><span class="pre">linkedlist</span></tt>。<tt class="docutils literal"><span class="pre">ziplist</span></tt>是为节约大小较小的列表空间而作的特殊表示。</li>
+<li>集合可以被编码为<tt class="docutils literal"><span class="pre">intset</span></tt>或者<tt class="docutils literal"><span class="pre">hashtable</span></tt>。<tt class="docutils literal"><span class="pre">intset</span></tt>是只储存数字的小集合的特殊表示。</li>
+<li>哈希表可以编码为<tt class="docutils literal"><span class="pre">zipmap</span></tt>或者<tt class="docutils literal"><span class="pre">hashtable</span></tt>。<tt class="docutils literal"><span class="pre">zipmap</span></tt>是小哈希表的特殊表示。</li>
+<li>有序集合可以被编码为<tt class="docutils literal"><span class="pre">ziplist</span></tt>或者<tt class="docutils literal"><span class="pre">skiplist</span></tt>格式。<tt class="docutils literal"><span class="pre">ziplist</span></tt>用于表示小的有序集合，而<tt class="docutils literal"><span class="pre">skiplist</span></tt>则用于表示任何大小的有序集合。</li>
+</ul>
+<div class="line-block">
+<div class="line">假如你做了什么让Redis没办法再使用节省空间的编码时(比如将一个只有1个元素的集合扩展为一个有100万个元素的集合)，特殊编码类型(specially encoded types)会自动转换成通用类型(general type)。</div>
+</div>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">REFCOUNT</span></tt>和<tt class="docutils literal"><span class="pre">IDLETIME</span></tt>返回数字。</div>
+<div class="line"><tt class="docutils literal"><span class="pre">ENCODING</span></tt>返回相应的编码类型。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SET game "COD"  # 设置一个字符串
+OK
+
+redis&gt; OBJECT REFCOUNT game  # 只有一个引用
+(integer) 1
+
+redis&gt; OBJECT IDLETIME game  # 等待一阵。。。然后查看空转时间
+(integer) 90
+
+redis&gt; GET game  # 提取game， 让它处于活跃(active)状态
+"COD"
+
+redis&gt; OBJECT IDLETIME game  # 不再处于空转
+(integer) 0
+
+redis&gt; OBJECT ENCODING game  # 字符串的编码方式
+"raw"
+
+redis&gt; SET phone 15820123123  # 大的数字也被编码为字符串
+OK
+
+redis&gt; OBJECT ENCODING phone
+"raw"
+
+redis&gt; SET age 20  # 短数字被编码为int
+OK
+
+redis&gt; OBJECT ENCODING age
+"int"</pre>
+</div>
+</div>
+<div class="section" id="renamenx">
+<span id="id11"></span><h2>RENAMENX<a class="headerlink" href="#renamenx" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">RENAMENX key newkey</tt></dt>
+<dd></dd></dl>
+
+<p>当且仅当<tt class="docutils literal"><span class="pre">newkey</span></tt>不存在时，将<tt class="docutils literal"><span class="pre">key</span></tt>改为<tt class="docutils literal"><span class="pre">newkey</span></tt>。</p>
+<p>出错的情况和<a class="reference internal" href="#rename">RENAME</a>一样(<tt class="docutils literal"><span class="pre">key</span></tt>不存在时报错)。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">修改成功时，返回<tt class="docutils literal"><span class="pre">1</span></tt>。</div>
+<div class="line">如果<tt class="docutils literal"><span class="pre">newkey</span></tt>已经存在，返回<tt class="docutils literal"><span class="pre">0</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre># 情况1：newkey不存在，成功
+
+redis&gt; SET player "MPlyaer"
+OK
+
+redis&gt; EXISTS best_player
+(integer) 0
+
+redis&gt; RENAMENX player best_player
+(integer) 1
+
+
+# 情况2：newkey存在时，失败
+
+redis&gt; SET animal "bear"
+OK
+
+redis&gt; SET favorite_animal "butterfly"
+OK
+
+redis&gt; RENAMENX animal favorite_animal
+(integer) 0
+
+redis&gt; get animal
+"bear"
+
+redis&gt; get favorite_animal
+"butterfly"</pre>
+</div>
+</div>
+<div class="section" id="expireat">
+<span id="id12"></span><h2>EXPIREAT<a class="headerlink" href="#expireat" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">EXPIREAT key timestamp</tt></dt>
+<dd></dd></dl>
+
+<p><a class="reference internal" href="#expireat">EXPIREAT</a>的作用和<a class="reference internal" href="#expire">EXPIRE</a>一样，都用于为<tt class="docutils literal"><span class="pre">key</span></tt>设置生存时间。</p>
+<p>不同在于<a class="reference internal" href="#expireat">EXPIREAT</a>命令接受的时间参数是<em>UNIX时间戳</em>(unix timestamp)。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">如果生存时间设置成功，返回<tt class="docutils literal"><span class="pre">1</span></tt>。</div>
+<div class="line">当<tt class="docutils literal"><span class="pre">key</span></tt>不存在或没办法设置生存时间，返回<tt class="docutils literal"><span class="pre">0</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SET cache www.google.com
+OK
+
+redis&gt; EXPIREAT cache 1355292000 # 这个key将在2012.12.12过期
+(integer) 1
+
+redis&gt; TTL cache
+(integer) 45081860</pre>
+</div>
+</div>
+<div class="section" id="persist">
+<span id="id13"></span><h2>PERSIST<a class="headerlink" href="#persist" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">PERSIST key</tt></dt>
+<dd></dd></dl>
+
+<p>移除给定<tt class="docutils literal"><span class="pre">key</span></tt>的生存时间。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd>O(1)</dd>
+<dt><strong>返回值：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">当生存时间移除成功时，返回<tt class="docutils literal"><span class="pre">1</span></tt>.</div>
+<div class="line">如果<tt class="docutils literal"><span class="pre">key</span></tt>不存在或<tt class="docutils literal"><span class="pre">key</span></tt>没有设置生存时间，返回<tt class="docutils literal"><span class="pre">0</span></tt>。</div>
+</div>
+</dd>
+</dl>
+<div class="highlight-python"><pre>redis&gt; SET time_to_say_goodbye "886..."
+OK
+
+redis&gt; EXPIRE time_to_say_goodbye 300
+(integer) 1
+
+redis&gt; TTL time_to_say_goodbye
+(integer) 293
+
+redis&gt; PERSIST time_to_say_goodbye  # 移除生存时间
+(integer) 1
+
+redis&gt; TTL time_to_say_goodbye  # 移除成功
+(integer) -1</pre>
+</div>
+</div>
+<div class="section" id="sort">
+<span id="id14"></span><h2>SORT<a class="headerlink" href="#sort" title="永久链接至标题">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">SORT key [BY pattern] [LIMIT offset count] [GET pattern [GET pattern ...]] [ASC | DESC] [ALPHA] [STORE destination]</tt></dt>
+<dd></dd></dl>
+
+<p>返回或保存给定列表、集合、有序集合<tt class="docutils literal"><span class="pre">key</span></tt>中经过排序的元素。</p>
+<p>排序默认以数字作为对象，值被解释为双精度浮点数，然后进行比较。</p>
+<p><strong>一般SORT用法</strong></p>
+<p>最简单的<a class="reference internal" href="#sort">SORT</a>使用方法是<tt class="docutils literal"><span class="pre">SORT</span> <span class="pre">key</span></tt>。</p>
+<p>假设<tt class="docutils literal"><span class="pre">today_cost</span></tt>是一个保存数字的列表，<a class="reference internal" href="#sort">SORT</a>命令默认会返回该列表值的递增(从小到大)排序结果。</p>
+<div class="highlight-python"><pre># 将数据一一加入到列表中
+
+redis&gt; LPUSH today_cost 30
+(integer) 1
+
+redis&gt; LPUSH today_cost 1.5
+(integer) 2
+
+redis&gt; LPUSH today_cost 10
+(integer) 3
+
+redis&gt; LPUSH today_cost 8
+(integer) 4
+
+# 排序
+
+redis&gt; SORT today_cost
+1) "1.5"
+2) "8"
+3) "10"
+4) "30"</pre>
+</div>
+<p>当数据集中保存的是字符串值时，你可以用<tt class="docutils literal"><span class="pre">ALPHA</span></tt>修饰符(modifier)进行排序。</p>
+<div class="highlight-python"><pre># 将数据一一加入到列表中
+
+redis&gt; LPUSH website "www.reddit.com"
+(integer) 1
+redis&gt; LPUSH website "www.slashdot.com"
+(integer) 2
+redis&gt; LPUSH website "www.infoq.com"
+(integer) 3
+
+# 默认排序
+
+redis&gt; SORT website
+1) "www.infoq.com"
+2) "www.slashdot.com"
+3) "www.reddit.com"
+
+# 按字符排序
+
+redis&gt; SORT website ALPHA
+1) "www.infoq.com"
+2) "www.reddit.com"
+3) "www.slashdot.com"</pre>
+</div>
+<p>如果你正确设置了<tt class="docutils literal"><span class="pre">!LC_COLLATE</span></tt>环境变量的话，Redis能识别<tt class="docutils literal"><span class="pre">UTF-8</span></tt>编码。</p>
+<div class="line-block">
+<div class="line">排序之后返回的元素数量可以通过<tt class="docutils literal"><span class="pre">LIMIT</span></tt>修饰符进行限制。</div>
+<div class="line"><tt class="docutils literal"><span class="pre">LIMIT</span></tt>修饰符接受两个参数：<tt class="docutils literal"><span class="pre">offset</span></tt>和<tt class="docutils literal"><span class="pre">count</span></tt>。</div>
+<div class="line"><tt class="docutils literal"><span class="pre">offset</span></tt>指定要跳过的元素数量，<tt class="docutils literal"><span class="pre">count</span></tt>指定跳过<tt class="docutils literal"><span class="pre">offset</span></tt>个指定的元素之后，要返回多少个对象。</div>
+</div>
+<p>以下例子返回排序结果的前5个对象(<tt class="docutils literal"><span class="pre">offset</span></tt>为<tt class="docutils literal"><span class="pre">0</span></tt>表示没有元素被跳过)。</p>
+<div class="highlight-python"><pre># 将数据一一加入到列表中
+
+redis&gt; LPUSH rank 30
+(integer) 1
+redis&gt; LPUSH rank 56
+(integer) 2
+redis&gt; LPUSH rank 42
+(integer) 3
+redis&gt; LPUSH rank 22
+(integer) 4
+redis&gt; LPUSH rank 0
+(integer) 5
+redis&gt; LPUSH rank 11
+(integer) 6
+redis&gt; LPUSH rank 32
+(integer) 7
+redis&gt; LPUSH rank 67
+(integer) 8
+redis&gt; LPUSH rank 50
+(integer) 9
+redis&gt; LPUSH rank 44
+(integer) 10
+redis&gt; LPUSH rank 55
+(integer) 11
+
+# 排序
+
+redis&gt; SORT rank LIMIT 0 5  # 返回排名前五的元素
+1) "0"
+2) "11"
+3) "22"
+4) "30"
+5) "32"</pre>
+</div>
+<p>修饰符可以组合使用。以下例子返回降序(从大到小)的前5个对象。</p>
+<div class="highlight-python"><pre>redis&gt; SORT rank LIMIT 0 5 DESC
+1) "78"
+2) "67"
+3) "56"
+4) "55"
+5) "50"</pre>
+</div>
+<p><strong>使用外部key进行排序</strong></p>
+<p>有时候你会希望使用外部的<tt class="docutils literal"><span class="pre">key</span></tt>作为权重来比较元素，代替默认的对比方法。</p>
+<p>假设现在有用户(user)数据如下：</p>
+<blockquote>
+<div><table border="1" class="docutils">
+<colgroup>
+<col width="29%" />
+<col width="35%" />
+<col width="35%" />
+</colgroup>
+<thead valign="bottom">
+<tr><th class="head">id</th>
+<th class="head">name</th>
+<th class="head">level</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr><td>1</td>
+<td>admin</td>
+<td>9999</td>
+</tr>
+<tr><td>2</td>
+<td>huangz</td>
+<td>10</td>
+</tr>
+<tr><td>59230</td>
+<td>jack</td>
+<td>3</td>
+</tr>
+<tr><td>222</td>
+<td>hacker</td>
+<td>9999</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<div class="line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">id</span></tt>数据保存在<tt class="docutils literal"><span class="pre">key</span></tt>名为<tt class="docutils literal"><span class="pre">user_id</span></tt>的列表中。</div>
+<div class="line"><tt class="docutils literal"><span class="pre">name</span></tt>数据保存在<tt class="docutils literal"><span class="pre">key</span></tt>名为<tt class="docutils literal"><span class="pre">user_name_{id}</span></tt>的列表中</div>
+<div class="line"><tt class="docutils literal"><span class="pre">level</span></tt>数据保存在<tt class="docutils literal"><span class="pre">user_level_{id}</span></tt>的<tt class="docutils literal"><span class="pre">key</span></tt>中。</div>
+</div>
+<div class="highlight-python"><pre># 先将要使用的数据加入到数据库中
+
+# admin
+
+redis&gt; LPUSH user_id 1
+(integer) 1
+redis&gt; SET user_name_1 admin
+OK
+redis&gt; SET user_level_1 9999
+OK
+
+# huangz
+
+redis&gt; LPUSH user_id 2
+(integer) 2
+redis&gt; SET user_name_2 huangz
+OK
+redis&gt; SET user_level_2 10
+OK
+
+# jack
+
+redis&gt; LPUSH user_id 59230
+(integer) 3
+redis&gt; SET user_name_59230 jack
+OK
+redis&gt; SET user_level_59230 3
+OK
+
+# hacker
+
+redis&gt; LPUSH user_id 222
+(integer) 4
+redis&gt; SET user_name_222 hacker
+OK
+redis&gt; SET user_level_222 9999
+OK</pre>
+</div>
+<p>如果希望按<tt class="docutils literal"><span class="pre">level</span></tt>从大到小排序<tt class="docutils literal"><span class="pre">user_id</span></tt>，可以使用以下命令：</p>
+<div class="highlight-python"><pre>redis&gt; SORT user_id BY user_level_* DESC
+1) "222"    # hacker
+2) "1"      # admin
+3) "2"      # huangz
+4) "59230"  # jack</pre>
+</div>
+<p>但是有时候只是返回相应的<tt class="docutils literal"><span class="pre">id</span></tt>没有什么用，你可能更希望排序后返回<tt class="docutils literal"><span class="pre">id</span></tt>对应的用户名，这样更友好一点，使用<tt class="docutils literal"><span class="pre">GET</span></tt>选项可以做到这一点：</p>
+<div class="highlight-python"><pre>redis&gt; SORT user_id BY user_level_* DESC GET user_name_*
+1) "hacker"
+2) "admin"
+3) "huangz"
+4) "jack"</pre>
+</div>
+<p>可以多次地、有序地使用<tt class="docutils literal"><span class="pre">GET</span></tt>操作来获取更多外部<tt class="docutils literal"><span class="pre">key</span></tt>。</p>
+<p>比如你不但希望获取用户名，还希望连用户的密码也一并列出，可以使用以下命令：</p>
+<div class="highlight-python"><pre># 先添加一些测试数据
+
+redis&gt; SET user_password_222 "hey,im in"
+OK
+redis&gt; SET user_password_1 "a_long_long_password"
+OK
+redis&gt; SET user_password_2 "nobodyknows"
+OK
+redis&gt; SET user_password_59230 "jack201022"
+OK
+
+# 获取name和password
+
+redis&gt; SORT user_id BY user_level_* DESC GET user_name_* GET user_password_*
+1) "hacker"       # 用户名
+2) "hey,im in"    # 密码
+3) "jack"
+4) "jack201022"
+5) "huangz"
+6) "nobodyknows"
+7) "admin"
+8) "a_long_long_password"
+
+# 注意GET操作是有序的，GET user_name_* GET user_password_* 和 GET user_password_* GET user_name_*返回的结果位置不同
+
+redis&gt; SORT user_id BY user_level_* DESC GET user_password_* GET user_name_*
+1) "hey,im in"    # 密码
+2) "hacker"       # 用户名
+3) "jack201022"
+4) "jack"
+5) "nobodyknows"
+6) "huangz"
+7) "a_long_long_password"
+8) "admin"</pre>
+</div>
+<p><tt class="docutils literal"><span class="pre">GET</span></tt>还有一个特殊的规则——<tt class="docutils literal"><span class="pre">&quot;GET</span> <span class="pre">#&quot;</span></tt>，用于获取被排序对象(我们这里的例子是<tt class="docutils literal"><span class="pre">user_id</span></tt>)的当前元素。</p>
+<p>比如你希望<tt class="docutils literal"><span class="pre">user_id</span></tt>按<tt class="docutils literal"><span class="pre">level</span></tt>排序，还要列出<tt class="docutils literal"><span class="pre">id</span></tt>、<tt class="docutils literal"><span class="pre">name</span></tt>和<tt class="docutils literal"><span class="pre">password</span></tt>，可以使用以下命令：</p>
+<div class="highlight-python"><pre>redis&gt; SORT user_id BY user_level_* DESC GET # GET user_name_* GET user_password_*
+1) "222"          # id
+2) "hacker"       # name
+3) "hey,im in"    # password
+4) "1"
+5) "admin"
+6) "a_long_long_password"
+7) "2"
+8) "huangz"
+9) "nobodyknows"
+10) "59230"
+11) "jack"
+12) "jack201022"</pre>
+</div>
+<p><strong>只获取对象而不排序</strong></p>
+<p><tt class="docutils literal"><span class="pre">BY</span></tt>修饰符可以将一个不存在的<tt class="docutils literal"><span class="pre">key</span></tt>当作权重，让<a class="reference internal" href="#sort">SORT</a>跳过排序操作。</p>
+<p>该方法用于你希望获取外部对象而又不希望引起排序开销时使用。</p>
+<div class="highlight-python"><pre># 确保fake_key不存在
+
+redis&gt; EXISTS fake_key
+(integer) 0
+
+# 以fake_key作BY参数，不排序，只GET name 和 GET password
+
+redis&gt; SORT user_id BY fake_key GET # GET user_name_* GET user_password_*
+1) "222"        # id
+2) "hacker"     # user_name
+3) "hey,im in"  # password
+4) "59230"
+5) "jack"
+6) "jack201022"
+7) "2"
+8) "huangz"
+9) "nobodyknows"
+10) "1"
+11) "admin"
+12) "a_long_long_password"</pre>
+</div>
+<p><strong>保存排序结果</strong></p>
+<p>默认情况下，<a class="reference internal" href="#sort">SORT</a>操作只是简单地返回排序结果，如果你希望保存排序结果，可以给<tt class="docutils literal"><span class="pre">STORE</span></tt>选项指定一个<tt class="docutils literal"><span class="pre">key</span></tt>作为参数，排序结果将以列表的形式被保存到这个<tt class="docutils literal"><span class="pre">key</span></tt>上。(若指定<tt class="docutils literal"><span class="pre">key</span></tt>已存在，则覆盖。)</p>
+<div class="highlight-python"><pre>redis&gt; EXISTS user_info_sorted_by_level  # 确保指定key不存在
+(integer) 0
+
+redis&gt; SORT user_id BY user_level_* GET # GET user_name_* GET user_password_* STORE user_info_sorted_by_level    # 排序
+(integer) 12  # 显示有12条结果被保存了
+
+redis&gt; LRANGE user_info_sorted_by_level 0 11  # 查看排序结果
+1) "59230"
+2) "jack"
+3) "jack201022"
+4) "2"
+5) "huangz"
+6) "nobodyknows"
+7) "222"
+8) "hacker"
+9) "hey,im in"
+10) "1"
+11) "admin"
+12) "a_long_long_password"</pre>
+</div>
+<p>一个有趣的用法是将<a class="reference internal" href="#sort">SORT</a>结果保存，用<a class="reference internal" href="#expire">EXPIRE</a>为结果集设置生存时间，这样结果集就成了<a class="reference internal" href="#sort">SORT</a>操作的一个缓存。</p>
+<p>这样就不必频繁地调用<a class="reference internal" href="#sort">SORT</a>操作了，只有当结果集过期时，才需要再调用一次<a class="reference internal" href="#sort">SORT</a>操作。</p>
+<p>有时候为了正确实现这一用法，你可能需要加锁以避免多个客户端同时进行缓存重建(也就是多个客户端，同一时间进行<a class="reference internal" href="#sort">SORT</a>操作，并保存为结果集)，具体参见<a class="reference internal" href="string.html#setnx"><em>SETNX</em></a>命令。</p>
+<p><strong>在GET和BY中使用哈希表</strong></p>
+<p>可以使用哈希表特有的语法，在<a class="reference internal" href="#sort">SORT</a>命令中进行<tt class="docutils literal"><span class="pre">GET</span></tt>和<tt class="docutils literal"><span class="pre">BY</span></tt>操作。</p>
+<div class="highlight-python"><pre># 假设现在我们的用户表新增了一个serial项来为作为每个用户的序列号
+# 序列号以哈希表的形式保存在serial哈希域内。
+
+redis&gt; HMSET serial 1 23131283 2 23810573 222 502342349 59230 2435829758
+OK
+
+# 我们希望以比较serial中的大小来作为排序user_id的方式
+
+redis&gt; SORT user_id BY *-&gt;serial
+1) "222"
+2) "59230"
+3) "2"
+4) "1"</pre>
+</div>
+<p>符号<tt class="docutils literal"><span class="pre">&quot;-&gt;&quot;</span></tt>用于分割哈希表的关键字(key name)和索引域(hash field)，格式为<tt class="docutils literal"><span class="pre">&quot;key-&gt;field&quot;</span></tt>。</p>
+<p>除此之外，哈希表的<tt class="docutils literal"><span class="pre">BY</span></tt>和<tt class="docutils literal"><span class="pre">GET</span></tt>操作和上面介绍的其他数据结构(列表、集合、有序集合)没有什么不同。</p>
+<dl class="docutils">
+<dt><strong>时间复杂度：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">O(N+M*log(M))，<tt class="docutils literal"><span class="pre">N</span></tt>为要排序的列表或集合内的元素数量，<tt class="docutils literal"><span class="pre">M</span></tt>为要返回的元素数量。</div>
+<div class="line">如果只是使用<a class="reference internal" href="#sort">SORT</a>命令的<tt class="docutils literal"><span class="pre">GET</span></tt>选项获取数据而没有进行排序，时间复杂度O(N)。</div>
+</div>
+</dd>
+<dt><strong>返回值：</strong></dt>
+<dd><div class="first last line-block">
+<div class="line">没有使用<tt class="docutils literal"><span class="pre">STORE</span></tt>参数，返回列表形式的排序结果。</div>
+<div class="line">使用<tt class="docutils literal"><span class="pre">STORE</span></tt>参数，返回排序结果的元素数量。</div>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">內容目录</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">键(Key)</a><ul>
+<li><a class="reference internal" href="#del">DEL</a></li>
+<li><a class="reference internal" href="#keys">KEYS</a></li>
+<li><a class="reference internal" href="#randomkey">RANDOMKEY</a></li>
+<li><a class="reference internal" href="#ttl">TTL</a></li>
+<li><a class="reference internal" href="#exists">EXISTS</a></li>
+<li><a class="reference internal" href="#move">MOVE</a></li>
+<li><a class="reference internal" href="#rename">RENAME</a></li>
+<li><a class="reference internal" href="#type">TYPE</a></li>
+<li><a class="reference internal" href="#expire">EXPIRE</a></li>
+<li><a class="reference internal" href="#object">OBJECT</a></li>
+<li><a class="reference internal" href="#renamenx">RENAMENX</a></li>
+<li><a class="reference internal" href="#expireat">EXPIREAT</a></li>
+<li><a class="reference internal" href="#persist">PERSIST</a></li>
+<li><a class="reference internal" href="#sort">SORT</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>上一个主题</h4>
+  <p class="topless"><a href="index.html"
+                        title="上一章">Redis命令参考简体中文版</a></p>
+  <h4>下一个主题</h4>
+  <p class="topless"><a href="string.html"
+                        title="下一章">字符串(String)</a></p>
+  <h3>本页</h3>
+  <ul class="this-page-menu">
+    <li><a href="sources/key.txt"
+           rel="nofollow">显示源代码</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>快速搜索</h3>
+    <form class="search" action="http://redis.readthedocs.org/en/2.4/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="搜索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    输入相关的模块，术语，类或者函数名称进行搜索
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>导航</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="总目录"
+             >索引</a></li>
+        <li class="right" >
+          <a href="string.html" title="字符串(String)"
+             >下一页</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Redis命令参考简体中文版"
+             >上一页</a> |</li>
+        <li><a href="index.html">Redis命令参考简体中文版 v2.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; 版权所有 2011, huangz1990.
+      使用 <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.8.
+    </div>
+  </body>
+
+<!-- Mirrored from redis.readthedocs.org/en/2.4/key.html by HTTrack Website Copier/3.x [XR&CO'2010], Tue, 22 Nov 2011 10:08:48 GMT -->
+</html>

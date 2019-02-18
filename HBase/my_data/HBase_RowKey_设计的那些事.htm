@@ -1,0 +1,181 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>HBase RowKey 设计的那些事</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility"><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 16px; -webkit-text-stroke-width: 0px">对于新手来说，<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 16px; -webkit-text-stroke-width: 0px">RowKey</SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 16px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的设计是比较陌生的一件事，看上去很简单的东西，其实非常复杂，<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 16px; -webkit-text-stroke-width: 0px">RowKey</SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 16px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>的设计基本上可以划分成两大影响，分别是分析维度、查询性能。为什么要这样分呢？我们再回头看看<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN></SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 16px; -webkit-text-stroke-width: 0px">HBase</SPAN><SPAN 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FLOAT: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; WIDOWS: 1; DISPLAY: inline !important; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 16px; -webkit-text-stroke-width: 0px"><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>系统架构图：</SPAN></H2>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">合理的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>RowKey</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>设计方法</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px"><SPAN></SPAN>基于上面的原因，我们需要考虑单点集中以及数据查询两方面的因素，因此，在<SPAN>RowKey</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>上我们要针对这两个问题进行方案设计。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px"><SPAN></SPAN>首先是单点集中问题，我们出现这样单点集中的原因大概有以下几种：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">l<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>RowKey</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>前面的字符过于固定</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">l&nbsp; 
+集群结点数量过少</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">集群结点数量是由我们自身硬件资源限制的，这个我们不考虑在内，我们主要考虑<SPAN>RowKey</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>设计。既然是因为前面字符过于集中，那么我们可以通过在<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>RowKey</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>前面添加随机的一个字符串，下面是引自《<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>HBase Essential</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>》里面的一个随机字符计算方法：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">int 
+saltNumber = new Long(new Long(timestamp).hashCode()) %&lt;number of region 
+servers&gt;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">用这种方法，我们在插入数据的时候可以人为地随机把一断时间内的数据打散，分布到各个<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>RegionServer</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>下的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>Region</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>中，充分利用分布式的优势，这样做不紧可以加快数据的读写访问，也解决了数据集中的问题。</P>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">改良后的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>RowKey</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>设计方案</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px"><SPAN></SPAN>通过上面的技术研讨，可以制定出以下的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>RowKey</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>设计方案了：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">随机字符(2位) 
++ 时间位（14位）+&nbsp; CompanyCode（4</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px"><SPAN></SPAN>我在实际测试过程中，前后两种方案对比，前者的<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>MR</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>程序跑了<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>1</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>个小时，后者只花了<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>5</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>分钟。</P>
+<H2 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: bold 20px/22px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.5em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px; text-rendering: optimizeLegibility">合理地编写查询代码</H2>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px"><SPAN></SPAN>我们完成数据存储之后，假如要取出某部分数值，需要设置<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><SPAN>Scan</SPAN><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>查询，以下是我在实战中用到的部分代码，仅供参考：</P><PRE class="prettyprint java" style="WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 12px/1.5em Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; WIDOWS: 1; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; border-radius: 4px"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=class style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">HBaseTableDriver</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">extends</SPAN> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Configured</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">implements</SPAN> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Tool</SPAN> {</SPAN>
+    <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN> run(String[] arg0) <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throws</SPAN> Exception {
+       <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN>(arg0.length &lt; <SPAN class=number style="COLOR: rgb(0,153,153)">4</SPAN> || arg0.length &gt; <SPAN class=number style="COLOR: rgb(0,153,153)">5</SPAN>)
+           <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throw</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> IllegalArgumentException(<SPAN class=string style="COLOR: rgb(221,17,68)">"The input argument need:start &amp;&amp; stop &amp;&amp; farmid &amp;&amp; turbineNum &amp;&amp; calid"</SPAN>);
+       <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN>(arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>].length() != <SPAN class=number style="COLOR: rgb(0,153,153)">8</SPAN> || arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">1</SPAN>].length() != <SPAN class=number style="COLOR: rgb(0,153,153)">8</SPAN>)
+           <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throw</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> IllegalArgumentException(<SPAN class=string style="COLOR: rgb(221,17,68)">"The date format should be yyyyMMdd"</SPAN>);
+       Configuration conf = HBaseConfiguration.create();
+       conf.set(<SPAN class=string style="COLOR: rgb(221,17,68)">"hbase.zookeeper.quorum"</SPAN>, ConstantValues.QUOREM);
+       conf.set(<SPAN class=string style="COLOR: rgb(221,17,68)">"hbase.zookeeper.property.clientPort"</SPAN>, ConstantValues.CLIENT_PORT);
+       <SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//extract table &amp;&amp; tagid &amp;&amp; start time &amp;&amp; end time</SPAN>
+       conf.set(<SPAN class=string style="COLOR: rgb(221,17,68)">"start"</SPAN>, arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>]);
+       conf.set(<SPAN class=string style="COLOR: rgb(221,17,68)">"stop"</SPAN>, arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">1</SPAN>]);
+        conf.set(<SPAN class=string style="COLOR: rgb(221,17,68)">"farmid"</SPAN>, arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">2</SPAN>]);
+       conf.set(<SPAN class=string style="COLOR: rgb(221,17,68)">"turbineNum"</SPAN>, arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">3</SPAN>]);
+       conf.set(<SPAN class=string style="COLOR: rgb(221,17,68)">"calid"</SPAN>, arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">4</SPAN>]);
+       String startRow = <SPAN class=string style="COLOR: rgb(221,17,68)">"0"</SPAN> + arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>] + <SPAN class=string style="COLOR: rgb(221,17,68)">" 000000"</SPAN> + arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">2</SPAN>] + <SPAN class=string style="COLOR: rgb(221,17,68)">"001"</SPAN>;
+       String stopRow = <SPAN class=string style="COLOR: rgb(221,17,68)">"2"</SPAN> + arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">1</SPAN>] + <SPAN class=string style="COLOR: rgb(221,17,68)">" 235959"</SPAN> + arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">2</SPAN>] + RowKeyGenerator.addZero(Integer.parseInt(arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">3</SPAN>]));
+       String targetKpiTableName = <SPAN class=string style="COLOR: rgb(221,17,68)">"kpi2"</SPAN>;
+       Job job = Job.getInstance(conf, <SPAN class=string style="COLOR: rgb(221,17,68)">"KPIExtractor"</SPAN>);
+        job.setJarByClass(KPIExtractor.class);
+        job.setNumReduceTasks(<SPAN class=number style="COLOR: rgb(0,153,153)">6</SPAN>);
+        Scan scan = <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> Scan();
+        scan.addColumn(<SPAN class=string style="COLOR: rgb(221,17,68)">"f"</SPAN>.getBytes(), <SPAN class=string style="COLOR: rgb(221,17,68)">"v"</SPAN>.getBytes());
+        String regEx = <SPAN class=string style="COLOR: rgb(221,17,68)">"^\\d{1}(?:"</SPAN> + arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>].substring(<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>, <SPAN class=number style="COLOR: rgb(0,153,153)">4</SPAN>) + <SPAN class=string style="COLOR: rgb(221,17,68)">"|"</SPAN> + arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">1</SPAN>].substring(<SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>, <SPAN class=number style="COLOR: rgb(0,153,153)">4</SPAN>) + <SPAN class=string style="COLOR: rgb(221,17,68)">")\\d{17}"</SPAN>;
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">switch</SPAN>(arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">4</SPAN>]){
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">case</SPAN> <SPAN class=string style="COLOR: rgb(221,17,68)">"1"</SPAN>:
+<SPAN class=indent>  </SPAN>   regEx = regEx + <SPAN class=string style="COLOR: rgb(221,17,68)">"(?:823|834)$"</SPAN>;
+<SPAN class=indent>  </SPAN>   startRow = startRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"823"</SPAN>;
+<SPAN class=indent>  </SPAN>   stopRow = stopRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"834"</SPAN>;
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">break</SPAN>;
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">case</SPAN> <SPAN class=string style="COLOR: rgb(221,17,68)">"2"</SPAN>:
+<SPAN class=indent>  </SPAN>regEx = regEx + <SPAN class=string style="COLOR: rgb(221,17,68)">"211$"</SPAN>;
+<SPAN class=indent>  </SPAN>startRow = startRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"211"</SPAN>;
+           stopRow = stopRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"211"</SPAN>;
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">break</SPAN>;
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">case</SPAN> <SPAN class=string style="COLOR: rgb(221,17,68)">"3"</SPAN>:
+<SPAN class=indent>  </SPAN>regEx = regEx + <SPAN class=string style="COLOR: rgb(221,17,68)">"544$"</SPAN>;
+<SPAN class=indent>  </SPAN>startRow = startRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"544"</SPAN>;
+           stopRow = stopRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"544"</SPAN>;
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">break</SPAN>;
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">case</SPAN> <SPAN class=string style="COLOR: rgb(221,17,68)">"4"</SPAN>:
+<SPAN class=indent>  </SPAN>regEx = regEx + <SPAN class=string style="COLOR: rgb(221,17,68)">"208$"</SPAN>;
+<SPAN class=indent>  </SPAN>startRow = startRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"208"</SPAN>;
+           stopRow = stopRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"208"</SPAN>;
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">break</SPAN>;
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">case</SPAN> <SPAN class=string style="COLOR: rgb(221,17,68)">"5"</SPAN>:
+<SPAN class=indent>  </SPAN>regEx = regEx + <SPAN class=string style="COLOR: rgb(221,17,68)">"(?:739|823)$"</SPAN>;
+<SPAN class=indent>  </SPAN>startRow = startRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"739"</SPAN>;
+           stopRow = stopRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"823"</SPAN>;
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">break</SPAN>;
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">case</SPAN> <SPAN class=string style="COLOR: rgb(221,17,68)">"6"</SPAN>:
+<SPAN class=indent>  </SPAN>regEx = regEx + <SPAN class=string style="COLOR: rgb(221,17,68)">"(?:211|823)$"</SPAN>;
+<SPAN class=indent>  </SPAN>startRow = startRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"211"</SPAN>;
+           stopRow = stopRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"823"</SPAN>;
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">break</SPAN>;
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">case</SPAN> <SPAN class=string style="COLOR: rgb(221,17,68)">"7"</SPAN>:
+<SPAN class=indent>  </SPAN>regEx = regEx + <SPAN class=string style="COLOR: rgb(221,17,68)">"708$"</SPAN>;
+<SPAN class=indent>  </SPAN>startRow = startRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"708"</SPAN>;
+           stopRow = stopRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"708"</SPAN>;
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">break</SPAN>;
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">case</SPAN> <SPAN class=string style="COLOR: rgb(221,17,68)">"8"</SPAN>:
+<SPAN class=indent>  </SPAN>regEx = regEx + <SPAN class=string style="COLOR: rgb(221,17,68)">"822$"</SPAN>;
+<SPAN class=indent>  </SPAN>startRow = startRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"822"</SPAN>;
+           stopRow = stopRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"822"</SPAN>;
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">break</SPAN>;
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">case</SPAN> <SPAN class=string style="COLOR: rgb(221,17,68)">"9"</SPAN>:
+<SPAN class=indent>  </SPAN>regEx = regEx + <SPAN class=string style="COLOR: rgb(221,17,68)">"211$"</SPAN>;
+<SPAN class=indent>  </SPAN>startRow = startRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"211"</SPAN>;
+           stopRow = stopRow + <SPAN class=string style="COLOR: rgb(221,17,68)">"211"</SPAN>;
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">break</SPAN>;
+        <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">default</SPAN>:
+<SPAN class=indent>  </SPAN><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throw</SPAN> <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> IllegalArgumentException(<SPAN class=string style="COLOR: rgb(221,17,68)">"UnKnown Argument calid:"</SPAN>+arg0[<SPAN class=number style="COLOR: rgb(0,153,153)">4</SPAN>]+<SPAN class=string style="COLOR: rgb(221,17,68)">",it should be between 1~9"</SPAN>);
+        }
+        scan.setStartRow(startRow.getBytes());
+        scan.setStopRow(stopRow.getBytes());
+        scan.setFilter(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> RowFilter(CompareOp.EQUAL, <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN> RegexStringComparator(regEx)));
+        TableMapReduceUtil.initTableMapperJob(<SPAN class=string style="COLOR: rgb(221,17,68)">"hellowrold"</SPAN>, scan , KPIMapper.class, ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
+        TableMapReduceUtil.initTableReducerJob(targetKpiTableName, KPIReducer.class, job);
+        job.waitForCompletion(<SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">true</SPAN>);
+       <SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN> <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN>;
+    }
+}
+</PRE>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">注意点：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">l&nbsp; 
+这里主要用到了RowFilter对RowKey进行过滤，并且我在查阅相关资料的时候，别人建议不要在大数据量下使用ColumnFilter，性能非常低。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/27px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; WIDOWS: 1; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(254,254,254); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">l&nbsp; 
+可以通过Configuration为Map/Reduce传输参数值。</P></body>
+</html>

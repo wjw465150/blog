@@ -1,0 +1,137 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<HTML>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>关于MappedByteBuffer资源释放问题--简单生活</title>
+<LINK title=RSS 
+href="rss2.xml" type=application/rss+xml 
+rel=alternate>
+<LINK href="/blog/OblogStyle/OblogUserDefault4.css" type=text/css 
+rel=stylesheet>
+</HEAD>
+
+<BODY>
+<TABLE cellSpacing=1 cellPadding=4 width=760 align=center bgColor=#cccccc 
+border=0>
+  <TBODY>
+    <TR bgColor=#ffffff>
+      <TD vAlign=top align=center><TABLE style="TABLE-LAYOUT: fixed; WORD-BREAK: break-all" cellSpacing=1 
+cellPadding=3 width="98%" bgColor=#cccccc border=0>
+          <TBODY><!--StartFragment-->
+            <TR bgColor=#f8f8f8>
+              <TD><FONT size=4><STRONG>关于MappedByteBuffer资源释放问题</STRONG></FONT><BR>
+                简单生活 发表于 
+                2006-11-24 18:04:00 </TD>
+            </TR>
+            <TR bgColor=#ffffff>
+              <TD ><TABLE cellSpacing=0 cellPadding=0 width="100%" border=0>
+                  <TBODY>
+                    <TR>
+                      <TD><DIV>JDK1.4中加入了一个新的包:NIO(java.nio.*)。这个库最大的功能(我认为)就是增加了对异步套接字的支持。其实在其他语言中，包括在最原始的SOCKET实现(BSD 
+                          SOCKET)，这是一个早有的功能:异步回调读/写事件，通过选择器动态选择感兴趣的事件，等等。</DIV>
+                        <DIV>先谈谈操作系统的内存管理。一般操作系统的内存分两部分：物理内存；虚拟内存。虚拟内存一般使用的是页面映像文件，即硬盘中的某个(某些)特殊的文件.操作系统负责页面文件内容的读写，这个过程叫"页面中断/切换"。</DIV>
+                        <DIV>MappedByteBuffer也是类似的,你可以把整个文件(不管文件有多大)看成是一个ByteBuffer。这是一个很好的设计，除了令人头疼的一点在后面会讲到。</DIV>
+                        <DIV><A title="java.lang 中的类" 
+href="mk:@MSITStore:D:/lesson/JDK5/JAVA5.0API_CN.CHM::/java/lang/Object.html">java.lang.Object</A><BR>
+                          &nbsp; <IMG onclick=javascript:window.open(this.src); onload ="javascript:if(this.width 
+>400){this.resized 
+=true;this.style.width=400;}" style="CURSOR: pointer" src="inherit.gif" ><A 
+title="java.nio 中的类" 
+href="mk:@MSITStore:D:/lesson/JDK5/JAVA5.0API_CN.CHM::/java/nio/Buffer.html">java.nio.Buffer</A><BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <IMG onclick=javascript:window.open(this.src); onload ="javascript:if(this.width 
+>400){this.resized 
+=true;this.style.width=400;}" style="CURSOR: pointer" src="inherit.gif" ><A 
+title="java.nio 中的类" 
+href="mk:@MSITStore:D:/lesson/JDK5/JAVA5.0API_CN.CHM::/java/nio/ByteBuffer.html">java.nio.ByteBuffer</A><BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <IMG onclick=javascript:window.open(this.src); onload ="javascript:if(this.width 
+>400){this.resized 
+=true;this.style.width=400;}" style="CURSOR: pointer" src="inherit.gif" ><B>java.nio.MappedByteBuffer</B><BR>
+                        </DIV>
+                        <DIV>MappedByteBuffer是一个比较方便使用的类。其内容是文件的内存映射区域。映射的字节缓冲区是通过 <A 
+href="mk:@MSITStore:D:/lesson/JDK5/JAVA5.0API_CN.CHM::/java/nio/channels/FileChannel.html#map(java.nio.channels.FileChannel.MapMode, long, long)"><CODE><SPAN 
+style="FONT-FAMILY: 新宋体">FileChannel.map</SPAN></CODE></A> 方法创建的。映射的字节缓冲区和它所表示的文件映射关系在该缓冲区本身成为垃圾回收缓冲区之前一直保持有效。此类用特定于内存映射文件区域的操作扩展 <A 
+title="java.nio 中的类" 
+href="mk:@MSITStore:D:/lesson/JDK5/JAVA5.0API_CN.CHM::/java/nio/ByteBuffer.html"><CODE><SPAN 
+style="FONT-FAMILY: 新宋体">ByteBuffer</SPAN></CODE></A> 类。 
+                          这个类本身的设计是不错的,比直接操作byte[]方便多了。</DIV>
+                        <DIV>ByteBuffer有两种模式：直接/间接。间接模式最典型(也只有这么一种)的就是HeapByteBuffer，即操作堆内存(byte[])。但是内存毕竟有限，如果我要发送一个1G的文件怎么办？不可能真的去分配1G的内存.这时就必须使用"直接"模式，即MappedByteBuffer，文件映射。</DIV>
+                        <DIV>在JDK API文档中这样描述的：</DIV>
+                        <DIV>全部或部分映射的字节缓冲区可能随时成为不可访问的，例如，如果我们截取映射的文件。试图访问映射的字节缓冲区的不可访问区域将不会更改缓冲区的内容，并导致在访问时或访问后的某个时刻抛出未指定的异常。因此强烈推荐采取适当的预防措施，以避免此程序或另一个同时运行的程序对映射的文件执行操作（读写文件内容除外）。 </DIV>
+                        <DIV>
+                          <DIV>MappedByteBuffer只能通过调用FileChannel的map()取得,再没有其他方式.但是令人奇怪的是,SUN提供了map()却没有提供unmap().这样会导致什么后果呢?</DIV>
+                        </DIV>
+                        <DIV>这样，问题就出现了。通过MappedByteBuffer实现文件复制功能非常容易，可以用以下方法来实现。</DIV>
+                        <DIV>&nbsp;&nbsp; //文件复制<BR>
+                          &nbsp;&nbsp; public void copyFile(String filename,String srcpath,String 
+                          destpath)throws IOException {<BR>
+                          &nbsp;&nbsp;&nbsp; File source = new 
+                          File(srcpath+"/"+filename);<BR>
+                          &nbsp;&nbsp;&nbsp; File dest = new 
+                          File(destpath+"/"+filename);<BR>&nbsp;&nbsp;&nbsp;&nbsp; FileChannel in =
+                              null, out = null;<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp; 
+                          try { <BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; in = new FileInputStream(source).getChannel();<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; out = 
+                          new FileOutputStream(dest).getChannel();</DIV>
+                        <DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; long size = in.size();<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MappedByteBuffer buf = 
+                          in.map(FileChannel.MapMode.READ_ONLY, 0, size);</DIV>
+                        <DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; out.write(buf);</DIV>
+                        <DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; in.close();</DIV>
+                        <DIV>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; out.close();<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; source.delete();//文件复制完成后，删除源文件<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp; 
+                          }catch(Exception e){<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; e.printStackTrace();<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp; } finally {<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                          in.close();<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; out.close();<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp; }<BR>
+                          &nbsp;&nbsp; }</DIV>
+                        <DIV>但是如果要实现文件文件复制完成后，删除源文件，以上方法就有问题。因为在source.delete()时，会返回false，删除失败，主要原因是变量buf仍然有源文件的句柄，文件处于不可删除状态。既然MappedByteBuffer是从FileChannel中map()出来的，为什么它又不提供unmap()呢？SUN自己也没有讲清楚为什么。O'Reilly的&lt;&lt;Java 
+                          NIO&gt;&gt;中说是因为"安全"的原因，但是到底unmap()会怎么不安全，作者也没有讲清楚。</DIV>
+                        <DIV>在sun网站也有相应的BUG报告：bug id:4724038链接为<A 
+href="http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4724038">http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4724038</A>，但是sun自己不认为是BUG，而只是一个RFE(Request 
+                          For Enhancement)，有待改进。</DIV>
+                        <DIV>好在有个叫<STRONG>bellomi</STRONG>的网友提出了一个解决方法，我也测试过，可以实现期望的功能。具体实现代码如下：</DIV>
+                        <DIV>&nbsp;&nbsp; public static void clean(final Object buffer) throws Exception 
+                          {<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; AccessController.doPrivileged(new PrivilegedAction() 
+                          {<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; public Object run() {<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;try {<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                  &nbsp;&nbsp;Method getCleanerMethod =
+                           
+                             buffer.getClass().getMethod("cleaner",new 
+                          Class[0]);<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                          &nbsp;&nbsp;getCleanerMethod.setAccessible(true);<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;sun.misc.Cleaner 
+                          cleaner =(sun.misc.Cleaner)getCleanerMethod.invoke(buffer,new 
+                          Object[0]);<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;cleaner.clean();<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;} 
+                          catch(Exception e) {<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;e.printStackTrace();<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                          &nbsp;}<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;return null;}});<BR>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;<BR>
+                          &nbsp;}</DIV>
+                        <DIV>不知道为什么SUN不提供ByteBuffer的派生。毕竟这是一个很实用的类，如果允许派生，那么我就可以操作的就不仅仅限于堆内存和文件了，我可以扩展到任何存储设备。</DIV></TD>
+                    </TR>
+                  </TBODY>
+                </TABLE></TD>
+            </TR><!--EndFragment-->
+          </TBODY>
+        </TABLE></TD>
+    </TR>
+  </TBODY>
+</TABLE>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+</BODY>
+</HTML>

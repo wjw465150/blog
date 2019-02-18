@@ -1,0 +1,109 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>HBase 性能优化笔记</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+style="TEXT-DECORATION: none; COLOR: rgb(26,139,200)" 
+href="http://www.cnblogs.com/shitouer/archive/2012/08/07/2626377.html#hbase.hregion.max.filesize">1 
+hbase.hregion.max.filesize应该设置多少合适</A></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+style="TEXT-DECORATION: none; COLOR: rgb(26,139,200)" 
+href="http://www.cnblogs.com/shitouer/archive/2012/08/07/2626377.html#autoflush_false">2 
+autoflush=false的影响</A></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+style="TEXT-DECORATION: none; COLOR: rgb(26,139,200)" 
+href="http://www.cnblogs.com/shitouer/archive/2012/08/07/2626377.html#number_of_column_family">3 
+从性能的角度谈table中family和qualifier的设置</A></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><A 
+style="TEXT-DECORATION: none; COLOR: rgb(26,139,200)" 
+href="http://www.cnblogs.com/shitouer/archive/2012/08/07/2626377.html#hbase.regionserver.handler.count">4 
+hbase.regionserver.handler.count</A>详解</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><A 
+name=hbase.hregion.max.filesize></A><SPAN 
+style="COLOR: rgb(0,0,255); LINE-HEIGHT: 1.5">1 
+hbase.hregion.max.filesize应该设置多少合适</SPAN></STRONG><BR><STRONG>默认值</STRONG><SPAN 
+style="LINE-HEIGHT: 1.5">：256M</SPAN><BR><STRONG>说明</STRONG><SPAN 
+style="LINE-HEIGHT: 1.5">：</SPAN>Maximum HStoreFile size. If any one of a column 
+families' HStoreFiles has&nbsp;grown to exceed this value, the hosting HRegion 
+is split in two.</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">HStoreFile的最大值。如果任何一个Column 
+Family（或者说HStore）的HStoreFiles的大小超过这个值，那么，其所属的HRegion就会Split成两个。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>调优</STRONG><SPAN 
+style="LINE-HEIGHT: 1.5">：</SPAN></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">hbase中hfile的默认最大值(hbase.hregion.max.filesize)是256MB，而google的bigtable论文中对tablet的最大值也推荐为100-200MB，这个大小有什么秘密呢？<BR>　　众所周知hbase中数据一开始会写入memstore，当memstore满64MB以后，会flush到disk上而成为storefile。当storefile数量超过3时，会启动compaction过程将它们合并为一个storefile。这个过程中会删除一些timestamp过期的数据，比如update的数据。而当合并后的storefile大小大于hfile默认最大值时，会触发split动作，将它切分成两个region。<BR>　　lz进行了持续insert压力测试，并设置了不同的hbase.hregion.max.filesize，根据结果得到如下结论：值越小，平均吞吐量越大，但吞吐量越不稳定；值越大，平均吞吐量越小，吞吐量不稳定的时间相对更小。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　为什么会这样呢？推论如下：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;&nbsp; 
+&nbsp;a 当hbase.hregion.max.filesize比较小时，触发split的机率更大，而split的时候会将region 
+offline，因此在split结束的时间前，访问该region的请求将被block住，客户端自我block的时间默认为1s。当大量的region同时发生split时，系统的整体访问服务将大受影响。因此容易出现吞吐量及响应时间的不稳定现象<BR>&nbsp;&nbsp; 
+&nbsp;b 
+当hbase.hregion.max.filesize比较大时，单个region中触发split的机率较小，大量region同时触发split的机率也较小，因此吞吐量较之小hfile尺寸更加稳定些。但是由于长期得不到split，因此同一个region内发生多次compaction的机会增加了。compaction的原理是将原有数据读一遍并重写一遍到hdfs上，然后再删除原有数据。无疑这种行为会降低以io为瓶颈的系统的速度，因此平均吞吐量会受到一些影响而下降。<BR>&nbsp;&nbsp; 
+&nbsp;综合以上两种情况，hbase.hregion.max.filesize不宜过大或过小，256MB或许是一个更理想的经验参数。对于离线型的应用，调整为128MB会更加合适一些，而在线应用除非对split机制进行改造，否则不应该低于256MB</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><A 
+name=autoflush_false></A><SPAN style="COLOR: rgb(0,0,255); LINE-HEIGHT: 1.5">2 
+autoflush=false的影响</SPAN></STRONG></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　无论是官方还是很多blog都提倡为了提高hbase的写入速度而在应用代码中设置autoflush=false，然后lz认为<STRONG>在在线应用中应该谨慎进行该设置</STRONG>。原因如下：</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　a 
+autoflush=false的原理是当客户端提交delete或put请求时，将该请求<STRONG>在客户端缓存</STRONG>，直到数据超过2M(hbase.client.write.buffer决定)或用户执行了hbase.flushcommits()时<STRONG>才向regionserver提交请求</STRONG>。<SPAN 
+style="LINE-HEIGHT: 1.5">因此即使htable.put()执行返回成功，也并非说明请求真的成功了。假如还<STRONG>没有达到该缓存而client崩溃</STRONG>，该部分数据将由于未发送到regionserver而丢失</SPAN>。这对于零容忍的在线服务是不可接受的。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　b 
+autoflush=true虽然会让写入速度下降2-3倍，但是<STRONG>对于很多在线应用来说这都是必须打开</STRONG>的，也正是hbase为什么让它默认值为true的原因。当该值为true时，每次请求都会发往regionserver,而regionserver接收到请求后第一件事就是写hlog，因此对io的要求是非常高的，为了提高hbase的写入速度，应该尽可能高地提高io吞吐量，比如增加磁盘、使用raid卡、减少replication因子数等</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><A 
+name=number_of_column_family></A><SPAN 
+style="COLOR: rgb(0,0,255); LINE-HEIGHT: 1.5">3 
+从性能的角度谈table中family和qualifier的设置</SPAN></STRONG><BR>　　对于传统关系型数据库中的一张table，在业务转换到hbase上建模时，从性能的角度应该如何设置family和qualifier呢？<BR>　　最极端的，①每一列都设置成一个family，②一个表仅有一个family，所有列都是其中的一个qualifier，那么有什么区别呢？</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>　　从读的方面考虑：</STRONG><BR>　　family越多，那么获取每一个cell数据的优势越明显，因为io和网络都减少了。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　如果只有一个family，那么每一次读都会读取当前rowkey的所有数据，网络和io上会有一些损失。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　当然如果要获取的是固定的几列数据，那么把这几列写到一个family中比分别设置family要更好，因为只需一次请求就能拿回所有数据。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG>　　从写的角度考虑：</STRONG></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">　　首先，<STRONG>内存方面来说</STRONG>，对于一个Region，会为每一个表的每一个Family分配一个Store，而每一个Store，都会分配一个MemStore，所以更多的family会消耗更多的内存。<BR>　　其次，<STRONG>从flush和compaction方面说</STRONG>，目前版本的hbase，在flush和compaction都是以region为单位的，也就是说当一个family达到flush条件时，该region的所有family所属的memstore都会flush一次，即使memstore中只有很少的数据也<STRONG>会触发flush而生成小文件</STRONG>。这样就<STRONG>增加了compaction发生的机率</STRONG>，<STRONG>而compaction也是以region为单位的，这样就很容易发生compaction风暴从而降低系统的整体吞吐量</STRONG>。<BR>　　第三，<STRONG>从split方面考虑</STRONG>，由于hfile是以family为单位的，因此对于多个family来说，数据被分散到了更多的hfile中，减小了split发生的机率。这是把双刃剑。<STRONG>更少的split会导致该region的体积比较大，由于balance是以region的数目而不是大小为单位来进行的，因此可能会导致balance失效。</STRONG>而从好的方面来说，更少的split会让系统提供更加稳定的在线服务。而坏处我们可以通过在请求的低谷时间进行人工的split和balance来避免掉。<BR>&nbsp;&nbsp; 
+&nbsp; 
+因此对于写比较多的系统，<STRONG>如果是离线应该，我们尽量只用一个family好了，但如果是在线应用，那还是应该根据应用的情况合理地分配family</STRONG>。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px"><STRONG><SPAN 
+style="COLOR: rgb(0,0,255); LINE-HEIGHT: 1.5"><A 
+name=hbase.regionserver.handler.count></A>4&nbsp;hbase.regionserver.handler.count</SPAN></STRONG></P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;RegionServer端开启的RPC监听器实例个数，也即RegionServer能够处理的IO请求线程数。默认是10.</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;此参数与内存息息相关。该值设置的时候，以监控内存为主要参考。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;对于&nbsp;单次请求内存消耗较高的Big 
+PUT场景（大容量单次PUT或设置了较大cache的scan，均属于Big PUT）或ReigonServer的内存比较紧张的场景，可以设置的相对较小。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(75,75,75); FONT: 13px/19px Verdana, Geneva, Arial, Helvetica, sans-serif; MARGIN: 10px auto; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px">&nbsp;对于&nbsp;单次请求内存消耗低，TPS（TransactionPerSecond，每秒事务处理量）要求非常高的场景，可以设置的相对大些。</P></body>
+</html>

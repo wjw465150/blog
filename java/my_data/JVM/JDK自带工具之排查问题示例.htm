@@ -1,0 +1,232 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>JDK自带工具之排查问题示例</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<DIV id=nei class=article_body 
+style='WORD-WRAP: break-word; MARGIN-BOTTOM: 0px; FONT-SIZE: 16px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; OVERFLOW-X: hidden; TEXT-TRANSFORM: none; WORD-BREAK: break-all; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); PADDING-BOTTOM: 25px; FONT-STYLE: normal; PADDING-TOP: 20px; PADDING-LEFT: 5px; MIN-HEIGHT: 340px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 5px; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal'>
+<DIV style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">最近看到了大量关于java性能调优、故障排查的文章，自己也写了一篇Java调优经验谈。接着此篇文章，其实一直打算写写一些常用调优的工具以及惯常用法的。后来在<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://java-performance.info/" rel=nofollow,noindex 
+target=_blank>http://java-performance.info</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>这个站点上看到了类似的一篇博文，自我感觉很有指导意义。于是决定翻译+重组织一下此篇文章：<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://java-performance.info/java-server-application-troubleshooting-using-jdk-tools/" 
+rel=nofollow,noindex target=_blank>Java server application troubleshooting using 
+JDK tools</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>。</P>
+<H2 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility">引言</H2>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">在Java世界中，我们的很多开发工作从编码、调试到调优都是在使用GUI工具进行。我们经常尝试在本地构建一套和生产环境一样的环境从而使得问题能够重现，进而使用我们常用的工具来排查定位故障。但不幸的是，很多情况下我们是无法在本地重现线上问题的。例如，我们是没有权限获取线上真实客户端提交到服务端的数据的。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">由于上文提到的问题，很多时候都是需要远程来排查线上服务器上发生的问题。但是如果单单只有一个JRE的话，你也是无法有合适的方案来进行排查的。你需要JDK或者第三方的工具。有时候使用JDK提供的工具就是最可取的方案，毕竟，在线上环境使用第三方工具有时候会牵扯到权限的问题。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">一般情况下，在线上环境安装JDK发布版本可以让排查进行的更高效。建议安装使用最新的Java7/8 
+JDK或者构建与线上JRE匹配的一些工具。(原文作者貌似不建议安装jdk的发布版本，而是建议逐渐地根据需求安装这些)</P>
+<H2 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility">问题排查场景</H2>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility">获取正在运行的JVM列表</H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">为了开始排查工作，我们首先需要获取正在运行的jvm进程列表，包括进程id、命令行参数等。有时候仅仅这一步就可以定位到问题，例如，同样的app被多启动一次在并发做同样的事情(破坏输出文件、重新打开sockets后者其他愚蠢的事情)。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>jcmd</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>不加任何参数即可获取jvm进程列表</P><PRE class="prettyprint hljs css" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'>25691 <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">org</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.apache</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.catalina</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.startup</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.Bootstrap</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">start</SPAN>
+20730 <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">org</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.apache</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.catalina</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.startup</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.Bootstrap</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">start</SPAN>
+26828 <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">sun</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.tools</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.jcmd</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.JCmd</SPAN>
+3883 <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">org</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.apache</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.catalina</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.startup</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.Bootstrap</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">start</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">使用<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>jcmd 
+&lt;PID&gt; help</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>能够获取某个jvm进程其他可用的诊断命令。例如：</P><PRE class="prettyprint hljs css" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'><SPAN class=hljs-selector-attr style="COLOR: rgb(188,96,96)">[root@test-172-16-0-34-ip ~]</SPAN># <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">jcmd</SPAN> 3883 <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">help</SPAN>
+3883:
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">The</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">following</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">commands</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">are</SPAN> <SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">available</SPAN>:
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.commercial_features</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">ManagementAgent</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.stop</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">ManagementAgent</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.start_local</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">ManagementAgent</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.start</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">Thread</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.print</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">GC</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.class_histogram</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">GC</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.heap_dump</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">GC</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.run_finalization</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">GC</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.run</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.uptime</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.flags</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.system_properties</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.command_line</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">VM</SPAN><SPAN class=hljs-selector-class style="COLOR: rgb(136,0,0)">.version</SPAN>
+<SPAN class=hljs-selector-tag style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">help</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">输入<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>jcmd 
+&lt;PID&gt; &lt;COMMAND_NAME&gt;</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>可以运行一个诊断命令或者获取到参数错误信息。</P><PRE class="prettyprint hljs bash" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'>[root@<SPAN class=hljs-built_in style="COLOR: rgb(57,115,0)">test</SPAN>-172-16-0-34-ip ~]<SPAN class=hljs-comment style="COLOR: rgb(136,136,136)"># jcmd 3883 GC.heap_dump</SPAN>
+3883:
+java.lang.IllegalArgumentException: Missing argument <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">for</SPAN> diagnostic <SPAN class=hljs-built_in style="COLOR: rgb(57,115,0)">command</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">通过<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>jcmd 
+&lt;PID&gt; help &lt;COMMAND_NAME&gt;</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>你能够获取此诊断命令更多的信息。如下是<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>GC.heap_dump</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>命令的help。</P><PRE class="prettyprint hljs vim" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'>[root@test-<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">172</SPAN>-<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">16</SPAN>-<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">0</SPAN>-<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">34</SPAN>-ip ~]# jcmd <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3883</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">help</SPAN> GC.heap_dump
+<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3883</SPAN>:
+GC.heap_dump
+Generate <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">a</SPAN> HPROF format dump of the Java heap.
+
+Impac<SPAN class=hljs-variable style="COLOR: rgb(188,96,96)">t:</SPAN> High: Depends <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">on</SPAN> Java heap size <SPAN class=hljs-built_in style="COLOR: rgb(57,115,0)">and</SPAN> content. Request <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">a</SPAN> full GC unless the <SPAN class=hljs-string style="COLOR: rgb(136,0,0)">'-all'</SPAN> option <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">is</SPAN> specified.
+
+Syntax : GC.heap_dump [<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">options</SPAN>] <SPAN class=hljs-symbol style="COLOR: rgb(188,96,96)">&lt;filename&gt;</SPAN>
+
+Argument<SPAN class=hljs-variable style="COLOR: rgb(188,96,96)">s:</SPAN>
+    filename :  Name of the dump <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">file</SPAN> (STRING, <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">no</SPAN> default value)
+
+Option<SPAN class=hljs-variable style="COLOR: rgb(188,96,96)">s:</SPAN> (<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">options</SPAN> must <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">be</SPAN> specified using the <SPAN class=hljs-symbol style="COLOR: rgb(188,96,96)">&lt;key&gt;</SPAN> <SPAN class=hljs-built_in style="COLOR: rgb(57,115,0)">or</SPAN> <SPAN class=hljs-symbol style="COLOR: rgb(188,96,96)">&lt;key&gt;</SPAN>=<SPAN class=hljs-symbol style="COLOR: rgb(188,96,96)">&lt;value&gt;</SPAN> <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">syntax</SPAN>)
+    -<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">all</SPAN> : [optional] Dump <SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">all</SPAN> objects, including unreachable objects (BOOLEAN, false)</PRE>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility">Java堆的DUMP</H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">jcmd提供了输出HPROF格式的堆dump接口。运行<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><CODE 
+style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>jmcd 
+&lt;PID&gt; GC.heap_dump &lt;FILENAME&gt;</CODE><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>即可。注意这里的FILENaME是相对于运行中的jvm目录在说的，因此推荐使用绝对路径。此外，也建议使用.hprof作为输出文件的扩展名。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">在堆dump完成之后，你可以复制此文件到本地用VisualVM或者用jmc的JOverflow插件打开，进而通过分析堆的状况定位内存问题。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">需要注意的两点：</P>
+<UL 
+style="LIST-STYLE-TYPE: none; FONT-SIZE: 16px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 0px">
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">还有很多可以打开分析hprof文件的工具：NetBeans, 
+  Elipse的MAT，jhat等等。用你最熟悉的即可。</LI>
+  <LI 
+  style="LIST-STYLE-TYPE: disc; FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">同样可以使用<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><CODE 
+  style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>jmap 
+  -dump:live,file=&lt;FILE_NAME&gt; &lt;PID&gt;</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>来产生堆dump文件，但是官方文档标注了此工具为unsupported的。虽然我们绝大多数人都会认为JDK中unsupported的特性会永远存在，但是事实并非这样：<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><A 
+  style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+  href="http://openjdk.java.net/jeps/240" rel=nofollow,noindex target=_blank>JEP 
+  240</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>,<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><A 
+  style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+  href="http://openjdk.java.net/jeps/241" rel=nofollow,noindex target=_blank>JEP 
+  241</A><SPAN class=Apple-converted-space>&nbsp;</SPAN>。</LI></UL>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility">分析类柱状图</H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">如果正在排查内存泄漏问题，你可能想要知道堆中某种类型的存活对象数目。例如，某一时刻某些类应该只有一个实例(单例模式)，但是此类的另外一个或者多个实例却已经到了老年代，但是它们不应该能被GC 
+roots访问到。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">运行以下命令可以打印出类柱状图(同时也打印出存活对象的数目)：</P><PRE class="hljs xml" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: medium none; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'>jcmd <SPAN class=hljs-tag>&lt;<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">PID</SPAN>&gt;</SPAN> GC.class_histogram
+jmap -histo:live <SPAN class=hljs-tag>&lt;<SPAN class=hljs-name style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">PID</SPAN>&gt;</SPAN></PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">输入如下：</P><PRE class="prettyprint hljs nginx" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'><SPAN class=hljs-attribute style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">num</SPAN>     <SPAN class=hljs-comment style="COLOR: rgb(136,136,136)">#instances         #bytes  class name</SPAN>
+----------------------------------------------
+   <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">1</SPAN>:         <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">37083</SPAN>       <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">48318152</SPAN>  [B
+   <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">2</SPAN>:        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">235781</SPAN>       <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">22496784</SPAN>  [C
+   <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3</SPAN>:        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">103958</SPAN>       <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">16069448</SPAN>  &lt;constMethodKlass&gt;
+   <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">4</SPAN>:        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">482361</SPAN>       <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">15435552</SPAN>  java.util.HashMap<SPAN class=hljs-variable style="COLOR: rgb(188,96,96)">$Entry</SPAN>
+   <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">5</SPAN>:        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">103958</SPAN>       <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">14152480</SPAN>  &lt;methodKlass&gt;
+   <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">6</SPAN>:          <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">9576</SPAN>       <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">11192168</SPAN>  &lt;constantPoolKlass&gt;
+   <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">7</SPAN>:        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">186264</SPAN>       <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">10430784</SPAN>  com.mysql.jdbc.ConnectionPropertiesImpl<SPAN class=hljs-variable style="COLOR: rgb(188,96,96)">$BooleanConnectionProperty</SPAN>
+   <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">8</SPAN>:        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">274109</SPAN>        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">8771488</SPAN>  java.util.Hashtable<SPAN class=hljs-variable style="COLOR: rgb(188,96,96)">$Entry</SPAN>
+   <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">9</SPAN>:          <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">9576</SPAN>        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">7210152</SPAN>  &lt;instanceKlassKlass&gt;
+  <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">10</SPAN>:          <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">7972</SPAN>        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">6404256</SPAN>  &lt;constantPoolCacheKlass&gt;
+  <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">11</SPAN>:        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">229637</SPAN>        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">5511288</SPAN>  java.lang.String
+  <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">12</SPAN>:         <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">48471</SPAN>        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">5428752</SPAN>  java.net.SocksSocketImpl
+  <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">13</SPAN>:         <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">21599</SPAN>        <SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3859672</SPAN>  [Ljava.util.HashMap<SPAN class=hljs-variable style="COLOR: rgb(188,96,96)">$Entry</SPAN>;</PRE>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">这里的以byte为单位的占用大小是浅的(shallow 
+size)，并没有包括子对象的大小。其实很容易注意到char[]和String的统计数据：这俩的实例数目是差不多的，但是char[]的占用大小要大很多，这在于String并未包含下面的char[]的大小。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">有了类柱状图信息，你就可以grep/search类的名字从而获取存活实例的数目。如果你发现比期望的数目要大很多，你就可以做heap 
+dump，然后用任意的heap分析工具来分析问题。</P>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility">线程Dump</H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">很多时候，应用会呈现出“卡在那里”的情形。这里有很多种卡住的状况：死锁、cpu密集运算。为了定位到问题所在需要知道线程在做什么、持有了什么锁等等。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">Java中有两种锁：sychronized和Object.wait/notifyAll方法的原始锁以及java5引入的java.util.concurrent锁。这俩种锁的不同之处主要在于前者是限制在你进入synchronies块的地方的栈帧(stack 
+frame)中，并且会一直在线程dump中存在。后者却并不限制在栈帧中-你可以在一个方法中进入锁，在另一方法中解锁。因此，thread 
+dump有时候并没有包含这些信息。尽管如此，还是应该使用thread dump来查看线程信息排查问题。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">这里有三种方法可以打印应用的thread 
+dump。</P><PRE class="prettyprint hljs vim" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'>kill -<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">3</SPAN> <SPAN class=hljs-symbol style="COLOR: rgb(188,96,96)">&lt;PID&gt;</SPAN> #仅限Linux平台
+jstack <SPAN class=hljs-symbol style="COLOR: rgb(188,96,96)">&lt;PID&gt;</SPAN>
+jcmd <SPAN class=hljs-symbol style="COLOR: rgb(188,96,96)">&lt;PID&gt;</SPAN> Thread.<SPAN class=hljs-keyword style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">print</SPAN></PRE>
+<H3 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility">运行Java飞行记录器(Java 
+Flight Recorder)</H3>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">上面讲到的工具都是作为快速的查看诊断工具的。如果要深入分析问题，可以选择使用内置的Java飞行记录器:<SPAN 
+class=Apple-converted-space>&nbsp;</SPAN><A 
+style="TEXT-DECORATION: none; BORDER-BOTTOM: rgb(148,148,148) 1px dashed; FONT-WEIGHT: bold; COLOR: rgb(148,148,148); OUTLINE-WIDTH: 0px; FONT-STYLE: italic; OUTLINE-STYLE: none; OUTLINE-COLOR: invert; transition: 0.25s" 
+href="http://java-performance.info/oracle-java-mission-control-overview/" 
+rel=nofollow,noindex target=_blank>Java Mission Control</A><SPAN 
+class=Apple-converted-space>&nbsp;</SPAN>。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">运行JFR需要三步：</P>
+<OL 
+style="FONT-SIZE: 16px; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; MARGIN: 0px 0px 0.75em 25px; LINE-HEIGHT: 1.7em; PADDING-RIGHT: 0px">
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">
+  <P class=no-text-indent 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 0px">创建一个包含了你自己配置的JFR模板文件。运行<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><CODE 
+  style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>jmc</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>, 然后<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><CODE 
+  style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>Window-&gt;Flight 
+  Recording Template Manage</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>菜单。准备好档案后，就可以导出文件，并移动到要排查问题的环境中。</P></LI>
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 0px">由于JFR需要JDK的商业证书，这一步需要解锁jdk的商业特性。</P><PRE class="hljs nginx" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 0.75em; BORDER-LEFT: medium none; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'><SPAN class=hljs-attribute style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">jcmd</SPAN> &lt;PID&gt; VM.unlock_commercial_features</PRE></LI>
+  <LI style="FONT-SIZE: 16px; LINE-HEIGHT: 1.7em">
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 0px">最后你就可以启动JFR。</P><PRE class="prettyprint hljs nginx" style='WORD-WRAP: break-word; FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: pre; OVERFLOW-X: auto; BORDER-BOTTOM: medium none; WORD-BREAK: break-all; COLOR: rgb(68,68,68); PADDING-BOTTOM: 0.5em; PADDING-TOP: 0.5em; PADDING-LEFT: 0.5em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: medium none; DISPLAY: block; LINE-HEIGHT: 1.5em; PADDING-RIGHT: 0.5em; BACKGROUND-COLOR: rgb(246,246,246); border-radius: 4px'><SPAN class=hljs-attribute style="FONT-WEIGHT: 700; COLOR: rgb(51,51,51)">jcmd</SPAN> &lt;PID&gt; JFR.start name=test duration=<SPAN class=hljs-number style="COLOR: rgb(136,0,0)">60s</SPAN> settings=template.jfc filename=output.jfr</PRE>
+  <P 
+  style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 0px">上述命令立即启动JFR并开始使用<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><CODE 
+  style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>templayte.jfc</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>的配置收集60s的JVM信息，输出到<SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN><CODE 
+  style='FONT-SIZE: 14px; BORDER-TOP: medium none; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: medium none; WHITE-SPACE: normal; BORDER-BOTTOM: medium none; FONT-WEIGHT: 600; COLOR: rgb(51,51,51) !important; PADDING-BOTTOM: 2px; PADDING-TOP: 2px; PADDING-LEFT: 4px; BORDER-LEFT: medium none; PADDING-RIGHT: 4px; BACKGROUND-COLOR: rgb(247,247,249); border-radius: 3px'>output.jfr</CODE><SPAN 
+  class=Apple-converted-space>&nbsp;</SPAN>中。</P></LI></OL>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">一旦记录完成之后，就可以复制.jfr文件到你的工作环境使用jmc 
+GUI来分析。它几乎包含了排查jvm问题需要的所有信息，包括堆dump时的异常信息。</P>
+<H2 
+style="FONT-SIZE: 18px; FONT-FAMILY: inherit; FONT-WEIGHT: bold; COLOR: ; MARGIN: 0px 0px 0.5em; LINE-HEIGHT: 1.6em; TEXT-INDENT: 1em; text-rendering: optimizeLegibility">后记</H2>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">本文基本上是对英文原文的翻译，主要描述了几个常见问题的排查场景。</P>
+<P 
+style="FONT-SIZE: 16px; MARGIN: 0px 0px 0.75em; LINE-HEIGHT: 1.7em; TEXT-INDENT: 1em">不得不说的是，JDK自带的工具是非常强大的。用好了这些工具其实已经足以应付绝大多数的Java问题排查场景。</P></DIV></DIV>
+<DIV class=article_social 
+style='MARGIN-BOTTOM: 10px; FONT-SIZE: 14px; FONT-FAMILY: "Helvetica Neue", Helvetica, Tahoma, Arial, STXihei, "Microsoft YaHei", 微软雅黑, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: normal; COLOR: rgb(51,51,51); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; TEXT-INDENT: 0px; -webkit-text-stroke-width: 0px; font-variant-ligatures: normal; font-variant-caps: normal'>&nbsp;</DIV></body>
+</html>

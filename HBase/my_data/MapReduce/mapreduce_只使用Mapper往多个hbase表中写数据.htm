@@ -1,0 +1,124 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>mapreduce 只使用Mapper往多个hbase表中写数据</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">只使用Mapper不使用reduce会大大减少mapreduce程序的运行时间。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">有时候程序会往多张hbase表写数据。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">所以有如题的需求。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">下面给出的代码，不是可以运行的代码，只是展示driver中需要进行的必要项设置，mapper类需要实现的接口，map函数需要的参数以及函数内部的处理方式。</P>
+<P 
+style="WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; COLOR: rgb(51,51,51); FONT: 16px/28px 'Helvetica Neue', Helvetica, Tahoma, Arial, STXihei, 'Microsoft YaHei', 微软雅黑, sans-serif; MARGIN: 0px 0px 0.75em; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 1em; -webkit-text-stroke-width: 0px">实现过程比较曲折，只贴代码：</P><PRE class="prettyprint java" style="WORD-WRAP: break-word; BORDER-TOP: 1px solid; BORDER-RIGHT: 1px solid; WHITE-SPACE: pre-wrap; WORD-SPACING: 0px; OVERFLOW-Y: auto; BORDER-BOTTOM: 1px solid; TEXT-TRANSFORM: none; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 0.3em; PADDING-TOP: 0.3em; FONT: 14px/1.5em Monaco, Menlo, Consolas, 'Courier New', monospace; PADDING-LEFT: 0.3em; MARGIN: 0px 0px 1.5em; BORDER-LEFT: 1px solid; DISPLAY: block; LETTER-SPACING: normal; PADDING-RIGHT: 0.3em; BACKGROUND-COLOR: rgb(246,246,246); TEXT-INDENT: 0px; border-radius: 4px; -webkit-text-stroke-width: 0px"><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=class style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN></SPAN></SPAN><SPAN class=class style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)"> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Qos2HbaseDriver</SPAN> <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">extends</SPAN></SPAN> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Configured</SPAN> <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">implements</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)"> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Tool</SPAN>
+{</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+    </SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN></SPAN> <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN></SPAN> Logger logger =<SPAN style="COLOR: rgb(0,0,0)"> LoggerFactory
+<SPAN class=indent>  </SPAN>    .getLogger(Qos2HbaseDriver.</SPAN><SPAN style="COLOR: rgb(0,0,255)">class</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+    </SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN></SPAN> <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN></SPAN> <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">final</SPAN></SPAN> <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN></SPAN> DEFAULT_NUM_REDUCE = <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN><SPAN style="COLOR: rgb(0,0,0)">;
+
+    </SPAN><SPAN style="COLOR: rgb(0,128,0)"><SPAN class=javadoc style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/**</SPAN></SPAN><SPAN class=javadoc style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)">
+     * args[0]输入hdfs文件路径，args[1]输出表
+     </SPAN><SPAN style="COLOR: rgb(0,128,0)">*/</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+
+    <SPAN class=annotation>@Override</SPAN>
+    </SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN></SPAN> <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN></SPAN> run(String[] args) <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throws</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)"> Exception
+    {
+<SPAN class=indent>  </SPAN>Configuration conf </SPAN>=<SPAN style="COLOR: rgb(0,0,0)"> HBaseConfiguration.create();
+<SPAN class=indent>  </SPAN>conf.set(</SPAN><SPAN class=string style="COLOR: rgb(221,17,68)">"output"</SPAN>, args[<SPAN class=number style="COLOR: rgb(0,153,153)">1</SPAN>]);<SPAN style="COLOR: rgb(0,128,0)"><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//</SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)">输出表1</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN class=indent>  </SPAN>conf.set(<SPAN class=string style="COLOR: rgb(221,17,68)">"output2"</SPAN>, args[<SPAN class=number style="COLOR: rgb(0,153,153)">2</SPAN>]);<SPAN style="COLOR: rgb(0,128,0)"><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//</SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)">输出表2</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN style="COLOR: rgb(0,0,0)">
+<SPAN class=indent>  </SPAN>Job job </SPAN>=<SPAN style="COLOR: rgb(0,0,0)"> Job.getInstance(conf);
+<SPAN class=indent>  </SPAN>job.setJobName(</SPAN><SPAN class=string style="COLOR: rgb(221,17,68)">"iplane_Qos2Hbase"</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+<SPAN class=indent>  </SPAN>job.setMapperClass(Qos2HbaseMapper.</SPAN><SPAN style="COLOR: rgb(0,0,255)">class</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+<SPAN class=indent>  </SPAN>FileInputFormat.setInputPaths(job, args[</SPAN><SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN><SPAN style="COLOR: rgb(0,0,0)">]);
+<SPAN class=indent>  </SPAN>job.setMapOutputKeyClass(ImmutableBytesWritable.</SPAN><SPAN style="COLOR: rgb(0,0,255)">class</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+<SPAN class=indent>  </SPAN>job.setMapOutputValueClass(Put.</SPAN><SPAN style="COLOR: rgb(0,0,255)">class</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+<SPAN class=indent>  </SPAN>job.setOutputFormatClass(MultiTableOutputFormat.</SPAN><SPAN style="COLOR: rgb(0,0,255)">class</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+
+<SPAN class=indent>  </SPAN>TableMapReduceUtil.addDependencyJars(job);
+<SPAN class=indent>  </SPAN>TableMapReduceUtil.addDependencyJars(job.getConfiguration());
+<SPAN class=indent>  </SPAN>job.setJarByClass(Qos2Hbase.</SPAN><SPAN style="COLOR: rgb(0,0,255)">class</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+
+<SPAN class=indent>  </SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//</SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)"> 设置reduce个数，可调节</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN class=indent>  </SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">int</SPAN></SPAN> numberReduceTasks = <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN><SPAN style="COLOR: rgb(0,0,0)">;       
+<SPAN class=indent>  </SPAN>job.setNumReduceTasks(numberReduceTasks);
+<SPAN class=indent>  </SPAN></SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">boolean</SPAN></SPAN> b = job.waitForCompletion(<SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">true</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+<SPAN class=indent>  </SPAN></SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN></SPAN> (!<SPAN style="COLOR: rgb(0,0,0)">b)
+<SPAN class=indent>  </SPAN>{
+<SPAN class=indent>  </SPAN>    logger.error(</SPAN><SPAN class=string style="COLOR: rgb(221,17,68)">"工作错误！"</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+<SPAN class=indent>  </SPAN>    </SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN></SPAN> -<SPAN class=number style="COLOR: rgb(0,153,153)">1</SPAN><SPAN style="COLOR: rgb(0,0,0)">;
+<SPAN class=indent>  </SPAN>}
+<SPAN class=indent>  </SPAN></SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">return</SPAN></SPAN> <SPAN class=number style="COLOR: rgb(0,153,153)">0</SPAN><SPAN style="COLOR: rgb(0,0,0)">;
+    }
+}
+
+</SPAN><SPAN style="COLOR: rgb(0,128,0)"><SPAN class=javadoc style="COLOR: rgb(153,153,136); FONT-STYLE: italic">/**</SPAN></SPAN><SPAN class=javadoc style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)">
+ * <SPAN class=javadoctag>@ClassName</SPAN>: Qos2HbaseMapper
+ * <SPAN class=javadoctag>@Description</SPAN>: 将结果入Hbase库的mapper类
+ * </SPAN><SPAN style="COLOR: rgb(128,128,128)"><SPAN class=javadoctag>@author</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"> Dangzhang
+ * <SPAN class=javadoctag>@date</SPAN> 2014-9-16 下午1:18:49
+ * 
+ </SPAN><SPAN style="COLOR: rgb(0,128,0)">*/</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN style="COLOR: rgb(0,0,255)"><SPAN class=class style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">class</SPAN></SPAN></SPAN><SPAN class=class style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)"> <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Qos2HbaseMapper</SPAN> <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">extends</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+<SPAN class=indent>  </SPAN><SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Mapper</SPAN></SPAN>&lt;<SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">LongWritable</SPAN>, <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Text</SPAN>, <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">ImmutableBytesWritable</SPAN>, <SPAN class=title style="FONT-WEIGHT: bold; COLOR: rgb(68,85,136)">Put</SPAN>&gt;<SPAN style="COLOR: rgb(0,0,0)">
+{</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">
+    </SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">private</SPAN></SPAN> <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">static</SPAN></SPAN> Logger logger =<SPAN style="COLOR: rgb(0,0,0)"> LoggerFactory
+<SPAN class=indent>  </SPAN>    .getLogger(Qos2HbaseMapper.</SPAN><SPAN style="COLOR: rgb(0,0,255)">class</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+
+    <SPAN class=annotation>@Override</SPAN>
+    </SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">public</SPAN></SPAN> <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">void</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)"> map(LongWritable key, Text line, Context context)
+<SPAN class=indent>  </SPAN>    </SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">throws</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)"> IOException, InterruptedException
+    {
+<SPAN class=indent>  </SPAN>String output </SPAN>= context.getConfiguration().get(<SPAN class=string style="COLOR: rgb(221,17,68)">"output"</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+<SPAN class=indent>  </SPAN>String output2 </SPAN>= context.getConfiguration().get(<SPAN class=string style="COLOR: rgb(221,17,68)">"output2"</SPAN><SPAN style="COLOR: rgb(0,0,0)">);
+
+<SPAN class=indent>  </SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//</SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)"> 组装rowkey：ip_ip</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN class=indent>  </SPAN>StringBuffer rowkeySb = <SPAN class=string style="COLOR: rgb(221,17,68)">"aaaa"</SPAN><SPAN style="COLOR: rgb(0,0,0)">;
+
+<SPAN class=indent>  </SPAN>Put put </SPAN>= <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">null</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)">;
+<SPAN class=indent>  </SPAN>String family </SPAN>= <SPAN class=string style="COLOR: rgb(221,17,68)">"d"</SPAN><SPAN style="COLOR: rgb(0,0,0)">;
+<SPAN class=indent>  </SPAN>String qualifier </SPAN>= <SPAN class=string style="COLOR: rgb(221,17,68)">""</SPAN><SPAN style="COLOR: rgb(0,0,0)">;
+<SPAN class=indent>  </SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//</SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)"> 直接将结果存入hbase</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN class=indent>  </SPAN><SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">long</SPAN></SPAN> ts =<SPAN style="COLOR: rgb(0,0,0)"> System.currentTimeMillis();
+<SPAN class=indent>  </SPAN>put </SPAN>= <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)"> Put(Bytes.toBytes(rowkeySb.toString()));
+
+<SPAN class=indent>  </SPAN>qualifier </SPAN>= <SPAN class=string style="COLOR: rgb(221,17,68)">"del"</SPAN><SPAN style="COLOR: rgb(0,0,0)">;
+<SPAN class=indent>  </SPAN>put.add(Bytes.toBytes(family), Bytes.toBytes(qualifier), ts,
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>Bytes.toBytes(values[</SPAN><SPAN class=number style="COLOR: rgb(0,153,153)">6</SPAN>]));<SPAN style="COLOR: rgb(0,128,0)"><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//</SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)"> 组装一条数据    </SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN class=indent>  </SPAN>    <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN></SPAN> (!<SPAN style="COLOR: rgb(0,0,0)">put.isEmpty())
+<SPAN class=indent>  </SPAN>    {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>ImmutableBytesWritable ib </SPAN>= <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)"> ImmutableBytesWritable();
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>ib.set(Bytes.toBytes(output));
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>context.write(ib, put);</SPAN><SPAN style="COLOR: rgb(0,128,0)"><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//</SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)"> 将结果存入hbase表</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN style="COLOR: rgb(0,0,0)"><SPAN class=indent>  </SPAN>    }      
+<SPAN class=indent>  </SPAN>    
+<SPAN class=indent>  </SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//</SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)"> 存历史表</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN style="COLOR: rgb(0,0,0)"><SPAN class=indent>  </SPAN>rowkeySb.append(rowkeySeparator).append(myDate);
+<SPAN class=indent>  </SPAN>put </SPAN>= <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)"> Put(Bytes.toBytes(rowkeySb.toString()));
+<SPAN class=indent>  </SPAN>qualifier </SPAN>= <SPAN class=string style="COLOR: rgb(221,17,68)">"del"</SPAN><SPAN style="COLOR: rgb(0,0,0)">;
+<SPAN class=indent>  </SPAN>put.add(Bytes.toBytes(family), Bytes.toBytes(qualifier), ts,
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>Bytes.toBytes(values[</SPAN><SPAN class=number style="COLOR: rgb(0,153,153)">6</SPAN>]));<SPAN style="COLOR: rgb(0,128,0)"><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//</SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)"> 组装一条数据</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN class=indent>  </SPAN>    <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">if</SPAN></SPAN> (!<SPAN style="COLOR: rgb(0,0,0)">put.isEmpty())
+<SPAN class=indent>  </SPAN>    {
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>ImmutableBytesWritable ib </SPAN>= <SPAN style="COLOR: rgb(0,0,255)"><SPAN class=keyword style="FONT-WEIGHT: bold; COLOR: rgb(51,51,51)">new</SPAN></SPAN><SPAN style="COLOR: rgb(0,0,0)"> ImmutableBytesWritable();
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>ib.set(Bytes.toBytes(output2));
+<SPAN class=indent>  </SPAN><SPAN class=indent>  </SPAN>context.write(ib, put);</SPAN><SPAN style="COLOR: rgb(0,128,0)"><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic">//</SPAN></SPAN><SPAN class=comment style="COLOR: rgb(153,153,136); FONT-STYLE: italic"><SPAN style="COLOR: rgb(0,128,0)"> 将结果存入hbase表</SPAN></SPAN><SPAN style="COLOR: rgb(0,128,0)"></SPAN>
+<SPAN style="COLOR: rgb(0,0,0)"><SPAN class=indent>  </SPAN>    }
+      
+    }
+}</SPAN></PRE></body>
+</html>
