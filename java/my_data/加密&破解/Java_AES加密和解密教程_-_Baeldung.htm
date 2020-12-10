@@ -1,0 +1,386 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Java AES加密和解密教程 - Baeldung</title>
+<meta name="GENERATOR" content="WinCHM">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+html,body { 
+	/* Default Font */
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11pt;
+}
+</style>
+
+</head>
+
+<body>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>在本教程中，我们将看到如何使用JDK中的Java密码体系结构（JCA）来实现AES加密和解密。对称密钥块密码在数据加密中起重要作用。这意味着同一密钥可用于加密和解密。<A 
+class=body_href 
+style="BOX-SIZING: border-box; TEXT-DECORATION: none; BACKGROUND: 0px 0px; COLOR: rgb(48,168,124); transition: all 0.2s ease-in-out 0s" 
+href="https://en.wikipedia.org/wiki/Advanced_Encryption_Standard">高级加密标准</A>（AES）是一种广泛使用的对称密钥加密算法。</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>AES算法是一种迭代的对称密钥块密码，它支持128、192和256位的加密密钥（秘密密钥），以对128位的块中的数据进行加密和解密。</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>&nbsp;</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>在AES中生成密钥的方法有两种：从随机数生成或从给定密码生成。</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>在第一种方法中，应该从像SecureRandom类这样的加密安全（伪）随机数生成器生成秘密密钥。为了生成密钥，我们可以使用KeyGenerator类。让我们定义一种用于生成大小为n（128、192和256）位的AES密钥的方法：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'><B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">public</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">static</B> SecretKey generateKey(<B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">int</B> n) throws NoSuchAlgorithmException {
+&nbsp; &nbsp; KeyGenerator keyGenerator = KeyGenerator.getInstance(<FONT style="BOX-SIZING: border-box" color=#00bb00>"AES"</FONT><FONT style="BOX-SIZING: border-box" color=black>);
+&nbsp; &nbsp; keyGenerator.init(n);
+&nbsp; &nbsp; SecretKey key = keyGenerator.generateKey();
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">return</B> key;
+}
+</FONT></PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>在第二种方法中，可以使用基于密码的密钥派生功能（例如PBKDF2）从给定的密码派生AES秘密密钥。下面方法可通过65,536次迭代和256位密钥长度从给定密码生成AES密钥：</P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'><B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">public</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">static</B> SecretKey getKeyFromPassword(String password, String salt)
+&nbsp; &nbsp; throws NoSuchAlgorithmException, InvalidKeySpecException {
+&nbsp; &nbsp;&nbsp;
+&nbsp; &nbsp; SecretKeyFactory factory = SecretKeyFactory.getInstance(<FONT style="BOX-SIZING: border-box" color=#00bb00>"PBKDF2WithHmacSHA256"</FONT><FONT style="BOX-SIZING: border-box" color=black>);
+&nbsp; &nbsp; KeySpec spec = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> PBEKeySpec(password.toCharArray(), salt.getBytes(), 65536, 256);
+&nbsp; &nbsp; SecretKey secret = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> SecretKeySpec(factory.generateSecret(spec)
+&nbsp; &nbsp; &nbsp; &nbsp; .getEncoded(), </FONT><FONT style="BOX-SIZING: border-box" color=#00bb00>"AES"</FONT><FONT style="BOX-SIZING: border-box" color=black>);
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">return</B> secret;
+}
+</FONT></PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'><B 
+style="BOX-SIZING: border-box; FONT-WEIGHT: 700">加密字符串</B></P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>要实现输入字符串加密，我们首先需要根据上一节生成密钥和初始化向量IV：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>IV是伪随机值，其大小与加密的块相同。我们可以使用SecureRandom类生成随机IV。</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>让我们定义一种生成IV的方法：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'><B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">public</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">static</B> IvParameterSpec generateIv() {
+&nbsp; &nbsp; byte[] iv = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> byte[16];
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> SecureRandom().nextBytes(iv);
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">return</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> IvParameterSpec(iv);
+}
+</PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>下一步，我们使用getInstance（）方法从Cipher类创建一个实例。</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>此外，我们使用带有秘密密钥，IV和加密模式的init（）方法配置密码实例。最后，我们通过调用doFinal（）方法对输入字符串进行加密。此方法获取输入字节并以字节为单位返回密文：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'><B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">public</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">static</B> String encrypt(String algorithm, String input, SecretKey key,
+&nbsp; &nbsp; IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
+&nbsp; &nbsp; InvalidAlgorithmParameterException, InvalidKeyException,
+&nbsp; &nbsp; BadPaddingException, IllegalBlockSizeException {
+&nbsp; &nbsp;&nbsp;
+&nbsp; &nbsp; Cipher cipher = Cipher.getInstance(algorithm);
+&nbsp; &nbsp; cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+&nbsp; &nbsp; byte[] cipherText = cipher.doFinal(input.getBytes());
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">return</B> Base64.getEncoder()
+&nbsp; &nbsp; &nbsp; &nbsp; .encodeToString(cipherText);
+}
+</PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>为了解密输入字符串，我们可以使用DECRYPT_MODE初始化密码来解密内容：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'><B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">public</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">static</B> String decrypt(String algorithm, String cipherText, SecretKey key,
+&nbsp; &nbsp; IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
+&nbsp; &nbsp; InvalidAlgorithmParameterException, InvalidKeyException,
+&nbsp; &nbsp; BadPaddingException, IllegalBlockSizeException {
+&nbsp; &nbsp;&nbsp;
+&nbsp; &nbsp; Cipher cipher = Cipher.getInstance(algorithm);
+&nbsp; &nbsp; cipher.init(Cipher.DECRYPT_MODE, key, iv);
+&nbsp; &nbsp; byte[] plainText = cipher.doFinal(Base64.getDecoder()
+&nbsp; &nbsp; &nbsp; &nbsp; .decode(cipherText));
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">return</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> String(plainText);
+}
+</PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>编写一个用于加密和解密字符串输入的测试方法：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'>@Test
+<B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">void</B> givenString_whenEncrypt_thenSuccess()
+&nbsp; &nbsp; throws NoSuchAlgorithmException, IllegalBlockSizeException, InvalidKeyException,
+&nbsp; &nbsp; BadPaddingException, InvalidAlgorithmParameterException, NoSuchPaddingException {&nbsp;
+&nbsp; &nbsp;&nbsp;
+&nbsp; &nbsp; String input = <FONT style="BOX-SIZING: border-box" color=#00bb00>"baeldung"</FONT><FONT style="BOX-SIZING: border-box" color=black>;
+&nbsp; &nbsp; SecretKey key = AESUtil.generateKey(128);
+&nbsp; &nbsp; IvParameterSpec ivParameterSpec = AESUtil.generateIv();
+&nbsp; &nbsp; String algorithm = </FONT><FONT style="BOX-SIZING: border-box" color=#00bb00>"AES/CBC/PKCS5Padding"</FONT><FONT style="BOX-SIZING: border-box" color=black>;
+&nbsp; &nbsp; String cipherText = AESUtil.encrypt(algorithm, input, key, ivParameterSpec);
+&nbsp; &nbsp; String plainText = AESUtil.decrypt(algorithm, cipherText, key, ivParameterSpec);
+&nbsp; &nbsp; Assertions.assertEquals(input, plainText);
+}
+</FONT></PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>&nbsp;</P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'><B 
+style="BOX-SIZING: border-box; FONT-WEIGHT: 700">加密文件</B></P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>现在，让我们使用AES算法加密文件。步骤是相同的​​，但是我们需要一些IO类来处理文件。让我们加密一个文本文件：</P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'><B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">public</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">static</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">void</B> encryptFile(String algorithm, SecretKey key, IvParameterSpec iv,
+&nbsp; &nbsp; File inputFile, File outputFile) throws IOException, NoSuchPaddingException,
+&nbsp; &nbsp; NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException,
+&nbsp; &nbsp; BadPaddingException, IllegalBlockSizeException {
+&nbsp; &nbsp;&nbsp;
+&nbsp; &nbsp; Cipher cipher = Cipher.getInstance(algorithm);
+&nbsp; &nbsp; cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+&nbsp; &nbsp; FileInputStream inputStream = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> FileInputStream(inputFile);
+&nbsp; &nbsp; FileOutputStream outputStream = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> FileOutputStream(outputFile);
+&nbsp; &nbsp; byte[] buffer = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> byte[64];
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">int</B> bytesRead;
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">while</B> ((bytesRead = inputStream.read(buffer)) != -1) {
+&nbsp; &nbsp; &nbsp; &nbsp; byte[] output = cipher.update(buffer, 0, bytesRead);
+&nbsp; &nbsp; &nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">if</B> (output != <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">null</B>) {
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; outputStream.write(output);
+&nbsp; &nbsp; &nbsp; &nbsp; }
+&nbsp; &nbsp; }
+&nbsp; &nbsp; byte[] outputBytes = cipher.doFinal();
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">if</B> (outputBytes != <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">null</B>) {
+&nbsp; &nbsp; &nbsp; &nbsp; outputStream.write(outputBytes);
+&nbsp; &nbsp; }
+&nbsp; &nbsp; inputStream.close();
+&nbsp; &nbsp; outputStream.close();
+}
+</PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>请注意，不建议尝试将整个文件（尤其是大文件）读入内存。相反，我们一次加密一个缓冲区。</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>为了解密文件，我们使用类似的步骤，并使用DECRYPT_MODE初始化密码，如前所述。</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>再次，让我们定义一个用于加密和解密文本文件的测试方法。在这种方法中，我们从测试资源目录中读取baeldung.txt文件，将其加密为一个名为baeldung.encrypted的文件，然后将该文件解密为一个新文件：</P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'>@Test
+<B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">void</B> givenFile_whenEncrypt_thenSuccess()&nbsp;
+&nbsp; &nbsp; throws NoSuchAlgorithmException, IOException, IllegalBlockSizeException,&nbsp;
+&nbsp; &nbsp; InvalidKeyException, BadPaddingException, InvalidAlgorithmParameterException,&nbsp;
+&nbsp; &nbsp; NoSuchPaddingException {
+&nbsp; &nbsp;&nbsp;
+&nbsp; &nbsp; SecretKey key = AESUtil.generateKey(128);
+&nbsp; &nbsp; String algorithm = <FONT style="BOX-SIZING: border-box" color=#00bb00>"AES/CBC/PKCS5Padding"</FONT><FONT style="BOX-SIZING: border-box" color=black>;
+&nbsp; &nbsp; IvParameterSpec ivParameterSpec = AESUtil.generateIv();
+&nbsp; &nbsp; Resource resource = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> ClassPathResource(</FONT><FONT style="BOX-SIZING: border-box" color=#00bb00>"inputFile/baeldung.txt"</FONT><FONT style="BOX-SIZING: border-box" color=black>);
+&nbsp; &nbsp; File inputFile = resource.getFile();
+&nbsp; &nbsp; File encryptedFile = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> File(</FONT><FONT style="BOX-SIZING: border-box" color=#00bb00>"classpath:baeldung.encrypted"</FONT><FONT style="BOX-SIZING: border-box" color=black>);
+&nbsp; &nbsp; File decryptedFile = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> File(</FONT><FONT style="BOX-SIZING: border-box" color=#00bb00>"document.decrypted"</FONT><FONT style="BOX-SIZING: border-box" color=black>);
+&nbsp; &nbsp; AESUtil.encryptFile(algorithm, key, ivParameterSpec, inputFile, encryptedFile);
+&nbsp; &nbsp; AESUtil.decryptFile(
+&nbsp; &nbsp; &nbsp; algorithm, key, ivParameterSpec, encryptedFile, decryptedFile);
+&nbsp; &nbsp; assertThat(inputFile).hasSameTextualContentAs(decryptedFile);
+}
+</FONT></PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>&nbsp;</P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'><B 
+style="BOX-SIZING: border-box; FONT-WEIGHT: 700">基于密码加密解密</B></P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>我们可以使用从给定密码派生的密钥进行AES加密和解密。</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>为了生成密钥，我们使用getKeyFromPassword（）方法。加密和解密步骤与字符串输入部分中显示的步骤相同。然后，我们可以使用实例化的密码和提供的密钥来执行加密。</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>让我们写一个测试方法：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'>@Test
+<B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">void</B> givenPassword_whenEncrypt_thenSuccess()&nbsp;
+&nbsp; &nbsp; throws InvalidKeySpecException, NoSuchAlgorithmException,&nbsp;
+&nbsp; &nbsp; IllegalBlockSizeException, InvalidKeyException, BadPaddingException,&nbsp;
+&nbsp; &nbsp; InvalidAlgorithmParameterException, NoSuchPaddingException {
+&nbsp; &nbsp;&nbsp;
+&nbsp; &nbsp; String plainText = <FONT style="BOX-SIZING: border-box" color=#00bb00>"www.baeldung.com"</FONT><FONT style="BOX-SIZING: border-box" color=black>;
+&nbsp; &nbsp; String password = </FONT><FONT style="BOX-SIZING: border-box" color=#00bb00>"baeldung"</FONT><FONT style="BOX-SIZING: border-box" color=black>;
+&nbsp; &nbsp; String salt = </FONT><FONT style="BOX-SIZING: border-box" color=#00bb00>"12345678"</FONT><FONT style="BOX-SIZING: border-box" color=black>;
+&nbsp; &nbsp; IvParameterSpec ivParameterSpec = AESUtil.generateIv();
+&nbsp; &nbsp; SecretKey key = AESUtil.getKeyFromPassword(password,salt);
+&nbsp; &nbsp; String cipherText = AESUtil.encryptPasswordBased(plainText, key, ivParameterSpec);
+&nbsp; &nbsp; String decryptedCipherText = AESUtil.decryptPasswordBased(
+&nbsp; &nbsp; &nbsp; cipherText, key, ivParameterSpec);
+&nbsp; &nbsp; Assertions.assertEquals(plainText, decryptedCipherText);
+}
+</FONT></PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>&nbsp;</P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'><B 
+style="BOX-SIZING: border-box; FONT-WEIGHT: 700">加密对象</B></P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>为了加密Java对象，我们需要使用SealedObject类。该对象应可序列化。让我们从定义学生类开始：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'><B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">public</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">class</B> Student implements Serializable {
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">private</B> String name;
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">private</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">int</B> age;
+
+&nbsp; &nbsp; <FONT style="BOX-SIZING: border-box" color=#0000aa><I style="BOX-SIZING: border-box">// standard setters and getters</I></FONT><FONT style="BOX-SIZING: border-box" color=black>
+}
+</FONT></PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>接下来，让我们加密Student对象：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'><B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">public</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">static</B> SealedObject encryptObject(String algorithm, Serializable object,
+&nbsp; &nbsp; SecretKey key, IvParameterSpec iv) throws NoSuchPaddingException,
+&nbsp; &nbsp; NoSuchAlgorithmException, InvalidAlgorithmParameterException,&nbsp;
+&nbsp; &nbsp; InvalidKeyException, IOException, IllegalBlockSizeException {
+&nbsp; &nbsp;&nbsp;
+&nbsp; &nbsp; Cipher cipher = Cipher.getInstance(algorithm);
+&nbsp; &nbsp; cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+&nbsp; &nbsp; SealedObject sealedObject = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> SealedObject(object, cipher);
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">return</B> sealedObject;
+}
+</PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>稍后可以使用正确的密码解密加密的对象：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'><B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">public</B> <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">static</B> Serializable decryptObject(String algorithm, SealedObject sealedObject,
+&nbsp; &nbsp; SecretKey key, IvParameterSpec iv) throws NoSuchPaddingException,
+&nbsp; &nbsp; NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException,
+&nbsp; &nbsp; ClassNotFoundException, BadPaddingException, IllegalBlockSizeException,
+&nbsp; &nbsp; IOException {
+&nbsp; &nbsp;&nbsp;
+&nbsp; &nbsp; Cipher cipher = Cipher.getInstance(algorithm);
+&nbsp; &nbsp; cipher.init(Cipher.DECRYPT_MODE, key, iv);
+&nbsp; &nbsp; Serializable unsealObject = (Serializable) sealedObject.getObject(cipher);
+&nbsp; &nbsp; <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">return</B> unsealObject;
+}
+</PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>让我们写一个测试用例：</P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<TABLE 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; MAX-WIDTH: 100%; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; BORDER-COLLAPSE: collapse; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; BORDER-SPACING: 0px; ORPHANS: 2; WIDOWS: 2; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial' 
+cellSpacing=0 cellPadding=0 width="100%" border=0>
+  <TBODY style="BOX-SIZING: border-box">
+  <TR style="BOX-SIZING: border-box">
+    <TD class=code-outline     style="BOX-SIZING: border-box; PADDING-BOTTOM: 0px; PADDING-TOP: 0px; PADDING-LEFT: 0px; PADDING-RIGHT: 0px"><PRE class=displaycode style='BOX-SIZING: border-box; FONT-SIZE: 13px; OVERFLOW: auto; BORDER-TOP: rgb(204,204,204) 1px solid; FONT-FAMILY: Menlo, Monaco, Consolas, "Courier New", monospace; BORDER-RIGHT: rgb(204,204,204) 1px solid; WHITE-SPACE: pre-wrap; BORDER-BOTTOM: rgb(204,204,204) 1px solid; WORD-BREAK: break-all; COLOR: rgb(51,51,51); PADDING-BOTTOM: 9px; PADDING-TOP: 9px; PADDING-LEFT: 9px; BORDER-LEFT: rgb(204,204,204) 1px solid; MARGIN: 0px 0px 10px; DISPLAY: block; LINE-HEIGHT: 1.4285; PADDING-RIGHT: 9px; BACKGROUND-COLOR: rgb(245,245,245); overflow-wrap: break-word; border-radius: 4px'>@Test
+<B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">void</B> givenObject_whenEncrypt_thenSuccess()&nbsp;
+&nbsp; &nbsp; throws NoSuchAlgorithmException, IllegalBlockSizeException, InvalidKeyException,
+&nbsp; &nbsp; InvalidAlgorithmParameterException, NoSuchPaddingException, IOException,&nbsp;
+&nbsp; &nbsp; BadPaddingException, ClassNotFoundException {
+&nbsp; &nbsp;&nbsp;
+&nbsp; &nbsp; Student student = <B style="BOX-SIZING: border-box; FONT-WEIGHT: 700">new</B> Student(<FONT style="BOX-SIZING: border-box" color=#00bb00>"Baeldung"</FONT><FONT style="BOX-SIZING: border-box" color=black>, 20);
+&nbsp; &nbsp; SecretKey key = AESUtil.generateKey(128);
+&nbsp; &nbsp; IvParameterSpec ivParameterSpec = AESUtil.generateIv();
+&nbsp; &nbsp; String algorithm = </FONT><FONT style="BOX-SIZING: border-box" color=#00bb00>"AES/CBC/PKCS5Padding"</FONT><FONT style="BOX-SIZING: border-box" color=black>;
+&nbsp; &nbsp; SealedObject sealedObject = AESUtil.encryptObject(
+&nbsp; &nbsp; &nbsp; algorithm, student, key, ivParameterSpec);
+&nbsp; &nbsp; Student object = (Student) AESUtil.decryptObject(
+&nbsp; &nbsp; &nbsp; algorithm, sealedObject, key, ivParameterSpec);
+&nbsp; &nbsp; assertThat(student).isEqualToComparingFieldByField(object);
+}
+</FONT></PRE></TD></TR></TBODY></TABLE>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'></P>
+<P class=indent 
+style='BOX-SIZING: border-box; FONT-SIZE: 16px; FONT-FAMILY: "Segoe UI", SegoeUI, "Microsoft YaHei", 微软雅黑, "Helvetica Neue", Helvetica, Arial, sans-serif; WHITE-SPACE: normal; WORD-SPACING: 0px; TEXT-TRANSFORM: none; FONT-WEIGHT: 400; COLOR: rgb(70,80,73); FONT-STYLE: normal; ORPHANS: 2; WIDOWS: 2; MARGIN: 0px 0px 20px; LETTER-SPACING: normal; BACKGROUND-COLOR: rgb(255,255,255); TEXT-INDENT: 0px; font-variant-ligatures: normal; font-variant-caps: normal; -webkit-text-stroke-width: 0px; text-decoration-style: initial; text-decoration-color: initial; text-decoration-thickness: initial'>可以<A 
+class=body_href 
+style="BOX-SIZING: border-box; TEXT-DECORATION: none; BACKGROUND: 0px 0px; COLOR: rgb(48,168,124); transition: all 0.2s ease-in-out 0s" 
+href="https://github.com/eugenp/tutorials/tree/master/core-java-modules/core-java-security-2">在GitHub上</A>获得本文的完整源代码&nbsp;。</P></body>
+</html>
