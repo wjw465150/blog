@@ -63,13 +63,14 @@ d.add("59","0","Gradle File dependencies","my_data/Gradle_File_dependencies.htm"
 d.add("60","0","Gradle 构建工具 介绍","my_data/Gradle_构建工具_介绍.htm");
 d.add("61","0","在 Eclipse 下利用 gradle 构建系统","my_data/在 Eclipse 下利用 gradle 构建系统.htm");
 d.add("62","0","(wjw)Gradle秘籍","my_data/(wjw)Gradle秘籍.html");
-d.add("63","0","Gradle&Git与代码规范利器Checkstyle的完美结合","my_data/Gradle&Git与代码规范利器Checkstyle的完美结合/Gradle&Git与代码规范利器Checkstyle的完美结合.htm");
-d.add("64","0","解决Gradle编译时出现： 编码GBK的不可映射字符","my_data/解决Gradle编译时出现：_编码GBK的不可映射字符.htm");
-d.add("65","0","Gradle的依赖管理(Repository&Dependency )","my_data/Gradle的依赖管理(Repository&Dependency_).htm");
-d.add("66","0","Standard project properties","my_data/Standard_project_properties.htm");
-d.add("67","0","使用Gradle 插件进行代码分析","my_data/使用Gradle插件进行代码分析/index.html");
-d.add("68","0","Netflix开源的Gradle插件集合","my_data/Netflix开源的Gradle插件集合.htm");
-d.add("69","0","Gradle之恋－Init插件","my_data/Gradle之恋－Init插件.htm");
-d.add("70","0","利用gradle shadowjar构建包含依赖的JAR包","my_data/利用gradle shadowjar构建包含依赖的JAR包.html");
+d.add("63","0","(wjw)Gradle构建java项目中加入调试信息","my_data/(wjw)Gradle构建java项目中加入调试信息.htm");
+d.add("64","0","Gradle&Git与代码规范利器Checkstyle的完美结合","my_data/Gradle&Git与代码规范利器Checkstyle的完美结合/Gradle&Git与代码规范利器Checkstyle的完美结合.htm");
+d.add("65","0","解决Gradle编译时出现： 编码GBK的不可映射字符","my_data/解决Gradle编译时出现：_编码GBK的不可映射字符.htm");
+d.add("66","0","Gradle的依赖管理(Repository&Dependency )","my_data/Gradle的依赖管理(Repository&Dependency_).htm");
+d.add("67","0","Standard project properties","my_data/Standard_project_properties.htm");
+d.add("68","0","使用Gradle 插件进行代码分析","my_data/使用Gradle插件进行代码分析/index.html");
+d.add("69","0","Netflix开源的Gradle插件集合","my_data/Netflix开源的Gradle插件集合.htm");
+d.add("70","0","Gradle之恋－Init插件","my_data/Gradle之恋－Init插件.htm");
+d.add("71","0","利用gradle shadowjar构建包含依赖的JAR包","my_data/利用gradle shadowjar构建包含依赖的JAR包.html");
 document.write(d);
 //-->
