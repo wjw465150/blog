@@ -126,7 +126,7 @@ d.add("122","89","conf-Configuration with ConfigSlurper","my_data/Goodness/conf-
 d.add("123","89","Date-Convert Date to java.sql.Timestamp","my_data/Goodness/Date-Convert Date to java.sql.Timestamp.htm");
 d.add("124","89","Date-Create New Date or Calendar from Existing and Set Property Value","my_data/Goodness/Date-Create New Date or Calendar from Existing and Set Property Value.htm");
 d.add("125","89","IO-Transforming Reader Input to Writer Output","my_data/Goodness/IO-Transforming Reader Input to Writer Output.htm");
-d.add("126","89","IO-Use Connection Parameters to Get Text From URL","my_data/Goodness/IO-Use Connection Parameters to Get Text From URL.htm");
+d.add("126","89","HTTP-Use Connection Parameters to Get Text From URL","my_data/Goodness/IO-Use Connection Parameters to Get Text From URL.htm");
 d.add("127","89","JSON-Build JSON with JsonBuilder and Pretty Print JSON Text","my_data/Goodness/JSON-Build JSON with JsonBuilder and Pretty Print JSON Text.htm");
 d.add("128","89","JSON-Parse JSON with JsonSlurper","my_data/Goodness/JSON-Parse JSON with JsonSlurper.htm");
 d.add("129","89","JSON-Streaming JSON with StreamingJsonBuilder","my_data/Goodness/JSON-Streaming JSON with StreamingJsonBuilder.htm");
