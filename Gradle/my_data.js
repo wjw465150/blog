@@ -78,7 +78,8 @@ d.add("74","0","Standard project properties","my_data/Standard_project_propertie
 d.add("75","0","使用Gradle 插件进行代码分析","my_data/使用Gradle插件进行代码分析/index.html");
 d.add("76","0","Netflix开源的Gradle插件集合","my_data/Netflix开源的Gradle插件集合.htm");
 d.add("77","0","Gradle之恋－Init插件","my_data/Gradle之恋－Init插件.htm");
-d.add("78","0","利用gradle shadowjar构建包含依赖的JAR包","my_data/利用gradle shadowjar构建包含依赖的JAR包.html");
-d.add("79","0","gradle的ext - 简书","my_data/gradle的ext.html");
+d.add("78","0","gradle的ext - 简书","my_data/gradle的ext.html");
+d.add("79","0","利用gradle shadowjar构建包含依赖的JAR包(老的方式).html","my_data/利用gradle shadowjar构建包含依赖的JAR包(老的方式).html");
+d.add("80","0","利用gradle shadowjar构建包含依赖的JAR包(新的方式).html","my_data/利用gradle shadowjar构建包含依赖的JAR包(新的方式).html");
 document.write(d);
 //-->
